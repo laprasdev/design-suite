@@ -1,0 +1,17 @@
+/* Example layout only. Component geometry and interaction styles come from the package. */
+body{margin:0;background:#151515;font-family:system-ui,sans-serif}
+.bloom-gallery{min-height:100vh;box-sizing:border-box;padding:clamp(20px,5vw,64px);background:var(--color-bg);color:var(--color-text)}
+.bloom-gallery h1{font-size:clamp(32px,5vw,56px);margin:12px 0}
+.bloom-gallery p{color:var(--color-dim);line-height:1.6;max-width:54ch}
+.bloom-gallery header{max-width:960px;margin:auto auto 32px}
+.gallery-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:24px;max-width:960px;margin:auto}
+.gallery-grid>section{padding:24px;border:1px solid var(--color-line);border-radius:14px;background:var(--color-surface)}
+.gallery-grid h2{margin-top:0}
+.gallery-grid .bd-btn{margin:8px 8px 0 0}
+.gallery-portraits{display:flex;align-items:center;gap:24px;flex-wrap:wrap;padding:24px 0 32px}
+.gallery-dialog{padding:24px}
+.gallery-dialog h2{margin-top:0}
+.gallery-dialog label{display:grid;gap:8px}
+.gallery-dialog input{min-width:0;padding:10px;font:inherit;color:inherit;background:var(--color-bg);border:1px solid var(--color-line);border-radius:6px}
+.gallery-dialog details{margin:24px 0}
+.gallery-dialog summary{cursor:pointer}

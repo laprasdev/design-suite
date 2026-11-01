@@ -1,0 +1,250 @@
+{
+ "_": "One row per component kind, keyed by the data it edits. Names on the right must exist in the scan or build.mjs fails. Unity names win where they exist.",
+ "kinds": {
+  "MultiChoice": {
+   "data": "enum, all options visible",
+   "unity": [
+    "MultiChoice"
+   ],
+   "skinForms": [
+    "tabs",
+    "rack",
+    "strip",
+    "pills",
+    "selection"
+   ],
+   "web": [
+    "Enum",
+    "TabStrip",
+    "ButtonGrid",
+    "EnumRow"
+   ],
+   "kit": [
+    "SegmentedControl"
+   ],
+   "css": [],
+   "core": [
+    "SegmentedControl",
+    "ChoiceField",
+    "GameViewTabs",
+    "PageNavigation"
+   ],
+   "note": "Inside an ActionBar it takes the text form by itself; a control's own props still win."
+  },
+  "Cycle": {
+   "data": "enum, one option visible",
+   "unity": [
+    "Cycle"
+   ],
+   "web": [],
+   "kit": [
+    "Cycle"
+   ]
+  },
+  "Boolean": {
+   "data": "bool",
+   "skinForms": [
+    "boolean"
+   ],
+   "web": [
+    "Boolean",
+    "LabeledToggle"
+   ],
+   "note": "Forms: cell, setting. Open: is it a Cycle form in Unity, which has no enum entry but does have SynthBooleanShader?",
+   "core": [
+    "SettingToggle"
+   ],
+   "kit": [
+    "Boolean"
+   ]
+  },
+  "Knob": {
+   "data": "bounded number",
+   "unity": [
+    "Knob"
+   ],
+   "skinForms": [
+    "knob"
+   ],
+   "web": [
+    "Knob"
+   ],
+   "kitGap": true,
+   "kit": [
+    "Knob"
+   ]
+  },
+  "Slider": {
+   "data": "bounded number or range",
+   "unity": [
+    "Slider"
+   ],
+   "skinForms": [
+    "slider"
+   ],
+   "web": [
+    "Slider",
+    "RangeSlider"
+   ],
+   "kitGap": true,
+   "core": [
+    "RangeControl"
+   ],
+   "kit": [
+    "Slider"
+   ],
+   "note": "Forms: cell, setting."
+  },
+  "IntegerIncrementer": {
+   "data": "integer",
+   "skinForms": [
+    "incrementer"
+   ],
+   "web": [
+    "40-IntegerIncrementer"
+   ],
+   "kitGap": true,
+   "core": [
+    "IncrementMeter"
+   ],
+   "kit": [
+    "IntegerIncrementer"
+   ],
+   "note": "Forms: stepper, meter."
+  },
+  "Graph": {
+   "data": "curve",
+   "unity": [
+    "Graph"
+   ],
+   "skinForms": [
+    "graph"
+   ],
+   "web": [
+    "Graph"
+   ],
+   "kitGap": true,
+   "kit": [
+    "Graph"
+   ]
+  },
+  "RenderTextureView": {
+   "data": "live render",
+   "unity": [
+    "RenderTextureView"
+   ],
+   "web": [
+    "RuntimePreview"
+   ],
+   "kitGap": true
+  },
+  "NodeGraph": {
+   "data": "node network",
+   "unity": [
+    "ArithmeticNodes"
+   ],
+   "web": [],
+   "webDirs": [
+    "arithmetic"
+   ],
+   "kit": [
+    "NodeGraph",
+    "Node",
+    "bezierPath",
+    "edgePoint"
+   ],
+   "containerForms": [
+    "node"
+   ]
+  },
+  "Connection": {
+   "data": "source to target link",
+   "web": [
+    "NumericConnections"
+   ],
+   "webFirst": "baseball AdvantageTrace",
+   "note": "The gutter threads and the baseball advantage borders are the same idea."
+  },
+  "Accent": {
+   "data": "label, glyph, light box, divider",
+   "unity": [
+    "Glyph",
+    "LightBox",
+    "NameLabel",
+    "ValueLabel",
+    "Divider"
+   ],
+   "web": [
+    "Title",
+    "SectionHeader",
+    "Divider"
+   ],
+   "kit": [
+    "Label",
+    "Glyph",
+    "Divider",
+    "LightBox"
+   ]
+  },
+  "Container": {
+   "data": "grouping and depth",
+   "containerForms": [
+    "module",
+    "cutout",
+    "button"
+   ],
+   "web": [
+    "Layout",
+    "CollapsibleSection"
+   ],
+   "kit": [
+    "ViewStack",
+    "Button",
+    "Modal"
+   ],
+   "core": [
+    "MenuCard",
+    "SettingsPanel",
+    "AppHeader",
+    "FooterTray"
+   ]
+  },
+  "SelectField": {
+   "data": "enum, long list",
+   "kit": [
+    "ListboxSelect"
+   ],
+   "core": [
+    "ListboxSelect"
+   ]
+  },
+  "PipRow": {
+   "data": "small count",
+   "kit": [
+    "PipRow"
+   ]
+  },
+  "MonthGrid": {
+   "data": "dates",
+   "kit": [
+    "MonthGrid"
+   ]
+  },
+  "ActionBar": {
+   "data": "the current actors and their state",
+   "webFirst": "baseball core ActionBar",
+   "note": "Web-first. Reaches C# once promoted in the language.",
+   "core": [
+    "ActionBar",
+    "Bar",
+    "BarParticipants",
+    "PlayerBarParticipants"
+   ],
+   "kit": [
+    "ActionBar",
+    "Bar",
+    "BarParticipants"
+   ]
+  }
+ }
+}

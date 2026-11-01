@@ -1,0 +1,49 @@
+{
+  "meta": {
+    "label": "Serum Classic",
+    "inherit": "../SynthSkin.json",
+    "priority": 100
+  },
+  "forms": {
+    "base": {
+      "palette": {
+        "primary": "#33A9A8",
+        "secondary": "#CB629B",
+        "background": "#0a0e10",
+        "backgroundGradient": "#101012",
+        "cutoutBackground": "#0e1011",
+        "cutoutBorder": "#262626",
+        "glow": "rgba(51,169,168,0.6)",
+        "knobGradient": [
+          "#1a2f35",
+          "#1a2f35"
+        ]
+      },
+      "shadow": {
+        "cutout": {
+          "inset": [
+            [
+              0,
+              2,
+              8,
+              0.6
+            ]
+          ],
+          "highlight": [
+            0,
+            1,
+            0,
+            0.05
+          ]
+        }
+      }
+    },
+    "components": {
+      "cycle": {
+        "palette": {
+          "border": "#33A9A8"
+        }
+      }
+    }
+  }
+}

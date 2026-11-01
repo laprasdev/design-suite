@@ -1,0 +1,33 @@
+{
+  "meta": { "inherit": "../SynthSkin.json" },
+  "forms": {
+    "base": {
+      "palette": {
+        "primary": "#FF4444",
+        "secondary": "#44FF44",
+        "tertiary": "#4444FF",
+        "background": "#1A0505",
+        "backgroundGradient": "#1A0505",
+        "text": "#FFCCCC",
+        "border": "#442222",
+        "inactive": "rgba(255,68,68,0.2)",
+        "cutoutBackground": "#220808",
+        "cutoutBorder": "#331111"
+      },
+      "glow": { "intensity": 1.2, "scale": 20 },
+      "edge": { "width": 2 },
+      "contentShape": { "cornerRadius": 16 },
+      "opacity": {
+        "full": 1.0, "hover": 0.9, "high": 0.75,
+        "medium": 0.5, "half": 0.5, "low": 0.35,
+        "dim": 0.25, "subtle": 0.2, "solid": 0.85,
+        "inactive": 0.15, "faint": 0.1, "trace": 0.08, "ghost": 0.04
+      },
+      "spacing": {
+        "padding": [24, 24],
+        "gap": 16,
+        "sectionGap": 32
+      }
+    }
+  }
+}

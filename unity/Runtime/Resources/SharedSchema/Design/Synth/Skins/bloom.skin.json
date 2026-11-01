@@ -1,0 +1,57 @@
+{
+  "meta": {
+    "label": "Bloom",
+    "inherit": "flat.skin.json",
+    "priority": 110
+  },
+  "forms": {
+    "base": {
+      "palette": {
+        "primary": "#CC619C",
+        "secondary": "#9C61CC",
+        "tertiary": "#619CCC",
+        "background": "#08070D",
+        "backgroundGradient": "#0A090F",
+        "text": "#D4B0C8",
+        "cutoutBackground": "#0D0B14",
+        "cutoutBorder": "#151020",
+        "glow": "rgba(204,97,156,0.6)",
+        "knobGradient": [
+          "#3A2240",
+          "#1E1528"
+        ]
+      },
+      "glow": {
+        "intensity": 0.5
+      },
+      "contentShape": {
+        "cornerRadius": 8
+      },
+      "shadow": {
+        "cutout": {
+          "inset": [
+            [
+              0,
+              2,
+              8,
+              0.6
+            ]
+          ],
+          "highlight": [
+            0,
+            1,
+            0,
+            0.05
+          ]
+        }
+      }
+    },
+    "components": {
+      "cycle": {
+        "palette": {
+          "border": "#CC619C"
+        }
+      }
+    }
+  }
+}

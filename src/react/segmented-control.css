@@ -1,0 +1,65 @@
+/* The selected fill is one shared motion element; team colors live on options. */
+.seg {
+  --segment-transition-duration:.15s;
+  position:relative;isolation:isolate;flex-shrink:1;min-width:0;width:fit-content;max-width:100%;box-sizing:border-box;
+  display: inline-flex; padding: 3px; gap: 3px;
+  background: var(--card); border: var(--line-width) solid var(--line);
+  border-radius: 8px;
+  box-shadow: inset 0 1px 0 var(--bevel);
+}
+.seg[data-fit] {display:grid;grid-template-columns:repeat(var(--segment-count),minmax(0,1fr));width:100%;box-sizing:border-box;}
+.seg[data-fit=content] {grid-template-columns:repeat(var(--segment-count),auto);}
+/* A scrolling control keeps its frame within the parent's width; its options scroll inside it. */
+.seg[data-scroll] {overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:thin;}
+.seg[data-scroll]>* {flex:none;}
+.seg[data-density=compact] {--label-action-size:var(--caption-size);--segment-padding-block:calc(var(--field-gap) / 4);--segment-padding-inline:calc(var(--field-gap) / 2);}
+.app-root .seg[data-fit] button {min-width:0;justify-content:center;padding-inline:3px;}
+/* Box + color only — typography comes from the composed <Label kind="action">. */
+.seg button {
+  --segment-fill:var(--pink);
+  display: inline-flex; align-items: center; padding: var(--segment-padding-block,calc(var(--field-gap) / 4)) var(--segment-padding-inline,var(--field-gap)); border-radius: 5px;
+  color: var(--dim); transition: color var(--segment-transition-duration), background var(--segment-transition-duration); white-space: nowrap;
+}
+.seg button>.bd-label {display:inline-flex;align-items:center;gap:8px;}
+.seg button:hover { color: var(--text); }
+/* An option unavailable on its own grays out; a read-only control keeps its look. */
+.seg button[data-unavailable] { color: var(--faint); cursor: default; }
+.seg button[data-on="true"] {
+  --icon-foreground:var(--selection-foreground);
+  background:transparent;color:var(--selection-foreground);box-shadow:none;
+}
+.seg-indicator { position:absolute;z-index:-1;pointer-events:none;transform-origin:top left;background:var(--pink);box-shadow:inset 0 1px 0 var(--bevel); }
+/* The options of a group sit together, with a wider space before the next group. */
+.seg button[data-group-start] { margin-inline-start:var(--segment-group-gap,calc(var(--field-gap) * 2)); }
+.seg[data-multiple=true] button[data-on=true] { background:var(--segment-fill); }
+.seg[data-multiple=true] button[data-mixed=true] { background:linear-gradient(to top,var(--pink-wash) 50%,transparent 50%);box-shadow:inset 0 calc(-1 * var(--line-width)) var(--pink);color:var(--text); }
+/* Joined actions share one outline and can append a content-sized group. */
+.seg--joined,.seg[data-multiple=true]:not(.seg--text,.seg--icons) { padding:0;gap:0;align-items:stretch; }
+.seg--joined { flex-wrap:var(--segment-wrap,wrap); }
+.seg--joined>button,.seg[data-multiple=true]:not(.seg--text,.seg--icons)>button { flex:none;border-radius:0; }
+/* The first and last cells round with the frame, whether chosen or not. */
+.seg--joined>button:first-of-type,.seg[data-multiple=true]:not(.seg--text,.seg--icons)>button:first-of-type { border-start-start-radius:inherit;border-end-start-radius:inherit; }
+.seg--joined>button:last-child,.seg[data-multiple=true]:not(.seg--text,.seg--icons)>button:last-of-type { border-start-end-radius:inherit;border-end-end-radius:inherit; }
+.seg--joined>button+button,.seg--joined>div,.seg[data-multiple=true]:not(.seg--text,.seg--icons)>button:not(:first-of-type) { border-inline-start:var(--line-width) solid var(--segment-divider,var(--line)); }
+.seg--inset { gap:2px;background:transparent;box-shadow:none; }
+.seg--inset .seg-indicator { box-shadow:none; }
+.app-root .seg--inset button { justify-content:center;border:0;padding:var(--segment-padding-block,4px) var(--segment-padding-inline,7px);min-width:0; }
+.seg--inset button>.bd-label { display:inline-flex;align-items:center;justify-content:center;gap:8px;font:inherit;font-size:var(--label-action-size,inherit);text-transform:none;letter-spacing:normal;font-weight:700; }
+/* Bare choices move the selected color through their text or icon glyphs. */
+.seg--text { --segment-padding-block:var(--field-gap);--segment-padding-inline:var(--field-gap);gap:var(--field-gap);padding:0;border:0;border-radius:0;background:transparent;box-shadow:none; }
+.seg--text button,.seg--icons button { border-radius:0;transition:none; }
+.seg--text button:first-of-type { padding-inline-start:0; }
+.seg--text button>.bd-label,.seg--icons button>.bd-label { position:relative;text-transform:none;letter-spacing:normal; }
+.seg--text button[data-on=true],.seg--icons button[data-on=true] { --icon-foreground:currentColor;color:var(--dim); }
+.seg--text button[data-on=true] .bd-text-selection,.seg--icons button[data-on=true] .bd-text-selection { opacity:1; }
+.seg--text .bd-text-selection,.seg--icons .bd-text-selection { --text-selection-color:var(--pink);--icon-foreground:var(--pink);position:absolute;inset:0;white-space:inherit; }
+.seg--icons { border:0;border-radius:0;background:transparent;box-shadow:none;padding:0;gap:var(--field-gap); }
+.seg--icons .bd-text-selection { display:flex;align-items:center;justify-content:center;filter:drop-shadow(0 0 calc(var(--field-gap) / 2) var(--pink)); }
+.seg[data-orientation=vertical] { display:flex;flex-direction:column;align-items:stretch; }
+.app-root .seg[data-orientation=vertical] button { justify-content:flex-start;white-space:normal;text-align:left; }
+.seg[data-orientation=vertical] button>.bd-label { justify-content:flex-start;text-align:inherit;white-space:normal; }
+.app-root .seg[data-icon-only=true] button{display:grid;place-items:center;justify-content:center;padding-inline:0}
+.app-root .seg[data-icon-only=true] button>.bd-label{display:flex;width:100%;justify-content:center;align-items:center;text-align:center;line-height:0}
+.seg[data-icon-only=true] button svg{display:block;flex:none;margin:0}
+/* Intrinsic SVGs need a size; explicit artwork and consumer sizing take precedence. */
+:where(.seg[data-icon-only=true] button svg:not([width]):not([height])) { width:var(--header-icon-size);height:var(--header-icon-size); }

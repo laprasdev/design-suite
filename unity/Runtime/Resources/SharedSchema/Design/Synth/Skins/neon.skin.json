@@ -1,0 +1,50 @@
+{
+  "meta": {
+    "label": "Neon Dreams",
+    "inherit": "../SynthSkin.json",
+    "priority": 70
+  },
+  "forms": {
+    "base": {
+      "palette": {
+        "primary": "#00ff9f",
+        "secondary": "#ff00ff",
+        "background": "#000000",
+        "backgroundGradient": "#0a0a0a",
+        "cutoutBackground": "#050505",
+        "cutoutBorder": "#001a11",
+        "glow": "rgba(0,255,159,0.8)",
+        "knobGradient": [
+          "#003322",
+          "#001a11"
+        ]
+      },
+      "shadow": {
+        "cutout": {
+          "inset": [
+            [
+              0,
+              2,
+              12,
+              0.9
+            ]
+          ],
+          "highlight": [
+            0,
+            0,
+            8,
+            0.15
+          ],
+          "highlightColor": "#00ff9f"
+        }
+      }
+    },
+    "components": {
+      "cycle": {
+        "palette": {
+          "border": "#00ff9f"
+        }
+      }
+    }
+  }
+}

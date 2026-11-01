@@ -1,0 +1,22 @@
+.action-bar {
+ --bar-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1fr);
+ --action-bar-height:var(--header-control);
+ --action-bar-inset:var(--page-gutter,var(--inset));
+ --header-control:var(--header-control-compact);
+ position:relative;container-type:inline-size;min-height:var(--action-bar-height);padding:0 var(--action-bar-inset);background:var(--surface-chrome);
+ border-bottom:var(--line-width) solid var(--line);box-shadow:var(--panel-shadow);
+}
+.action-bar>.bar-center { container-type:inline-size;--participant-cluster-width:50cqw;--bar-participant-fit:calc((100cqw - var(--participant-clearance) * 2 - var(--field-gap)) / 2); }
+.action-bar>.bar-left,.action-bar>.bar-center:not(:has(.bar-participants)) { overflow:hidden; }
+.action-bar:has(.header-notices[data-inline]>*) { --bar-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1fr); }
+
+/* A phone gives the navigation its full usable row. Decorative participants
+   yield first; brief music notices use the same bar directly below it. */
+@media(max-width:760px) {
+ .action-bar { --bar-columns:minmax(0,1fr) 0 minmax(0,max-content); }
+ .action-bar>.bar-center { position:static;overflow:visible; }
+ .action-bar>.bar-center .bar-participants { display:none; }
+ .action-bar>.bar-center>.header-notices[data-inline] { inset:100% 0 auto; }
+ .action-bar>.bar-center>.header-notices[data-inline]>.header-notice { background:var(--surface-chrome);min-height:var(--action-bar-height); }
+ .action-bar:has(.header-notices[data-inline]>*) { --bar-columns:minmax(0,1fr) 0 minmax(0,max-content); }
+}

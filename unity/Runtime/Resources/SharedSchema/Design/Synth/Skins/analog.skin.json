@@ -1,0 +1,50 @@
+{
+  "meta": {
+    "label": "Analog Warmth",
+    "inherit": "../SynthSkin.json",
+    "priority": 90
+  },
+  "forms": {
+    "base": {
+      "palette": {
+        "primary": "#ff8c42",
+        "secondary": "#ffd700",
+        "background": "#1a1410",
+        "backgroundGradient": "#2a1f18",
+        "cutoutBackground": "#1a1410",
+        "cutoutBorder": "#3a2818",
+        "glow": "rgba(255,140,66,0.6)",
+        "knobGradient": [
+          "#3a2f25",
+          "#3a2818"
+        ]
+      },
+      "shadow": {
+        "cutout": {
+          "inset": [
+            [
+              0,
+              3,
+              10,
+              0.7
+            ]
+          ],
+          "highlight": [
+            0,
+            1,
+            0,
+            0.1
+          ],
+          "highlightColor": "#ff8c42"
+        }
+      }
+    },
+    "components": {
+      "cycle": {
+        "palette": {
+          "border": "#ff8c42"
+        }
+      }
+    }
+  }
+}

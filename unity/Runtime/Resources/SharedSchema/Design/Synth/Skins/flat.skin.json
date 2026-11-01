@@ -1,0 +1,22 @@
+{
+  "meta": {
+    "inherit": "../SynthSkin.json"
+  },
+  "forms": {
+    "base": {
+      "shadow": {
+        "module": {
+          "drop": "none"
+        }
+      }
+    },
+    "containers": {
+      "cutout": {
+        "shadow": {
+          "inset": false,
+          "blur": 0
+        }
+      }
+    }
+  }
+}

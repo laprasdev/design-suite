@@ -1,0 +1,8 @@
+/* Header, action and footer variants share one region layout. Content never
+   selects a layout through its tag name or through an unstructured children path. */
+.bar { box-sizing:border-box;display:grid;grid-template-columns:var(--bar-columns,minmax(0,max-content) minmax(0,1fr) minmax(0,max-content));grid-template-areas:"left center right";align-items:center;gap:var(--bar-gap,var(--header-gap));min-width:0; }
+.bar>.bar-left,.bar>.bar-center,.bar>.bar-right { display:flex;align-items:center;gap:var(--header-gap);min-width:0; }
+.bar>.bar-left { grid-area:left;justify-content:flex-start; }
+.bar>.bar-center { grid-area:center;position:relative;align-self:stretch;justify-content:center; }
+.bar>.bar-right { grid-area:right;justify-content:flex-end; }
+.bar>.bar-left:empty,.bar>.bar-right:empty { display:none; }

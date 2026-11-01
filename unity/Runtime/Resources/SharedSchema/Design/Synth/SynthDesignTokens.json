@@ -1,0 +1,702 @@
+{
+  "relativity": {
+    "phi": 0.618,
+    "inverse_degree": {
+      "1": 0.382,
+      "2": 0.236,
+      "3": 0.146
+    },
+    "half": 0.5
+  },
+  "styles": {
+    "base": {
+      "palette": {
+        "primary": [
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "secondary": [
+          0.8,
+          0.2,
+          0.1,
+          1.0
+        ],
+        "background": [
+          0.04,
+          0.055,
+          0.063,
+          1.0
+        ]
+      },
+      "sizing": {
+        "steps": [
+          10.0,
+          16.0,
+          24.0,
+          32.0,
+          40.0,
+          46.0,
+          60.0,
+          75.0,
+          96.0
+        ]
+      },
+      "spacing": {
+        "padding": [
+          3.81966019,
+          3.81966019
+        ]
+      },
+      "contentShape": {
+        "cornerRadius": 4.8
+      },
+      "text": {
+        "kern": 5.0,
+        "weight": 600,
+        "size": 10.0,
+        "casing": "allCapitals",
+        "truncation": "none"
+      },
+      "shadow": {
+        "offset": [
+          0.0,
+          2.0
+        ],
+        "blur": 8.0
+      },
+      "opacity": {
+        "value": 1.0
+      },
+      "wrap": "linear"
+    },
+    "multichoice": {
+      "scaleOffset": -3,
+      "sizing": {
+        "scaleOffset": -2147483648,
+        "sizeY": 16.18034,
+        "minY": 16.18034
+      },
+      "spacing": {
+        "padding": [
+          3.81966019,
+          0.0
+        ],
+        "gap": 0.0
+      },
+      "text": {
+        "kern": 5.0,
+        "weight": 600,
+        "size": 10.0,
+        "truncation": "ellipsis"
+      },
+      "border": {
+        "width": 1.45898032,
+        "borderEdges": []
+      },
+      "glyph": {
+        "size": 10.0
+      },
+      "accents": "nameLabel, divider",
+      "childAlignment": "middleCenter",
+      "edgePlacement": {
+        "anchorX": 0.5,
+        "anchorY": 0.5
+      }
+    },
+    "knob": {
+      "scaleOffset": -3,
+      "sizing": {
+        "scaleOffset": -2147483648,
+        "sizeX": 80.0,
+        "minX": 80.0
+      },
+      "spacing": {
+        "padding": [
+          0.0,
+          0.0
+        ],
+        "gap": 2.4
+      },
+      "text": {
+        "kern": 5.0,
+        "nameLabelOpacity": 0.6,
+        "valueLabelOpacity": 0.8,
+        "weight": 600,
+        "size": 10.0,
+        "truncation": "none"
+      },
+      "shadow": {
+        "blur": 3.2
+      },
+      "glyph": {
+        "size": 40.0
+      },
+      "flow": "down",
+      "accents": "glyph, nameLabel, valueLabel",
+      "accentOrder": [
+        "glyph",
+        "valueLabel",
+        "nameLabel"
+      ],
+      "childAlignment": "upperCenter",
+      "edgePlacement": {
+        "anchorX": 0.5,
+        "anchorY": 1.0
+      }
+    },
+    "slider": {
+      "scaleOffset": -3,
+      "sizing": {
+        "scaleOffset": -2147483648,
+        "sizeX": 0.0,
+        "minX": 0.0,
+        "weightX": 1.0
+      },
+      "spacing": {
+        "padding": [
+          6.18034,
+          6.18034
+        ],
+        "gap": 3.81966019
+      },
+      "text": {
+        "kern": 5.0,
+        "weight": 600,
+        "size": 10.0,
+        "truncation": "ellipsis"
+      },
+      "glyph": {
+        "size": 10.0
+      },
+      "flow": "right",
+      "accents": "glyph, nameLabel, valueLabel",
+      "accentOrder": [
+        "nameLabel",
+        "glyph",
+        "valueLabel"
+      ]
+    },
+    "graph": {
+      "scaleOffset": -2,
+      "spacing": {
+        "padding": [
+          6.18034,
+          6.18034
+        ],
+        "gap": 3.81966019
+      },
+      "text": {
+        "kern": 5.0,
+        "weight": 600,
+        "size": 10.0,
+        "truncation": "none"
+      },
+      "glyph": {
+        "size": 10.0
+      },
+      "accents": "glyph, nameLabel",
+      "childAlignment": "upperLeft",
+      "edgePlacement": {
+        "anchorY": 1.0
+      }
+    },
+    "rendertextureview": {
+      "sizing": {
+        "scaleOffset": -2147483648,
+        "sizeY": 0.0,
+        "minY": 0.0,
+        "sizeX": 0.0,
+        "minX": 0.0,
+        "weightY": 1.0,
+        "weightX": 1.0
+      }
+    },
+    "cycle": {
+      "scaleOffset": -1,
+      "sizing": {
+        "scaleOffset": -2147483648,
+        "sizeX": 0.0,
+        "minX": 0.0,
+        "weightX": 1.0
+      },
+      "spacing": {
+        "padding": [
+          6.18034,
+          3.81966019
+        ],
+        "gap": 3.81966019
+      },
+      "contentShape": {
+        "cornerRadius": 2.36067986
+      },
+      "text": {
+        "kern": 5.0,
+        "weight": 600,
+        "size": 10.0,
+        "casing": "allCapitals",
+        "truncation": "ellipsis"
+      },
+      "border": {
+        "width": 1.45898032,
+        "borderEdges": []
+      },
+      "glyph": {
+        "size": 10.0
+      },
+      "flow": "right",
+      "accents": "glyph, nameLabel, valueLabel"
+    },
+    "default": {
+      "text": {
+        "kern": 8.0,
+        "weight": 700,
+        "size": 16.18034,
+        "truncation": "none"
+      }
+    },
+    "glyph": {},
+    "lightbox": {
+      "border": {
+        "width": 1.45898032
+      }
+    },
+    "namelabel": {
+      "sizing": {
+        "scaleOffset": -2147483648,
+        "sizeX": 0.0,
+        "minX": 0.0,
+        "weightX": 1.0
+      },
+      "spacing": {
+        "padding": [
+          6.18034,
+          0.0
+        ]
+      }
+    },
+    "valuelabel": {
+      "text": {
+        "kern": 5.0,
+        "weight": 600,
+        "casing": "none"
+      }
+    },
+    "divider": {
+      "sizing": {
+        "scaleOffset": -2147483648,
+        "sizeY": 1.45898032,
+        "minY": 1.45898032,
+        "sizeX": 1.45898032,
+        "minX": 1.45898032
+      },
+      "border": {
+        "width": 1.45898032
+      },
+      "opacity": {
+        "value": 1.0
+      }
+    },
+    "up": {
+      "sizing": {
+        "weightY": 0.0,
+        "weightX": 1.0
+      },
+      "spacing": {
+        "padding": [
+          0.0,
+          0.0
+        ],
+        "gap": 0.0
+      },
+      "border": {
+        "width": 1.0,
+        "accentAlpha": 0.145898029,
+        "borderEdges": [
+          "down"
+        ]
+      },
+      "flow": "right",
+      "childAlignmentRelative": "inner"
+    },
+    "left": {
+      "sizing": {
+        "weightY": 1.0,
+        "weightX": 0.0
+      },
+      "spacing": {
+        "padding": [
+          0.0,
+          0.0
+        ],
+        "gap": 0.0
+      },
+      "border": {
+        "width": 3.2,
+        "accentAlpha": 0.145898029,
+        "borderEdges": [
+          "right"
+        ]
+      },
+      "flow": "down",
+      "childAlignmentRelative": "inner"
+    },
+    "right": {
+      "sizing": {
+        "weightY": 1.0,
+        "weightX": 0.0
+      },
+      "spacing": {
+        "padding": [
+          0.0,
+          0.0
+        ],
+        "gap": 0.0
+      },
+      "border": {
+        "width": 3.2,
+        "accentAlpha": 0.145898029,
+        "borderEdges": [
+          "left"
+        ]
+      },
+      "flow": "down",
+      "childAlignmentRelative": "inner"
+    },
+    "down": {
+      "sizing": {
+        "weightY": 0.0,
+        "weightX": 1.0
+      },
+      "spacing": {
+        "padding": [
+          0.0,
+          0.0
+        ],
+        "gap": 0.0
+      },
+      "border": {
+        "width": 1.0,
+        "accentAlpha": 0.145898029,
+        "borderEdges": [
+          "up"
+        ]
+      },
+      "flow": "right",
+      "childAlignmentRelative": "inner"
+    }
+  },
+  "components": {},
+  "viewport": {
+    "maxContentWidth": 1824.0,
+    "minHeightVh": 400.0,
+    "categories": [
+      "Abilities",
+      "Environment",
+      "Paint"
+    ]
+  },
+  "scale": {
+    "defaultIndex": 6,
+    "resolutionRule": "equationOverHardcoded",
+    "steps": [
+      {
+        "sizing": 24.0,
+        "spacing": [
+          3.0,
+          3.0
+        ],
+        "text": {
+          "size": 5.0
+        }
+      },
+      {
+        "sizing": 32.0,
+        "spacing": [
+          4.0,
+          4.0
+        ],
+        "text": {
+          "size": 5.5
+        }
+      },
+      {
+        "sizing": 40.0,
+        "spacing": [
+          5.0,
+          5.0
+        ],
+        "text": {
+          "size": 6.0
+        }
+      },
+      {
+        "sizing": 48.0,
+        "spacing": [
+          6.0,
+          6.0
+        ],
+        "text": {
+          "size": 6.5
+        }
+      },
+      {
+        "sizing": 64.0,
+        "spacing": [
+          8.0,
+          8.0
+        ],
+        "text": {
+          "size": 7.0
+        }
+      },
+      {
+        "sizing": 96.0,
+        "spacing": [
+          10.0,
+          10.0
+        ],
+        "text": {
+          "size": 8.0
+        }
+      },
+      {
+        "sizing": 128.0,
+        "spacing": [
+          12.0,
+          12.0
+        ],
+        "text": {
+          "size": 10.0
+        }
+      },
+      {
+        "sizing": 192.0,
+        "spacing": [
+          16.0,
+          16.0
+        ],
+        "text": {
+          "size": 12.0
+        }
+      },
+      {
+        "sizing": 256.0,
+        "spacing": [
+          20.0,
+          20.0
+        ],
+        "text": {
+          "size": 14.0
+        }
+      }
+    ],
+    "func": {
+      "kern": "index.text.size * 0.006"
+    }
+  },
+  "knobGeometry": {
+    "defaultSize": 40.0,
+    "startAngle": 225.0,
+    "endAngle": 495.0
+  },
+  "controllerGeometry": {
+    "width": 400.0,
+    "height": 220.0,
+    "maximumWidth": 240.0,
+    "sideX": 70.0,
+    "upperY": 105.0,
+    "lowerY": 178.0,
+    "faceStep": 32.0,
+    "faceRadius": 13.0,
+    "stickRadius": 26.0,
+    "stickInnerRadius": 19.0,
+    "shoulderWidth": 104.0,
+    "triggerWidth": 84.0,
+    "triggerHeight": 32.0,
+    "bumperHeight": 12.0,
+    "triggerY": 20.0,
+    "bumperY": 48.0,
+    "metaOffset": 24.0,
+    "metaY": 105.0,
+    "metaRadius": 9.0,
+    "dpadStep": 14.0,
+    "dpadSize": 24.0,
+    "dpadHeight": 28.0,
+    "strokeWidth": 1.0,
+    "phaseInset": 3.0,
+    "buttonInset": 2.4,
+    "hitRadius": 20.0
+  },
+  "graphInset": 24.0,
+  "nameLabelIconHeight": 16.18034,
+  "controllerControls": {
+    "LeftTrigger": [
+      70.0,
+      20.0,
+      84.0,
+      32.0
+    ],
+    "RightTrigger": [
+      330.0,
+      20.0,
+      84.0,
+      32.0
+    ],
+    "LeftBumper": [
+      70.0,
+      48.0,
+      104.0,
+      12.0
+    ],
+    "RightBumper": [
+      330.0,
+      48.0,
+      104.0,
+      12.0
+    ],
+    "NorthButton": [
+      330.0,
+      73.0,
+      26.0,
+      26.0
+    ],
+    "SouthButton": [
+      330.0,
+      137.0,
+      26.0,
+      26.0
+    ],
+    "WestButton": [
+      298.0,
+      105.0,
+      26.0,
+      26.0
+    ],
+    "EastButton": [
+      362.0,
+      105.0,
+      26.0,
+      26.0
+    ],
+    "MoveJoystickPress": [
+      70.0,
+      105.0,
+      52.0,
+      52.0
+    ],
+    "CameraJoystickPress": [
+      260.0,
+      178.0,
+      52.0,
+      52.0
+    ],
+    "SelectButton": [
+      176.0,
+      105.0,
+      18.0,
+      18.0
+    ],
+    "StartButton": [
+      224.0,
+      105.0,
+      18.0,
+      18.0
+    ],
+    "Movement": [
+      70.0,
+      105.0,
+      38.0,
+      38.0
+    ],
+    "Camera": [
+      260.0,
+      178.0,
+      38.0,
+      38.0
+    ],
+    "Up": [
+      140.0,
+      164.0,
+      24.0,
+      28.0,
+      0.0
+    ],
+    "Down": [
+      140.0,
+      192.0,
+      24.0,
+      28.0,
+      180.0
+    ],
+    "Left": [
+      126.0,
+      178.0,
+      24.0,
+      28.0,
+      90.0
+    ],
+    "Right": [
+      154.0,
+      178.0,
+      24.0,
+      28.0,
+      -90.0
+    ]
+  },
+  "controllerDpadOutline": [
+    [
+      128.0,
+      150.0
+    ],
+    [
+      152.0,
+      150.0
+    ],
+    [
+      152.0,
+      166.0
+    ],
+    [
+      168.0,
+      166.0
+    ],
+    [
+      168.0,
+      190.0
+    ],
+    [
+      152.0,
+      190.0
+    ],
+    [
+      152.0,
+      206.0
+    ],
+    [
+      128.0,
+      206.0
+    ],
+    [
+      128.0,
+      190.0
+    ],
+    [
+      112.0,
+      190.0
+    ],
+    [
+      112.0,
+      166.0
+    ],
+    [
+      128.0,
+      166.0
+    ],
+    [
+      128.0,
+      150.0
+    ]
+  ]
+}

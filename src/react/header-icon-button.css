@@ -1,0 +1,15 @@
+/* Header icon buttons: one size, palette colour and hover glow wherever a header,
+   toolbar or notice shows a square icon control. */
+.app-root .header-icon-button { --header-control-radius:9px;display:inline-flex;align-items:center;justify-content:center;flex:none;width:var(--header-control);height:var(--header-control);padding:var(--header-control-padding,5px);border:var(--line-width) solid var(--header-border-color,var(--line));border-radius:var(--header-control-radius);background:var(--card);color:var(--pink);text-decoration:none;transition:border-color .18s,background .18s,box-shadow .18s; }
+/* Header icons share one drawn size; the jar reads a touch larger. */
+.header-icon-button>svg { width:var(--header-icon-size);height:var(--header-icon-size); }
+/* Hover and focus glow. A button that opts in with data-dim-disabled (the season
+   footer's Play and Sim) dims instead while disabled; `:where` leaves the glow's
+   specificity as it is for every other icon button. */
+.app-root .header-icon-button:not([data-appearance=bare]):where(:not([data-dim-disabled]:disabled)):hover,.app-root .header-icon-button:not([data-appearance=bare]):focus-visible { border-color:var(--header-hover-border,var(--pink));background:var(--header-hover-background,var(--pink-wash));box-shadow:var(--header-hover-shadow,0 0 12px color-mix(in srgb,var(--pink) 28%,transparent)); }
+.app-root .header-icon-button[data-appearance=bare] { border:0;border-radius:0;background:transparent;box-shadow:none; }
+.app-root .header-icon-button[data-appearance=bare]:is(:hover,:focus-visible):not(:disabled)>svg { filter:drop-shadow(0 0 5px currentColor); }
+.app-root .header-icon-button[data-dim-disabled]:disabled { opacity:.55;cursor:default; }
+.app-root .header-icon-button:focus-visible { outline:var(--focus-outline,2px solid var(--pink));outline-offset:3px; }
+@media(prefers-reduced-motion:reduce) { .app-root .header-icon-button { transition:none; } }
+.header-icon-button[data-active] { --header-border-color:var(--pink);box-shadow:0 0 8px var(--pink-wash); }

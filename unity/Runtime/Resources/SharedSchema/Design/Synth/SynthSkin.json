@@ -1,0 +1,933 @@
+{
+  "meta": {
+    "type": "skinBase",
+    "version": "2.0",
+    "tokens": "SynthDesignTokens.json",
+    "inherit": "null"
+  },
+  "structure": {
+    "grid": {
+      "columns": 6,
+      "rowFlex": [0.809017, 0.809017, 0.809017, 0.5, 0.872678, 0.436339]
+    },
+    "node": {
+      "background": null,
+      "border": null,
+      "spacing": null,
+      "sizeAdj": null
+    },
+    "edges": {
+      "y": {
+        "spacing": {
+          "padding": [
+            0,
+            0
+          ]
+        },
+        "minExtent": 24
+      },
+      "-y": {
+        "spacing": {
+          "padding": [
+            0,
+            0
+          ]
+        },
+        "minExtent": 24
+      },
+      "-x": {
+        "spacing": {
+          "padding": [
+            0,
+            0
+          ]
+        },
+        "textSizeAdj": -1,
+        "minExtent": 48
+      },
+      "x": {
+        "spacing": {
+          "padding": [
+            0,
+            0
+          ]
+        },
+        "textSizeAdj": -1,
+        "minExtent": 48
+      }
+    },
+    "arrangements": {
+      "grid": {
+        "columns": 2,
+        "axis": "x"
+      },
+      "stack": {
+        "axis": "y"
+      },
+      "split": {
+        "axis": "x"
+      },
+      "flow": {
+        "wrap": true
+      },
+      "single": {
+        "fill": true
+      }
+    },
+    "accent": {
+      "height": 3,
+      "edge": "-y",
+      "glowOnActive": true
+    }
+  },
+  "settings": {
+    "displayMode": {
+      "default": "cutout",
+      "variants": {
+        "cutout": {
+          "shadow": "cutout",
+          "background": {
+            "type": "gradient",
+            "angle": 145
+          },
+          "contentShape": {
+            "cornerRadius": 8
+          }
+        },
+        "flat": {
+          "shadow": null,
+          "background": {
+            "type": "solid"
+          },
+          "contentShape": {
+            "cornerRadius": 6
+          }
+        }
+      }
+    },
+    "casing": {
+      "default": "allCapitals",
+      "variants": {
+        "allCapitals": {
+          "textTransform": "uppercase"
+        },
+        "wordCase": {
+          "textTransform": "capitalize"
+        },
+        "lowerCase": {
+          "textTransform": "lowercase"
+        }
+      },
+      "scopes": {
+        "button": "allCapitals",
+        "enum": "allCapitals",
+        "title": "allCapitals",
+        "nodeTitle": "allCapitals",
+        "nodeChoice": "allCapitals"
+      }
+    },
+    "enumStyle": {
+      "default": "sharedBack",
+      "variants": {
+        "sharedBack": {
+          "container": "shared",
+          "highlight": "glow"
+        },
+        "distinct": {
+          "container": "distinct",
+          "highlight": "fill"
+        }
+      }
+    },
+    "enumGlowMode": {
+      "default": "glow",
+      "variants": {
+        "glow": {
+          "highlight": "glow"
+        },
+        "fill": {
+          "highlight": "fill"
+        }
+      }
+    },
+    "numberPickerContrast": {
+      "default": "high",
+      "variants": {
+        "subtle": {
+          "opacity": {
+            "value": 0.3
+          }
+        },
+        "medium": {
+          "opacity": {
+            "value": 0.6
+          }
+        },
+        "high": {
+          "opacity": {
+            "value": 1.0
+          }
+        }
+      }
+    },
+    "layoutMode": {
+      "default": "hd",
+      "variants": {
+        "hd": {
+          "aspectRatio": [
+            16,
+            9
+          ]
+        },
+        "square": {
+          "aspectRatio": [
+            1,
+            1
+          ]
+        }
+      }
+    },
+    "stripTitleAlign": {
+      "default": "left",
+      "variants": {
+        "left": {
+          "textAlign": "left"
+        },
+        "right": {
+          "textAlign": "right"
+        }
+      }
+    },
+    "accentColorMode": {
+      "default": "styled",
+      "variants": {
+        "styled": {
+          "source": "accent"
+        },
+        "primary": {
+          "source": "primary"
+        },
+        "secondary": {
+          "source": "secondary"
+        },
+        "custom": {
+          "source": "override"
+        }
+      }
+    },
+    "buttonWidth": {
+      "default": "consistent",
+      "variants": {
+        "consistent": {
+          "sizing": "uniform"
+        },
+        "fitToWidth": {
+          "sizing": "stretch"
+        }
+      }
+    },
+    "graphGrid": {
+      "x": {
+        "enabled": true,
+        "distance": 0.25
+      },
+      "y": {
+        "enabled": true,
+        "distance": 0.25
+      },
+      "opacity": 0.5,
+      "distanceOptions": [
+        0.0625,
+        0.125,
+        0.25,
+        0.5,
+        1,
+        2,
+        4
+      ]
+    }
+  },
+  "forms": {
+    "text": {
+      "sizeScale": [
+        6,
+        7,
+        8,
+        9,
+        10,
+        12,
+        14,
+        16,
+        20,
+        24
+      ],
+      "sizeIndex": 5,
+      "weight": 600,
+      "kerning": 0.05,
+      "lineHeight": 1.2,
+      "tiers": {
+        "title": {
+          "sizeAdj": 0,
+          "weight": 700,
+          "kerning": 0.1
+        },
+        "label": {
+          "sizeAdj": -2,
+          "weight": 600,
+          "kerning": 0.05
+        },
+        "value": {
+          "sizeAdj": -1,
+          "weight": 600,
+          "kerning": 0.02
+        },
+        "small": {
+          "sizeAdj": -3,
+          "weight": 500,
+          "kerning": 0.03
+        },
+        "tiny": {
+          "sizeAdj": -4,
+          "weight": 500,
+          "kerning": 0.02
+        },
+        "micro": {
+          "sizeAdj": -5,
+          "weight": 600,
+          "kerning": 0.05
+        }
+      }
+    },
+    "containers": {
+      "module": {
+        "inherit": "forms.base",
+        "contentShape": {
+          "cornerRadius": 0,
+          "roundedCorners": []
+        },
+        "spacing": {
+          "padding": [
+            0,
+            0
+          ]
+        },
+        "border": {
+          "width": 1,
+          "borderEdges": [
+            "up",
+            "right",
+            "down",
+            "left"
+          ],
+          "aboveContent": true
+        },
+        "shadow": {
+          "opacity": 0
+        }
+      },
+      "cutout": {
+        "inherit": "forms.base",
+        "contentShape": {
+          "cornerRadius": 0,
+          "roundedCorners": []
+        },
+        "spacing": {
+          "padding": [
+            0,
+            0
+          ]
+        },
+        "shadow": {
+          "opacity": 0
+        },
+        "border": {
+          "width": 1,
+          "borderEdges": [
+            "up",
+            "right",
+            "down",
+            "left"
+          ],
+          "aboveContent": true
+        }
+      },
+      "button": {
+        "inherit": "forms.base",
+        "contentShape": {
+          "cornerRadius": 4
+        },
+        "spacing": {
+          "padding": [
+            8,
+            8
+          ]
+        },
+        "edge": {
+          "width": 1
+        },
+        "shadowKey": "button"
+      },
+      "node": {
+        "inherit": "forms.base",
+        "contentShape": {
+          "cornerRadius": 8
+        },
+        "spacing": {
+          "padding": [
+            12,
+            12
+          ]
+        },
+        "edge": {
+          "width": 1
+        },
+        "shadowKey": "node"
+      }
+    },
+    "components": {
+      "knob": {
+        "inherit": "forms.base",
+        "arc": {
+          "startAngle": 225,
+          "sweep": 270
+        },
+        "inner": {
+          "gradient": {
+            "type": "radial",
+            "center": [
+              0.3,
+              0.3
+            ],
+            "stops": [
+              "borderColor:1.0",
+              "borderColor:0.8",
+              "cutoutBorder:1.0"
+            ]
+          },
+          "shadowKey": "knobInner"
+        },
+        "indicator": {
+          "small": [
+            3,
+            6
+          ],
+          "large": [
+            4,
+            8
+          ]
+        },
+        "presets": {
+          "mini": {
+            "widgetSizeIndex": 3,
+            "stroke": 2,
+            "layout": "y",
+            "labelStyle": 1,
+            "features": []
+          },
+          "standard": {
+            "widgetSizeIndex": 5,
+            "stroke": 3,
+            "layout": "y",
+            "labelStyle": 0,
+            "features": []
+          },
+          "detailed": {
+            "widgetSizeIndex": 7,
+            "stroke": 4,
+            "layout": "y",
+            "labelStyle": 1,
+            "features": [
+              0,
+              1
+            ]
+          },
+          "integer": {
+            "widgetSizeIndex": 7,
+            "stroke": 4,
+            "layout": "y",
+            "labelStyle": 1,
+            "features": [
+              0,
+              1
+            ]
+          },
+          "compact": {
+            "widgetSizeIndex": 4,
+            "stroke": 2,
+            "layout": "x",
+            "labelStyle": 0,
+            "features": []
+          },
+          "range": {
+            "widgetSizeIndex": 5,
+            "stroke": 3,
+            "layout": "y",
+            "labelStyle": 1,
+            "features": []
+          }
+        },
+        "label": {
+          "edge": "-y",
+          "textSizeAdj": -2
+        },
+        "value": {
+          "edge": "center",
+          "textSizeAdj": -3
+        },
+        "spacing": {
+          "padding": [0, 0, 4.8, 0]
+        },
+        "text": {
+          "nameLabelOpacity": 0.6,
+          "valueLabelOpacity": 0.8
+        },
+        "variants": {
+          "None": {
+            "opacity": {
+              "value": 1.0
+            }
+          },
+          "Disabled": {
+            "opacity": {
+              "value": 0.7
+            }
+          }
+        }
+      },
+      "divider": {
+        "palette": {
+          "border": "rgba(250,250,250,0.09)"
+        }
+      },
+      "slider": {
+        "inherit": "forms.base",
+        "variants": {
+          "None": {
+            "text": {
+              "valueLabelOpacity": 0.5
+            },
+            "opacity": {
+              "value": 1.0
+            }
+          }
+        },
+        "trackHeight": 4,
+        "handleSize": 12,
+        "label": {
+          "edge": "-x"
+        },
+        "value": {
+          "edge": "x",
+          "textSizeAdj": -1
+        }
+      },
+      "boolean": {
+        "inherit": "forms.base",
+        "sizes": [
+          10,
+          16,
+          24,
+          32
+        ],
+        "border": {
+          "radius": 4
+        }
+      },
+      "graph": {
+        "inherit": "forms.base",
+        "grid": {
+          "opacityKey": "faint"
+        },
+        "fill": {
+          "opacityKeys": [
+            "low",
+            "faint",
+            "ghost"
+          ]
+        },
+        "curve": {
+          "stroke": 1.5,
+          "opacityKey": "hover"
+        },
+        "handle": {
+          "widgetSizeIndex": 1
+        }
+      },
+      "incrementer": {
+        "inherit": "forms.base",
+        "buttonWidgetSizeIndex": 3,
+        "border": {
+          "radius": 4
+        },
+        "value": {
+          "edge": "center"
+        }
+      },
+      "colorSwatch": {
+        "inherit": "forms.base",
+        "widgetSizeIndex": 4,
+        "border": {
+          "width": 2
+        },
+        "shadowKey": "carved"
+      },
+      "tabs": {
+        "inherit": "forms.base",
+        "edge": "y",
+        "arrangement": "flow",
+        "selection": {
+          "mode": "exclusive",
+          "highlight": "glow",
+          "container": "shared"
+        },
+        "item": {
+          "textSizeAdj": -1,
+          "glyph": {
+            "edge": "-x",
+            "widgetSizeIndex": 1
+          },
+          "accent": {
+            "edge": "-y",
+            "height": 3,
+            "glowOnActive": true
+          }
+        }
+      },
+      "rack": {
+        "inherit": "forms.base",
+        "edge": "x",
+        "arrangement": "stack",
+        "selection": {
+          "mode": "exclusive",
+          "highlight": "fill",
+          "container": "shared"
+        },
+        "item": {
+          "textSizeAdj": -1,
+          "accent": {
+            "edge": "-x",
+            "height": 3,
+            "glowOnActive": true
+          }
+        }
+      },
+      "strip": {
+        "inherit": "forms.base",
+        "edge": "y",
+        "arrangement": "split",
+        "selection": {
+          "mode": "independent",
+          "highlight": "fill",
+          "container": "distinct"
+        },
+        "item": {
+          "textSizeAdj": -2,
+          "accent": {
+            "edge": "-y",
+            "height": 2,
+            "glowOnActive": false
+          }
+        }
+      },
+      "pills": {
+        "inherit": "forms.base",
+        "edge": "y",
+        "arrangement": "flow",
+        "selection": {
+          "mode": "exclusive",
+          "highlight": "fill",
+          "container": "distinct"
+        },
+        "item": {
+          "textSizeAdj": -2,
+          "border": {
+            "radius": 4
+          }
+        }
+      },
+      "selection": {
+        "axes": {
+          "mode": [
+            "exclusive",
+            "independent"
+          ],
+          "visibility": [
+            "all",
+            "activeOnly",
+            "scrollable"
+          ],
+          "container": [
+            "shared",
+            "distinct"
+          ],
+          "highlight": [
+            "glow",
+            "fill"
+          ]
+        },
+        "shared": {
+          "gap": 4,
+          "border": "none",
+          "glow": {
+            "shadowKey": "glow"
+          },
+          "fill": {
+            "backgroundAlphaKey": "ghost",
+            "accentAlphaKey": "faint"
+          },
+          "inactiveAlphaKey": "dim",
+          "transitionSeconds": 0.2
+        },
+        "distinct": {
+          "gap": 4,
+          "border": {
+            "width": 2
+          },
+          "selectedOpacityKey": "full",
+          "unselectedOpacityKey": "medium"
+        },
+        "activeOnly": {
+          "normalAlphaKey": "high",
+          "hoverAlphaKey": "hover"
+        }
+      }
+    },
+    "base": {
+      "scales": {
+        "widget": [
+          10,
+          16,
+          24,
+          32,
+          40,
+          46,
+          60,
+          75,
+          96
+        ],
+        "spacing": [
+          2,
+          4,
+          8,
+          12,
+          16,
+          24,
+          48
+        ]
+      },
+      "spacing": {
+        "padding": [
+          0,
+          0
+        ],
+        "gap": 12,
+        "sectionGap": 24
+      },
+      "edge": {
+        "width": 1
+      },
+      "shadow": {
+        "module": {
+          "drop": [
+            0,
+            4,
+            16,
+            0.5
+          ],
+          "insetHighlight": [
+            0,
+            1,
+            0,
+            0.03
+          ]
+        },
+        "cutout": {
+          "inset": [
+            [
+              0,
+              2,
+              8,
+              0.6
+            ],
+            [
+              0,
+              1,
+              2,
+              0.4
+            ]
+          ],
+          "highlight": [
+            0,
+            1,
+            0,
+            0.03
+          ]
+        },
+        "button": {
+          "inset": [
+            [
+              0,
+              2,
+              4,
+              0.4
+            ]
+          ]
+        },
+        "carved": {
+          "inset": [
+            [
+              0,
+              2,
+              6,
+              0.5
+            ]
+          ],
+          "insetHighlight": [
+            0,
+            -1,
+            2,
+            0.08
+          ]
+        },
+        "glow": {
+          "scale": 12
+        },
+        "knobInner": {
+          "small": {
+            "drop": [
+              0,
+              1,
+              3,
+              0.5
+            ],
+            "insetScheme": "inner"
+          },
+          "standard": {
+            "drop": [
+              0,
+              2,
+              4,
+              0.4
+            ],
+            "insetScheme": "inner",
+            "insetBottom": [
+              0,
+              -1,
+              2,
+              0.6
+            ]
+          },
+          "large": {
+            "drop": [
+              0,
+              3,
+              6,
+              0.5
+            ],
+            "insetScheme": "inner:2:4",
+            "insetBottom": [
+              0,
+              -2,
+              4,
+              0.7
+            ]
+          }
+        }
+      },
+      "opacity": {
+        "full": 1.0,
+        "hover": 0.9,
+        "solid": 0.85,
+        "high": 0.8,
+        "medium": 0.6,
+        "half": 0.5,
+        "low": 0.4,
+        "dim": 0.3,
+        "subtle": 0.25,
+        "inactive": 0.2,
+        "faint": 0.15,
+        "trace": 0.12,
+        "ghost": 0.07
+      },
+      "glow": {
+        "intensity": 1.0,
+        "scale": 12
+      },
+      "interaction": {
+        "active": {
+          "background": {
+            "type": "gradient",
+            "angle": 135,
+            "stops": [
+              "main:1.0",
+              "main:0.85"
+            ]
+          },
+          "shadow": "glow",
+          "insetHighlight": [
+            0,
+            1,
+            2,
+            "white:0.3"
+          ],
+          "border": "main:0.6"
+        },
+        "inactive": {
+          "background": {
+            "type": "solid",
+            "colorRole": "cutoutBorder"
+          },
+          "shadow": "cutout",
+          "border": "black:0.4"
+        },
+        "hover": {
+          "glowBoost": true,
+          "opacityKey": "hover"
+        },
+        "disabled": {
+          "opacityKey": "inactive"
+        },
+        "inherit": {
+          "background": {
+            "type": "transparent"
+          },
+          "border": {
+            "colorRole": "main",
+            "alpha": 0.4,
+            "style": 1
+          },
+          "shadow": "none"
+        }
+      },
+      "colorDerivation": {
+        "glowAlpha": 0.6,
+        "innerAlpha": 0.15,
+        "fillAlpha": 0.4,
+        "gradientAlpha": [
+          0.6,
+          0.05
+        ]
+      },
+      "palette": {
+        "primary": null,
+        "secondary": null,
+        "tertiary": null,
+        "accent": null,
+        "background": null,
+        "backgroundGradient": null,
+        "text": "#fafafa",
+        "border": "rgba(250,250,250,0.24)",
+        "outline": "rgba(250,250,250,0.24)",
+        "glow": null,
+        "inactive": "rgba(181,181,181,0.35)"
+      },
+      "variants": {
+        "Selected": {
+          "palette": {
+            "primary": "#fafafa"
+          }
+        }
+      }
+    }
+  }
+}

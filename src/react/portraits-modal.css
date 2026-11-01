@@ -1,0 +1,102 @@
+/* ============================================================================
+   Bloom Design — modal and portrait primitives. Structure only;
+   colour/rounding come from host CSS custom properties (--card, --line, --r, …)
+   so the consuming app's palette themes these. The existing `sd-` CSS contracts remain stable for consumers.
+   ========================================================================== */
+
+/* Components own their box geometry even without an application reset. */
+.sd-modal-bg,.sd-modal,.sd-pi,.sd-pi * { box-sizing:border-box; }
+
+/* ---- Modal ---- */
+/* The modal layer; a host lifts a stacking context holding an open modal to it. */
+:root { --sd-modal-layer: 60; }
+.sd-modal-bg {
+  position: fixed; inset: 0; z-index: var(--sd-modal-layer); display: grid; place-items: center;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.55); backdrop-filter: blur(2px);
+  opacity: 0; transition: opacity 0.2s ease;
+}
+.sd-modal-bg.sd-in { opacity: 1; }
+.sd-modal {
+  width: min(380px, 92vw); max-height: 92vh; overflow: auto;
+  border-radius: var(--r, 14px); background: var(--card, var(--color-surface, #17171b));
+  border: 1px solid var(--line, var(--color-line, rgba(255, 255, 255, 0.08)));
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+  transform: translateY(8px) scale(0.985); transition: transform 0.2s ease;
+}
+.sd-modal-bg.sd-in .sd-modal { transform: none; }
+/* A blocking dialog takes focus itself until a control inside it does. */
+.sd-modal[tabindex="-1"]:focus { outline: none; }
+/* Reduced motion: the dialog appears in place, with no rise. */
+@media (prefers-reduced-motion: reduce) {
+  .sd-modal-bg, .sd-modal { transition: none; }
+  .sd-modal { transform: none; }
+}
+
+/* ---- PlayerIcon ---- */
+.sd-pi {
+  --pi-accent: var(--pink, var(--color-accent, #c4678f));
+  position: relative; display: inline-block; flex: none;
+  width: var(--pi-size, 40px); height: var(--pi-size, 40px); line-height: 0;
+}
+.sd-pi[data-tone="pit"] { --pi-accent: var(--teal, var(--color-teal, #4bb3a6)); }
+.sd-pi[data-tone="bat"] { --pi-accent: var(--pink, var(--color-accent, #c4678f)); }
+.sd-pi-btn { cursor: pointer; padding: 0; background: none; border: 0; }
+
+.sd-pi-photo {
+  display: block; width: 100%; height: 100%; overflow: hidden;
+  border-radius: 50%; border: 1px solid var(--line, var(--color-line, rgba(255, 255, 255, 0.08)));
+  background: var(--card-hi, var(--color-surface-hi, #202027));
+  transition: box-shadow 0.12s;
+}
+.sd-pi-photo > * { display: block; width: 100% !important; height: 100% !important; }
+/* Player headshots are 2:3 with the cap above the face; this focus centers the
+   face in square and round crops. Hosts reuse it for their own headshot crops. */
+:root { --headshot-focus: center 28%;--player-ring-outset:4px; }
+.sd-pi-photo img { object-fit: cover; object-position: var(--headshot-focus); }
+/* bare — no backing box (e.g. headshots sitting directly on a busy surface) */
+.sd-pi-bare .sd-pi-photo { background: transparent; }
+.sd-pi-btn:hover .sd-pi-photo { box-shadow: 0 0 0 2px var(--pi-accent); }
+.sd-pi-sel .sd-pi-photo { box-shadow: 0 0 0 2px var(--pi-accent); }
+.sd-pi-faded { opacity: 0.55; }
+
+/* handedness dots — bottom corners, ringed in the surface colour (--pi-dot-edge,
+   which hosts can animate an active dot back to) */
+.sd-pi-dot {
+  --pi-dot-edge: 0 0 0 1.5px var(--card, var(--color-surface, #17171b));
+  z-index: 2;
+  position: absolute; bottom: 0; width: 5px; height: 5px; border-radius: 50%;
+  background: var(--pi-accent); box-shadow: var(--pi-dot-edge);
+}
+.sd-pi-dot-l { left: 0; }
+.sd-pi-dot-r { right: 0; }
+.sd-pi-dot[data-active=true] { box-shadow:0 0 5px 1px var(--pi-accent); }
+.sd-pi-dot[data-active=false] { opacity:.3; }
+.sd-pi-hand-bonus { position:absolute;bottom:-2px;font-size:max(9px,calc(var(--pi-size)*.25));line-height:1;color:var(--pi-accent);font-weight:800;white-space:nowrap;text-shadow:0 0 7px currentColor; }
+.sd-pi-dot-l .sd-pi-hand-bonus { right:calc(100% + 3px); }
+.sd-pi-dot-r .sd-pi-hand-bonus { left:calc(100% + 3px); }
+
+/* top-corner accents — a primary rating (left) + a secondary metric (right) */
+.sd-pi-acc {
+  z-index: 2;
+  position: absolute; top: 0; font-size: 9px; font-weight: 800; line-height: 1;
+  letter-spacing: -0.03em; pointer-events: none;
+  text-shadow: 0 0 3px var(--card, var(--color-surface, #17171b)), 0 0 3px var(--card, var(--color-surface, #17171b)), 0 0 2px var(--card, var(--color-surface, #17171b));
+}
+.sd-pi-acc-l { left:calc(-1 * var(--player-ring-outset)); color: var(--pi-accent); }
+.sd-pi-acc-r { right:calc(-1 * var(--player-ring-outset)); color: var(--dim, var(--color-dim, #9a9aa2)); }
+
+/* progress ring — sits just outside the photo, sweeping from the top */
+.sd-pi-ring {
+  position: absolute;
+  left:calc(-1 * var(--player-ring-outset)); top:calc(-1 * var(--player-ring-outset));
+  width:calc(100% + 2 * var(--player-ring-outset)); height:calc(100% + 2 * var(--player-ring-outset));
+  transform: rotate(-90deg); transform-origin:50% 50%; pointer-events: none; overflow: visible;
+}
+.sd-pi-ring-fg {
+  fill: none; stroke: var(--pi-accent); stroke-linecap: round;
+}
+/* Segments tile end to end; a glowing one lights in its own color. */
+.sd-pi-ring-fg[data-segment=true] { stroke-linecap: butt; }
+.sd-pi-ring-fg[data-glow=true] { filter: drop-shadow(0 0 2.5px currentColor); }
+

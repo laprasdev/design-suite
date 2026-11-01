@@ -1,0 +1,7 @@
+{
+  "name": "com.looms.design-suite",
+  "version": "1.0.0",
+  "displayName": "Design Suite",
+  "description": "The skins and design tokens shared by Unity and the web. Unity reads this folder directly.",
+  "unity": "6000.3"
+}

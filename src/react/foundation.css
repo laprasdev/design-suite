@@ -1,0 +1,12 @@
+:where(:root) {
+ --header-control-compact:26px;--header-control:var(--header-control-compact);
+ --header-gap-compact:8px;--header-gap:var(--header-gap-compact);
+ --header-icon-size:20px;--page-gutter:0px;--popover-layer:10000;
+ --label-action-size:12px;--surface-chrome:var(--card);
+}
+/* Reset plain buttons, but not composable ones. `:where` keeps the exclusion at zero
+   specificity so component button styles still win. */
+.app-root button:where(:not(.bd-btn)) { font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer; }
+:where(:root) { --segment-padding-block:3px;--segment-padding-inline:10px; }
+/* One select chrome: its caret sits as far in from the right as its text sits from the left. */
+.app-root { --select-inset:12px;--select-caret:4px; }

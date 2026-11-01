@@ -1,0 +1,6 @@
+.gp-hover-anchor { position:relative;outline-offset:3px;cursor:help; }
+/* Details that open on click: hover and keyboard focus brighten the trigger to its full strength first. */
+.gp-hover-anchor[data-open-on=click] { --detail-ease:.18s ease;cursor:pointer;transition:filter var(--detail-ease),opacity var(--detail-ease),color var(--detail-ease); }
+.gp-hover-anchor[data-open-on=click]:is(:hover,:focus-visible,[aria-expanded=true]) { opacity:1;filter:brightness(1.25); }
+.gp-hover-detail { position:fixed;z-index:var(--popover-layer);max-width:min(360px,calc(100vw - 16px));padding:16px;border:var(--line-width) solid var(--pink);border-radius:12px;background:var(--surface,#19191f);box-shadow:0 12px 36px #0009;color:var(--text,#eee);font-family:var(--font);font-size:12px;line-height:1.5;box-sizing:border-box;pointer-events:none; }
+.gp-hover-detail[role=dialog] { pointer-events:auto; }

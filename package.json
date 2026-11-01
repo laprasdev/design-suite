@@ -1,0 +1,85 @@
+{
+  "name": "@looms/bloom-design",
+  "version": "1.0.0",
+  "description": "Bloom Design tokens, theming and composable React controls, dialogs, portraits and node graphs.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "source": "./src/index.ts",
+      "default": "./dist/index.js"
+    },
+    "./tokens": {
+      "types": "./src/tokens.ts",
+      "source": "./src/tokens.ts",
+      "default": "./dist/tokens.js"
+    },
+    "./layout": {
+      "types": "./src/layout.ts",
+      "source": "./src/layout.ts",
+      "default": "./dist/layout.js"
+    },
+    "./color": {
+      "types": "./src/color.ts",
+      "source": "./src/color.ts",
+      "default": "./dist/color.js"
+    },
+    "./theme": {
+      "types": "./src/theme.ts",
+      "source": "./src/theme.ts",
+      "default": "./dist/theme.js"
+    },
+    "./skins": {
+      "types": "./src/skins.ts",
+      "source": "./src/skins.ts",
+      "default": "./dist/skins.js"
+    },
+    "./react": {
+      "types": "./src/react/index.ts",
+      "source": "./src/react/index.ts",
+      "default": "./dist/react/index.js"
+    },
+    "./react/styles.css": {
+      "source": "./src/react/styles.css",
+      "default": "./dist/react/styles.css"
+    },
+    "./modal-room": {
+      "types": "./src/react/modalRoom.ts",
+      "source": "./src/react/modalRoom.ts",
+      "default": "./dist/react/modalRoom.js"
+    },
+    "./synth/*": "./src/synth/*"
+  },
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "peerDependencies": {
+    "react": ">=18"
+  },
+  "license": "UNLICENSED",
+  "files": [
+    "dist",
+    "src",
+    "unity",
+    "scripts/build.mjs",
+    "README.md",
+    "examples"
+  ],
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "prepare": "npm run build",
+    "check": "tsc -p .",
+    "test": "node --test tests/*.test.ts"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.31",
+    "@types/react-dom": "^18.3.7",
+    "esbuild": "0.28.2",
+    "typescript": "^7.0.2"
+  },
+  "dependencies": {
+    "lucide-react": "^0.487.0"
+  }
+}

@@ -1,0 +1,50 @@
+{
+  "meta": {
+    "label": "Midnight Blue",
+    "inherit": "../SynthSkin.json",
+    "priority": 80
+  },
+  "forms": {
+    "base": {
+      "palette": {
+        "primary": "#5b9aff",
+        "secondary": "#b45bff",
+        "background": "#0a0a14",
+        "backgroundGradient": "#12121f",
+        "cutoutBackground": "#0e0e1a",
+        "cutoutBorder": "#1f2540",
+        "glow": "rgba(91,154,255,0.6)",
+        "knobGradient": [
+          "#1a2540",
+          "#1f2540"
+        ]
+      },
+      "shadow": {
+        "cutout": {
+          "inset": [
+            [
+              0,
+              2,
+              8,
+              0.8
+            ]
+          ],
+          "highlight": [
+            0,
+            1,
+            0,
+            0.08
+          ],
+          "highlightColor": "#5b9aff"
+        }
+      }
+    },
+    "components": {
+      "cycle": {
+        "palette": {
+          "border": "#5b9aff"
+        }
+      }
+    }
+  }
+}

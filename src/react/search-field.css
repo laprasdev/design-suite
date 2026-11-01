@@ -1,0 +1,4 @@
+
+.app-root .search-field { display:block;box-sizing:border-box;width:100%;min-width:0;min-height:var(--setup-field-height);margin:0;padding:9px 12px;border:var(--line-width) solid var(--line);border-radius:var(--r-sm);background:var(--card);color:var(--text);font:inherit; }
+.app-root .search-field[data-density=compact] { min-height:var(--header-control-compact);padding:calc(var(--field-gap) / 4) var(--field-gap);font-size:var(--caption-size); }
+.app-root .search-field::placeholder { color:var(--dim);opacity:1; }

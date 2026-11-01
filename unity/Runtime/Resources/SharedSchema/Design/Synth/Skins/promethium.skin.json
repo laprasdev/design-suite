@@ -1,0 +1,50 @@
+{
+  "meta": {
+    "label": "Promethium",
+    "inherit": "../SynthSkin.json",
+    "priority": 60
+  },
+  "forms": {
+    "base": {
+      "palette": {
+        "primary": "#33cccc",
+        "secondary": "#4de88d",
+        "background": "#0a1216",
+        "backgroundGradient": "#0e181e",
+        "cutoutBackground": "#0c1820",
+        "cutoutBorder": "#1a3545",
+        "glow": "rgba(51,204,204,0.6)",
+        "knobGradient": [
+          "#1a3040",
+          "#1a3545"
+        ]
+      },
+      "shadow": {
+        "cutout": {
+          "inset": [
+            [
+              0,
+              2,
+              8,
+              0.7
+            ]
+          ],
+          "highlight": [
+            0,
+            1,
+            0,
+            0.08
+          ],
+          "highlightColor": "#33cccc"
+        }
+      }
+    },
+    "components": {
+      "cycle": {
+        "palette": {
+          "border": "#33cccc"
+        }
+      }
+    }
+  }
+}
