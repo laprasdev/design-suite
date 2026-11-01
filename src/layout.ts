@@ -242,6 +242,8 @@ export const LayoutDimensions = {
     bodyGap: 12,
     columnGap: 12,
     rulesIndent: 16,
+    relationshipTypeColumns: 2,
+    statesRowGap: 8,
     gesturePhaseHeight: 20,
     gestureColumnWidth: 200,
     toolIconHeight: 20,

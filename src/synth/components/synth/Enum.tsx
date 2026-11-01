@@ -45,6 +45,8 @@ export interface SingleSelectEnumProps<T = string> extends BaseEnumProps<T> {
   variant?: 'full' | 'cycling' | 'options';
   /** Size in px for cycling variant button (default: uses SIZES.enumMinWidth) */
   size?: number;
+  /** How many columns the options form lays its choices in. */
+  columns?: number;
 }
 
 // =====================================================
@@ -310,11 +312,11 @@ function FullDistinctRenderer<T>({ options, isSelected: isSel, onSelect, scheme,
 // =====================================================
 // OPTIONS - Every choice in view on a module's grid, wrapping to fit
 // =====================================================
-function OptionsEnumRenderer<T>({ options, value, onChange, disabled, scheme, style, className = '' }: SingleSelectEnumProps<T> & RendererProps<T>) {
+function OptionsEnumRenderer<T>({ options, value, onChange, disabled, scheme, style, className = '', columns }: SingleSelectEnumProps<T> & RendererProps<T>) {
   const fmtLabel = useEnumLabel();
   const { optionColumns, optionGap, optionPaddingBlock, optionPaddingInline } = D.moduleGrid;
   return (
-    <div className={className} data-enum-options style={{ display: F.grid, width: '100%', gridTemplateColumns: `repeat(${Math.min(optionColumns, options.length)}, minmax(0, 1fr))`, gap: optionGap }}>
+    <div className={className} data-enum-options style={{ display: F.grid, width: '100%', gridTemplateColumns: `repeat(${Math.min(columns ?? optionColumns, options.length)}, minmax(0, 1fr))`, gap: optionGap }}>
       {options.map((option, index) => {
         const selected = option.value === value;
         return (
