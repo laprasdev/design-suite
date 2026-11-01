@@ -194,6 +194,23 @@ export const LayoutDimensions = {
     guideRemeasureMs: 1000,
     guideClipSlack: 1,
     overlayLayer: 2000,
+    // A flip: twice the suite's .17s, long enough to watch a page and its card trade places around the still Preview.
+    flipMs: 340,
+    flipEase: 'cubic-bezier(.22,1,.36,1)',
+    flipCardFadeDelayMs: 170,
+    flipLeavingLayer: 1,
+    flipArrivingLayer: 2,
+    frameLayer: 3,
+    arrangeLayer: 6,
+    // Arranging: how near a tile's edge a drop cuts in, what a gutter takes the mouse over, and where a cut can rest, so a layout stays on the ratio.
+    dropEdgeZone: 36,
+    gutterHit: 10,
+    gutterLine: 2,
+    arrangeText: 13,
+    cutStops: [(1 - PHI_INVERSE) * PHI_INVERSE, 1 - PHI_INVERSE, 0.5, PHI_INVERSE, 1 - (1 - PHI_INVERSE) * PHI_INVERSE],
+    // The smallest window an arrangement has to stay usable in, whichever window it's made in.
+    smallestWindowWidth: 1366,
+    smallestWindowHeight: 650,
   },
 
   // A module on the four-column grid: its fixed size in the rack, and how it fills a page's tile
