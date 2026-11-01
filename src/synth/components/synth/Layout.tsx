@@ -74,6 +74,10 @@ export interface ModuleCardCutoutProps {
   showTitle?: boolean;
 }
 
+// A surface that draws its own tile around a module turns this off, so the module brings no border of its own.
+export const ModuleFrameContext = React.createContext(true);
+const UNFRAMED: React.CSSProperties = { background: 'transparent', border: 'none', boxShadow: 'none', borderRadius: 0 };
+
 const CARD_COLUMN: React.CSSProperties = { display: 'flex', flexDirection: 'column', minWidth: 0, minHeight: 0, overflow: 'hidden' };
 const CARD_BODY: React.CSSProperties = { ...CARD_COLUMN, flex: 1, overflow: 'auto' };
 function ModuleCardHeader({ title, controls, showTitle }: { title?: string; controls?: React.ReactNode; showTitle: boolean }) {
@@ -91,7 +95,8 @@ function ModuleCardHeader({ title, controls, showTitle }: { title?: string; cont
 
 export function ModuleCardCutout({ children, className = '', width, style: customStyle, title, headerControls, showTitle = true }: ModuleCardCutoutProps) {
   const { getEffectiveStyle, advancedSettings } = useStyle();
-  const style = { ...LayoutAPI.getCutoutContainer(getEffectiveStyle(), advancedSettings.moduleDisplayMode), width, ...customStyle };
+  const ownFrame = React.useContext(ModuleFrameContext);
+  const style = { ...LayoutAPI.getCutoutContainer(getEffectiveStyle(), advancedSettings.moduleDisplayMode), ...(ownFrame ? {} : UNFRAMED), width, ...customStyle };
   const framed = Boolean(title || headerControls), header = Boolean((showTitle && title) || headerControls);
   return <div className={className} data-module-owner={title ?? ""} aria-label={title} style={framed ? { ...style, ...CARD_COLUMN } : style}>
     {header && <ModuleCardHeader title={title} controls={headerControls} showTitle={showTitle} />}
