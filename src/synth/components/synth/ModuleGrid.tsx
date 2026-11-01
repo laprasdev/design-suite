@@ -171,6 +171,13 @@ export function ModuleNumberInput({ value, onChange, ariaLabel, disabled, onFocu
     style={{ ...T.moduleValue, width: G.numberInputWidth, minWidth: 0, boxSizing: 'border-box', color: style.textColor, background: style.cutoutBackground, border: `1px solid ${hexToRgba(style.primaryColor, O.low)}`, borderRadius: D.radius.button, padding: G.inputPadding, opacity: disabled ? O.medium : O.full }} />;
 }
 
+/** A typed line of text. */
+export function ModuleTextInput({ value, onChange, ariaLabel, placeholder }: { value: string; onChange: (value: string) => void; ariaLabel: string; placeholder?: string }) {
+  const style = useStyle().getEffectiveStyle();
+  return <input type="text" aria-label={ariaLabel} value={value} placeholder={placeholder} onChange={event => onChange(event.target.value)}
+    style={{ ...T.moduleValue, width: G.numberInputWidth, minWidth: 0, boxSizing: 'border-box', color: style.textColor, background: style.cutoutBackground, border: `1px solid ${hexToRgba(style.primaryColor, O.low)}`, borderRadius: D.radius.button, padding: G.inputPadding }} />;
+}
+
 /** An icon and its name that opens something. Dim when this case doesn't use it, and quiet when nothing is set in it, and it still opens either way. */
 export function ModuleToolButton({ label, icon, title, dim, set, onPress }: { label: string; icon: React.ReactNode; title?: string; dim?: boolean; set?: boolean; onPress: () => void }) {
   const style = useStyle().getEffectiveStyle();
