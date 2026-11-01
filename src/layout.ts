@@ -241,6 +241,13 @@ export const LayoutDimensions = {
     detailDepthDragPx: 180,
     bodyGap: 12,
     columnGap: 12,
+    rulesIndent: 16,
+    toolIconHeight: 20,
+    layerBits: 32,
+    layerColumns: 8,
+    numberInputWidth: 88,
+    sensorReachMeters: 5,
+    inputPadding: 4,
   },
 
 } as const;

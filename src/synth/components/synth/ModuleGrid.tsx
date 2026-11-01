@@ -120,7 +120,7 @@ export function ModuleFieldRow({ label, icon, value, emphasis, onName, nameLabel
   const style = useStyle().getEffectiveStyle();
   const set = emphasis === FieldEmphasis.SET, inert = emphasis === FieldEmphasis.INERT;
   return (
-    <div data-module-field={label} data-field-emphasis={emphasis} aria-disabled={inert} style={{ display: 'grid', gridTemplateColumns: `${G.rowLabelWidth}px minmax(0, 1fr) ${G.rowValueWidth}px`, alignItems: 'center', gap: G.rowGap, width: '100%' }}>
+    <div data-module-field={label} data-field-emphasis={emphasis} aria-disabled={inert} style={{ display: 'grid', gridTemplateColumns: `minmax(${G.rowLabelWidth}px, max-content) minmax(0, 1fr) minmax(${G.rowValueWidth}px, max-content)`, alignItems: 'center', gap: G.rowGap, width: '100%' }}>
       <div style={{ justifySelf: 'start' }}><FieldName label={label} icon={icon} emphasis={emphasis} onName={onName} nameLabel={nameLabel} nameTitle={nameTitle} /></div>
       <div data-field-control style={{ display: 'flex', minWidth: 0, opacity: CONTROL_OPACITY[emphasis], pointerEvents: inert ? 'none' : undefined, transition: TransitionKeys.fast }}>{children}</div>
       <div data-field-value style={{ ...T.moduleValue, textAlign: 'right', fontVariantNumeric: 'tabular-nums', color: hexToRgba(style.textColor, set ? O.full : O.high) }}>{value}</div>
@@ -150,4 +150,29 @@ export function ModuleKnob({ value, min, max, integer, onChange, ariaLabel, disa
 export function ModuleSwitch({ value, onChange, ariaLabel, disabled }: { value: boolean; onChange: (value: boolean) => void; ariaLabel: string; disabled?: boolean }) {
   const height = clamp(Math.round(useModuleControlSize() * G.switchShare), G.switchMin, G.switchMax);
   return <BooleanControl form={BooleanForm.SWITCH} height={height} value={value} onChange={onChange} ariaLabel={ariaLabel} disabled={disabled} />;
+}
+
+/** A compact list on a module's grid, for choices too many to show as options. */
+export function ModuleSelect<Value extends string | number>({ value, options, onChange, ariaLabel, disabled }: { value: Value; options: { value: Value; label: string }[]; onChange?: (value: Value) => void; ariaLabel: string; disabled?: boolean }) {
+  const style = useStyle().getEffectiveStyle();
+  return <select aria-label={ariaLabel} value={String(value)} disabled={disabled || !onChange} onChange={event => { const found = options.find(option => String(option.value) === event.target.value); if (found) onChange?.(found.value); }}
+    style={{ ...T.moduleValue, color: style.textColor, background: style.cutoutBackground, border: `1px solid ${hexToRgba(style.primaryColor, O.low)}`, borderRadius: D.radius.button, padding: G.inputPadding, minWidth: 0, maxWidth: '100%' }}>
+    {options.map(option => <option key={String(option.value)} value={String(option.value)}>{option.label}</option>)}
+  </select>;
+}
+
+/** A typed number. What's being typed stays as typed, and only a real number writes. */
+export function ModuleNumberInput({ value, onChange, ariaLabel, disabled, onFocus, onBlur }: { value: number; onChange?: (value: number) => void; ariaLabel: string; disabled?: boolean; onFocus?: () => void; onBlur?: () => void }) {
+  const style = useStyle().getEffectiveStyle();
+  const [typing, setTyping] = useState<string | null>(null);
+  return <input type="number" step="any" aria-label={ariaLabel} disabled={disabled} value={typing ?? String(value)}
+    onFocus={() => { setTyping(String(value)); onFocus?.(); }} onBlur={() => { setTyping(null); onBlur?.(); }}
+    onChange={event => { setTyping(event.target.value); const next = event.target.valueAsNumber; if (Number.isFinite(next)) onChange?.(next); }}
+    style={{ ...T.moduleValue, width: G.numberInputWidth, minWidth: 0, boxSizing: 'border-box', color: style.textColor, background: style.cutoutBackground, border: `1px solid ${hexToRgba(style.primaryColor, O.low)}`, borderRadius: D.radius.button, padding: G.inputPadding, opacity: disabled ? O.medium : O.full }} />;
+}
+
+/** An icon and its name that opens something. Dim when this case doesn't use it, and quiet when nothing is set in it, and it still opens either way. */
+export function ModuleToolButton({ label, icon, title, dim, set, onPress }: { label: string; icon: React.ReactNode; title?: string; dim?: boolean; set?: boolean; onPress: () => void }) {
+  const style = useStyle().getEffectiveStyle();
+  return <button type="button" data-module-tool={label} data-tool-used={!dim} data-tool-set={set} title={title} aria-label={label} onClick={onPress} style={{ ...T.moduleLabel, display: 'grid', justifyItems: 'center', gap: G.fieldGap, padding: 0, minWidth: 0, border: 'none', background: 'transparent', cursor: 'pointer', textTransform: 'uppercase', color: set ? style.primaryColor : hexToRgba(style.textColor, O.high), opacity: dim ? O.medium : O.full }}>{icon}<span style={{ overflowWrap: 'anywhere' }}>{label}</span></button>;
 }
