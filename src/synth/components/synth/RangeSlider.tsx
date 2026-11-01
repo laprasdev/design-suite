@@ -50,7 +50,9 @@ export function RangeSlider({low, high, min, max, onChange, step = 0, singleEnde
   const [hovered, setHovered] = useState(false);
   const span = max - min;
   const percent = (value: number) => (Math.min(max, Math.max(min, value)) - min) / span * 100;
-  const snap = (value: number) => (step > 0 ? Math.round(value / step) * step : value);
+  // Through the step's own decimals, so a tenth is written as a tenth and not 16.000000000000004.
+  const stepDecimals = (String(step).split('.')[1] ?? '').length;
+  const snap = (value: number) => (step > 0 ? Number((Math.round(value / step) * step).toFixed(stepDecimals)) : value);
   const valueAt = (clientX: number) => {
     const box = track.current!.getBoundingClientRect();
     return min + Math.min(1, Math.max(0, (clientX - box.left) / box.width)) * span;

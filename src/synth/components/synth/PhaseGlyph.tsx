@@ -13,9 +13,11 @@ export interface PhaseGlyphProps {
   value: PhaseGlyphValue;
   onChange?: (value: PhaseGlyphValue) => void;
   ariaLabel: string;
+  /** Drawn height. The width follows from it. */
+  height?: number;
 }
 
-export function PhaseGlyph({value, onChange, ariaLabel}: PhaseGlyphProps) {
+export function PhaseGlyph({value, onChange, ariaLabel, height = VIEW_HEIGHT}: PhaseGlyphProps) {
   const color = useStyle().getEffectiveStyle().primaryColor;
   const paint = (lit: boolean) => (lit
     ? {fill: color, stroke: 'none'}
@@ -27,7 +29,7 @@ export function PhaseGlyph({value, onChange, ariaLabel}: PhaseGlyphProps) {
   };
   const interactive = onChange ? {cursor: 'pointer', transition: 'fill .17s ease'} : undefined;
   return (
-    <svg viewBox={`0 0 ${VIEW_WIDTH} ${VIEW_HEIGHT}`} width={VIEW_WIDTH} height={VIEW_HEIGHT} role="group" aria-label={ariaLabel} style={{overflow: 'visible', flex: 'none'}}>
+    <svg viewBox={`0 0 ${VIEW_WIDTH} ${VIEW_HEIGHT}`} width={height * VIEW_WIDTH / VIEW_HEIGHT} height={height} role="group" aria-label={ariaLabel} style={{overflow: 'visible', flex: 'none'}}>
       <g role="switch" aria-label="Entrance" aria-checked={value.entrance} onClick={() => toggle('entrance')} style={interactive}>
         <rect x={0} y={0} width={10} height={VIEW_HEIGHT} fill="transparent"/>
         <path d={RAMP_PATH} {...paint(value.entrance)}/>

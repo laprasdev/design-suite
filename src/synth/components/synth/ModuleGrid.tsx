@@ -4,6 +4,7 @@ import { hexToRgba } from '../../../color.ts';
 import { D, O, T, TransitionKeys } from '../../design/index.ts';
 import { Knob, KnobPreset, KnobLabelStyle, KnobLayout, KnobStroke, KnobValueType } from './Knob.tsx';
 import { Boolean as BooleanControl, BooleanForm } from './Boolean.tsx';
+import type { ModulationProps } from './modulation.ts';
 
 // A module's body is four equal columns, and every control takes whole cells, so nothing sits between two columns or moves between tabs.
 // In the rack it has a fixed size. On a page it fills its tile, and its controls grow with their cells up to a limit.
@@ -91,27 +92,58 @@ export const FieldEmphasis = Object.freeze({ SET: 'set', QUIET: 'quiet', INERT: 
 export type FieldEmphasisValue = typeof FieldEmphasis[keyof typeof FieldEmphasis];
 const CONTROL_OPACITY: Record<FieldEmphasisValue, number> = { set: O.full, quiet: O.medium, inert: O.low };
 
-/** A field in its cell: the control, what it reads, and its name, all staying readable when dim. Pressing the name is optional. */
-export function ModuleField({ label, value, emphasis, onName, nameLabel, nameTitle, stretch, children }: { label: string; value?: React.ReactNode; emphasis: FieldEmphasisValue; onName?: () => void; nameLabel?: string; nameTitle?: string; stretch?: boolean; children: React.ReactNode }) {
+function FieldName({ label, icon, emphasis, onName, nameLabel, nameTitle }: { label: string; icon?: React.ReactNode; emphasis: FieldEmphasisValue; onName?: () => void; nameLabel?: string; nameTitle?: string }) {
   const style = useStyle().getEffectiveStyle();
   const set = emphasis === FieldEmphasis.SET, inert = emphasis === FieldEmphasis.INERT;
-  const nameStyle: React.CSSProperties = { ...T.moduleLabel, textTransform: 'uppercase', textAlign: 'center', color: set ? style.primaryColor : hexToRgba(style.textColor, O.high), transition: TransitionKeys.fast };
+  const nameStyle: React.CSSProperties = { ...T.moduleLabel, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: G.nameIconGap, textTransform: 'uppercase', textAlign: 'center', color: set ? style.primaryColor : hexToRgba(style.textColor, O.high), transition: TransitionKeys.fast };
+  const content = <>{icon}{label}</>;
+  return onName && !inert
+    ? <button type="button" data-field-name aria-label={nameLabel} title={nameTitle} onClick={onName} style={{ ...nameStyle, padding: 0, border: 'none', background: 'transparent', cursor: 'pointer' }}>{content}</button>
+    : <span data-field-name style={nameStyle}>{content}</span>;
+}
+
+/** A field in its cell: the control, what it reads, and its name, all staying readable when dim. Pressing the name is optional. */
+export function ModuleField({ label, icon, value, emphasis, onName, nameLabel, nameTitle, stretch, children }: { label: string; icon?: React.ReactNode; value?: React.ReactNode; emphasis: FieldEmphasisValue; onName?: () => void; nameLabel?: string; nameTitle?: string; stretch?: boolean; children: React.ReactNode }) {
+  const style = useStyle().getEffectiveStyle();
+  const set = emphasis === FieldEmphasis.SET, inert = emphasis === FieldEmphasis.INERT;
   return (
     <div data-module-field={label} data-field-emphasis={emphasis} aria-disabled={inert} style={{ display: 'grid', justifyItems: 'center', gap: G.fieldGap, width: stretch ? '100%' : undefined }}>
       <div data-field-control style={{ display: 'grid', placeItems: 'center', width: stretch ? '100%' : undefined, opacity: CONTROL_OPACITY[emphasis], pointerEvents: inert ? 'none' : undefined, transition: TransitionKeys.fast }}>{children}</div>
       {value !== undefined && <div data-field-value style={{ ...T.moduleValue, textAlign: 'center', fontVariantNumeric: 'tabular-nums', color: hexToRgba(style.textColor, set ? O.full : O.high) }}>{value}</div>}
-      {onName && !inert
-        ? <button type="button" data-field-name aria-label={nameLabel} title={nameTitle} onClick={onName} style={{ ...nameStyle, padding: 0, border: 'none', background: 'transparent', cursor: 'pointer' }}>{label}</button>
-        : <span data-field-name style={nameStyle}>{label}</span>}
+      <FieldName label={label} icon={icon} emphasis={emphasis} onName={onName} nameLabel={nameLabel} nameTitle={nameTitle} />
     </div>
   );
 }
 
+/** A field as a row across its cells: its name, the control, and what it reads. For a range, whose control wants the width. */
+export function ModuleFieldRow({ label, icon, value, emphasis, onName, nameLabel, nameTitle, children }: { label: string; icon?: React.ReactNode; value?: React.ReactNode; emphasis: FieldEmphasisValue; onName?: () => void; nameLabel?: string; nameTitle?: string; children: React.ReactNode }) {
+  const style = useStyle().getEffectiveStyle();
+  const set = emphasis === FieldEmphasis.SET, inert = emphasis === FieldEmphasis.INERT;
+  return (
+    <div data-module-field={label} data-field-emphasis={emphasis} aria-disabled={inert} style={{ display: 'grid', gridTemplateColumns: `${G.rowLabelWidth}px minmax(0, 1fr) ${G.rowValueWidth}px`, alignItems: 'center', gap: G.rowGap, width: '100%' }}>
+      <div style={{ justifySelf: 'start' }}><FieldName label={label} icon={icon} emphasis={emphasis} onName={onName} nameLabel={nameLabel} nameTitle={nameTitle} /></div>
+      <div data-field-control style={{ display: 'flex', minWidth: 0, opacity: CONTROL_OPACITY[emphasis], pointerEvents: inert ? 'none' : undefined, transition: TransitionKeys.fast }}>{children}</div>
+      <div data-field-value style={{ ...T.moduleValue, textAlign: 'right', fontVariantNumeric: 'tabular-nums', color: hexToRgba(style.textColor, set ? O.full : O.high) }}>{value}</div>
+    </div>
+  );
+}
+
+/** A sentence in a module saying what it can't do yet, or what limit applies. */
+export function ModuleNotice({ children }: { children: React.ReactNode }) {
+  const style = useStyle().getEffectiveStyle();
+  return <p data-module-notice style={{ ...T.moduleValue, margin: 0, flexShrink: 0, padding: `0 ${G.noticePadding}px ${G.noticePadding}px`, color: hexToRgba(style.textColor, O.high) }}>{children}</p>;
+}
+
+/** A module's own header controls in a row, between its tabs and the tile's edge. */
+export function ModuleHeaderControls({ children }: { children: React.ReactNode }) {
+  return <div data-module-header-controls style={{ display: 'flex', alignItems: 'center', gap: G.headerGap, padding: `0 ${G.headerControlsPadding}px`, flex: 'none' }}>{children}</div>;
+}
+
 /** The minimal knob, its value and name left to the field around it. */
-export function ModuleKnob({ value, min, max, integer, onChange, ariaLabel, disabled }: { value: number; min: number; max: number; integer: boolean; onChange: (value: number) => void; ariaLabel: string; disabled?: boolean }) {
+export function ModuleKnob({ value, min, max, integer, onChange, ariaLabel, disabled, modulators, selectedSource, onSelectSource }: { value: number; min: number; max: number; integer: boolean; onChange: (value: number) => void; ariaLabel: string; disabled?: boolean } & ModulationProps) {
   const size = useModuleControlSize();
   const config = { ...KnobPreset.minimal, size, stroke: KnobStroke.STANDARD, labelStyle: KnobLabelStyle.PLAIN, layout: KnobLayout.KNOB_ONLY, valueType: integer ? KnobValueType.INTEGER : KnobValueType.FLOAT };
-  return <div role="group" aria-label={ariaLabel}><Knob config={config} tooltip={ariaLabel} sensitivity={(max - min) / G.knobDragPx} value={value} min={min} max={max} disabled={disabled} disabledOpacity={O.full} onChange={onChange} color="primary" /></div>;
+  return <div role="group" aria-label={ariaLabel}><Knob config={config} tooltip={ariaLabel} sensitivity={(max - min) / G.knobDragPx} value={value} min={min} max={max} disabled={disabled} disabledOpacity={O.full} onChange={onChange} color="primary" modulators={modulators} selectedSource={selectedSource} onSelectSource={onSelectSource} /></div>;
 }
 
 /** The switch form at the size of this grid's controls. */
