@@ -196,6 +196,40 @@ export const LayoutDimensions = {
     overlayLayer: 2000,
   },
 
+  // A module on the four-column grid: its fixed size in the rack, and how it fills a page's tile
+  moduleGrid: {
+    columns: 4,
+    rows: 2,
+    cellWidth: 75,
+    rowHeight: 76,
+    sidePadding: 10,
+    ringHeadroom: 16,
+    footPadding: 0,
+    tightLine: 1.15,
+    fillPadding: 12,
+    fillGap: 8,
+    headerGap: 8,
+    headerTitleGap: 16,
+    headerInset: 12,
+    tabMinWidth: 18,
+    tabMinHeight: 14,
+    iconHeight: 14,
+    tabIconHeight: 20,
+    fieldGap: 6,
+    fieldTextRoom: 44,
+    controlShare: 0.85,
+    controlMin: 44,
+    controlMax: 88,
+    switchShare: 0.3,
+    switchMin: 12,
+    switchMax: 26,
+    knobDragPx: 200,
+    optionColumns: 3,
+    optionGap: 4,
+    optionPaddingBlock: 6,
+    optionPaddingInline: 4,
+  },
+
 } as const;
 
 // Compact spacing — dense synthesizer strip UI

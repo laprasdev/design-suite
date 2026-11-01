@@ -13,7 +13,7 @@ import type { HciComposableStyle } from '../../design/designTokensLoader.ts';
 // =====================================================
 
 export type EnumColor = 'primary' | 'secondary' | 'tertiary' | 'cyan' | 'pink' | 'green';
-export type EnumVariant = 'full' | 'cycling' | 'multi';
+export type EnumVariant = 'full' | 'cycling' | 'multi' | 'options';
 export type EnumDisplayMode = 'shared' | 'distinct';
 
 export interface EnumOption<T = string> {
@@ -42,7 +42,7 @@ interface BaseEnumProps<T = string> {
 export interface SingleSelectEnumProps<T = string> extends BaseEnumProps<T> {
   value: T;
   onChange?: (value: T) => void;
-  variant?: 'full' | 'cycling';
+  variant?: 'full' | 'cycling' | 'options';
   /** Size in px for cycling variant button (default: uses SIZES.enumMinWidth) */
   size?: number;
 }
@@ -99,6 +99,10 @@ export function Enum<T = string>(props: EnumProps<T>) {
         className={className}
       />
     );
+  }
+
+  if (props.variant === 'options') {
+    return <OptionsEnumRenderer {...props as SingleSelectEnumProps<T>} scheme={scheme} style={style} className={className} />;
   }
 
   if (isMultiSelect(props)) {
@@ -296,6 +300,34 @@ function FullDistinctRenderer<T>({ options, isSelected: isSel, onSelect, scheme,
                 {fmtLabel(option)}
               </span>
             )}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+// =====================================================
+// OPTIONS - Every choice in view on a module's grid, wrapping to fit
+// =====================================================
+function OptionsEnumRenderer<T>({ options, value, onChange, disabled, scheme, style, className = '' }: SingleSelectEnumProps<T> & RendererProps<T>) {
+  const fmtLabel = useEnumLabel();
+  const { optionColumns, optionGap, optionPaddingBlock, optionPaddingInline } = D.moduleGrid;
+  return (
+    <div className={className} data-enum-options style={{ display: F.grid, width: '100%', gridTemplateColumns: `repeat(${Math.min(optionColumns, options.length)}, minmax(0, 1fr))`, gap: optionGap }}>
+      {options.map((option, index) => {
+        const selected = option.value === value;
+        return (
+          <button key={index} type="button" disabled={disabled} aria-pressed={selected} title={option.tooltip ?? option.label}
+            onClick={() => onChange?.(option.value)}
+            style={{
+              ...T.moduleLabel, minWidth: 0, padding: `${optionPaddingBlock}px ${optionPaddingInline}px`,
+              borderRadius: D.radius.button, border: 'none', cursor: disabled ? C.notAllowed : C.pointer,
+              background: selected ? scheme.main : hexToRgba(scheme.main, O.trace),
+              color: selected ? style.backgroundColor : style.textColor,
+              transition: TransitionKeys.fast,
+            }}>
+            {fmtLabel(option)}
           </button>
         );
       })}
@@ -692,6 +724,10 @@ export function BaseFullDisplayEnum<T = string>(props: Omit<SingleSelectEnumProp
 
 export function CyclingEnum<T = string>(props: Omit<SingleSelectEnumProps<T>, 'variant'>) {
   return <Enum {...props} variant="cycling" />;
+}
+
+export function OptionsEnum<T = string>(props: Omit<SingleSelectEnumProps<T>, 'variant'>) {
+  return <Enum {...props} variant="options" />;
 }
 
 export function MultiSelectEnum<T = string>(props: Omit<MultiSelectEnumProps<T>, 'variant'> & { variant?: never }) {

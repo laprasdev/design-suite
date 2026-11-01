@@ -56,12 +56,15 @@ export interface SwitchBooleanProps {
   value: boolean;
   onChange(value: boolean): void;
   ariaLabel: string;
+  /** Its height. The width and thumb follow from it. */
+  height?: number;
+  disabled?: boolean;
 }
-const SWITCH_WIDTH=20, SWITCH_HEIGHT=10, SWITCH_INSET=2;
-function SwitchBoolean({value,onChange,ariaLabel}: SwitchBooleanProps) {
- const style=useStyle().getEffectiveStyle(), color=style.primaryColor, thumb=SWITCH_HEIGHT-SWITCH_INSET*2;
- return <button type="button" role="switch" aria-checked={value} aria-label={ariaLabel} onClick={()=>onChange(!value)} style={{position:'relative',flex:'none',width:SWITCH_WIDTH,height:SWITCH_HEIGHT,padding:0,border:'none',borderRadius:SWITCH_HEIGHT/2,cursor:C.pointer,background:value?color:style.knobGradient.at(-1),transition:TransitionKeys.normal}}>
-  <span style={{position:'absolute',top:SWITCH_INSET,left:value?SWITCH_WIDTH-SWITCH_INSET-thumb:SWITCH_INSET,width:thumb,height:thumb,borderRadius:'50%',background:value?style.backgroundColor:color,transition:TransitionKeys.normal}}/>
+const SWITCH_HEIGHT=10, SWITCH_WIDTH_RATIO=2, SWITCH_INSET_RATIO=0.2;
+function SwitchBoolean({value,onChange,ariaLabel,height=SWITCH_HEIGHT,disabled=false}: SwitchBooleanProps) {
+ const style=useStyle().getEffectiveStyle(), color=style.primaryColor, width=height*SWITCH_WIDTH_RATIO, inset=height*SWITCH_INSET_RATIO, thumb=height-inset*2;
+ return <button type="button" role="switch" aria-checked={value} aria-label={ariaLabel} disabled={disabled} onClick={()=>onChange(!value)} style={{position:'relative',flex:'none',width,height,padding:0,border:'none',borderRadius:height/2,cursor:disabled?C.notAllowed:C.pointer,background:value?color:style.knobGradient.at(-1),transition:TransitionKeys.normal}}>
+  <span style={{position:'absolute',top:inset,left:value?width-inset-thumb:inset,width:thumb,height:thumb,borderRadius:'50%',background:value?style.backgroundColor:color,transition:TransitionKeys.normal}}/>
  </button>;
 }
 export function Boolean(props: BooleanProps|SettingBooleanProps|SwitchBooleanProps) {
