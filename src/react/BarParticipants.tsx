@@ -2,7 +2,7 @@ import {useEffect,useRef,useState,type ReactNode,type CSSProperties} from 'react
 import {BarParticipantElement} from './actionBarElements.ts';
 import {PositiveReaction,positiveReaction,PARTICIPANT_REACTION_MS,PARTICIPANT_WIGGLE,PARTICIPANT_WIGGLE_DEGREES,type PositiveReactionName} from './participantInteraction.ts';
 import {reducedMotion} from './motion.ts';
-import {PARTICIPANT_GRASS,participantGrass} from './participantGrass.ts';
+import {PARTICIPANT_GRASS} from './participantGrass.ts';
 import {useParticipantGrass} from './useParticipantGrass.ts';
 
 export interface BarParticipant {
@@ -17,20 +17,15 @@ export interface BarParticipant {
 // A decorative gathering. Sports pass their active participants; this component
 // owns only their presentation, never roster selection or game randomness.
 export function BarParticipants({participants,center,onInteract}: {participants: readonly BarParticipant[],center?: ReactNode,onInteract?(id: string): void}) {
+ const root=useRef<HTMLDivElement>(null),grass=useParticipantGrass(root);
  const middle=Math.ceil(participants.length/2),groups=[participants.slice(0,middle),participants.slice(middle)];
- return <div className={BarParticipantElement.ROOT.className} data-center={!!center||undefined}>
-  {groups.map((group,side)=><ParticipantGroup key={side} count={group.length}>
+ return <div ref={root} className={BarParticipantElement.ROOT.className} data-center={!!center||undefined}>
+  {groups.map((group,side)=><div key={side} className={BarParticipantElement.GROUP.className} style={{'--participant-count':group.length} as CSSProperties}>
    {group.map((participant,index)=><ParticipantActor key={participant.id} participant={participant} index={index+side*middle} position={group.length===1?.5:index/(group.length-1)} onInteract={onInteract}/>)}
-  </ParticipantGroup>)}
+  </div>)}
   {center&&<div className={BarParticipantElement.MESSAGE.className}>{center}</div>}
- </div>;
-}
-function ParticipantGroup({count,children}:{count:number,children:ReactNode}) {
- const root=useRef<HTMLDivElement>(null);useParticipantGrass(root);
- return <div ref={root} className={BarParticipantElement.GROUP.className} style={{'--participant-count':count} as CSSProperties}>
-  {children}
-  {count>0&&<svg className={BarParticipantElement.GRASS.className} viewBox={`0 ${-PARTICIPANT_GRASS.height} ${PARTICIPANT_GRASS.width} ${PARTICIPANT_GRASS.height}`} preserveAspectRatio="none" aria-hidden="true">
-   {participantGrass.map((blade,index)=><g key={index} transform={`translate(${blade.x} 0)`}>
+  {participants.length>0&&<svg className={BarParticipantElement.GRASS.className} viewBox={`0 ${-PARTICIPANT_GRASS.height} ${grass.width} ${PARTICIPANT_GRASS.height}`} preserveAspectRatio="none" aria-hidden="true">
+   {grass.blades.map((blade,index)=><g key={index} transform={`translate(${blade.x} 0)`}>
     <g className={BarParticipantElement.BLADE.className} style={{'--grass-variant':blade.variant} as CSSProperties}><path d={blade.path}/></g>
    </g>)}
   </svg>}
