@@ -22,7 +22,7 @@ A surface can set the form of what's inside it: a `SegmentedControl` in an `Acti
 `catalog/` records which source implements each kind. `kinds.json` is the hand-kept map and `scan.mjs` reads the sources statically, so Unity never has to run. `build.mjs` writes `catalog.json` and exits non-zero if the map names something the sources lack.
 
 ```sh
-git -C ../baseball archive origin/dev packages src | tar -x -C /tmp/bb
+git -C ../slowbro-sports archive origin/dev packages src | tar -x -C /tmp/bb
 BASEBALL_ROOT=/tmp/bb node catalog/build.mjs
 ```
 

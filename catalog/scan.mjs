@@ -6,7 +6,7 @@ const SUITE = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..'
 const ISM = path.resolve(SUITE, '../InfiniteStateMachine/packages');
 const SM = `${ISM}/com.bloom.state-machine`;
 const SYNTH = `${ISM}/synth-web/src`;
-const BB = process.env.BASEBALL_ROOT || path.resolve(SUITE, '../baseball');
+const BB = process.env.BASEBALL_ROOT || path.resolve(SUITE, '../slowbro-sports');
 const SUITE_SYNTH = `${SUITE}/src/synth`;
 const SKINS = `${SUITE}/unity/Runtime/Resources/SharedSchema/Design/Synth`;
 const read = f => readFile(f, 'utf8');
