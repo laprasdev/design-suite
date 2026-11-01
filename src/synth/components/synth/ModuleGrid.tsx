@@ -66,8 +66,8 @@ export function Icon({ svg, height = G.iconHeight, flip, label }: { svg: string;
 export function ModuleHeaderRow({ group, children }: { group?: string; children: React.ReactNode }) {
   const style = useStyle().getEffectiveStyle();
   return (
-    <div style={{ display: 'flex', alignItems: 'stretch', justifyContent: 'flex-end', gap: G.headerGap, flex: 1, minWidth: 0 }}>
-      {group && <span data-open-group style={{ ...T.moduleLabel, alignSelf: 'center', marginRight: 'auto', textTransform: 'uppercase', color: style.textColor, opacity: O.high, whiteSpace: 'nowrap' }}>{group}</span>}
+    <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'stretch', justifyContent: 'flex-end', gap: G.headerGap, flex: 1, minWidth: 0 }}>
+      {group && <span data-open-group style={{ ...T.moduleLabel, alignSelf: 'flex-start', lineHeight: `${G.headerLineHeight}px`, marginRight: 'auto', textTransform: 'uppercase', color: style.textColor, opacity: O.high, whiteSpace: 'nowrap' }}>{group}</span>}
       {children}
     </div>
   );
@@ -79,7 +79,7 @@ export function GridModule({ title, group, tabs, children }: { title: string; gr
   return (
     <section data-grid-module data-module-owner={title} aria-label={title} style={{ flex: 1, minWidth: 0, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
       <header data-module-header={title} style={{ flexShrink: 0, display: 'flex', alignItems: 'stretch', gap: G.headerTitleGap, paddingLeft: G.headerInset }}>
-        <h2 style={{ ...T.title, margin: 0, alignSelf: 'center', color: style.primaryColor, textTransform: 'uppercase', cursor: 'default' }}>{title}</h2>
+        <h2 style={{ ...T.title, margin: 0, alignSelf: 'flex-start', lineHeight: `${G.headerLineHeight}px`, color: style.primaryColor, textTransform: 'uppercase', cursor: 'default' }}>{title}</h2>
         <ModuleHeaderRow group={group}>{tabs}</ModuleHeaderRow>
       </header>
       <div data-module-body={title} style={{ flex: 1, minWidth: 0, minHeight: 0, display: 'flex' }}>{children}</div>
@@ -162,24 +162,58 @@ export function ModuleSelect<Value extends string | number>({ value, options, on
 }
 
 /** A typed number. What's being typed stays as typed, and only a real number writes. */
-export function ModuleNumberInput({ value, onChange, ariaLabel, disabled, onFocus, onBlur }: { value: number; onChange?: (value: number) => void; ariaLabel: string; disabled?: boolean; onFocus?: () => void; onBlur?: () => void }) {
+export function ModuleNumberInput({ value, onChange, ariaLabel, disabled, onFocus, onBlur, fill }: { value: number; onChange?: (value: number) => void; ariaLabel: string; disabled?: boolean; onFocus?: () => void; onBlur?: () => void; fill?: boolean }) {
   const style = useStyle().getEffectiveStyle();
   const [typing, setTyping] = useState<string | null>(null);
   return <input type="number" step="any" aria-label={ariaLabel} disabled={disabled} value={typing ?? String(value)}
     onFocus={() => { setTyping(String(value)); onFocus?.(); }} onBlur={() => { setTyping(null); onBlur?.(); }}
     onChange={event => { setTyping(event.target.value); const next = event.target.valueAsNumber; if (Number.isFinite(next)) onChange?.(next); }}
-    style={{ ...T.moduleValue, width: G.numberInputWidth, minWidth: 0, boxSizing: 'border-box', color: style.textColor, background: style.cutoutBackground, border: `1px solid ${hexToRgba(style.primaryColor, O.low)}`, borderRadius: D.radius.button, padding: G.inputPadding, opacity: disabled ? O.medium : O.full }} />;
+    style={{ ...T.moduleValue, width: fill ? '100%' : G.numberInputWidth, minWidth: 0, boxSizing: 'border-box', color: style.textColor, background: style.cutoutBackground, border: `1px solid ${hexToRgba(style.primaryColor, O.low)}`, borderRadius: D.radius.button, padding: G.inputPadding, opacity: disabled ? O.medium : O.full }} />;
 }
 
 /** A typed line of text. */
-export function ModuleTextInput({ value, onChange, ariaLabel, placeholder }: { value: string; onChange: (value: string) => void; ariaLabel: string; placeholder?: string }) {
+export function ModuleTextInput({ value, onChange, ariaLabel, placeholder, fill, disabled }: { value: string; onChange: (value: string) => void; ariaLabel: string; placeholder?: string; fill?: boolean; disabled?: boolean }) {
   const style = useStyle().getEffectiveStyle();
-  return <input type="text" aria-label={ariaLabel} value={value} placeholder={placeholder} onChange={event => onChange(event.target.value)}
-    style={{ ...T.moduleValue, width: G.numberInputWidth, minWidth: 0, boxSizing: 'border-box', color: style.textColor, background: style.cutoutBackground, border: `1px solid ${hexToRgba(style.primaryColor, O.low)}`, borderRadius: D.radius.button, padding: G.inputPadding }} />;
+  return <input type="text" aria-label={ariaLabel} value={value} placeholder={placeholder} disabled={disabled} onChange={event => onChange(event.target.value)}
+    style={{ ...T.moduleValue, width: fill ? '100%' : G.numberInputWidth, minWidth: 0, boxSizing: 'border-box', color: style.textColor, background: style.cutoutBackground, border: `1px solid ${hexToRgba(style.primaryColor, O.low)}`, borderRadius: D.radius.button, padding: G.inputPadding }} />;
 }
 
 /** An icon and its name that opens something. Dim when this case doesn't use it, and quiet when nothing is set in it, and it still opens either way. */
 export function ModuleToolButton({ label, icon, title, dim, set, onPress }: { label: string; icon: React.ReactNode; title?: string; dim?: boolean; set?: boolean; onPress: () => void }) {
   const style = useStyle().getEffectiveStyle();
   return <button type="button" data-module-tool={label} data-tool-used={!dim} data-tool-set={set} title={title} aria-label={label} onClick={onPress} style={{ ...T.moduleLabel, display: 'grid', justifyItems: 'center', gap: G.fieldGap, padding: 0, minWidth: 0, border: 'none', background: 'transparent', cursor: 'pointer', textTransform: 'uppercase', color: set ? style.primaryColor : hexToRgba(style.textColor, O.high), opacity: dim ? O.medium : O.full }}>{icon}<span style={{ overflowWrap: 'anywhere' }}>{label}</span></button>;
+}
+
+/** Text chips for the groups inside a tab: the second level, when a tab holds more than one grid can. A dim chip has nothing set inside it. */
+export function ModuleGroups<Id extends string>({ groups, value, onChange, ariaLabel }: { groups: { id: Id; label: string; set: boolean }[]; value: Id; onChange: (id: Id) => void; ariaLabel: string }) {
+  const style = useStyle().getEffectiveStyle();
+  return <div role="tablist" aria-label={ariaLabel} data-module-groups style={{ flexShrink: 0, display: 'flex', flexWrap: 'wrap', gap: G.groupGap, padding: `${G.groupStripPadding}px ${G.headerInset}px 0` }}>
+    {groups.map(group => { const open = group.id === value; return <button key={group.id} type="button" role="tab" aria-selected={open} data-group={group.id} data-group-set={group.set} onClick={() => onChange(group.id)}
+      style={{ ...T.moduleLabel, padding: `${G.groupPaddingBlock}px ${G.groupPaddingInline}px`, border: 'none', borderRadius: D.radius.button, cursor: 'pointer', textTransform: 'uppercase', background: open ? hexToRgba(style.primaryColor, O.subtle) : 'transparent', color: open || group.set ? style.primaryColor : hexToRgba(style.textColor, O.high) }}>{group.label}</button>; })}
+  </div>;
+}
+
+/** A curve to read. It draws what the asset holds and takes no edits. */
+export function ModuleCurve({ points, ariaLabel }: { points: { x: number; y: number }[] | null; ariaLabel: string }) {
+  const style = useStyle().getEffectiveStyle();
+  const line = points?.map(point => `${point.x * G.curveWidth},${(1 - point.y) * G.curveHeight}`).join(' ');
+  return <svg role="img" aria-label={ariaLabel} viewBox={`0 0 ${G.curveWidth} ${G.curveHeight}`} width="100%" height={G.curveHeight} preserveAspectRatio="none" style={{ display: 'block', maxWidth: G.curveWidth, overflow: 'visible' }}>
+    <rect x={0} y={0} width={G.curveWidth} height={G.curveHeight} rx={D.radius.button} fill={hexToRgba(style.primaryColor, O.ghost)} />
+    {line && <polyline points={line} fill="none" stroke={style.primaryColor} strokeWidth={G.curveLine} vectorEffect="non-scaling-stroke" strokeLinecap="round" strokeLinejoin="round" />}
+  </svg>;
+}
+
+/** A field whose contents open in the module's body. */
+export function ModuleOpenButton({ ariaLabel, onPress, disabled }: { ariaLabel: string; onPress: () => void; disabled?: boolean }) {
+  const style = useStyle().getEffectiveStyle();
+  return <button type="button" data-field-open aria-label={ariaLabel} disabled={disabled} onClick={onPress} style={{ ...T.moduleLabel, width: G.openButtonWidth, height: G.openButtonHeight, padding: 0, border: `1px solid ${hexToRgba(style.primaryColor, O.low)}`, borderRadius: D.radius.button, background: 'transparent', color: style.primaryColor, cursor: disabled ? 'not-allowed' : 'pointer' }}>›</button>;
+}
+
+/** A colour to pick. `hex` is what the browser's picker can show, and channels past 1 stay as written until a pick replaces them. */
+export function ModuleColorInput({ hex, alpha, onHex, onAlpha, ariaLabel, disabled, onFocus, onBlur }: { hex: string; alpha: number; onHex: (hex: string) => void; onAlpha: (alpha: number) => void; ariaLabel: string; disabled?: boolean; onFocus?: () => void; onBlur?: () => void }) {
+  const style = useStyle().getEffectiveStyle();
+  return <div data-module-color style={{ display: 'grid', justifyItems: 'center', gap: G.groupGap }}>
+    <input type="color" aria-label={ariaLabel} value={hex} disabled={disabled} onFocus={onFocus} onBlur={onBlur} onChange={event => onHex(event.target.value)} style={{ width: G.swatchWidth, height: G.swatchHeight, padding: 0, border: 'none', background: 'transparent', cursor: disabled ? 'not-allowed' : 'pointer' }} />
+    <label title="Alpha" style={{ ...T.moduleValue, display: 'flex', alignItems: 'center', gap: G.groupGap, color: style.textColor }}>A<ModuleNumberInput ariaLabel={`${ariaLabel} alpha`} value={alpha} disabled={disabled} fill onFocus={onFocus} onBlur={onBlur} onChange={onAlpha} /></label>
+  </div>;
 }

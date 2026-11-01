@@ -1,5 +1,6 @@
 import React, {useRef, useState} from 'react';
 import {useStyle} from '../../StyleContext.tsx';
+import {LayoutDimensions} from '../../../layout.ts';
 import {getColorScheme, hexToRgba, resolveColorType, type AnyColor} from '../../../color.ts';
 import {O} from '../../design/index.ts';
 import {MODULATOR_LIVE_COLOR, RangeEnd, VALUE_THICKNESS, modulationLadder, modulatorColor, modulatorOpacity, type ControlModulator, type ModulationProps} from './modulation.ts';
@@ -12,7 +13,7 @@ const LINE_HIT_HEIGHT = 7;
 const LIVE_SCALE = 2.4;
 const CHEVRON_HEIGHT = 6;
 const CHEVRON_WIDTH = 3;
-const NUMERAL_SIZE = 7;
+const NUMERAL_SIZE = LayoutDimensions.moduleGrid.ringNumeralSize;
 const NUMERAL_OFFSET = 8;
 const BAR_GLOW = 6;
 const LINE_GLOW = 3;

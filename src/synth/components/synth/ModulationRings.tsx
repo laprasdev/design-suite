@@ -1,13 +1,14 @@
 import React from 'react';
 import {useStyle} from '../../StyleContext.tsx';
+import {LayoutDimensions} from '../../../layout.ts';
 import {MODULATOR_LIVE_COLOR, modulationLadder, modulatorColor, modulatorOpacity, type ModulationProps} from './modulation.ts';
 
 const SWEEP_DEGREES = 270;
 const SWEEP_START = -135;
 const SWEEP_END = SWEEP_START + SWEEP_DEGREES;
 const BIPOLAR_GAP_DEGREES = 0.7;
-const NUMERAL_OFFSET = 5;
-const NUMERAL_SIZE = 6.5;
+const NUMERAL_OFFSET = 7;
+const NUMERAL_SIZE = LayoutDimensions.moduleGrid.ringNumeralSize;
 const LIVE_RADIUS_FACTOR = 0.8;
 const HIT_WIDTH = 7;
 const RING_GLOW = 3;
