@@ -17,12 +17,16 @@ import {
 } from '../../design/constants/KnobConfig.ts';
 import { useKnobDrag, KnobInnerCircle } from './base/index.ts';
 import { useTooltipSafe } from './TooltipContext.tsx';
+import { ModulationRings } from './ModulationRings.tsx';
+import type { ModulationProps } from './modulation.ts';
 
 // =====================================================
 // UNIFIED KNOB COMPONENT - Config-based architecture
 // =====================================================
 
 export type KnobColor = AnyColor;
+
+const RING_INSET = 2;
 
 // =====================================================
 // HORSESHOE RING - SVG arc for knob fill
@@ -48,7 +52,7 @@ export function HorseshoeRing({
   const style = getEffectiveStyle();
 
   const center = size / 2;
-  const radius = (size - strokeWidth) / 2 - 2;
+  const radius = (size - strokeWidth) / 2 - RING_INSET;
   const startRad = (startAngle - 90) * (Math.PI / 180);
   const endRad = (endAngle - 90) * (Math.PI / 180);
   const totalAngle = endAngle - startAngle;
@@ -128,6 +132,19 @@ export function KnobIndicator({
   );
 }
 
+// A line inside the body, for the minimal knob: the value reads off the body as well as the arc.
+const LINE_INDICATOR_FROM = 0.44;
+const LINE_INDICATOR_TO = 0.83;
+const LINE_INDICATOR_WIDTH = 2;
+function KnobLineIndicator({ percentage, size, innerSize, color, dimmed }: { percentage: number; size: number; innerSize: number; color: string; dimmed: boolean }) {
+  const center = size / 2, radius = innerSize / 2, angle = (225 + 270 * percentage) * Math.PI / 180;
+  const at = (fraction: number) => [center + radius * fraction * Math.sin(angle), center - radius * fraction * Math.cos(angle)];
+  const [x1, y1] = at(LINE_INDICATOR_FROM), [x2, y2] = at(LINE_INDICATOR_TO);
+  return <svg width={size} height={size} style={{ position: 'absolute', top: 0, left: 0, pointerEvents: 'none' }}>
+    <line x1={x1} y1={y1} x2={x2} y2={y2} stroke={color} strokeWidth={LINE_INDICATOR_WIDTH} strokeLinecap="round" opacity={dimmed ? O.low : 1} />
+  </svg>;
+}
+
 // =====================================================
 // KNOB TICKS RENDERER
 // =====================================================
@@ -177,7 +194,9 @@ function KnobTicks({ value, min = 0, max = 1, numTicks = 11, size, scheme }: Kno
 // =====================================================
 // MAIN KNOB PROPS - Config-based interface
 // =====================================================
-export interface KnobProps {
+export interface KnobProps extends ModulationProps {
+  /** Value per pixel dragged. Defaults to the config's own. */
+  sensitivity?: number;
   value: number;
   onChange?: (value: number) => void;
   label?: string;
@@ -277,7 +296,11 @@ export function Knob({
   config: configProp,
   size: sizeOverride,
   layout: layoutOverride,
-  align = 'left'
+  align = 'left',
+  sensitivity: sensitivityOverride,
+  modulators,
+  selectedSource,
+  onSelectSource
 }: KnobProps) {
   const { getEffectiveStyle } = useStyle();
   const style = getEffectiveStyle();
@@ -302,7 +325,7 @@ export function Knob({
   const isDisabled = disabled || (showToggle && !toggleValue);
 
   // Calculate sensitivity for the range
-  const sensitivity = getKnobSensitivity(config, max - min);
+  const sensitivity = sensitivityOverride ?? getKnobSensitivity(config, max - min);
 
   // Use shared drag logic
   const { isDragging, isHovered, setIsHovered, handleMouseDown } = useKnobDrag(
@@ -412,13 +435,20 @@ export function Knob({
       )}
 
       {/* Position indicator */}
-      <KnobIndicator
+      {hasFeature(config, KnobFeature.LINE_INDICATOR)
+        ? <KnobLineIndicator percentage={normalizedValue} size={dims.size} innerSize={dims.innerSize} color={scheme.main} dimmed={isDisabled} />
+        : <KnobIndicator
         percentage={normalizedValue}
         size={dims.size}
         color={scheme.main}
         indicatorWidth={dims.indicatorWidth}
         indicatorHeight={dims.indicatorHeight}
-      />
+      />}
+
+      {modulators && modulators.length > 0 && !isDisabled && (
+        <ModulationRings modulators={modulators} selectedSource={selectedSource} onSelectSource={onSelectSource}
+          size={dims.size} radius={(dims.size - dims.stroke) / 2 - RING_INSET} thickness={dims.stroke} fraction={normalizedValue} span={max - min} />
+      )}
     </div>
   );
 

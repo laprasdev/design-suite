@@ -6,6 +6,7 @@ import { useControlBehavior } from './base/index.ts';
 import { useTooltipSafe } from './TooltipContext.tsx';
 import {HoverDetail} from '../../../react/HoverDetail.tsx';
 import {ResetIcon} from '../../../react/HeaderIconButton.tsx';
+import {RangeSlider, type RangeSliderProps} from './RangeSlider.tsx';
 
 // =====================================================
 // SLIDER - Compact horizontal fader (knob aesthetic)
@@ -30,6 +31,8 @@ export interface SliderProps {
   width?: number;
   fill?: boolean;
   className?: string;
+  /** Value per pixel dragged. Defaults to the drag behaviour's own. */
+  sensitivity?: number;
 }
 
 // =====================================================
@@ -84,8 +87,8 @@ function SliderFader({ fraction, scheme, style, active }: {
 // SLIDER COMPONENT
 // =====================================================
 
-// One slider, two forms: a bare track for a module's grid, or a labelled row with its written value and a reset.
-export const SliderForm=Object.freeze({CELL:'cell',SETTING:'setting'} as const);
+// One slider, three forms: a bare track for a module's grid, a labelled row with its written value and a reset, or a two-ended range.
+export const SliderForm=Object.freeze({CELL:'cell',SETTING:'setting',RANGE:'range'} as const);
 export interface SettingSliderProps {
   form: typeof SliderForm.SETTING;
   label: string;
@@ -110,11 +113,12 @@ function SettingSlider({label,detail,value,min,max,step,defaultValue,onChange,re
  </div>;
 }
 
-export function Slider(props: SliderProps|SettingSliderProps) {
+export function Slider(props: SliderProps|SettingSliderProps|(RangeSliderProps&{form:typeof SliderForm.RANGE})) {
+  if('form' in props&&props.form===SliderForm.RANGE) return <RangeSlider {...props}/>;
   return 'form' in props&&props.form===SliderForm.SETTING?<SettingSlider {...props}/>:<CellSlider {...props as SliderProps}/>;
 }
 
-function CellSlider({ value, onChange, min: minProp = 0, max, label, color, disabled, tooltip, isInteger, width, fill, className }: SliderProps) {
+function CellSlider({ value, onChange, min: minProp = 0, max, label, color, disabled, tooltip, isInteger, width, fill, className, sensitivity }: SliderProps) {
   const { getEffectiveStyle } = useStyle();
   const style = getEffectiveStyle();
   const { setTooltip } = useTooltipSafe();
@@ -127,7 +131,7 @@ function CellSlider({ value, onChange, min: minProp = 0, max, label, color, disa
   const zeroFraction = range > 0 ? Math.min(Math.max((0 - minProp) / range, 0), 1) : 0;
 
   const { isDragging, isHovered, setIsHovered, handleMouseDown } = useControlBehavior(
-    value, onChange, { min: minProp, max, vertical: false, isInteger, disabled }
+    value, onChange, { min: minProp, max, vertical: false, isInteger, disabled, sensitivity }
   );
 
   const active = isDragging || isHovered;

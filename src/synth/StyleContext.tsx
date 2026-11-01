@@ -11,6 +11,7 @@ export interface StyleTheme {
   name: string;
   primaryColor: string;
   secondaryColor: string;
+  tertiaryColor: string;
   accentColor: string;
   backgroundColor: string;
   backgroundGradientStart: string;

@@ -1,0 +1,17 @@
+.bd-caret {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: var(--line-width, 1.5px) solid var(--line, rgba(255, 255, 255, 0.11));
+  border-radius: var(--r-sm, 9px);
+  background: var(--stage, var(--card, #15151a));
+  color: var(--dim, #82828e);
+  cursor: pointer;
+}
+.bd-caret:hover { color: var(--text, #f0f0f3); }
+.bd-caret svg { transition: transform 0.17s ease; }
+.bd-caret[aria-expanded="true"] svg { transform: rotate(90deg); }

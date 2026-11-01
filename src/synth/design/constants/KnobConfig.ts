@@ -15,6 +15,8 @@ export const KnobSize = {
   COMPACT: 40,
   /** Standard knob (46px) - default size for most controls */
   STANDARD: LayoutDimensions.sizes.knobMedium,
+  /** Minimal knob (56px) - the module grid's knob, with room inside for a line indicator */
+  MINIMAL: 56,
   /** Large knob (60px) - for prominent controls */
   LARGE: 60,
   /** Detailed knob (75px) - for primary controls with ticks */
@@ -86,7 +88,9 @@ export const KnobFeature = {
   /** Show center dot on knob body */
   CENTER_DOT: 'centerDot',
   /** Show toggle button for enable/disable */
-  TOGGLE: 'toggle'
+  TOGGLE: 'toggle',
+  /** A line inside the body instead of the bar on the rim */
+  LINE_INDICATOR: 'lineIndicator'
 } as const;
 
 export type KnobFeatureValue = typeof KnobFeature[keyof typeof KnobFeature];
@@ -122,6 +126,16 @@ export const KnobPreset = {
     layout: KnobLayout.VERTICAL,
     labelStyle: KnobLabelStyle.CUTOUT,
     features: new Set<KnobFeatureValue>()
+  } satisfies KnobConfig,
+
+  /** Minimal module knob: heavy arc, inner line, cutout label, no ticks */
+  minimal: {
+    size: KnobSize.MINIMAL,
+    stroke: KnobStroke.THICK,
+    valueType: KnobValueType.FLOAT,
+    layout: KnobLayout.VERTICAL,
+    labelStyle: KnobLabelStyle.CUTOUT,
+    features: new Set<KnobFeatureValue>([KnobFeature.LINE_INDICATOR])
   } satisfies KnobConfig,
 
   /** Standard control knob */

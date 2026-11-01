@@ -1,0 +1,14 @@
+/* A small read-only ledger: named counts and notes in aligned columns. */
+.bd-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.bd-table th {
+  text-align: left; padding: 2px 12px 4px 0;
+  font-size: 9px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;
+  color: var(--color-dim, #82828e);
+}
+.bd-table td {
+  padding: 3px 12px 3px 0; vertical-align: top;
+  border-top: var(--line-width, 1.5px) solid var(--line, rgba(255, 255, 255, 0.11));
+  color: var(--color-text, #f0f0f3);
+}
+.bd-table td:first-child { font-weight: 600; white-space: nowrap; }
+.bd-table td:last-child { color: var(--color-dim, #82828e); }
