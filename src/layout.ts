@@ -175,6 +175,27 @@ export const LayoutDimensions = {
     moduleColumns: 2
   },
 
+  // The synth's page shell: the screen it's drawn for, and how it fits smaller ones
+  pageShell: {
+    stageWidth: 1920,
+    stageHeight: 1080,
+    stageZoomMin: 0.8,
+    tileGutter: 3,
+    moduleWidth: 320,
+    moduleHeight: 194,
+    envelopeMinWidth: 453,
+    envelopeMinHeight: 255,
+    previewMinWidth: 280,
+    previewMinHeight: 157,
+    compactModuleMinHeight: 96,
+    barLineHeight: 1.4,
+    guideText: 11,
+    cardTitle: 12,
+    guideRemeasureMs: 1000,
+    guideClipSlack: 1,
+    overlayLayer: 2000,
+  },
+
 } as const;
 
 // Compact spacing — dense synthesizer strip UI
