@@ -58,7 +58,7 @@ export function ModuleCell({ column, row, columns = 1, rows = 1, stretch, childr
 
 /** Recolours an icon's own file by the text colour around it. */
 export function Icon({ svg, height = G.iconHeight, flip, label }: { svg: string; height?: number; flip?: boolean; label?: string }) {
-  const sized = svg.replace(/\s(width|height)="[^"]*"/g, '').replace('<svg ', `<svg height="${height}" style="display:block;${flip ? 'transform:scaleX(-1)' : ''}" `).replace(/#fff/g, 'currentColor');
+  const sized = svg.replace(/\s(width|height)="[^"]*"/g, '').replace('<svg ', `<svg height="${height}" style="display:block;${flip ? 'transform:scaleX(-1)' : ''}" `).replace(/#fff|\bwhite\b/g, 'currentColor');
   return <span role={label ? 'img' : undefined} aria-label={label} style={{ display: 'inline-block', lineHeight: 0 }} dangerouslySetInnerHTML={{ __html: sized }} />;
 }
 
