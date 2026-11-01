@@ -1,20 +1,28 @@
 .bar-participants {
  --participant-glow:calc(var(--field-gap) / 3);
  --participant-chat-clearance:calc(var(--field-gap) / 2);
+ /* Sizes come from the bar's height: a typical sprite stands 1/φ² of it and the
+    chat 1/φ³, so together they fill 1/φ. Sprites keep their art's own proportions
+    in one image size, set so a typical one fills half its image. */
+ --participant-phi:1.618;
+ --participant-typical-height:calc(100cqh / var(--participant-phi) / var(--participant-phi));
+ --participant-typical-fill:.5;
+ --participant-image-size:calc(var(--participant-typical-height) / var(--participant-typical-fill));
+ --participant-chat-height:calc(var(--participant-typical-height) / var(--participant-phi));
  --participant-roam-time:28s;
  --participant-space-time:.62s;
  --participant-clearance:var(--bar-participant-inset,calc(var(--field-gap) * 2));
- position:relative;flex:1;align-self:stretch;min-width:0;min-height:var(--header-control);display:grid;grid-template-columns:minmax(0,1fr) minmax(0,0fr) minmax(0,1fr);
- padding-inline:var(--participant-clearance);column-gap:var(--field-gap);overflow:visible;clip-path:inset(calc(-1 * var(--header-control)) 0 0);
+ position:relative;flex:1;align-self:stretch;min-width:0;min-height:var(--header-control);container-type:size;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,0fr) minmax(0,1fr);
+ column-gap:var(--field-gap);overflow:visible;clip-path:inset(calc(-1 * var(--header-control)) 0 0);
  transition:grid-template-columns var(--participant-space-time) ease-in-out;
 }
-.bar-participant-group { --participant-size:min(var(--bar-participant-size,calc(var(--header-control) * 1.7)),calc(var(--bar-participant-fit,100cqw) / var(--participant-count)));position:relative;grid-column:1;justify-self:end;width:min(var(--participant-cluster-width,20cqw),calc(var(--participant-count) * var(--participant-size)),100%);height:100%; }
+.bar-participant-group { --participant-size:min(var(--bar-participant-size,calc(var(--participant-image-size) * var(--participant-phi))),calc(var(--bar-participant-fit,100cqw) / var(--participant-count)));position:relative;grid-column:1;justify-self:end;width:min(var(--participant-cluster-width,20cqw),calc(var(--participant-count) * var(--participant-size)),calc(100% - var(--participant-clearance)));height:100%; }
 .bar-participant-group+ .bar-participant-group { grid-column:3;justify-self:start; }
 .app-root .bar-participant {
  --participant-cycle:calc(var(--participant-roam-time) + var(--participant-index) * 3s);
  --participant-phase:calc(var(--participant-index) * -7s);
  --participant-travel:calc(var(--participant-size) * .45);
- --participant-sprite-size:min(var(--participant-size),calc(var(--header-control) / var(--participant-image-height)));
+ --participant-sprite-size:min(var(--participant-size),var(--participant-image-size));
  position:absolute;left:calc(var(--participant-position) * (100% - var(--participant-size)));bottom:0;width:var(--participant-size);height:100%;min-width:0;min-height:0;padding:0;border:0;border-radius:0;background:none;cursor:pointer;overflow:visible;
  animation:participant-roam var(--participant-cycle) linear infinite;
  animation-delay:var(--participant-phase);
@@ -28,7 +36,7 @@
  animation:participant-facing var(--participant-cycle) steps(1,end) infinite;animation-delay:var(--participant-phase);
 }
 .bar-participant img {
- display:block;width:100%;height:100%;object-fit:contain;image-rendering:pixelated;
+ display:block;width:100%;height:100%;object-fit:contain;
  filter:drop-shadow(0 0 var(--participant-glow) color-mix(in srgb,var(--participant-color,var(--pink)),var(--text) 35%));
  transform-origin:50% calc(var(--participant-image-bottom) * 100%);
  animation:participant-step var(--participant-cycle) ease-in-out infinite;animation-delay:var(--participant-phase);
@@ -36,16 +44,19 @@
 .bar-participant:is(:hover,:focus-visible) { --participant-glow:var(--field-gap); }
 .bar-participant[data-reaction] .bar-participant-chat { animation:none;opacity:1; }
 .bar-participants[data-center] { grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);column-gap:calc(var(--section-gap) * 2); }
-.bar-participant-message { grid-column:2;grid-row:1;align-self:center;display:grid;gap:calc(var(--field-gap) / 3);text-align:center;white-space:nowrap;font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:var(--pink);font-weight:750; }
-.bar-participant-message strong { font-weight:bolder; }
-.bar-participant-message span { color:var(--text); }
+/* Uppercase has no descenders, so trim to its caps to centre the letters rather
+   than their line box. Text lands on whole pixels, so 11px's even cap height is
+   what leaves equal space above and below in an even bar; 10px sat half a pixel low. */
+.bar-participant-message { grid-column:2;grid-row:1;align-self:center;text-box:trim-both cap alphabetic;text-align:center;white-space:nowrap;font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--pink);font-weight:750; }
+.bar-participant-message strong { display:block;font-weight:bolder; }
+.bar-participant-message span { display:block;margin-top:calc(var(--field-gap) / 3);color:var(--text); }
 .bar-participant-group { grid-row:1; }
 .bar-participant-grass { position:absolute;inset-inline:0;bottom:0;width:100%;height:calc(var(--line-width) * 6);overflow:visible;pointer-events:none; }
 .bar-participant-blade { transform:skewX(var(--participant-grass-bend,0deg));transition:transform var(--participant-space-time) ease-out;fill:color-mix(in srgb,var(--grass),var(--text) calc(var(--grass-variant) * 3%));opacity:calc(.46 + var(--grass-variant) * .05); }
 .bar-participant-blade path { animation:participant-grass-sway calc(3s + var(--grass-variant) * .4s) ease-in-out infinite alternate;animation-delay:calc(var(--grass-variant) * -.7s); }
 @keyframes participant-grass-sway { from { transform:skewX(-5deg); } to { transform:skewX(7deg); } }
 .bar-participant-chat {
- position:absolute;bottom:calc(var(--participant-sprite-size) * var(--participant-image-height) + var(--participant-chat-clearance));left:50%;translate:-50% 0;width:calc(var(--participant-size) * .42);height:calc(var(--participant-size) * .35);opacity:0;transform-origin:bottom center;pointer-events:none;
+ position:absolute;bottom:min(calc(var(--participant-sprite-size) * var(--participant-image-height) + var(--participant-chat-clearance)),calc(100cqh - var(--participant-chat-height)));left:50%;translate:-50% 0;width:calc(var(--participant-chat-height) * 1.2);height:var(--participant-chat-height);opacity:0;transform-origin:bottom center;pointer-events:none;
  animation:participant-chat var(--participant-cycle) ease-in-out infinite;animation-delay:var(--participant-phase);
 }
 /* Several long rests, with short, slow walks between them. Feet keep the same
