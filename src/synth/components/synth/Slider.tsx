@@ -130,7 +130,7 @@ function CellSlider({ value, onChange, min: minProp = 0, max, label, color, disa
   const fraction = range > 0 ? Math.min(Math.max((value - minProp) / range, 0), 1) : 0;
   const zeroFraction = range > 0 ? Math.min(Math.max((0 - minProp) / range, 0), 1) : 0;
 
-  const { isDragging, isHovered, setIsHovered, handleMouseDown } = useControlBehavior(
+  const { isDragging, isHovered, setIsHovered, handleMouseDown, handlePointerDown } = useControlBehavior(
     value, onChange, { min: minProp, max, vertical: false, isInteger, disabled, sensitivity }
   );
 
@@ -143,6 +143,7 @@ function CellSlider({ value, onChange, min: minProp = 0, max, label, color, disa
       style={{ display: F.flex, alignItems: F.center, gap: D.spacing.microGap, cursor: disabled ? C.notAllowed : C.pointer, ...fillStyle }}
       onMouseEnter={() => { setIsHovered(true); tooltip && setTooltip(tooltip); }}
       onMouseLeave={() => { setIsHovered(false); tooltip && setTooltip(null); }}
+      onPointerDown={handlePointerDown}
       onMouseDown={handleMouseDown}
       onDoubleClick={() => !disabled && onChange?.(minProp)}
     >

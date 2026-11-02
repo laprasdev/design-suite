@@ -328,7 +328,7 @@ export function Knob({
   const sensitivity = sensitivityOverride ?? getKnobSensitivity(config, max - min);
 
   // Use shared drag logic
-  const { isDragging, isHovered, setIsHovered, handleMouseDown } = useKnobDrag(
+  const { isDragging, isHovered, setIsHovered, handleMouseDown, handlePointerDown } = useKnobDrag(
     value,
     onChange,
     { min, max, isInteger, disabled: isDisabled, sensitivity }
@@ -370,6 +370,7 @@ export function Knob({
   const knobElement = (
     <div
       data-control-anchor="radial"
+      onPointerDown={handlePointerDown}
       onMouseDown={handleMouseDown}
       style={{
         position: 'relative',

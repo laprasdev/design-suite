@@ -187,7 +187,8 @@ export const LayoutDimensions = {
     envelopeMinHeight: 255,
     previewMinWidth: 280,
     previewMinHeight: 157,
-    compactModuleMinHeight: 96,
+    scrollCueHeight: 18,
+    scrollCueIcon: 12,
     barLineHeight: 1.4,
     guideText: 11,
     cardTitle: 12,
@@ -199,6 +200,8 @@ export const LayoutDimensions = {
     flipEase: 'cubic-bezier(.22,1,.36,1)',
     flipCardFadeDelayMs: 170,
     flipLeavingLayer: 1,
+    // A card sliding to its new place passes under the arriving page's modules, over the page leaving.
+    flipCardLayer: 1,
     flipArrivingLayer: 2,
     frameLayer: 3,
     arrangeLayer: 6,

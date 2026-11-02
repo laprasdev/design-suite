@@ -179,6 +179,7 @@ export function DualTickRangeKnob({
 
   const handleMouseMove = useCallback((e: MouseEvent) => {
     if (!activeTick) return;
+    if (e.buttons === 0) { setActiveTick(null); return; }
 
     const deltaY = dragStartY.current - e.clientY;
     // Use much lower sensitivity - 0.002 per pixel for smooth control

@@ -187,7 +187,7 @@ export function ModuleToolButton({ label, icon, title, dim, set, onPress }: { la
 /** Text chips for the groups inside a tab: the second level, when a tab holds more than one grid can. A dim chip has nothing set inside it. */
 export function ModuleGroups<Id extends string>({ groups, value, onChange, ariaLabel }: { groups: { id: Id; label: string; set: boolean }[]; value: Id; onChange: (id: Id) => void; ariaLabel: string }) {
   const style = useStyle().getEffectiveStyle();
-  return <div role="tablist" aria-label={ariaLabel} data-module-groups style={{ flexShrink: 0, display: 'flex', flexWrap: 'wrap', gap: G.groupGap, padding: `${G.groupStripPadding}px ${G.headerInset}px 0` }}>
+  return <div role="tablist" aria-label={ariaLabel} data-module-groups style={{ flexShrink: 0, maxWidth: '100%', boxSizing: 'border-box', display: 'flex', flexWrap: 'wrap', gap: G.groupGap, padding: `${G.groupStripPadding}px ${G.headerInset}px 0` }}>
     {groups.map(group => { const open = group.id === value; return <button key={group.id} type="button" role="tab" aria-selected={open} data-group={group.id} data-group-set={group.set} onClick={() => onChange(group.id)}
       style={{ ...T.moduleLabel, padding: `${G.groupPaddingBlock}px ${G.groupPaddingInline}px`, border: 'none', borderRadius: D.radius.button, cursor: 'pointer', textTransform: 'uppercase', background: open ? hexToRgba(style.primaryColor, O.subtle) : 'transparent', color: open || group.set ? style.primaryColor : hexToRgba(style.textColor, O.high) }}>{group.label}</button>; })}
   </div>;
