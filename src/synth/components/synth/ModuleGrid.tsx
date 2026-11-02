@@ -15,6 +15,13 @@ const ModuleControlSize = React.createContext<number>(G.controlMin);
 /** How big a knob is in this grid's cells. */
 export const useModuleControlSize = () => useContext(ModuleControlSize);
 
+// Where a field sits in its cell: centred in the rack's fixed cells, and on its column's line on a page, so names and dots line up from row to row.
+export const FieldAlign = Object.freeze({ CENTER: 'center', START: 'start' } as const);
+export type FieldAlignValue = typeof FieldAlign[keyof typeof FieldAlign];
+const ModuleFieldAlign = React.createContext<FieldAlignValue>(FieldAlign.CENTER);
+/** Where this grid's fields sit in their cells. */
+export const useFieldAlign = () => useContext(ModuleFieldAlign);
+
 function useFilledControlSize(rows: number) {
   const [size, setSize] = useState<number>(G.controlMin);
   const observer = useRef<ResizeObserver | null>(null);
@@ -22,7 +29,7 @@ function useFilledControlSize(rows: number) {
     observer.current?.disconnect();
     if (!element) return;
     const measure = () => {
-      const width = (element.clientWidth - G.fillPadding * 2 - G.fillGap * (G.columns - 1)) / G.columns;
+      const width = Math.min(G.fillColumnMax, (element.clientWidth - G.fillPadding * 2 - G.fillGap * (G.columns - 1)) / G.columns);
       const height = (element.clientHeight - G.fillPadding * 2 - G.fillGap * (rows - 1)) / rows - G.fieldTextRoom;
       setSize(clamp(Math.round(Math.min(width, height) * G.controlShare), G.controlMin, G.controlMax));
     };
@@ -42,12 +49,19 @@ export function ModuleGrid({ rowsPerKnob = 1, children }: { rowsPerKnob?: 1 | 2;
   );
 }
 
-/** A page's grid: the same four columns, stretched to whatever its tile gives it. `sizingRows` is the most rows any of the module's tabs has, so controls keep their size across tabs. Too small a tile scrolls this body under its header. */
-export function FilledModuleGrid({ rows, sizingRows = rows, children }: { rows: number; sizingRows?: number; children: React.ReactNode }) {
+/**
+ * A page's grid: the same four columns, each growing with its tile up to `fillColumnMax`. Rows take what their fields need and gather at the top,
+ * so what a tile has to spare collects below the module as one block. `fill` instead stretches the rows over the tile, for a body that is a drawing.
+ * `sizingRows` is the most rows any of the module's tabs has, so controls keep their size across tabs. Too small a tile scrolls this body under its header.
+ */
+export function FilledModuleGrid({ rows, sizingRows = rows, fill = false, children }: { rows: number; sizingRows?: number; fill?: boolean; children: React.ReactNode }) {
   const { grid, size } = useFilledControlSize(sizingRows);
+  const align = fill ? FieldAlign.CENTER : FieldAlign.START;
   return (
-    <div ref={grid} data-module-grid data-grid-rows={rows} data-control-size={size} style={{ flex: 1, minWidth: 0, minHeight: 0, overflow: 'auto', boxSizing: 'border-box', display: 'grid', gridTemplateColumns: `repeat(${G.columns}, minmax(0, 1fr))`, gridTemplateRows: `repeat(${rows}, minmax(min-content, 1fr))`, gap: G.fillGap, padding: G.fillPadding, lineHeight: G.tightLine }}>
-      <ModuleControlSize.Provider value={size}>{children}</ModuleControlSize.Provider>
+    <div ref={grid} data-module-grid data-grid-rows={rows} data-grid-fill={fill || undefined} data-control-size={size} style={{ flex: 1, minWidth: 0, minHeight: 0, overflow: 'auto', boxSizing: 'border-box', display: 'grid',
+      gridTemplateColumns: `repeat(${G.columns}, minmax(0, ${fill ? '1fr' : `${G.fillColumnMax}px`}))`, gridTemplateRows: `repeat(${rows}, ${fill ? 'minmax(min-content, 1fr)' : 'max-content'})`,
+      alignContent: fill ? undefined : 'start', justifyContent: fill ? undefined : 'start', gap: G.fillGap, padding: G.fillPadding, lineHeight: G.tightLine }}>
+      <ModuleFieldAlign.Provider value={align}><ModuleControlSize.Provider value={size}>{children}</ModuleControlSize.Provider></ModuleFieldAlign.Provider>
     </div>
   );
 }
@@ -96,25 +110,27 @@ const CONTROL_OPACITY: Record<FieldEmphasisValue, number> = { set: O.full, quiet
 // A list or number that can't be changed fades less than a dim field around it, so the two together still read.
 const LOCKED_INPUT = O.high;
 
-function FieldName({ label, icon, emphasis, onName, nameLabel, nameTitle }: { label: string; icon?: React.ReactNode; emphasis: FieldEmphasisValue; onName?: () => void; nameLabel?: string; nameTitle?: string }) {
+/** `rowTall` gives a pressable name the whole height of its row and at least a label's width, where it would otherwise be only its letters. */
+function FieldName({ label, icon, emphasis, onName, nameLabel, nameTitle, align = FieldAlign.CENTER, rowTall }: { label: string; icon?: React.ReactNode; emphasis: FieldEmphasisValue; onName?: () => void; nameLabel?: string; nameTitle?: string; align?: FieldAlignValue; rowTall?: boolean }) {
   const style = useStyle().getEffectiveStyle();
   const set = emphasis === FieldEmphasis.SET, inert = emphasis === FieldEmphasis.INERT;
-  const nameStyle: React.CSSProperties = { ...T.moduleLabel, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: G.nameIconGap, textTransform: 'uppercase', textAlign: 'center', color: set ? style.primaryColor : hexToRgba(style.textColor, O.high), transition: TransitionKeys.fast };
+  const nameStyle: React.CSSProperties = { ...T.moduleLabel, display: 'inline-flex', alignItems: 'center', justifyContent: align, gap: G.nameIconGap, textTransform: 'uppercase', textAlign: align, color: set ? style.primaryColor : hexToRgba(style.textColor, O.high), transition: TransitionKeys.fast };
   const content = <>{icon}{label}</>;
   return onName && !inert
-    ? <button type="button" data-field-name aria-label={nameLabel} title={nameTitle} onClick={onName} style={{ ...nameStyle, padding: 0, border: 'none', background: 'transparent', cursor: 'pointer' }}>{content}</button>
+    ? <button type="button" data-field-name aria-label={nameLabel} title={nameTitle} onClick={onName} style={{ ...nameStyle, padding: 0, border: 'none', background: 'transparent', cursor: 'pointer', ...(rowTall && { minHeight: G.yesNoLine, minWidth: G.rowLabelWidth }) }}>{content}</button>
     : <span data-field-name style={nameStyle}>{content}</span>;
 }
 
 /** A field in its cell: the control, what it reads, and its name, all staying readable when dim. Pressing the name is optional. */
 export function ModuleField({ label, icon, value, emphasis, onName, nameLabel, nameTitle, stretch, children }: { label: string; icon?: React.ReactNode; value?: React.ReactNode; emphasis: FieldEmphasisValue; onName?: () => void; nameLabel?: string; nameTitle?: string; stretch?: boolean; children: React.ReactNode }) {
   const style = useStyle().getEffectiveStyle();
+  const align = useFieldAlign();
   const set = emphasis === FieldEmphasis.SET, inert = emphasis === FieldEmphasis.INERT;
   return (
-    <div data-module-field={label} data-field-emphasis={emphasis} aria-disabled={inert} style={{ display: 'grid', justifyItems: 'center', gap: G.fieldGap, width: stretch ? '100%' : undefined }}>
-      <div data-field-control style={{ display: 'grid', placeItems: 'center', width: stretch ? '100%' : undefined, opacity: CONTROL_OPACITY[emphasis], pointerEvents: inert ? 'none' : undefined, transition: TransitionKeys.fast }}>{children}</div>
-      {value !== undefined && <div data-field-value style={{ ...T.moduleValue, textAlign: 'center', fontVariantNumeric: 'tabular-nums', color: hexToRgba(style.textColor, set ? O.full : O.high) }}>{value}</div>}
-      <FieldName label={label} icon={icon} emphasis={emphasis} onName={onName} nameLabel={nameLabel} nameTitle={nameTitle} />
+    <div data-module-field={label} data-field-emphasis={emphasis} aria-disabled={inert} style={{ display: 'grid', justifyItems: align, gap: G.fieldGap, width: stretch ? '100%' : undefined }}>
+      <div data-field-control style={{ display: 'grid', alignItems: 'center', justifyItems: align, width: stretch ? '100%' : undefined, opacity: CONTROL_OPACITY[emphasis], pointerEvents: inert ? 'none' : undefined, transition: TransitionKeys.fast }}>{children}</div>
+      {value !== undefined && <div data-field-value style={{ ...T.moduleValue, textAlign: align, fontVariantNumeric: 'tabular-nums', color: hexToRgba(style.textColor, set ? O.full : O.high) }}>{value}</div>}
+      <FieldName label={label} icon={icon} emphasis={emphasis} onName={onName} nameLabel={nameLabel} nameTitle={nameTitle} align={align} />
     </div>
   );
 }
@@ -125,7 +141,7 @@ export function ModuleFieldRow({ label, icon, value, emphasis, onName, nameLabel
   const set = emphasis === FieldEmphasis.SET, inert = emphasis === FieldEmphasis.INERT;
   return (
     <div data-module-field={label} data-field-emphasis={emphasis} aria-disabled={inert} style={{ display: 'grid', gridTemplateColumns: `minmax(${G.rowLabelWidth}px, max-content) minmax(0, 1fr) minmax(${G.rowValueWidth}px, max-content)`, alignItems: 'center', gap: G.rowGap, width: '100%' }}>
-      <div style={{ justifySelf: 'start' }}><FieldName label={label} icon={icon} emphasis={emphasis} onName={onName} nameLabel={nameLabel} nameTitle={nameTitle} /></div>
+      <div style={{ justifySelf: 'start' }}><FieldName label={label} icon={icon} emphasis={emphasis} onName={onName} nameLabel={nameLabel} nameTitle={nameTitle} align={FieldAlign.START} rowTall /></div>
       <div data-field-control style={{ display: 'flex', minWidth: 0, opacity: CONTROL_OPACITY[emphasis], pointerEvents: inert ? 'none' : undefined, transition: TransitionKeys.fast }}>{children}</div>
       <div data-field-value style={{ ...T.moduleValue, textAlign: 'right', fontVariantNumeric: 'tabular-nums', color: hexToRgba(style.textColor, set ? O.full : O.high) }}>{value}</div>
     </div>
@@ -147,7 +163,9 @@ export function ModuleHeaderControls({ children }: { children: React.ReactNode }
 export function ModuleKnob({ value, min, max, integer, onChange, ariaLabel, disabled, modulators, selectedSource, onSelectSource }: { value: number; min: number; max: number; integer: boolean; onChange: (value: number) => void; ariaLabel: string; disabled?: boolean } & ModulationProps) {
   const size = useModuleControlSize();
   const config = { ...KnobPreset.minimal, size, stroke: KnobStroke.STANDARD, labelStyle: KnobLabelStyle.PLAIN, layout: KnobLayout.KNOB_ONLY, valueType: integer ? KnobValueType.INTEGER : KnobValueType.FLOAT };
-  return <div role="group" aria-label={ariaLabel}><Knob config={config} tooltip={ariaLabel} sensitivity={(max - min) / G.knobDragPx} value={value} min={min} max={max} disabled={disabled} disabledOpacity={O.full} onChange={onChange} color="primary" modulators={modulators} selectedSource={selectedSource} onSelectSource={onSelectSource} /></div>;
+  // A whole number can always be dragged onto: past a whole step per pixel, a long range takes a longer drag rather than skipping values.
+  const sweep = (max - min) / G.knobDragPx, sensitivity = integer ? Math.min(G.wholeStepsPerPixel, sweep) : sweep;
+  return <div role="group" aria-label={ariaLabel}><Knob config={config} tooltip={ariaLabel} sensitivity={sensitivity} value={value} min={min} max={max} disabled={disabled} disabledOpacity={O.full} onChange={onChange} color="primary" modulators={modulators} selectedSource={selectedSource} onSelectSource={onSelectSource} /></div>;
 }
 
 /** The switch form at the size of this grid's controls. */

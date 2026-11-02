@@ -14,6 +14,9 @@ export const Relativity = {
   OneMinusPhiInverse: 0.382,
 } as const;
 
+// The largest a knob on a page's module grows, which the grid's columns are measured against.
+const MODULE_CONTROL_MAX = 88;
+
 export const LayoutDimensions = {
   // Viewport
   viewport: {
@@ -251,6 +254,8 @@ export const LayoutDimensions = {
     tightLine: 1.15,
     fillPadding: 8,
     fillGap: 8,
+    // On a page a column grows with its tile only to φ of the largest knob, so a few fields stay together rather than spreading across a wide tile.
+    fillColumnMax: Math.round(MODULE_CONTROL_MAX * PHI),
     headerGap: 8,
     headerLineHeight: 29,
     headerTitleGap: 16,
@@ -263,11 +268,13 @@ export const LayoutDimensions = {
     fieldTextRoom: 44,
     controlShare: 0.85,
     controlMin: 44,
-    controlMax: 88,
+    controlMax: MODULE_CONTROL_MAX,
     switchShare: 0.3,
     switchMin: 12,
     switchMax: 26,
     knobDragPx: 200,
+    // A whole-number field, like a frame count, moves at most this many per pixel dragged, so it can be dragged onto any value.
+    wholeStepsPerPixel: 1,
     optionColumns: 3,
     optionGap: 4,
     optionPaddingBlock: 6,
@@ -314,6 +321,8 @@ export const LayoutDimensions = {
     layerColumns: 8,
     numberInputWidth: 88,
     sensorReachMeters: 5,
+    // A sensor's distance moves in centimetres, the two decimals it reads in, so what's written is what shows.
+    sensorDistanceStep: 0.01,
     inputPadding: 4,
   },
 

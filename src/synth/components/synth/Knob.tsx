@@ -253,9 +253,11 @@ function useRefusal() {
  * `refusesOutside` writes nothing for a number past min or max and says so, where without it the number is clamped. Escape then leaves without writing.
  * `value` is the exact number held, where `text` may round it for show: the box opens holding it, and leaving the box on that number writes nothing.
  */
-export function EditableValue({ text, value, color, style, onChange, min, max, refusesOutside }: {
+export function EditableValue({ text, value, color, style, onChange, min, max, refusesOutside, opensOnPress }: {
   text: string; value?: number; color: string; style: React.CSSProperties;
   onChange?: (v: number) => void; min: number; max: number; refusesOutside?: boolean;
+  /** One press opens the box, as its text cursor promises. Without it, as on the old grid, a double-click does. */
+  opensOnPress?: boolean;
 }) {
   const theme = useStyle().getEffectiveStyle();
   const [editing, setEditing] = useState(false);
@@ -277,7 +279,7 @@ export function EditableValue({ text, value, color, style, onChange, min, max, r
     else if (refusesOutside && event.key === 'Escape') { event.stopPropagation(); setEditing(false); }
   };
 
-  if (!editing || !onChange) return <div style={refusesOutside ? { ...style, position: 'relative' } : style} onDoubleClick={() => setEditing(true)}>
+  if (!editing || !onChange) return <div data-editable-value style={refusesOutside ? { ...style, position: 'relative' } : style} onClick={opensOnPress ? () => setEditing(true) : undefined} onDoubleClick={opensOnPress ? undefined : () => setEditing(true)}>
     {text}
     {refused && <span role="alert" data-value-refused style={{ ...T.moduleValue, position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)', zIndex: D.pageShell.overlayLayer, width: 'max-content', maxWidth: D.moduleGrid.rowValueWidth * 2, padding: D.moduleGrid.inputPadding, textAlign: 'center', color: theme.textColor, background: theme.cutoutBackground, border: `${Borders.standard.width}px solid ${theme.primaryColor}`, borderRadius: D.radius.tiny }}>{refused}</span>}
   </div>;
