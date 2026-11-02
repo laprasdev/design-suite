@@ -161,7 +161,7 @@ export const YesNo = Object.freeze({ ON: 'on', OFF: 'off', UNSET: 'unset', INHER
 export type YesNoValue = typeof YesNo[keyof typeof YesNo];
 
 /** Solid is on, a ring is off, dotted is not set, and half filled is inherit. */
-function YesNoDot({ state, color }: { state: YesNoValue; color: string }) {
+export function YesNoDot({ state, color }: { state: YesNoValue; color: string }) {
   const size = G.yesNoDot, centre = size / 2, r = centre - G.yesNoStroke;
   const settled = state === YesNo.ON || state === YesNo.OFF;
   return <svg aria-hidden width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ flex: 'none', display: 'block' }}>

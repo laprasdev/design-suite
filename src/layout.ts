@@ -192,16 +192,21 @@ export const LayoutDimensions = {
     barLineHeight: 1.4,
     guideText: 12,
     guideTagLayer: 1,
-    // A closed page's card, in stage pixels: its drawing beside what's set on it. The text stays readable at the smallest zoom.
+    // A closed page's card: one drawing laid out on φ in the larger card's box, drawn smaller in the smaller card.
+    // Text and icons stay these sizes in stage pixels in both, so they read at the smallest zoom; everything else is in the larger card's pixels.
     cardTitle: 14,
     cardText: 13,
-    cardPadding: 12,
-    cardDrawingWidth: 160,
-    cardDrawingHeight: 90,
-    cardDrawingInset: 8,
+    cardIcon: 14,
+    cardPadding: 8,
     cardStroke: 1.5,
-    cardDot: 4,
-    cardDotGap: 14,
+    cardWire: 1,
+    cardGateRadius: 9,
+    cardNodeRadius: 3,
+    // What a drawing weighs against a list when a card shares its room out, in text rows; and the narrowest a list's column gets, in stage pixels.
+    cardDrawingRows: 4,
+    cardLineWidth: 120,
+    // A card's title and live mark beside its drawing, when there they leave it more room than above it.
+    cardHeaderWidth: 104,
     guideRemeasureMs: 1000,
     guideClipSlack: 1,
     overlayLayer: 2000,
