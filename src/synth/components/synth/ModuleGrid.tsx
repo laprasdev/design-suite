@@ -88,9 +88,12 @@ export function GridModule({ title, group, tabs, children }: { title: string; gr
 }
 
 // How much a field says for itself: set, quiet because nothing is set or it inherits, or inert because it can't apply here.
+// Inert is as dim as quiet: its module's header already says it's off, and a value inside it still reads at 3:1 or better.
 export const FieldEmphasis = Object.freeze({ SET: 'set', QUIET: 'quiet', INERT: 'inert' } as const);
 export type FieldEmphasisValue = typeof FieldEmphasis[keyof typeof FieldEmphasis];
-const CONTROL_OPACITY: Record<FieldEmphasisValue, number> = { set: O.full, quiet: O.medium, inert: O.low };
+const CONTROL_OPACITY: Record<FieldEmphasisValue, number> = { set: O.full, quiet: O.medium, inert: O.medium };
+// A list or number that can't be changed fades less than a dim field around it, so the two together still read.
+const LOCKED_INPUT = O.high;
 
 function FieldName({ label, icon, emphasis, onName, nameLabel, nameTitle }: { label: string; icon?: React.ReactNode; emphasis: FieldEmphasisValue; onName?: () => void; nameLabel?: string; nameTitle?: string }) {
   const style = useStyle().getEffectiveStyle();
@@ -152,12 +155,41 @@ export function ModuleSwitch({ value, onChange, ariaLabel, disabled }: { value: 
   return <BooleanControl form={BooleanForm.SWITCH} height={height} value={value} onChange={onChange} ariaLabel={ariaLabel} disabled={disabled} />;
 }
 
-/** A compact list on a module's grid, for choices too many to show as options. */
-export function ModuleSelect<Value extends string | number>({ value, options, onChange, ariaLabel, disabled, fill }: { value: Value; options: { value: Value; label: string }[]; onChange?: (value: Value) => void; ariaLabel: string; disabled?: boolean; fill?: boolean }) {
+// A yes/no field's four real states: on, off, not set, and inherit.
+export const YesNo = Object.freeze({ ON: 'on', OFF: 'off', UNSET: 'unset', INHERIT: 'inherit' } as const);
+export type YesNoValue = typeof YesNo[keyof typeof YesNo];
+
+/** Solid is on, a ring is off, dotted is not set, and half filled is inherit. */
+function YesNoDot({ state, color }: { state: YesNoValue; color: string }) {
+  const size = G.yesNoDot, centre = size / 2, r = centre - G.yesNoStroke;
+  const settled = state === YesNo.ON || state === YesNo.OFF;
+  return <svg aria-hidden width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ flex: 'none', display: 'block' }}>
+    <circle cx={centre} cy={centre} r={r} fill={state === YesNo.ON ? color : 'none'} stroke={hexToRgba(color, settled ? O.full : O.high)} strokeWidth={G.yesNoStroke} strokeDasharray={state === YesNo.UNSET ? `${G.yesNoDash} ${G.yesNoDash}` : undefined} strokeLinecap="round" />
+    {state === YesNo.INHERIT && <path d={`M${centre} ${centre - r}A${r} ${r} 0 0 0 ${centre} ${centre + r}Z`} fill={color} />}
+  </svg>;
+}
+
+/** A yes/no field as one line, its dot then its name, and the whole line is what's pressed. Its name reads as any field's name does. */
+export function ModuleYesNo({ label, state, emphasis, onPress, title }: { label: string; state: YesNoValue; emphasis: FieldEmphasisValue; onPress?: () => void; title?: string }) {
   const style = useStyle().getEffectiveStyle();
-  return <select aria-label={ariaLabel} value={String(value)} disabled={disabled || !onChange} onChange={event => { const found = options.find(option => String(option.value) === event.target.value); if (found) onChange?.(found.value); }}
-    style={{ ...T.moduleValue, color: style.textColor, background: style.cutoutBackground, border: `1px solid ${hexToRgba(style.primaryColor, O.low)}`, borderRadius: D.radius.button, padding: G.inputPadding, minWidth: 0, maxWidth: '100%', width: fill ? '100%' : undefined, opacity: disabled ? O.medium : O.full }}>
-    {options.map(option => <option key={String(option.value)} value={String(option.value)}>{option.label}</option>)}
+  const set = emphasis === FieldEmphasis.SET, locked = emphasis === FieldEmphasis.INERT || !onPress;
+  return <button type="button" role="switch" aria-checked={state === YesNo.ON} aria-label={label} data-module-field={label} data-field-emphasis={emphasis} data-yes-no={state} title={title} disabled={locked} onClick={onPress}
+    style={{ ...T.moduleLabel, display: 'flex', alignItems: 'center', gap: G.fieldGap, maxWidth: '100%', minHeight: G.yesNoLine, padding: 0, border: 'none', background: 'transparent', textAlign: 'left', textTransform: 'uppercase', cursor: locked ? 'default' : 'pointer', color: set ? style.primaryColor : hexToRgba(style.textColor, O.high) }}>
+    <span style={{ display: 'flex', opacity: CONTROL_OPACITY[emphasis], transition: TransitionKeys.fast }}><YesNoDot state={state} color={style.primaryColor} /></span>
+    <span data-field-name style={{ minWidth: 0, overflowWrap: 'anywhere' }}>{label}</span>
+  </button>;
+}
+
+/** A compact list on a module's grid, for choices too many to show as options. */
+/** An option with a `group` is listed under that group's heading, so its own label needn't repeat it. `title` names the whole choice where the box cuts it short. */
+export function ModuleSelect<Value extends string | number>({ value, options, onChange, ariaLabel, disabled, fill, title }: { value: Value; options: { value: Value; label: string; group?: string }[]; onChange?: (value: Value) => void; ariaLabel: string; disabled?: boolean; fill?: boolean; title?: string }) {
+  const style = useStyle().getEffectiveStyle();
+  const item = (option: { value: Value; label: string }) => <option key={String(option.value)} value={String(option.value)}>{option.label}</option>;
+  const groups = [...new Set(options.flatMap(option => option.group ? [option.group] : []))];
+  return <select aria-label={ariaLabel} title={title} value={String(value)} disabled={disabled || !onChange} onChange={event => { const found = options.find(option => String(option.value) === event.target.value); if (found) onChange?.(found.value); }}
+    style={{ ...T.moduleValue, color: style.textColor, background: style.cutoutBackground, border: `1px solid ${hexToRgba(style.primaryColor, O.low)}`, borderRadius: D.radius.button, padding: G.inputPadding, minWidth: 0, maxWidth: '100%', width: fill ? '100%' : undefined, opacity: disabled ? LOCKED_INPUT : O.full }}>
+    {options.filter(option => !option.group).map(item)}
+    {groups.map(group => <optgroup key={group} label={group}>{options.filter(option => option.group === group).map(item)}</optgroup>)}
   </select>;
 }
 
@@ -168,7 +200,7 @@ export function ModuleNumberInput({ value, onChange, ariaLabel, disabled, onFocu
   return <input type="number" step="any" aria-label={ariaLabel} disabled={disabled} value={typing ?? String(value)}
     onFocus={() => { setTyping(String(value)); onFocus?.(); }} onBlur={() => { setTyping(null); onBlur?.(); }}
     onChange={event => { setTyping(event.target.value); const next = event.target.valueAsNumber; if (Number.isFinite(next)) onChange?.(next); }}
-    style={{ ...T.moduleValue, width: fill ? '100%' : G.numberInputWidth, minWidth: 0, boxSizing: 'border-box', color: style.textColor, background: style.cutoutBackground, border: `1px solid ${hexToRgba(style.primaryColor, O.low)}`, borderRadius: D.radius.button, padding: G.inputPadding, opacity: disabled ? O.medium : O.full }} />;
+    style={{ ...T.moduleValue, width: fill ? '100%' : G.numberInputWidth, minWidth: 0, boxSizing: 'border-box', color: style.textColor, background: style.cutoutBackground, border: `1px solid ${hexToRgba(style.primaryColor, O.low)}`, borderRadius: D.radius.button, padding: G.inputPadding, opacity: disabled ? LOCKED_INPUT : O.full }} />;
 }
 
 /** A typed line of text. */
@@ -203,10 +235,10 @@ export function ModuleCurve({ points, ariaLabel }: { points: { x: number; y: num
   </svg>;
 }
 
-/** A field whose contents open in the module's body. */
+/** A field whose contents open in the module's body. Its mark is in the text colour, which still reads when its field is dim. */
 export function ModuleOpenButton({ ariaLabel, onPress, disabled }: { ariaLabel: string; onPress: () => void; disabled?: boolean }) {
   const style = useStyle().getEffectiveStyle();
-  return <button type="button" data-field-open aria-label={ariaLabel} disabled={disabled} onClick={onPress} style={{ ...T.moduleLabel, width: G.openButtonWidth, height: G.openButtonHeight, padding: 0, border: `1px solid ${hexToRgba(style.primaryColor, O.low)}`, borderRadius: D.radius.button, background: 'transparent', color: style.primaryColor, cursor: disabled ? 'not-allowed' : 'pointer' }}>›</button>;
+  return <button type="button" data-field-open aria-label={ariaLabel} disabled={disabled} onClick={onPress} style={{ ...T.moduleLabel, width: G.openButtonWidth, height: G.openButtonHeight, padding: 0, border: `1px solid ${hexToRgba(style.primaryColor, O.low)}`, borderRadius: D.radius.button, background: 'transparent', color: style.textColor, cursor: disabled ? 'not-allowed' : 'pointer' }}>›</button>;
 }
 
 /** A colour to pick. `hex` is what the browser's picker can show, and channels past 1 stay as written until a pick replaces them. */

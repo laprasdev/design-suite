@@ -314,18 +314,20 @@ function FullDistinctRenderer<T>({ options, isSelected: isSel, onSelect, scheme,
 // =====================================================
 // OPTIONS - Every choice in view on a module's grid, wrapping to fit
 // =====================================================
+// Given `columns`, the choices keep to that many column lines. Without, each takes the room its words need and they wrap to another row rather than cut a word.
 function OptionsEnumRenderer<T>({ options, value, onChange, disabled, scheme, style, className = '', columns, litValues }: SingleSelectEnumProps<T> & RendererProps<T>) {
   const fmtLabel = useEnumLabel();
-  const { optionColumns, optionGap, optionPaddingBlock, optionPaddingInline } = D.moduleGrid;
+  const { optionGap, optionPaddingBlock, optionPaddingInline } = D.moduleGrid;
+  const flow: React.CSSProperties = columns ? { display: F.grid, gridTemplateColumns: `repeat(${Math.min(columns, options.length)}, minmax(0, 1fr))` } : { display: 'flex', flexWrap: 'wrap' };
   return (
-    <div className={className} data-enum-options style={{ display: F.grid, width: '100%', gridTemplateColumns: `repeat(${Math.min(columns ?? optionColumns, options.length)}, minmax(0, 1fr))`, gap: optionGap }}>
+    <div className={className} data-enum-options style={{ ...flow, width: '100%', gap: optionGap }}>
       {options.map((option, index) => {
         const selected = litValues ? litValues.includes(option.value) : option.value === value;
         return (
           <button key={index} type="button" disabled={disabled} aria-pressed={selected} title={option.tooltip ?? option.label}
             onClick={() => onChange?.(option.value)}
             style={{
-              ...T.moduleLabel, minWidth: 0, padding: `${optionPaddingBlock}px ${optionPaddingInline}px`,
+              ...T.moduleLabel, minWidth: 0, padding: `${optionPaddingBlock}px ${optionPaddingInline}px`, ...(columns ? {} : { flex: '1 0 auto', maxWidth: '100%', overflowWrap: 'anywhere' }),
               borderRadius: D.radius.button, border: 'none', cursor: disabled ? C.notAllowed : C.pointer,
               background: selected ? scheme.main : hexToRgba(scheme.main, O.trace),
               color: selected ? style.backgroundColor : style.textColor,

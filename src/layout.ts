@@ -265,6 +265,11 @@ export const LayoutDimensions = {
     headerSwitchHeight: 14,
     phaseGlyphHeight: 14,
     nameIconHeight: 12,
+    // A yes/no field as one line: its dot, drawn at the name's size, then the name. The line is as tall as a module header's, which is what it gives to press.
+    yesNoDot: 12,
+    yesNoStroke: 1.5,
+    yesNoDash: 2,
+    yesNoLine: 29,
     nameIconGap: 4,
     headerControlsPadding: 8,
     noticePadding: 12,
@@ -307,7 +312,8 @@ export const LayoutDimensions = {
     pickerSize: 26,
     pickerGlyph: 18,
     enableLine: 2,
-    enableHit: 8,
+    // What a phase's on and off line gives to press: its foot of the cell, kept clear of what's above.
+    enableHit: 13,
     boostIcon: 16,
     boostCell: 19,
     cellFloor: 0.05,
@@ -335,6 +341,12 @@ export const LayoutDimensions = {
     nodeRadius: 8,
     columnGap: 34,
     rowGap: 13,
+    // A chain wider than the canvas wraps into bands this far apart, room enough for a wire going back to the next band's start.
+    bandGap: 55,
+    // Between the canvas's edge and the outputs, so a wire cut off at the edge never reads as reaching an output.
+    edgeGap: 13,
+    // How long a node that a reference opened stays marked.
+    markMs: 1600,
     canvasInset: 21,
     canvasEnd: 34,
     portSize: 12,

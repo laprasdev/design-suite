@@ -1,4 +1,4 @@
-import React, { useCallback, useState, useRef } from 'react';
+import React, { useCallback, useEffect, useState, useRef } from 'react';
 import { useStyle } from '../../StyleContext.tsx';
 import { getColorScheme, getInsetShadow, resolveColorType, hexToRgba, type AnyColor } from '../../../color.ts';
 import { D, F, O, TransitionKeys, Borders, T } from '../../design/index.ts';
@@ -231,25 +231,55 @@ export interface KnobProps extends ModulationProps {
 // EDITABLE VALUE — click to type a numeric value
 // =====================================================
 
-export function EditableValue({ text, color, style, onChange, min, max }: {
+/** What a refused number says: the limits it has, and that nothing was written. */
+export function limitWords(typed: number, min: number, max: number) {
+  const takes = Number.isFinite(min) && Number.isFinite(max) ? `${min} to ${max}` : Number.isFinite(min) ? `${min} or more` : `${max} or less`;
+  return `Takes ${takes}, so ${typed} wasn't written.`;
+}
+
+/** A refusal stays in view until the next press or key anywhere. */
+function useRefusal() {
+  const [refused, setRefused] = useState<string | null>(null);
+  useEffect(() => {
+    if (!refused) return;
+    const clear = () => setRefused(null);
+    addEventListener('pointerdown', clear, true); addEventListener('keydown', clear, true);
+    return () => { removeEventListener('pointerdown', clear, true); removeEventListener('keydown', clear, true); };
+  }, [refused]);
+  return { refused, setRefused };
+}
+
+/** `refusesOutside` writes nothing for a number past min or max and says so, where without it the number is clamped. Escape then leaves without writing. */
+export function EditableValue({ text, color, style, onChange, min, max, refusesOutside }: {
   text: string; color: string; style: React.CSSProperties;
-  onChange?: (v: number) => void; min: number; max: number;
+  onChange?: (v: number) => void; min: number; max: number; refusesOutside?: boolean;
 }) {
+  const theme = useStyle().getEffectiveStyle();
   const [editing, setEditing] = useState(false);
+  const { refused, setRefused } = useRefusal();
   const inputRef = useRef<HTMLInputElement>(null);
 
   const commit = () => {
     const raw = parseFloat(inputRef.current?.value ?? '');
-    if (!isNaN(raw)) onChange?.(Math.min(max, Math.max(min, raw)));
     setEditing(false);
+    if (isNaN(raw)) return;
+    if (refusesOutside && (raw < min || raw > max)) return setRefused(limitWords(raw, min, max));
+    onChange?.(Math.min(max, Math.max(min, raw)));
+  };
+  const onKey = (event: React.KeyboardEvent) => {
+    if (event.key === 'Enter') commit();
+    else if (refusesOutside && event.key === 'Escape') { event.stopPropagation(); setEditing(false); }
   };
 
-  if (!editing || !onChange) return <div style={style} onDoubleClick={() => setEditing(true)}>{text}</div>;
+  if (!editing || !onChange) return <div style={refusesOutside ? { ...style, position: 'relative' } : style} onDoubleClick={() => setEditing(true)}>
+    {text}
+    {refused && <span role="alert" data-value-refused style={{ ...T.moduleValue, position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)', zIndex: D.pageShell.overlayLayer, width: 'max-content', maxWidth: D.moduleGrid.rowValueWidth * 2, padding: D.moduleGrid.inputPadding, textAlign: 'center', color: theme.textColor, background: theme.cutoutBackground, border: `${Borders.standard.width}px solid ${theme.primaryColor}`, borderRadius: D.radius.tiny }}>{refused}</span>}
+  </div>;
 
   return (
     <input ref={inputRef} autoFocus defaultValue={text.replace(/[^0-9.\-]/g, '')}
       style={{ ...style, background: 'transparent', border: 'none', outline: 'none', color, width: 32, padding: 0 }}
-      onBlur={commit} onKeyDown={e => e.key === 'Enter' && commit()} />
+      onBlur={commit} onKeyDown={onKey} />
   );
 }
 
