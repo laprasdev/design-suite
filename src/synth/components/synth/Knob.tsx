@@ -249,19 +249,25 @@ function useRefusal() {
   return { refused, setRefused };
 }
 
-/** `refusesOutside` writes nothing for a number past min or max and says so, where without it the number is clamped. Escape then leaves without writing. */
-export function EditableValue({ text, color, style, onChange, min, max, refusesOutside }: {
-  text: string; color: string; style: React.CSSProperties;
+/**
+ * `refusesOutside` writes nothing for a number past min or max and says so, where without it the number is clamped. Escape then leaves without writing.
+ * `value` is the exact number held, where `text` may round it for show: the box opens holding it, and leaving the box on that number writes nothing.
+ */
+export function EditableValue({ text, value, color, style, onChange, min, max, refusesOutside }: {
+  text: string; value?: number; color: string; style: React.CSSProperties;
   onChange?: (v: number) => void; min: number; max: number; refusesOutside?: boolean;
 }) {
   const theme = useStyle().getEffectiveStyle();
   const [editing, setEditing] = useState(false);
   const { refused, setRefused } = useRefusal();
   const inputRef = useRef<HTMLInputElement>(null);
+  const opensWith = value === undefined ? text.replace(/[^0-9.\-]/g, '') : String(value);
 
   const commit = () => {
-    const raw = parseFloat(inputRef.current?.value ?? '');
+    const typed = inputRef.current?.value ?? '';
+    const raw = parseFloat(typed);
     setEditing(false);
+    if (value !== undefined && (typed === opensWith || raw === value)) return;
     if (isNaN(raw)) return;
     if (refusesOutside && (raw < min || raw > max)) return setRefused(limitWords(raw, min, max));
     onChange?.(Math.min(max, Math.max(min, raw)));
@@ -277,7 +283,7 @@ export function EditableValue({ text, color, style, onChange, min, max, refusesO
   </div>;
 
   return (
-    <input ref={inputRef} autoFocus defaultValue={text.replace(/[^0-9.\-]/g, '')}
+    <input ref={inputRef} autoFocus defaultValue={opensWith}
       style={{ ...style, background: 'transparent', border: 'none', outline: 'none', color, width: 32, padding: 0 }}
       onBlur={commit} onKeyDown={onKey} />
   );

@@ -67,7 +67,8 @@ export function ModuleHeaderRow({ group, children }: { group?: string; children:
   const style = useStyle().getEffectiveStyle();
   return (
     <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'stretch', justifyContent: 'flex-end', gap: G.headerGap, flex: 1, minWidth: 0 }}>
-      {group && <span data-open-group style={{ ...T.moduleLabel, alignSelf: 'flex-start', lineHeight: `${G.headerLineHeight}px`, marginRight: 'auto', textTransform: 'uppercase', color: style.textColor, opacity: O.high, whiteSpace: 'nowrap' }}>{group}</span>}
+      {/* The group's name takes what room is left and is cut first, so the tabs and switches beside it stay on one row as long as they fit. */}
+      {group && <span data-open-group title={group} style={{ ...T.moduleLabel, alignSelf: 'flex-start', lineHeight: `${G.headerLineHeight}px`, flex: '1 1 0', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', textTransform: 'uppercase', color: style.textColor, opacity: O.high, whiteSpace: 'nowrap' }}>{group}</span>}
       {children}
     </div>
   );
