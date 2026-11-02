@@ -153,10 +153,10 @@ export function ModuleSwitch({ value, onChange, ariaLabel, disabled }: { value: 
 }
 
 /** A compact list on a module's grid, for choices too many to show as options. */
-export function ModuleSelect<Value extends string | number>({ value, options, onChange, ariaLabel, disabled }: { value: Value; options: { value: Value; label: string }[]; onChange?: (value: Value) => void; ariaLabel: string; disabled?: boolean }) {
+export function ModuleSelect<Value extends string | number>({ value, options, onChange, ariaLabel, disabled, fill }: { value: Value; options: { value: Value; label: string }[]; onChange?: (value: Value) => void; ariaLabel: string; disabled?: boolean; fill?: boolean }) {
   const style = useStyle().getEffectiveStyle();
   return <select aria-label={ariaLabel} value={String(value)} disabled={disabled || !onChange} onChange={event => { const found = options.find(option => String(option.value) === event.target.value); if (found) onChange?.(found.value); }}
-    style={{ ...T.moduleValue, color: style.textColor, background: style.cutoutBackground, border: `1px solid ${hexToRgba(style.primaryColor, O.low)}`, borderRadius: D.radius.button, padding: G.inputPadding, minWidth: 0, maxWidth: '100%' }}>
+    style={{ ...T.moduleValue, color: style.textColor, background: style.cutoutBackground, border: `1px solid ${hexToRgba(style.primaryColor, O.low)}`, borderRadius: D.radius.button, padding: G.inputPadding, minWidth: 0, maxWidth: '100%', width: fill ? '100%' : undefined, opacity: disabled ? O.medium : O.full }}>
     {options.map(option => <option key={String(option.value)} value={String(option.value)}>{option.label}</option>)}
   </select>;
 }
