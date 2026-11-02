@@ -202,6 +202,8 @@ export const LayoutDimensions = {
     cardWire: 1,
     cardGateRadius: 9,
     cardNodeRadius: 3,
+    // The dash of a line a card draws for what the state takes from elsewhere, such as an Envelope phase that inherits.
+    cardDash: 3,
     // What a drawing weighs against a list when a card shares its room out, in text rows; and the narrowest a list's column gets, in stage pixels.
     cardDrawingRows: 4,
     cardLineWidth: 120,
@@ -213,6 +215,8 @@ export const LayoutDimensions = {
     // A flip: twice the suite's .17s, long enough to watch a page and its card trade places around the still Preview.
     flipMs: 340,
     flipEase: 'cubic-bezier(.22,1,.36,1)',
+    // The first half of a flip: the card you pressed fades as its page grows out of it, and the card taking its place waits for it to go.
+    // In the second half that card slides in and the page you left hands over to its own card as it fades in.
     flipCardFadeDelayMs: 170,
     flipLeavingLayer: 1,
     // A card sliding to its new place passes under the arriving page's modules, over the page leaving.
