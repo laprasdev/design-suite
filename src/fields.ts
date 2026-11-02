@@ -1,5 +1,6 @@
-// The field vocabulary: whether a field is set, how much it says, which control draws it, and what a yes/no reads.
-// No React here, so the web synth's models read it without importing a view, and the suite's views read it too.
+// The field vocabulary: whether a field is set, how much it says, which control draws it, what a yes/no reads, and
+// which lifecycle phases are active. No React here, so the web synth's models read it without importing a view, and
+// the suite's views read it too.
 
 /** Whether a field holds its own value here: set, not set, or inheriting through its mode. */
 export const FieldState = Object.freeze({ SET: 'set', UNSET: 'unset', INHERITED: 'inherited' } as const);
@@ -46,3 +47,6 @@ export const YES_NO_NEXT: Readonly<Record<YesNoValue, YesNoValue>> = Object.free
 
 /** What a field holding nothing reads. */
 export const NO_VALUE = '—';
+
+/** C#'s PhaseConfiguration as a phase glyph draws it: whether its entrance and maintain phases are active. */
+export interface PhaseGlyphValue { entrance: boolean; maintain: boolean }

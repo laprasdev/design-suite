@@ -1,6 +1,7 @@
 import React from 'react';
 import {useStyle} from '../../StyleContext.tsx';
 import {hexToRgba} from '../../../color.ts';
+import type {PhaseGlyphValue} from '../../../fields.ts';
 
 // The timeline's own silhouette: a ramp in for entrance, a block for maintain. Every corner is rounded.
 const RAMP_PATH = 'M4.17 8L7.1 8A.9 .9 0 0 0 8 7.1L8 4.17A.9 .9 0 0 0 6.465 3.535L3.535 6.465A.9 .9 0 0 0 4.17 8Z';
@@ -8,7 +9,7 @@ const BLOCK = {x: 12, y: 2, size: 6, radius: 1.2};
 const UNLIT_OPACITY = 0.45;
 const VIEW_WIDTH = 20, VIEW_HEIGHT = 10;
 
-export interface PhaseGlyphValue { entrance: boolean; maintain: boolean }
+export type {PhaseGlyphValue};
 export interface PhaseGlyphProps {
   value: PhaseGlyphValue;
   onChange?: (value: PhaseGlyphValue) => void;
