@@ -202,10 +202,12 @@ export const LayoutDimensions = {
     cardWire: 1,
     cardGateRadius: 9,
     cardNodeRadius: 3,
-    // The dash of a line a card draws for what the state takes from elsewhere, such as an Envelope phase that inherits.
+    // The dash of a line a card draws for what has no length of its own, such as an Envelope sustain held until the state is left.
     cardDash: 3,
     // What a drawing weighs against a list when a card shares its room out, in text rows; and the narrowest a list's column gets, in stage pixels.
     cardDrawingRows: 4,
+    // The fewest text rows of height a condition's drawing is drawn in. With less, a pad or a sensor reads as a dash, so its row says its title instead.
+    cardDrawingLeastRows: 2,
     cardLineWidth: 120,
     // A card's title and live mark beside its drawing, when there they leave it more room than above it.
     cardHeaderWidth: 104,
@@ -216,13 +218,15 @@ export const LayoutDimensions = {
     flipMs: 340,
     flipEase: 'cubic-bezier(.22,1,.36,1)',
     // The first half of a flip: the card you pressed fades as its page grows out of it, and the card taking its place waits for it to go.
-    // In the second half that card slides in and the page you left hands over to its own card as it fades in.
+    // In the second half that card slides in. The page you left stays whole until it lands on its card, which shows only then.
     flipCardFadeDelayMs: 170,
-    flipLeavingLayer: 1,
-    // A card sliding to its new place passes under the arriving page's modules, over the page leaving.
-    flipCardLayer: 1,
-    flipArrivingLayer: 2,
-    frameLayer: 3,
+    // A flip's stack, bottom to top: cards on their way to their places, the page arriving, the card you pressed fading off it, and the page you
+    // leave, whole and over all of them, so nothing reads through it on its way into its card. The frame stays above the lot.
+    flipCardLayer: 0,
+    flipArrivingLayer: 1,
+    flipPressedCardLayer: 2,
+    flipLeavingLayer: 3,
+    frameLayer: 4,
     arrangeLayer: 6,
     // Arranging: how near a tile's edge a drop cuts in, what a gutter takes the mouse over, and where a cut can rest, so a layout stays on the ratio.
     dropEdgeZone: 36,
