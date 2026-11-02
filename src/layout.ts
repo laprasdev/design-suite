@@ -269,9 +269,6 @@ export const LayoutDimensions = {
     controlShare: 0.85,
     controlMin: 44,
     controlMax: MODULE_CONTROL_MAX,
-    switchShare: 0.3,
-    switchMin: 12,
-    switchMax: 26,
     knobDragPx: 200,
     // A whole-number field, like a frame count, moves at most this many per pixel dragged, so it can be dragged onto any value.
     wholeStepsPerPixel: 1,

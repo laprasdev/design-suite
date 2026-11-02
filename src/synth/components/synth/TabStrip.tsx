@@ -1,5 +1,4 @@
 import React from 'react';
-import { useStyle } from '../../StyleContext.tsx';
 import { hexToRgba } from '../../../color.ts';
 import { LayoutDimensions } from '../../../layout.ts';
 import { D, DC, O, S, SYNTH_LABEL, STRIP_LABEL, TransitionKeys, Borders } from '../../design/index.ts';
@@ -151,26 +150,6 @@ export function EnabledCell({ enabled, color, isLast, align, accent, capLeft, ca
       style={{ ...accentEdgeStyle(h, lineBg, needsLeftCap, needsRightCap, flipped, cap?.radius ?? h), cursor: onClick ? 'pointer' : 'default', ...extraStyle }} accent={h}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: justify, flex: 1, color }}>{children}</div>
     </TabStripCell>
-  );
-}
-
-export interface ModuleTab<Id extends string> { id: Id; label: string; content: React.ReactNode; authored: boolean }
-
-/** Siblings share a module's room: one is open, and a dim tab has nothing set inside it. The open tab is never dim: what it holds is in view. */
-export function ModuleTabs<Id extends string>({ tabs, value, onChange, ariaLabel }: { tabs: ModuleTab<Id>[]; value: Id; onChange: (id: Id) => void; ariaLabel: string }) {
-  const { primaryColor } = useStyle().getEffectiveStyle();
-  return (
-    <div role="tablist" aria-label={ariaLabel} style={{ display: 'flex', alignItems: 'stretch', flex: 'none' }}>
-      <Strip edge="inline">
-        {tabs.map((tab, index) => (
-          <EnabledCell key={tab.id} enabled={tab.id === value} color={primaryColor} isLast={index === tabs.length - 1} onClick={() => onChange(tab.id)} style={{ justifyContent: 'center' }}>
-            <span role="tab" tabIndex={0} aria-selected={tab.id === value} aria-label={tab.label} title={tab.label} data-tab={tab.id} data-tab-set={tab.authored}
-              onKeyDown={event => { if (event.key === 'Enter') onChange(tab.id); }}
-              style={{ display: 'grid', placeItems: 'center', minWidth: D.moduleGrid.tabMinWidth, minHeight: D.moduleGrid.tabMinHeight, outline: 'none', opacity: tab.authored || tab.id === value ? O.full : O.low }}>{tab.content}</span>
-          </EnabledCell>
-        ))}
-      </Strip>
-    </div>
   );
 }
 
