@@ -27,7 +27,8 @@ function ratchetNotice(file, measured, base) {
   if (!measured) return [`ratchet: ${file} is gone`];
   if (withinLimits(measured)) return [`ratchet: ${file} now passes at ${measured.lines} lines`];
   if (measured.lines < base.lines || measured.longLines < base.longLines) {
-    return [`ratchet: ${file} fell to ${measured.lines} lines, ${measured.longLines} long`];
+    const now = `${measured.lines} lines and ${measured.longLines} long`;
+    return [`ratchet: ${file} is ${now}, baselined ${base.lines} and ${base.longLines}`];
   }
   return [];
 }

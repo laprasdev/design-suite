@@ -81,7 +81,7 @@ describe('rule 3 and the ratchet', () => {
     const { problems, notices } = compare(now, baselineOf(base));
     assert.deepEqual(problems, []);
     assert.deepEqual(notices, [
-      'ratchet: src/a.ts fell to 280 lines, 1 long',
+      'ratchet: src/a.ts is 280 lines and 1 long, baselined 300 and 2',
       'ratchet: src/b.ts now passes at 200 lines',
       'ratchet: src/c.ts is gone',
     ]);
