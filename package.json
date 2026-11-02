@@ -70,7 +70,7 @@
   "scripts": {
     "build": "node scripts/build.mjs",
     "prepare": "npm run build",
-    "check": "tsc -p .",
+    "check": "tsc -p . && node scripts/size-gate.mjs",
     "test": "node --test tests/*.test.ts"
   },
   "devDependencies": {
