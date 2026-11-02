@@ -3,9 +3,20 @@
 // Extracted from Knob.tsx, used by: Knob, MiniKnob, RangeKnob, Boolean, etc.
 // =====================================================
 
-import { useState, useRef, useCallback, useEffect, createContext, useContext } from 'react';
+import { useState, useRef, useCallback, useEffect, useMemo, createContext, useContext } from 'react';
 
 export const ControlGestureContext = createContext<{ beginGesture: () => void; endGesture: () => void } | null>(null);
+
+export interface ControlGesture { begin: () => void; end: () => void }
+
+/**
+ * The one owner of a control's undo gesture: whatever a drag or an edit writes between begin and end undoes in one
+ * step. Without a provider, as in the proposals, both do nothing.
+ */
+export function useControlGesture(): ControlGesture {
+  const gesture = useContext(ControlGestureContext);
+  return useMemo(() => ({ begin: () => gesture?.beginGesture(), end: () => gesture?.endGesture() }), [gesture]);
+}
 
 export interface DragOptions {
   min?: number;
@@ -34,7 +45,7 @@ export function useControlBehavior(
   onChange: ((v: number) => void) | undefined,
   options: DragOptions = {}
 ): DragBehaviorResult {
-  const gesture = useContext(ControlGestureContext);
+  const gesture = useControlGesture();
   const {
     min = 0,
     max = 1,
@@ -56,7 +67,7 @@ export function useControlBehavior(
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     if (disabled) return;
-    gesture?.beginGesture();
+    gesture.begin();
     setIsDragging(true);
     // A release over a frame, like the Preview, would otherwise never reach this window, and the control would stay grabbed.
     if (pressedPointer.current !== null) e.currentTarget.setPointerCapture(pressedPointer.current);
@@ -67,7 +78,7 @@ export function useControlBehavior(
     e.preventDefault();
   }, [value, disabled, vertical, gesture]);
 
-  const handleMouseUp = useCallback(() => { setIsDragging(false); gesture?.endGesture(); }, [gesture]);
+  const handleMouseUp = useCallback(() => { setIsDragging(false); gesture.end(); }, [gesture]);
 
   const handleMouseMove = useCallback((e: MouseEvent) => {
     if (!isDragging) return;

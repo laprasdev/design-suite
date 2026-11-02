@@ -4,6 +4,7 @@ import {LayoutDimensions} from '../../../layout.ts';
 import {getColorScheme, hexToRgba, resolveColorType, type AnyColor} from '../../../color.ts';
 import {Borders} from '../../../tokens.ts';
 import {O} from '../../design/index.ts';
+import {useControlGesture} from './base/useControlBehavior.ts';
 import {MODULATOR_LIVE_COLOR, RangeEnd, VALUE_THICKNESS, modulationLadder, modulatorColor, modulatorOpacity, type ControlModulator, type ModulationProps} from './modulation.ts';
 
 // A range as one rounded bar on a track you can see, with a dot at each end you can move. Each modulator is a thinner line above the end it moves, pointing where the value goes.
@@ -60,6 +61,13 @@ export function RangeSlider({low, high, min, max, onChange, step = 0, singleEnde
   const drag = useRef<{grip: GripValue; low: number; high: number; start: number; fine: {x: number; value: number} | null} | null>(null);
   const [active, setActive] = useState(false);
   const [hovered, setHovered] = useState(false);
+  // A drag is one undo step: it begins on the press, before a press away from an end moves it, and ends on release.
+  const gesture = useControlGesture();
+  const release = () => {
+    if (drag.current) gesture.end();
+    drag.current = null;
+    setActive(false);
+  };
   const span = max - min;
   const clamp = (value: number) => Math.min(max, Math.max(min, value));
   const percent = (value: number) => (clamp(value) - min) / span * 100;
@@ -135,6 +143,7 @@ export function RangeSlider({low, high, min, max, onChange, step = 0, singleEnde
       onPointerEnter={() => setHovered(true)} onPointerLeave={() => setHovered(false)}
       onPointerDown={event => {
         if (disabled) return;
+        gesture.begin();
         event.currentTarget.setPointerCapture(event.pointerId);
         const grip = gripAt(event.clientX), start = valueAt(event.clientX);
         const held = grip === Grip.LOW ? low : high;
@@ -144,8 +153,8 @@ export function RangeSlider({low, high, min, max, onChange, step = 0, singleEnde
         if (grip !== Grip.BOTH && !grabbed) applyDrag(event.clientX);
       }}
       onPointerMove={event => applyDrag(event.clientX)}
-      onPointerUp={() => { drag.current = null; setActive(false); }}
-      onPointerCancel={() => { drag.current = null; setActive(false); }}>
+      onPointerUp={release}
+      onPointerCancel={release}>
       <div data-range-track style={{position: 'absolute', left: 0, right: 0, bottom: HIT_PADDING, height: VALUE_THICKNESS, borderRadius: VALUE_THICKNESS, background: hexToRgba(scheme.main, disabled ? O.ghost : O.faint)}}/>
       <div data-range-bar data-range-quiet={quiet || undefined} style={{position: 'absolute', left: `${percent(singleEnded ? min : low)}%`, width: `${percent(high) - percent(singleEnded ? min : low)}%`, bottom: HIT_PADDING, height: VALUE_THICKNESS, borderRadius: VALUE_THICKNESS, boxSizing: 'border-box',
         background: disabled ? hexToRgba(scheme.main, O.low) : quiet ? 'transparent' : scheme.main, border: quiet && !disabled ? `${Borders.standard.width}px dashed ${scheme.main}` : 'none',

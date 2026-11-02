@@ -5,6 +5,7 @@ import { D, O, T, TransitionKeys } from '../../design/index.ts';
 import { Knob, KnobPreset, KnobLabelStyle, KnobLayout, KnobStroke, KnobValueType } from './Knob.tsx';
 import { Boolean as BooleanControl, BooleanForm } from './Boolean.tsx';
 import type { ModulationProps } from './modulation.ts';
+import { FieldEmphasis, YesNo, type FieldEmphasisValue, type YesNoValue } from '../../../fields.ts';
 
 // A module's body is four equal columns, and every control takes whole cells, so nothing sits between two columns or moves between tabs.
 // In the rack it has a fixed size. On a page it fills its tile, and its controls grow with their cells up to a limit.
@@ -102,10 +103,6 @@ export function GridModule({ title, group, tabs, children }: { title: string; gr
   );
 }
 
-// How much a field says for itself: set, quiet because nothing is set or it inherits, or inert because it can't apply here.
-// Inert is as dim as quiet: its module's header already says it's off, and a value inside it still reads at 3:1 or better.
-export const FieldEmphasis = Object.freeze({ SET: 'set', QUIET: 'quiet', INERT: 'inert' } as const);
-export type FieldEmphasisValue = typeof FieldEmphasis[keyof typeof FieldEmphasis];
 const CONTROL_OPACITY: Record<FieldEmphasisValue, number> = { set: O.full, quiet: O.medium, inert: O.medium };
 // A list or number that can't be changed fades less than a dim field around it, so the two together still read.
 const LOCKED_INPUT = O.high;
@@ -173,10 +170,6 @@ export function ModuleSwitch({ value, onChange, ariaLabel, disabled }: { value: 
   const height = clamp(Math.round(useModuleControlSize() * G.switchShare), G.switchMin, G.switchMax);
   return <BooleanControl form={BooleanForm.SWITCH} height={height} value={value} onChange={onChange} ariaLabel={ariaLabel} disabled={disabled} />;
 }
-
-// A yes/no field's four real states: on, off, not set, and inherit.
-export const YesNo = Object.freeze({ ON: 'on', OFF: 'off', UNSET: 'unset', INHERIT: 'inherit' } as const);
-export type YesNoValue = typeof YesNo[keyof typeof YesNo];
 
 /** Solid is on, a ring is off, dotted is not set, and half filled is inherit. */
 export function YesNoDot({ state, color }: { state: YesNoValue; color: string }) {
