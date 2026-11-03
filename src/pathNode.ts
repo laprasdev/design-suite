@@ -128,10 +128,14 @@ export interface NodeStatus {
   reviews?: Partial<Record<ReviewerValue, NodeReview>>;
 }
 
-/** What a node waits on, and the checkpoint a task feeds. A checkpoint's `after` is the checkpoint before it. */
+/**
+ * What a node waits on, and the checkpoint a task feeds. A checkpoint's `after` lists the checkpoints it needs, none or
+ * several, so independent checkpoints run alongside each other. The owner marks one checkpoint as the destination.
+ */
 export interface NodePath {
   after?: string[];
   for?: string;
+  destination?: boolean;
 }
 
 /** An agent's proposal to move a checkpoint from one phase to another, which the owner answers. */
