@@ -1,6 +1,7 @@
 // =====================================================
 // LAYOUT DIMENSIONS - All numeric constants
 // =====================================================
+import { RoutingDimensions } from './routingLayout.ts';
 
 // Golden ratio constants
 export const PHI = 1.618033988749895;
@@ -254,6 +255,8 @@ export const LayoutDimensions = {
     tightLine: 1.15,
     fillPadding: 8,
     fillGap: 8,
+    // How far a scrolling body fades at an end with more beyond it, so it runs out rather than meeting a hard edge.
+    scrollFade: 21,
     // On a page a column grows with its tile only to φ of the largest knob, so a few fields stay together rather than spreading across a wide tile.
     fillColumnMax: Math.round(MODULE_CONTROL_MAX * PHI),
     headerGap: 8,
@@ -351,45 +354,8 @@ export const LayoutDimensions = {
     modulationDragPx: 180,
   },
 
-  // The Routing module on a page: cards on a canvas that pans, and the outputs in a column of their own.
-  routing: {
-    nodeWidth: 178,
-    nodeHeader: 24,
-    nodeRow: 30,
-    nodePadding: 6,
-    nodeRadius: 8,
-    columnGap: 34,
-    rowGap: 13,
-    // A chain wider than the canvas wraps into bands this far apart, room enough for a wire going back to the next band's start.
-    bandGap: 55,
-    // Between the canvas's edge and the outputs, so a wire cut off at the edge never reads as reaching an output.
-    edgeGap: 13,
-    // How long a node that a reference opened stays marked.
-    markMs: 1600,
-    canvasInset: 21,
-    canvasEnd: 34,
-    portSize: 12,
-    operatorSize: 24,
-    wireBend: 55,
-    wireWidth: 2,
-    wireDash: 5,
-    portStroke: 2,
-    gridStep: 21,
-    gridLine: 1,
-    outputColumnWidth: 200,
-    outputRow: 30,
-    outputNameWidth: 32,
-    outputPadding: 8,
-    terminalSize: 10,
-    menuWidth: 233,
-    menuOffset: 8,
-    panCueSize: 21,
-    panCueIcon: 14,
-    panStep: 0.8,
-    moveSlack: 3,
-    minWidth: 480,
-    minHeight: 320,
-  },
+  // The Routing module on a page, in its own file.
+  routing: RoutingDimensions,
 
 } as const;
 
