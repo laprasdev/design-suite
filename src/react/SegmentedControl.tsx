@@ -15,6 +15,7 @@ import {Label} from './accents.tsx';
 import {SegmentDefaultsContext} from './segmentContext.ts';
 import {HoverDetail} from './HoverDetail.tsx';
 import {PALETTE_CHANGE_EVENT} from '../theme.ts';
+import {cssRect} from './cssZoom.ts';
 
 // An option: its value and label, hover help (`detail`) or a chosen description,
 // whether it is unavailable, and its own attributes.
@@ -96,7 +97,7 @@ export function SegmentedControl<V extends SegmentValue>(props: SegmentedControl
     const selected=node.querySelector('button[data-on="true"]');
     if(!selected)return;
     const reveal=()=>{
-      const frame=node.getBoundingClientRect(),option=selected.getBoundingClientRect(),vertical=orientation==='vertical';
+      const frame=cssRect(node),option=cssRect(node,selected),vertical=orientation==='vertical';
       const start=vertical?frame.top+node.clientTop:frame.left+node.clientLeft,end=start+(vertical?node.clientHeight:node.clientWidth);
       const low=vertical?option.top:option.left,high=vertical?option.bottom:option.right;
       const delta=low<start?low-start:high>end?high-end:0;
@@ -131,7 +132,7 @@ export function SegmentedControl<V extends SegmentValue>(props: SegmentedControl
       const travels=!!current&&placed(current)&&placed(box)&&(current.value!==value||inFlight);
       const recolors=!!current&&placed(box)&&current.token!==box.token;
       // The indicator's place in the options' coordinates, which a scrolled frame offsets.
-      const actual=node.getBoundingClientRect(),origin=frame.getBoundingClientRect();
+      const actual=cssRect(frame,node),origin=cssRect(frame);
       const from={...(travels?{x:actual.left-origin.left-frame.clientLeft+frame.scrollLeft,y:actual.top-origin.top-frame.clientTop+frame.scrollTop,w:actual.width,h:actual.height}:box),color:getComputedStyle(node).backgroundColor};
       animation.current?.cancel();Object.assign(node.style,{left:`${box.x}px`,top:`${box.y}px`,width:`${box.w}px`,height:`${box.h}px`,borderRadius:box.radius,background:box.color});
       // Resolve custom-property colors before animating between teams.

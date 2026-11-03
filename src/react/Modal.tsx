@@ -16,6 +16,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefObject, type SyntheticEvent, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import {focusableControls} from './focusable.ts';
 import {KEPT_ROOM_ATTRIBUTE,SCROLL_STEP_PX,keptRoom,modalGrowthLimit} from './modalRoom.ts';
+import { cssRect } from './cssZoom.ts';
 
 const FADE_MS = 200;
 
@@ -60,7 +61,7 @@ const DISCLOSURE = "[aria-expanded], summary", PLACED = ["alignSelf", "marginTop
 // The dialog's top as laid out, without its entrance transform (a rise, and a scale
 // about its centre).
 function layoutTop(node: HTMLElement) {
-  const box = node.getBoundingClientRect(), entrance = new DOMMatrixReadOnly(getComputedStyle(node).transform);
+  const box = cssRect(node), entrance = new DOMMatrixReadOnly(getComputedStyle(node).transform);
   return box.top - entrance.f - box.height * (1 / entrance.d - 1) / 2;
 }
 // The backdrop's height inside its padding: the apparent parent.
@@ -168,7 +169,7 @@ function useHeldTop(mounted: boolean, keepRoomFor: string | undefined, backdrop:
       held.current.scrollTop = node.scrollTop;
       return;
     }
-    const inset = parseFloat(getComputedStyle(area).paddingTop), top = layoutTop(node) - area.getBoundingClientRect().top - inset;
+    const inset = parseFloat(getComputedStyle(area).paddingTop), top = layoutTop(node) - cssRect(area).top - inset;
     const parent = parentHeight(area), height = node.offsetHeight;
     watch.current?.disconnect();
     // Bound expansion to the apparent parent and the room kept, without shrinking

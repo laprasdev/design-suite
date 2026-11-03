@@ -1,4 +1,5 @@
 import {useLayoutEffect,useState,type CSSProperties,type RefObject} from 'react';
+import {cssRect,cssViewport} from './cssZoom.ts';
 
 // Where a popover portaled to the app root sits beside its anchor: this far from
 // the anchor and from the viewport's edges, hidden while less than the minimum
@@ -45,28 +46,29 @@ export function useAnchoredPopover(open: boolean,anchor: RefObject<HTMLElement|n
   const place=()=>{
    const theme=getComputedStyle(anchorNode),inherited: Record<`--${string}`,string>=Object.fromEntries(ANCHOR_STYLE.map(key=>[key,theme.getPropertyValue(key)]));
    for(const [key,value] of Object.entries(inherited))panelNode.style.setProperty(key,value);
-   const a=anchorNode.getBoundingClientRect(),p=panelNode.getBoundingClientRect(),style=getComputedStyle(panelNode);
+   // Everything in the panel's CSS pixels, which a zoomed page scales on screen.
+   const a=cssRect(panelNode,anchorNode),p=cssRect(panelNode),style=getComputedStyle(panelNode),view=cssViewport(panelNode);
    const height=panelNode.scrollHeight+parseFloat(style.borderTopWidth)+parseFloat(style.borderBottomWidth);
-   let left=Math.max(VIEWPORT_EDGE,Math.min(align==='center'?a.left+(a.width-p.width)/2:a.left,window.innerWidth-p.width-VIEWPORT_EDGE));
-   const {elements=[],boundary}=avoid?.()||{},fallback=boundary?boundary.getBoundingClientRect():a;
-   const obstacles=elements.map(node=>node.getBoundingClientRect()).filter(box=>box.width>0&&box.height>0);
+   let left=Math.max(VIEWPORT_EDGE,Math.min(align==='center'?a.left+(a.width-p.width)/2:a.left,view.width-p.width-VIEWPORT_EDGE));
+   const {elements=[],boundary}=avoid?.()||{},fallback=boundary?cssRect(panelNode,boundary):a;
+   const obstacles=elements.map(node=>cssRect(panelNode,node)).filter(box=>box.width>0&&box.height>0);
    const across=obstacles.filter(box=>box.left<left+p.width&&box.right>left);
    const bottom=Math.max(fallback.bottom,...across.map(box=>box.bottom)),start=Math.min(fallback.top,...across.map(box=>box.top));
-   const below=Math.max(0,window.innerHeight-VIEWPORT_EDGE-bottom-POPOVER_GAP),over=Math.max(0,start-POPOVER_GAP-VIEWPORT_EDGE);
+   const below=Math.max(0,view.height-VIEWPORT_EDGE-bottom-POPOVER_GAP),over=Math.max(0,start-POPOVER_GAP-VIEWPORT_EDGE);
    const [preferred,other]=above?[over,below]:[below,over],onPreferred=height<=preferred||(height>other&&preferred>=other);
    const down=above!==onPreferred;
    let available=down?below:over,top=down?bottom+POPOVER_GAP:start-POPOVER_GAP-Math.min(height,available);
-   const before=a.left-POPOVER_GAP-VIEWPORT_EDGE,after=window.innerWidth-VIEWPORT_EDGE-a.right-POPOVER_GAP;
+   const before=a.left-POPOVER_GAP-VIEWPORT_EDGE,after=view.width-VIEWPORT_EDGE-a.right-POPOVER_GAP;
    // A compact edge toolbar may sit inside the usual popover inset. Keep its
    // smaller side controls centered without pushing them beyond the viewport.
-   const topInset=Math.min(VIEWPORT_EDGE,Math.max(0,a.top)),bottomInset=Math.min(VIEWPORT_EDGE,Math.max(0,window.innerHeight-a.bottom));
-   const besideTop=Math.max(topInset,Math.min(a.top+(a.height-height)/2,window.innerHeight-bottomInset-height));
+   const topInset=Math.min(VIEWPORT_EDGE,Math.max(0,a.top)),bottomInset=Math.min(VIEWPORT_EDGE,Math.max(0,view.height-a.bottom));
+   const besideTop=Math.max(topInset,Math.min(a.top+(a.height-height)/2,view.height-bottomInset-height));
    const clear=(left: number)=>!obstacles.some(box=>box.left<left+p.width&&box.right>left&&box.top<besideTop+height&&box.bottom>besideTop);
    const beforeLeft=a.left-POPOVER_GAP-p.width,afterLeft=a.right+POPOVER_GAP;
    const fitsBefore=before>=p.width&&clear(beforeLeft),fitsAfter=after>=p.width&&clear(afterLeft);
    if(beside&&(fitsBefore||fitsAfter)){
     left=fitsBefore&&(preferBefore||!fitsAfter||before>after)?beforeLeft:afterLeft;
-    available=window.innerHeight-VIEWPORT_EDGE*2;
+    available=view.height-VIEWPORT_EDGE*2;
     top=besideTop;
    }
    placed={height:panelNode.scrollHeight,offset:top-a.top};
@@ -76,9 +78,9 @@ export function useAnchoredPopover(open: boolean,anchor: RefObject<HTMLElement|n
   };
   const hold=()=>{
    if(panelNode.scrollHeight===placed.height)return;
-   const top=anchorNode.getBoundingClientRect().top+placed.offset;
+   const top=cssRect(panelNode,anchorNode).top+placed.offset;
    placed={...placed,height:panelNode.scrollHeight};
-   setPosition(position=>({...position,top,...within(Math.max(0,window.innerHeight-VIEWPORT_EDGE-top),scroll)}));
+   setPosition(position=>({...position,top,...within(Math.max(0,cssViewport(panelNode).height-VIEWPORT_EDGE-top),scroll)}));
   };
   // Scrolling within the panel leaves it where it is.
   const follow=(e: Event)=>{if(!(e.target instanceof Node&&panelNode.contains(e.target)))place();};

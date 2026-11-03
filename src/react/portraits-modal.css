@@ -18,7 +18,7 @@
 }
 .sd-modal-bg.sd-in { opacity: 1; }
 .sd-modal {
-  width: min(380px, 92vw); max-height: 92vh; overflow: auto;
+  width: min(380px, calc(92vw / var(--css-zoom, 1))); max-height: calc(92vh / var(--css-zoom, 1)); overflow: auto;
   border-radius: var(--r, 14px); background: var(--card, var(--color-surface, #17171b));
   border: 1px solid var(--line, var(--color-line, rgba(255, 255, 255, 0.08)));
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);

@@ -27,6 +27,7 @@ export { BarParticipants, type BarParticipant } from './BarParticipants.tsx';
 export { SelectionMark } from './SelectionMark.tsx';
 export { SearchField, type SearchFieldProps } from './SearchField.tsx';
 export { ListboxSelect, type ListboxOption } from './ListboxSelect.tsx';
+export { CSS_ZOOM_PROPERTY, cssRect, cssViewport, zoomOf, type CssRect } from './cssZoom.ts';
 export { useAnchoredPopover, VIEWPORT_EDGE, type PopoverPlacement } from './useAnchoredPopover.ts';
 export { PARTICIPANT_GRASS, PARTICIPANT_GRASS_BEND } from './participantGrass.ts';
 export { ListboxElement } from './listboxSelectElements.ts';
