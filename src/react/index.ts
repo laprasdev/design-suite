@@ -1,7 +1,10 @@
 // @looms/bloom-design/react — generic React primitives.
 // Import styles once: `import "@looms/bloom-design/react/styles.css"`.
 export { Node, type NodeProps } from "./Node.tsx";
-export { NodeGraph, type GraphNode, type GraphEdge, type EdgeEnd, type NodeGraphProps } from "./NodeGraph.tsx";
+export {
+  NodeGraph, type GraphNode, type GraphEdge, type EdgeEnd, type NodeGraphProps, type NodeMove, type NodeMoves,
+} from "./NodeGraph.tsx";
+export { isPanKeyHeld } from "./panKey.ts";
 export { bezierPath, edgePoint, linkPath, verticalBezierPath, type NodeBox, type NodeSide } from "./geometry.ts";
 export { Label, Glyph, Divider, LightBox, type LabelKind } from "./accents.tsx";
 export { MonthGrid, type DayCell, type MonthGridProps } from "./Calendar.tsx";
@@ -28,7 +31,9 @@ export { SelectionMark } from './SelectionMark.tsx';
 export { SearchField, type SearchFieldProps } from './SearchField.tsx';
 export { ListboxSelect, type ListboxOption } from './ListboxSelect.tsx';
 export { GlowParticles } from './GlowParticles.tsx';
-export { LoadingIndicator, LoadingScreen, POKEBALL_OUTLINE, PokeballIcon, PokeballOutline, PokeballSpinner } from './Pokeball.tsx';
+export {
+  LoadingIndicator, LoadingScreen, POKEBALL_OUTLINE, PokeballIcon, PokeballOutline, PokeballSpinner,
+} from './Pokeball.tsx';
 export { GlowParticleElement, LoadingElement } from './loadingElements.ts';
 export { CSS_ZOOM_PROPERTY, cssRect, cssViewport, zoomOf, type CssRect } from './cssZoom.ts';
 export { useAnchoredPopover, VIEWPORT_EDGE, type PopoverPlacement } from './useAnchoredPopover.ts';

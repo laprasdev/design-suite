@@ -6,7 +6,12 @@ export const zoomOf=(node: Element)=>(node as Element&{currentCSSZoom?: number})
 export interface CssRect {left: number,top: number,right: number,bottom: number,width: number,height: number}
 export function cssRect(node: Element,of: Element|Range=node): CssRect {
  const box=of.getBoundingClientRect(),zoom=zoomOf(node);
- return {left:box.left/zoom,top:box.top/zoom,right:box.right/zoom,bottom:box.bottom/zoom,width:box.width/zoom,height:box.height/zoom};
+ return {
+  left:box.left/zoom,top:box.top/zoom,right:box.right/zoom,bottom:box.bottom/zoom,
+  width:box.width/zoom,height:box.height/zoom,
+ };
 }
 // The window's size in the node's CSS pixels.
-export const cssViewport=(node: Element)=>({width:window.innerWidth/zoomOf(node),height:window.innerHeight/zoomOf(node)});
+export const cssViewport=(node: Element)=>({
+ width:window.innerWidth/zoomOf(node),height:window.innerHeight/zoomOf(node),
+});

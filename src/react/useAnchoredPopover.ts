@@ -47,7 +47,8 @@ export function useAnchoredPopover(open: boolean,anchor: RefObject<HTMLElement|n
    const theme=getComputedStyle(anchorNode),inherited: Record<`--${string}`,string>=Object.fromEntries(ANCHOR_STYLE.map(key=>[key,theme.getPropertyValue(key)]));
    for(const [key,value] of Object.entries(inherited))panelNode.style.setProperty(key,value);
    // Everything in the panel's CSS pixels, which a zoomed page scales on screen.
-   const a=cssRect(panelNode,anchorNode),p=cssRect(panelNode),style=getComputedStyle(panelNode),view=cssViewport(panelNode);
+   const a=cssRect(panelNode,anchorNode),p=cssRect(panelNode),view=cssViewport(panelNode);
+   const style=getComputedStyle(panelNode);
    const height=panelNode.scrollHeight+parseFloat(style.borderTopWidth)+parseFloat(style.borderBottomWidth);
    let left=Math.max(VIEWPORT_EDGE,Math.min(align==='center'?a.left+(a.width-p.width)/2:a.left,view.width-p.width-VIEWPORT_EDGE));
    const {elements=[],boundary}=avoid?.()||{},fallback=boundary?cssRect(panelNode,boundary):a;
@@ -80,7 +81,8 @@ export function useAnchoredPopover(open: boolean,anchor: RefObject<HTMLElement|n
    if(panelNode.scrollHeight===placed.height)return;
    const top=cssRect(panelNode,anchorNode).top+placed.offset;
    placed={...placed,height:panelNode.scrollHeight};
-   setPosition(position=>({...position,top,...within(Math.max(0,cssViewport(panelNode).height-VIEWPORT_EDGE-top),scroll)}));
+   const room=Math.max(0,cssViewport(panelNode).height-VIEWPORT_EDGE-top);
+   setPosition(position=>({...position,top,...within(room,scroll)}));
   };
   // Scrolling within the panel leaves it where it is.
   const follow=(e: Event)=>{if(!(e.target instanceof Node&&panelNode.contains(e.target)))place();};
