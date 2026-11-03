@@ -1,5 +1,6 @@
 export const LABEL_PEEK_MS=2000;
 import {element} from './elementContract.ts';
+import {cssRect} from './cssZoom.ts';
 // Current released spring behavior, used by every application consumer.
 export const SPRING_MS=620;
 export const SEGMENT_MOTION=Object.freeze({bounded:true,duration:340});
@@ -11,8 +12,8 @@ export const TEXT_SELECTION_PROPERTIES=Object.freeze({LEFT:'--bd-text-selection-
 // resizing to the new label; there is no separate light or background indicator.
 export function sweepText(root: HTMLElement,labels: HTMLElement[],from: number,to: number) {
  if(reducedMotion())return null;
- const origin=root.getBoundingClientRect().left+root.clientLeft-root.scrollLeft;
- const boxes=labels.map(label=>{const box=label.getBoundingClientRect();return {left:box.left-origin,right:box.right-origin};});
+ const origin=cssRect(root).left+root.clientLeft-root.scrollLeft;
+ const boxes=labels.map(label=>{const box=cssRect(root,label);return {left:box.left-origin,right:box.right-origin};});
  labels.forEach((label,index)=>label.style.setProperty(TEXT_SELECTION_PROPERTIES.OFFSET,`${boxes[index].left}px`));
  root.setAttribute(TEXT_SELECTION_MOVING_ATTRIBUTE,'true');
  const frame=({left,right}: {left: number,right: number})=>({[TEXT_SELECTION_PROPERTIES.LEFT]:`${left}px`,[TEXT_SELECTION_PROPERTIES.RIGHT]:`${right}px`});

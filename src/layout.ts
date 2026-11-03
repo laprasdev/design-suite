@@ -1,6 +1,7 @@
 // =====================================================
 // LAYOUT DIMENSIONS - All numeric constants
 // =====================================================
+import { RoutingDimensions } from './routingLayout.ts';
 
 // Golden ratio constants
 export const PHI = 1.618033988749895;
@@ -13,6 +14,9 @@ export const Relativity = {
   PhiInverse: 0.618, // ~61.8% - larger portion
   OneMinusPhiInverse: 0.382,
 } as const;
+
+// The largest a knob on a page's module grows, which the grid's columns are measured against.
+const MODULE_CONTROL_MAX = 88;
 
 export const LayoutDimensions = {
   // Viewport
@@ -174,6 +178,182 @@ export const LayoutDimensions = {
   grid: {
     moduleColumns: 2
   },
+
+  // The synth's page shell: the screen it's drawn for, and how it fits smaller ones
+  pageShell: {
+    stageWidth: 1920,
+    stageHeight: 1080,
+    stageZoomMin: 0.8,
+    tileGutter: 3,
+    moduleWidth: 320,
+    moduleHeight: 194,
+    envelopeMinWidth: 453,
+    envelopeMinHeight: 255,
+    previewMinWidth: 280,
+    previewMinHeight: 157,
+    scrollCueHeight: 18,
+    scrollCueIcon: 12,
+    barLineHeight: 1.4,
+    guideText: 12,
+    guideTagLayer: 1,
+    // A closed page's card: one drawing laid out on φ in the larger card's box, drawn smaller in the smaller card.
+    // Text and icons stay these sizes in stage pixels in both, so they read at the smallest zoom; everything else is in the larger card's pixels.
+    cardTitle: 14,
+    cardText: 13,
+    cardIcon: 14,
+    cardPadding: 8,
+    cardStroke: 1.5,
+    cardWire: 1,
+    cardGateRadius: 9,
+    cardNodeRadius: 3,
+    // The dash of a line a card draws for what has no length of its own, such as an Envelope sustain held until the state is left.
+    cardDash: 3,
+    // What a drawing weighs against a list when a card shares its room out, in text rows; and the narrowest a list's column gets, in stage pixels.
+    cardDrawingRows: 4,
+    // The fewest text rows of height a condition's drawing is drawn in. With less, a pad or a sensor reads as a dash, so its row says its title instead.
+    cardDrawingLeastRows: 2,
+    cardLineWidth: 120,
+    // A card's title and live mark beside its drawing, when there they leave it more room than above it.
+    cardHeaderWidth: 104,
+    guideRemeasureMs: 1000,
+    guideClipSlack: 1,
+    overlayLayer: 2000,
+    // A flip: twice the suite's .17s, long enough to watch a page and its card trade places around the still Preview.
+    flipMs: 340,
+    flipEase: 'cubic-bezier(.22,1,.36,1)',
+    // The first half of a flip: the card you pressed fades as its page grows out of it, and the card taking its place waits for it to go.
+    // In the second half that card slides in. The page you left stays whole until it lands on its card, which shows only then.
+    flipCardFadeDelayMs: 170,
+    // A flip's stack, bottom to top: cards on their way to their places, the page arriving, the card you pressed fading off it, and the page you
+    // leave, whole and over all of them, so nothing reads through it on its way into its card. The frame stays above the lot.
+    flipCardLayer: 0,
+    flipArrivingLayer: 1,
+    flipPressedCardLayer: 2,
+    flipLeavingLayer: 3,
+    frameLayer: 4,
+    arrangeLayer: 6,
+    // Arranging: how near a tile's edge a drop cuts in, what a gutter takes the mouse over, and where a cut can rest, so a layout stays on the ratio.
+    dropEdgeZone: 36,
+    gutterHit: 10,
+    gutterLine: 2,
+    arrangeText: 13,
+    cutStops: [(1 - PHI_INVERSE) * PHI_INVERSE, 1 - PHI_INVERSE, PHI_INVERSE, 1 - (1 - PHI_INVERSE) * PHI_INVERSE],
+    // The smallest window an arrangement has to stay usable in, whichever window it's made in.
+    smallestWindowWidth: 1366,
+    smallestWindowHeight: 650,
+  },
+
+  // A module on the four-column grid: its fixed size in the rack, and how it fills a page's tile
+  moduleGrid: {
+    columns: 4,
+    rows: 2,
+    cellWidth: 75,
+    rowHeight: 76,
+    sidePadding: 10,
+    ringHeadroom: 16,
+    footPadding: 0,
+    tightLine: 1.15,
+    fillPadding: 8,
+    fillGap: 8,
+    // On a page a column grows with its tile only to φ of the largest knob, so a few fields stay together rather than spreading across a wide tile.
+    fillColumnMax: Math.round(MODULE_CONTROL_MAX * PHI),
+    headerGap: 8,
+    headerLineHeight: 29,
+    headerTitleGap: 16,
+    headerInset: 12,
+    tabMinWidth: 18,
+    tabMinHeight: 14,
+    iconHeight: 14,
+    tabIconHeight: 20,
+    fieldGap: 6,
+    fieldTextRoom: 44,
+    controlShare: 0.85,
+    controlMin: 44,
+    controlMax: MODULE_CONTROL_MAX,
+    knobDragPx: 200,
+    // A whole-number field, like a frame count, moves at most this many per pixel dragged, so it can be dragged onto any value.
+    wholeStepsPerPixel: 1,
+    optionColumns: 3,
+    optionGap: 4,
+    optionPaddingBlock: 6,
+    optionPaddingInline: 4,
+    rowLabelWidth: 56,
+    rowValueWidth: 96,
+    rowGap: 16,
+    headerSwitchHeight: 14,
+    phaseGlyphHeight: 14,
+    nameIconHeight: 12,
+    // A yes/no field as one line: its dot, drawn at the name's size, then the name. The line is as tall as a module header's, which is what it gives to press.
+    yesNoDot: 12,
+    yesNoStroke: 1.5,
+    yesNoDash: 2,
+    yesNoLine: 29,
+    nameIconGap: 4,
+    headerControlsPadding: 8,
+    noticePadding: 12,
+    detailLineGap: 12,
+    detailDepthDragPx: 180,
+    bodyGap: 12,
+    columnGap: 12,
+    rulesIndent: 16,
+    choiceOptionsMax: 6,
+    groupGap: 4,
+    groupPaddingBlock: 3,
+    groupPaddingInline: 8,
+    groupStripPadding: 8,
+    curveWidth: 96,
+    curveHeight: 40,
+    curveLine: 1.5,
+    openButtonWidth: 44,
+    openButtonHeight: 20,
+    swatchHeight: 24,
+    swatchWidth: 44,
+    ringNumeralSize: 12,
+    crumbGap: 8,
+    relationshipTypeColumns: 2,
+    statesRowGap: 8,
+    gesturePhaseHeight: 20,
+    gestureColumnWidth: 200,
+    toolIconHeight: 20,
+    layerBits: 32,
+    layerColumns: 8,
+    numberInputWidth: 88,
+    sensorReachMeters: 5,
+    // A sensor's distance moves in centimetres, the two decimals it reads in, so what's written is what shows.
+    sensorDistanceStep: 0.01,
+    inputPadding: 4,
+  },
+
+  // The Envelope module on a page: four phase cells over the graph, the graph taking φ of what's left.
+  envelope: {
+    cellGap: 6,
+    cellPadding: 8,
+    cellRowGap: 6,
+    pickerSize: 26,
+    pickerGlyph: 18,
+    enableLine: 2,
+    // What a phase's on and off line gives to press: its foot of the cell, kept clear of what's above.
+    enableHit: 13,
+    boostIcon: 16,
+    boostCell: 19,
+    cellFloor: 0.05,
+    plotBand: 34,
+    frameLabelWidth: 48,
+    gridLines: 4,
+    scaleLineRoom: 20,
+    curveSamples: 48,
+    graphStroke: 1.5,
+    graphGlow: 3,
+    gridLine: 1,
+    labelLine: 1.3,
+    modulationPopoverWidth: 280,
+    modulationPopoverGap: 4,
+    modulationDepthReach: 10,
+    modulationDragPx: 180,
+  },
+
+  // The Routing module on a page, in its own file.
+  routing: RoutingDimensions,
 
 } as const;
 

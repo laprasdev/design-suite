@@ -1,0 +1,19 @@
+/* Referenced-photo layouts: a strip of thumbnails, and labeled captures side by side. */
+.bd-photos { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
+.bd-photos a {
+  display: block; width: 220px; overflow: hidden; background: #000;
+  border: var(--line-width, 1.5px) solid var(--line, rgba(255, 255, 255, 0.11));
+  border-radius: var(--r-sm, 9px);
+}
+.bd-photos a[data-phone="true"] { width: 140px; }
+.bd-photos img { display: block; width: 100%; height: auto; }
+
+.bd-compare { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
+.bd-compare figure { margin: 0; flex: 1 1 240px; min-width: 0; }
+.bd-compare a {
+  display: block; overflow: hidden; background: #000;
+  border: var(--line-width, 1.5px) solid var(--line, rgba(255, 255, 255, 0.11));
+  border-radius: var(--r-sm, 9px);
+}
+.bd-compare img { display: block; width: 100%; height: auto; }
+.bd-compare figcaption { margin-top: 4px; }

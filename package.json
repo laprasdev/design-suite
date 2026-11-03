@@ -31,6 +31,11 @@
       "source": "./src/theme.ts",
       "default": "./dist/theme.js"
     },
+    "./pathNode": {
+      "types": "./src/pathNode.ts",
+      "source": "./src/pathNode.ts",
+      "default": "./dist/pathNode.js"
+    },
     "./skins": {
       "types": "./src/skins.ts",
       "source": "./src/skins.ts",
@@ -70,7 +75,7 @@
   "scripts": {
     "build": "node scripts/build.mjs",
     "prepare": "npm run build",
-    "check": "tsc -p .",
+    "check": "tsc -p . && node scripts/size-gate.mjs",
     "test": "node --test tests/*.test.ts"
   },
   "devDependencies": {

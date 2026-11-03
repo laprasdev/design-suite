@@ -33,6 +33,7 @@ export function skinStyle(name: string): StyleTheme {
     containers: Object.fromEntries(CONTAINER_TYPES.map(type => [type, resolveContainerComposable(flat, type)])),
     primaryColor: color('primary'),
     secondaryColor: color('secondary'),
+    tertiaryColor: color('tertiary'),
     accentColor: color('primary'),
     backgroundColor: color('background'),
     backgroundGradientStart: color('backgroundGradient'),

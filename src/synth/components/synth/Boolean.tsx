@@ -35,8 +35,8 @@ function getSizeMap(): Record<BooleanSize, number> {
   return _sizeMap ??= { xs: D.sizes.booleanMicro, sm: D.sizes.booleanSmall, md: D.sizes.booleanMedium, lg: D.sizes.booleanLarge };
 }
 
-// One boolean, two forms: a lit cell for a module's grid, or a labelled row for a settings list.
-export const BooleanForm=Object.freeze({CELL:'cell',SETTING:'setting'} as const);
+// One boolean, three forms: a lit cell for a module's grid, a labelled row for a settings list, or a small switch for a module's header.
+export const BooleanForm=Object.freeze({CELL:'cell',SETTING:'setting',SWITCH:'switch'} as const);
 export interface SettingBooleanProps {
   form: typeof BooleanForm.SETTING;
   value: boolean;
@@ -51,7 +51,24 @@ function SettingBoolean({value,onChange,label,detail,disabled=false,className=''
   const props={className:`setting-option ${className}`,disabled};
   return detail?<HoverDetail {...props} interactive panelRole="tooltip" triggerProps={{'aria-pressed':value}} label={label} content={detail} onActivate={()=>onChange(!value)}>{content}</HoverDetail>:<button type="button" {...props} aria-pressed={value} onClick={()=>onChange(!value)}>{content}</button>;
 }
-export function Boolean(props: BooleanProps|SettingBooleanProps) {
+export interface SwitchBooleanProps {
+  form: typeof BooleanForm.SWITCH;
+  value: boolean;
+  onChange(value: boolean): void;
+  ariaLabel: string;
+  /** Its height. The width and thumb follow from it. */
+  height?: number;
+  disabled?: boolean;
+}
+const SWITCH_HEIGHT=10, SWITCH_WIDTH_RATIO=2, SWITCH_INSET_RATIO=0.2;
+function SwitchBoolean({value,onChange,ariaLabel,height=SWITCH_HEIGHT,disabled=false}: SwitchBooleanProps) {
+ const style=useStyle().getEffectiveStyle(), color=style.primaryColor, width=height*SWITCH_WIDTH_RATIO, inset=height*SWITCH_INSET_RATIO, thumb=height-inset*2;
+ return <button type="button" role="switch" aria-checked={value} aria-label={ariaLabel} disabled={disabled} onClick={()=>onChange(!value)} style={{position:'relative',flex:'none',width,height,padding:0,border:'none',borderRadius:height/2,cursor:disabled?C.notAllowed:C.pointer,background:value?color:style.knobGradient.at(-1),transition:TransitionKeys.normal}}>
+  <span style={{position:'absolute',top:inset,left:value?width-inset-thumb:inset,width:thumb,height:thumb,borderRadius:'50%',background:value?style.backgroundColor:color,transition:TransitionKeys.normal}}/>
+ </button>;
+}
+export function Boolean(props: BooleanProps|SettingBooleanProps|SwitchBooleanProps) {
+ if('form' in props&&props.form===BooleanForm.SWITCH) return <SwitchBoolean {...props}/>;
   return 'form' in props&&props.form===BooleanForm.SETTING?<SettingBoolean {...props}/>:<CellBoolean {...props as BooleanProps}/>;
 }
 

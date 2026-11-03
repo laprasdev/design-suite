@@ -11,6 +11,7 @@ export interface StyleTheme {
   name: string;
   primaryColor: string;
   secondaryColor: string;
+  tertiaryColor: string;
   accentColor: string;
   backgroundColor: string;
   backgroundGradientStart: string;
@@ -130,7 +131,7 @@ function loadPersistedState(): Partial<PersistedStyleState> {
   return {};
 }
 
-export function StyleProvider({ children }: { children: ReactNode }) {
+export function StyleProvider({ children, persist = true }: { children: ReactNode; persist?: boolean }) {
   const persisted = loadPersistedState();
 
   const [styleName, setStyleNameState] = useState(persisted.styleName && SKIN_FILES[persisted.styleName] ? persisted.styleName : DEFAULT_SKIN);
@@ -144,6 +145,7 @@ export function StyleProvider({ children }: { children: ReactNode }) {
 
   // Persist state to localStorage whenever it changes
   useEffect(() => {
+    if (!persist) return;
     try {
       const toSave: PersistedStyleState = {
         styleName,
@@ -156,7 +158,7 @@ export function StyleProvider({ children }: { children: ReactNode }) {
     } catch (e) {
       console.warn('Failed to save style settings:', e);
     }
-  }, [styleName, primaryColorOverride, secondaryColorOverride, backgroundOverride, advancedSettings]);
+  }, [persist, styleName, primaryColorOverride, secondaryColorOverride, backgroundOverride, advancedSettings]);
 
   // Wrapper functions to handle state updates
   const setStyleName = (name: string) => setStyleNameState(name);

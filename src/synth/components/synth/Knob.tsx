@@ -1,4 +1,4 @@
-import React, { useCallback, useState, useRef } from 'react';
+import React, { useCallback, useEffect, useState, useRef } from 'react';
 import { useStyle } from '../../StyleContext.tsx';
 import { getColorScheme, getInsetShadow, resolveColorType, hexToRgba, type AnyColor } from '../../../color.ts';
 import { D, F, O, TransitionKeys, Borders, T } from '../../design/index.ts';
@@ -17,12 +17,16 @@ import {
 } from '../../design/constants/KnobConfig.ts';
 import { useKnobDrag, KnobInnerCircle } from './base/index.ts';
 import { useTooltipSafe } from './TooltipContext.tsx';
+import { ModulationRings } from './ModulationRings.tsx';
+import type { ModulationProps } from './modulation.ts';
 
 // =====================================================
 // UNIFIED KNOB COMPONENT - Config-based architecture
 // =====================================================
 
 export type KnobColor = AnyColor;
+
+const RING_INSET = 2;
 
 // =====================================================
 // HORSESHOE RING - SVG arc for knob fill
@@ -48,7 +52,7 @@ export function HorseshoeRing({
   const style = getEffectiveStyle();
 
   const center = size / 2;
-  const radius = (size - strokeWidth) / 2 - 2;
+  const radius = (size - strokeWidth) / 2 - RING_INSET;
   const startRad = (startAngle - 90) * (Math.PI / 180);
   const endRad = (endAngle - 90) * (Math.PI / 180);
   const totalAngle = endAngle - startAngle;
@@ -128,6 +132,19 @@ export function KnobIndicator({
   );
 }
 
+// A line inside the body, for the minimal knob: the value reads off the body as well as the arc.
+const LINE_INDICATOR_FROM = 0.44;
+const LINE_INDICATOR_TO = 0.83;
+const LINE_INDICATOR_WIDTH = 2;
+function KnobLineIndicator({ percentage, size, innerSize, color, dimmed }: { percentage: number; size: number; innerSize: number; color: string; dimmed: boolean }) {
+  const center = size / 2, radius = innerSize / 2, angle = (225 + 270 * percentage) * Math.PI / 180;
+  const at = (fraction: number) => [center + radius * fraction * Math.sin(angle), center - radius * fraction * Math.cos(angle)];
+  const [x1, y1] = at(LINE_INDICATOR_FROM), [x2, y2] = at(LINE_INDICATOR_TO);
+  return <svg width={size} height={size} style={{ position: 'absolute', top: 0, left: 0, pointerEvents: 'none' }}>
+    <line x1={x1} y1={y1} x2={x2} y2={y2} stroke={color} strokeWidth={LINE_INDICATOR_WIDTH} strokeLinecap="round" opacity={dimmed ? O.low : 1} />
+  </svg>;
+}
+
 // =====================================================
 // KNOB TICKS RENDERER
 // =====================================================
@@ -177,7 +194,9 @@ function KnobTicks({ value, min = 0, max = 1, numTicks = 11, size, scheme }: Kno
 // =====================================================
 // MAIN KNOB PROPS - Config-based interface
 // =====================================================
-export interface KnobProps {
+export interface KnobProps extends ModulationProps {
+  /** Value per pixel dragged. Defaults to the config's own. */
+  sensitivity?: number;
   value: number;
   onChange?: (value: number) => void;
   label?: string;
@@ -212,25 +231,63 @@ export interface KnobProps {
 // EDITABLE VALUE — click to type a numeric value
 // =====================================================
 
-export function EditableValue({ text, color, style, onChange, min, max }: {
-  text: string; color: string; style: React.CSSProperties;
-  onChange?: (v: number) => void; min: number; max: number;
+/** What a refused number says: the limits it has, and that nothing was written. */
+export function limitWords(typed: number, min: number, max: number) {
+  const takes = Number.isFinite(min) && Number.isFinite(max) ? `${min} to ${max}` : Number.isFinite(min) ? `${min} or more` : `${max} or less`;
+  return `Takes ${takes}, so ${typed} wasn't written.`;
+}
+
+/** A refusal stays in view until the next press or key anywhere. */
+function useRefusal() {
+  const [refused, setRefused] = useState<string | null>(null);
+  useEffect(() => {
+    if (!refused) return;
+    const clear = () => setRefused(null);
+    addEventListener('pointerdown', clear, true); addEventListener('keydown', clear, true);
+    return () => { removeEventListener('pointerdown', clear, true); removeEventListener('keydown', clear, true); };
+  }, [refused]);
+  return { refused, setRefused };
+}
+
+/**
+ * `refusesOutside` writes nothing for a number past min or max and says so, where without it the number is clamped. Escape then leaves without writing.
+ * `value` is the exact number held, where `text` may round it for show: the box opens holding it, and leaving the box on that number writes nothing.
+ */
+export function EditableValue({ text, value, color, style, onChange, min, max, refusesOutside, opensOnPress }: {
+  text: string; value?: number; color: string; style: React.CSSProperties;
+  onChange?: (v: number) => void; min: number; max: number; refusesOutside?: boolean;
+  /** One press opens the box, as its text cursor promises. Without it, as on the old grid, a double-click does. */
+  opensOnPress?: boolean;
 }) {
+  const theme = useStyle().getEffectiveStyle();
   const [editing, setEditing] = useState(false);
+  const { refused, setRefused } = useRefusal();
   const inputRef = useRef<HTMLInputElement>(null);
+  const opensWith = value === undefined ? text.replace(/[^0-9.\-]/g, '') : String(value);
 
   const commit = () => {
-    const raw = parseFloat(inputRef.current?.value ?? '');
-    if (!isNaN(raw)) onChange?.(Math.min(max, Math.max(min, raw)));
+    const typed = inputRef.current?.value ?? '';
+    const raw = parseFloat(typed);
     setEditing(false);
+    if (value !== undefined && (typed === opensWith || raw === value)) return;
+    if (isNaN(raw)) return;
+    if (refusesOutside && (raw < min || raw > max)) return setRefused(limitWords(raw, min, max));
+    onChange?.(Math.min(max, Math.max(min, raw)));
+  };
+  const onKey = (event: React.KeyboardEvent) => {
+    if (event.key === 'Enter') commit();
+    else if (refusesOutside && event.key === 'Escape') { event.stopPropagation(); setEditing(false); }
   };
 
-  if (!editing || !onChange) return <div style={style} onDoubleClick={() => setEditing(true)}>{text}</div>;
+  if (!editing || !onChange) return <div data-editable-value style={refusesOutside ? { ...style, position: 'relative' } : style} onClick={opensOnPress ? () => setEditing(true) : undefined} onDoubleClick={opensOnPress ? undefined : () => setEditing(true)}>
+    {text}
+    {refused && <span role="alert" data-value-refused style={{ ...T.moduleValue, position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)', zIndex: D.pageShell.overlayLayer, width: 'max-content', maxWidth: D.moduleGrid.rowValueWidth * 2, padding: D.moduleGrid.inputPadding, textAlign: 'center', color: theme.textColor, background: theme.cutoutBackground, border: `${Borders.standard.width}px solid ${theme.primaryColor}`, borderRadius: D.radius.tiny }}>{refused}</span>}
+  </div>;
 
   return (
-    <input ref={inputRef} autoFocus defaultValue={text.replace(/[^0-9.\-]/g, '')}
+    <input ref={inputRef} autoFocus defaultValue={opensWith}
       style={{ ...style, background: 'transparent', border: 'none', outline: 'none', color, width: 32, padding: 0 }}
-      onBlur={commit} onKeyDown={e => e.key === 'Enter' && commit()} />
+      onBlur={commit} onKeyDown={onKey} />
   );
 }
 
@@ -277,7 +334,11 @@ export function Knob({
   config: configProp,
   size: sizeOverride,
   layout: layoutOverride,
-  align = 'left'
+  align = 'left',
+  sensitivity: sensitivityOverride,
+  modulators,
+  selectedSource,
+  onSelectSource
 }: KnobProps) {
   const { getEffectiveStyle } = useStyle();
   const style = getEffectiveStyle();
@@ -302,10 +363,10 @@ export function Knob({
   const isDisabled = disabled || (showToggle && !toggleValue);
 
   // Calculate sensitivity for the range
-  const sensitivity = getKnobSensitivity(config, max - min);
+  const sensitivity = sensitivityOverride ?? getKnobSensitivity(config, max - min);
 
   // Use shared drag logic
-  const { isDragging, isHovered, setIsHovered, handleMouseDown } = useKnobDrag(
+  const { isDragging, isHovered, setIsHovered, handleMouseDown, handlePointerDown } = useKnobDrag(
     value,
     onChange,
     { min, max, isInteger, disabled: isDisabled, sensitivity }
@@ -347,6 +408,7 @@ export function Knob({
   const knobElement = (
     <div
       data-control-anchor="radial"
+      onPointerDown={handlePointerDown}
       onMouseDown={handleMouseDown}
       style={{
         position: 'relative',
@@ -412,13 +474,20 @@ export function Knob({
       )}
 
       {/* Position indicator */}
-      <KnobIndicator
+      {hasFeature(config, KnobFeature.LINE_INDICATOR)
+        ? <KnobLineIndicator percentage={normalizedValue} size={dims.size} innerSize={dims.innerSize} color={scheme.main} dimmed={isDisabled} />
+        : <KnobIndicator
         percentage={normalizedValue}
         size={dims.size}
         color={scheme.main}
         indicatorWidth={dims.indicatorWidth}
         indicatorHeight={dims.indicatorHeight}
-      />
+      />}
+
+      {modulators && modulators.length > 0 && !isDisabled && (
+        <ModulationRings modulators={modulators} selectedSource={selectedSource} onSelectSource={onSelectSource}
+          size={dims.size} radius={(dims.size - dims.stroke) / 2 - RING_INSET} thickness={dims.stroke} fraction={normalizedValue} span={max - min} />
+      )}
     </div>
   );
 

@@ -50,7 +50,7 @@
     "Boolean",
     "LabeledToggle"
    ],
-   "note": "Forms: cell, setting. Open: is it a Cycle form in Unity, which has no enum entry but does have SynthBooleanShader?",
+   "note": "Forms: cell, setting, switch. Open: is it a Cycle form in Unity, which has no enum entry but does have SynthBooleanShader?",
    "core": [
     "SettingToggle"
    ],
@@ -93,7 +93,7 @@
    "kit": [
     "Slider"
    ],
-   "note": "Forms: cell, setting."
+   "note": "Forms: cell, setting, range."
   },
   "IntegerIncrementer": {
    "data": "integer",
@@ -244,6 +244,36 @@
     "ActionBar",
     "Bar",
     "BarParticipants"
+   ]
+  },
+  "CaretButton": {
+   "data": "folded and open regions",
+   "kit": [
+    "CaretButton"
+   ]
+  },
+  "PhotoStrip": {
+   "data": "referenced photos",
+   "kit": [
+    "PhotoStrip"
+   ]
+  },
+  "PhotoCompare": {
+   "data": "labeled captures, compared",
+   "kit": [
+    "PhotoCompare"
+   ]
+  },
+  "Crossfade": {
+   "data": "one visible pane at a time",
+   "kit": [
+    "Crossfade"
+   ]
+  },
+  "DataTable": {
+   "data": "named counts and notes",
+   "kit": [
+    "DataTable"
    ]
   }
  }

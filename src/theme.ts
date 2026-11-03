@@ -12,7 +12,7 @@ import { hexToRgba } from "./color.ts";
 // A theme's overrides: its name, colors, radii, stroke and inset.
 export interface ThemeSpec {
   name?: string;
-  colors?: Partial<Record<"bg" | "stage" | "surface" | "surfaceHi" | "line" | "bevel" | "text" | "dim" | "faint" | "accent" | "accentDeep" | "accentWash" | "teal" | "amber" | "gold" | "goldLight" | "grass" | "sand", string>>;
+  colors?: Partial<Record<"bg" | "stage" | "surface" | "surfaceHi" | "line" | "bevel" | "text" | "dim" | "faint" | "accent" | "accentDeep" | "accentWash" | "teal" | "amber" | "gold" | "goldLight" | "grass" | "sand" | "scarlet", string>>;
   radius?: { lg?: number; sm?: number };
   stroke?: { line?: number };
   space?: { inset?: number };
@@ -43,6 +43,8 @@ export function createTheme(spec: ThemeSpec = {}) {
       // Field grass and the infield's sand, drawn faintly like the amber mound.
       grass: c.grass || "#9cf08a",
       sand: c.sand || "#ecd2a2",
+      // Salmon scarlet, warm beside the accent and amber: what waits on a person.
+      scarlet: c.scarlet || "#e86f5f",
     },
     radius: { lg: spec.radius?.lg ?? 14, sm: spec.radius?.sm ?? 9 },
     // Border width for section and control outlines, in px.
@@ -62,6 +64,7 @@ export function themeVariables(t: Theme): Record<string, string> {
     "--text": c.text, "--selection-foreground": c.text, "--dim": c.dim, "--faint": c.faint,
     "--pink": c.accent, "--pink-deep": c.accentDeep, "--pink-wash": c.accentWash, "--teal": c.teal,
     "--amber": c.amber, "--gold": c.gold, "--gold-light": c.goldLight, "--grass": c.grass, "--sand": c.sand,
+    "--scarlet": c.scarlet,
     "--r": `${t.radius.lg}px`, "--r-sm": `${t.radius.sm}px`, "--inset": `${t.space.inset}px`, "--line-width": `${t.stroke.line}px`,
     "--panel-shadow": Shadows.moduleOuter,
     "--field-gap": `${LayoutDimensions.spacing.tightGap}px`,

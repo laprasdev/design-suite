@@ -36,9 +36,10 @@ function dividerStyle(color?: string, flipped?: boolean, accentH: number = D.acc
 /** Unified strip container — flush to edges (no bleeding in flat mode).
  *  edge='top' (default) → top alignment.
  *  edge='bottom' → bottom alignment, accent flipped to top.
- *  edge='inline' → inline alignment. */
-export function Strip({ edge = 'top', columns, fill, children, style, accent }: {
-  edge?: StripEdge; columns?: string; fill?: boolean;
+ *  edge='inline' → inline alignment.
+ *  reachesEdge → it ends at its container's border, whose own inside curve closes it, so it draws no end cap. */
+export function Strip({ edge = 'top', columns, fill, reachesEdge, children, style, accent }: {
+  edge?: StripEdge; columns?: string; fill?: boolean; reachesEdge?: boolean;
   children: React.ReactNode; style?: React.CSSProperties; accent?: number;
 }) {
   const flipped = edge === 'bottom';
@@ -48,7 +49,7 @@ export function Strip({ edge = 'top', columns, fill, children, style, accent }: 
   const h = accent ?? LayoutDimensions.accent.thin;
   const r = LayoutDimensions.radius.cutout;
   const bleedsLeft = true;
-  const bleedsRight = !!(columns || fill);
+  const bleedsRight = !!(columns || fill || reachesEdge);
   const capped = arr.map((child, i) => (
     <StripCapContext.Provider key={`cap-${i}`} value={{
       height: h, radius: r,

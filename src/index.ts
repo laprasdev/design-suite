@@ -4,3 +4,4 @@ export * from "./tokens.ts";
 export * from "./layout.ts";
 export * from "./color.ts";
 export * from "./theme.ts";
+export * from "./pathNode.ts";
