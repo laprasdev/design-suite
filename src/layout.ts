@@ -255,8 +255,6 @@ export const LayoutDimensions = {
     tightLine: 1.15,
     fillPadding: 8,
     fillGap: 8,
-    // How far a scrolling body fades at an end with more beyond it, so it runs out rather than meeting a hard edge.
-    scrollFade: 21,
     // On a page a column grows with its tile only to φ of the largest knob, so a few fields stay together rather than spreading across a wide tile.
     fillColumnMax: Math.round(MODULE_CONTROL_MAX * PHI),
     headerGap: 8,

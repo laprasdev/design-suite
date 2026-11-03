@@ -6,9 +6,12 @@ import { ModuleHeaderRow } from './ModuleHeaderRow.tsx';
 const G = D.moduleGrid;
 const FILLS: React.CSSProperties = { flex: 1, minWidth: 0, minHeight: 0 };
 
-/** A module on a page: its name, open group and tabs over a body filling the tile. The tile draws the only border. */
-export function GridModule({ title, group, tabs, children }: {
-  title: string; group?: string; tabs?: React.ReactNode; children: React.ReactNode;
+/**
+ * A module on a page: its name, open group and tabs over a body filling the tile. The tile draws the only border.
+ * An untitled module's drawing says what it is, so its name is only its label, and a header with nothing else goes.
+ */
+export function GridModule({ title, titled = true, group, tabs, children }: {
+  title: string; titled?: boolean; group?: string; tabs?: React.ReactNode; children: React.ReactNode;
 }) {
   const style = useStyle().getEffectiveStyle();
   const headerStyle: React.CSSProperties = {
@@ -21,10 +24,10 @@ export function GridModule({ title, group, tabs, children }: {
   return (
     <section data-grid-module data-module-owner={title} aria-label={title}
       style={{ ...FILLS, display: 'flex', flexDirection: 'column' }}>
-      <header data-module-header={title} style={headerStyle}>
-        <h2 style={titleStyle}>{title}</h2>
+      {(titled || group || tabs) && <header data-module-header={title} style={headerStyle}>
+        {titled && <h2 style={titleStyle}>{title}</h2>}
         <ModuleHeaderRow group={group}>{tabs}</ModuleHeaderRow>
-      </header>
+      </header>}
       <div data-module-body={title} style={{ ...FILLS, display: 'flex' }}>{children}</div>
     </section>
   );

@@ -23,7 +23,7 @@ export function ModuleTabs<Id extends string>({ tabs, value, onChange, ariaLabel
   const pressed = (id: Id) => (event: React.KeyboardEvent) => { if (event.key === 'Enter') onChange(id); };
   return (
     <div role="tablist" aria-label={ariaLabel} style={ROW}>
-      <Strip edge="inline">
+      <Strip edge="inline" reachesEdge>
         {tabs.map((tab, index) => (
           <EnabledCell key={tab.id} enabled={tab.id === value} color={primaryColor} isLast={index === tabs.length - 1}
             onClick={() => onChange(tab.id)} style={CELL}>
