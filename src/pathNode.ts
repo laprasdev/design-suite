@@ -62,11 +62,12 @@ export type NodeToneValue = typeof NodeTone[keyof typeof NodeTone];
 export const AttachmentKind = Object.freeze({ IMAGE: 'image', VIDEO: 'video', PAGE: 'page', LINK: 'link' } as const);
 export type AttachmentKindValue = typeof AttachmentKind[keyof typeof AttachmentKind];
 
-/** A picture, a clip, a page to preview, or a link. */
+/** A picture, a clip, a page to preview, or a link. A phone capture is drawn at a phone's width. */
 export interface NodeAttachment {
   kind: AttachmentKindValue;
   src: string;
   caption?: string;
+  phone?: boolean;
 }
 
 export interface ReplyOption {
@@ -131,7 +132,23 @@ export interface NodePath {
   for?: string;
 }
 
-/** One node on a project's path. Its id starts with its source's prefix, as todo:… or checkpoint:…. */
+/** An agent's proposal to move a checkpoint from one phase to another, which the owner answers. */
+export interface NodeProposal {
+  checkpoint: string;
+  from: LifecyclePhaseValue;
+  to: LifecyclePhaseValue;
+}
+
+/** Where a node is read from when it isn't the desk's own, and whether it can be answered there. */
+export interface NodeSource {
+  name: string;
+  href?: string;
+  anchor?: string;
+  readonly?: boolean;
+}
+
+/** One node on a project's path. Its id starts with its source's prefix, as todo:… or checkpoint:…. `facts` are short
+ * words beside its name, `table` a small table it shows, and `compare` captures shown side by side. */
 export interface PathNode {
   id: string;
   kind: NodeKindValue;
@@ -143,6 +160,11 @@ export interface PathNode {
   replyOptions?: NodeReplyOptions;
   reply?: NodeReply;
   path?: NodePath;
+  proposal?: NodeProposal;
+  source?: NodeSource;
+  facts?: string[];
+  table?: { head: string[]; rows: string[][] };
+  compare?: NodeAttachment[];
   author?: string;
   revision?: number;
   at?: number;
