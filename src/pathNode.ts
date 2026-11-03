@@ -45,7 +45,7 @@ export type ReviewStatusValue = typeof ReviewStatus[keyof typeof ReviewStatus];
 export const LogVerb = Object.freeze({
   ADDED: 'added', ASKED: 'asked', CLAIMED: 'claimed', RELEASED: 'released', NOTED: 'noted', FINISHED: 'finished',
   ATTACHED: 'attached', REVISED: 'revised', WITHDREW: 'withdrew', LINKED: 'linked', PROPOSED: 'proposed',
-  REVIEWED: 'reviewed',
+  REVIEWED: 'reviewed', ASSIGNED: 'assigned',
 } as const);
 export type LogVerbValue = typeof LogVerb[keyof typeof LogVerb];
 
@@ -120,6 +120,8 @@ export interface NodeStatus {
   log: NodeLogEntry[];
   claimedBy?: string;
   claimedAt?: number;
+  /** The agent the owner handed this to, who should take it next. */
+  assignedTo?: string;
   doneBy?: string;
   withdrawn?: NodeWithdrawal;
   phase?: LifecyclePhaseValue;
