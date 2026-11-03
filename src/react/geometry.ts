@@ -8,6 +8,18 @@ export function bezierPath(x1: number, y1: number, x2: number, y2: number) {
   return `M ${x1} ${y1} C ${mx} ${y1}, ${mx} ${y2}, ${x2} ${y2}`;
 }
 
+/** Smooth vertical S-curve between two points, for a link that leaves a node's bottom or top. */
+export function verticalBezierPath(x1: number, y1: number, x2: number, y2: number) {
+  const my = (y1 + y2) / 2;
+  return `M ${x1} ${y1} C ${x1} ${my}, ${x2} ${my}, ${x2} ${y2}`;
+}
+
+/** The curve a link takes: vertical when it leaves a node's top or bottom, horizontal from its sides. */
+export function linkPath(from: { x: number; y: number }, to: { x: number; y: number }, side: NodeSide) {
+  const vertical = side === "top" || side === "bottom";
+  return (vertical ? verticalBezierPath : bezierPath)(from.x, from.y, to.x, to.y);
+}
+
 /**
  * A point on a node's edge. `side` is left/right/top/bottom; `t` (0..1) is the
  * fractional position along that edge. A node is { x, y, w, h }.

@@ -11,7 +11,7 @@
 // =====================================================
 import React, { useState, useRef, useLayoutEffect, type ReactNode } from "react";
 import { Node } from "./Node.tsx";
-import { bezierPath, edgePoint, type NodeBox, type NodeSide } from "./geometry.ts";
+import { edgePoint, linkPath, type NodeBox, type NodeSide } from "./geometry.ts";
 
 // A node on the canvas: its id, box and accent, and the consumer's own fields.
 export interface GraphNode extends NodeBox {
@@ -69,7 +69,7 @@ export function NodeGraph<N extends GraphNode>({
   const links = edges.map((e) => {
     const a = edgePoint(byId[e.from[0]], e.from[1], e.from[2] ?? 0.5);
     const b = edgePoint(byId[e.to[0]], e.to[1], e.to[2] ?? 0.5);
-    return { d: bezierPath(a.x, a.y, b.x, b.y), a, b };
+    return { d: linkPath(a, b, e.from[1]), a, b };
   });
 
   return (

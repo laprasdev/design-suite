@@ -2,7 +2,7 @@
 // Import styles once: `import "@looms/bloom-design/react/styles.css"`.
 export { Node, type NodeProps } from "./Node.tsx";
 export { NodeGraph, type GraphNode, type GraphEdge, type EdgeEnd, type NodeGraphProps } from "./NodeGraph.tsx";
-export { bezierPath, edgePoint, type NodeBox, type NodeSide } from "./geometry.ts";
+export { bezierPath, edgePoint, linkPath, verticalBezierPath, type NodeBox, type NodeSide } from "./geometry.ts";
 export { Label, Glyph, Divider, LightBox, type LabelKind } from "./accents.tsx";
 export { MonthGrid, type DayCell, type MonthGridProps } from "./Calendar.tsx";
 export { Cycle, type CycleOption, type CycleProps } from "./Cycle.tsx";
