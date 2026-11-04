@@ -14,6 +14,7 @@
   --bd-node-bevel: var(--color-bevel, rgba(255, 255, 255, 0.05));
   --bd-node-radius: var(--radius-card-sm, 9px);
   --bd-node-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+  --bd-node-selected: var(--color-text, #f0f0f3);
 
   --bd-edge-stroke: rgba(240, 240, 243, 0.2);
   --bd-edge-width: 1.6px;
@@ -64,11 +65,14 @@
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22), 0 6px 24px var(--bd-accent-glow);
 }
 
-/* Moving nodes: the surface doesn't select text, a selected node rings in the accent, and the marquee is a faint
-   accent box while it's dragged. */
+/* Moving nodes: the surface doesn't select text, a selected node is ringed and lit in the selection colour (apart from
+   any colour a consumer gives its nodes), and the marquee is a faint accent box while it's dragged. */
 .bd-nodegraph[data-moving] { user-select: none; -webkit-user-select: none; }
 .bd-nodegraph[data-moving] .bd-node { touch-action: none; }
-.bd-node[data-selected] { box-shadow: inset 0 1px 0 var(--bd-node-bevel), 0 0 0 1.5px var(--bd-accent), var(--bd-node-shadow); }
+.bd-node[data-selected] {
+  background: color-mix(in srgb, var(--bd-node-selected) 12%, var(--bd-node-bg));
+  box-shadow: inset 0 1px 0 var(--bd-node-bevel), 0 0 0 2px var(--bd-node-selected), var(--bd-node-shadow);
+}
 .bd-marquee {
   position: absolute;
   pointer-events: none;

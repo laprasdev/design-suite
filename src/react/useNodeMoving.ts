@@ -28,12 +28,14 @@ interface Gesture {
   from: NodeMoves;
   keep: ReadonlySet<string>;
   moved: boolean;
+  pressed?: string;
 }
 
 // Selecting and moving nodes on a NodeGraph: drag one to move it, drag across empty space to select several (Shift adds
-// to the selection, and Shift-click toggles one), then drag any selected node to move them all. Escape or a click on
-// empty space clears the selection. Holding Space leaves a drag on empty space to whatever pans the canvas. Points are
-// in canvas pixels, read through the surface's box on screen, so any zoom around the graph is accounted for.
+// to the selection, and Shift-click toggles one), then drag any selected node to move them all. Escape, a click on
+// empty space or a plain click on a node clears the selection. Holding Space leaves a drag on empty space to whatever
+// pans the canvas. Points are in canvas pixels, read through the surface's box on screen, so any zoom around the graph
+// is accounted for.
 export function useNodeMoving<N extends MovableNode>(
   nodes: readonly N[], width: number, moves: NodeMoves, onMovesChange?: (moves: NodeMoves) => void,
 ) {
@@ -85,6 +87,7 @@ export function useNodeMoving<N extends MovableNode>(
     gesture.current = null;
     setMarquee(null);
     if (g.kind === "drag" && g.moved) suppressClick.current = true;
+    if (g.kind === "drag" && !g.moved && g.pressed) setSelected(new Set());
     if (g.kind === "marquee" && !g.moved && !e.shiftKey) setSelected(new Set());
   };
   const nodeProps = (id: string) => ({
@@ -103,6 +106,7 @@ export function useNodeMoving<N extends MovableNode>(
       const group = selected.has(id) ? [...selected] : [id];
       if (!selected.has(id)) setSelected(new Set());
       begin(e, "drag", group, selected);
+      gesture.current!.pressed = id;
     },
     onPointerMove: move,
     onPointerUp: end,
