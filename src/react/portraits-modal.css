@@ -25,6 +25,31 @@
   transform: translateY(8px) scale(0.985); transition: transform 0.2s ease;
 }
 .sd-modal-bg.sd-in .sd-modal { transform: none; }
+/* A titled dialog: the title, the rows on two shared columns (the label's, sized to
+   the widest, and the control's), and the actions row, which stays in view while the
+   rows scroll. */
+.sd-modal[data-laid-out="true"] {
+  --sd-modal-inset: var(--modal-inset, 20px); --sd-modal-gap: var(--field-gap, 12px);
+  display: grid; grid-template-rows: auto minmax(0, 1fr) auto; row-gap: var(--sd-modal-gap);
+  width: min(420px, calc(92vw / var(--css-zoom, 1))); padding: var(--sd-modal-inset); overflow: hidden;
+}
+.sd-modal-title { margin: 0; font-size: 18px; font-weight: 750; letter-spacing: normal; text-transform: none; text-align: start; }
+.sd-modal-rows {
+  display: grid; grid-template-columns: fit-content(40%) minmax(0, 1fr); align-content: start;
+  gap: var(--sd-modal-gap) var(--sd-modal-gap); min-height: 0; overflow: auto; text-align: start;
+}
+.sd-modal-row { grid-column: 1 / -1; display: grid; grid-template-columns: subgrid; align-items: center; }
+.sd-modal-row[data-labelled="false"] .sd-modal-control { grid-column: 1 / -1; }
+.sd-modal-label { color: var(--dim); font-size: 13px; }
+.sd-modal-control { display: flex; align-items: center; justify-content: flex-end; gap: var(--sd-modal-gap); min-width: 0; font-size: 13px; line-height: 1.6; }
+/* A field or segmented control fills its column; buttons keep their size. */
+.sd-modal-control > :is([role="combobox"], :only-child:not(button)) { flex: 1; min-width: 0; }
+.sd-modal-row[data-labelled="false"] .sd-modal-control { justify-content: flex-start; }
+.sd-modal-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: var(--sd-modal-gap); }
+@media (max-width: 480px) {
+  .sd-modal-rows { grid-template-columns: minmax(0, 1fr); }
+  .sd-modal-row { grid-template-columns: minmax(0, 1fr); }
+}
 /* A blocking dialog takes focus itself until a control inside it does. */
 .sd-modal[tabindex="-1"]:focus { outline: none; }
 /* Reduced motion: the dialog appears in place, with no rise. */

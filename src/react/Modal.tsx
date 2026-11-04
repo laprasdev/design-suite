@@ -16,7 +16,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefObject, type SyntheticEvent, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import {focusableControls} from './focusable.ts';
 import {KEPT_ROOM_ATTRIBUTE,SCROLL_STEP_PX,keptRoom,modalGrowthLimit} from './modalRoom.ts';
-import { cssRect } from './cssZoom.ts';
+import { cssRect } from './cssZoom.ts'; import { ModalLayout } from './ModalLayout.tsx';
 
 const FADE_MS = 200;
 
@@ -197,10 +197,10 @@ export interface ModalProps {
   ariaLabel?: string;
   labelledBy?: string;
   keepRoomFor?: string;
-  className?: string;
+  className?: string; title?: string; actions?: ReactNode;
   children: ReactNode;
 }
-export function Modal({ open, onClose, dismissible = true, dismissOnContent = false, blocking = false, returnFocusRef, ariaLabel, labelledBy, keepRoomFor, className = "", children }: ModalProps) {
+export function Modal({ open, onClose, dismissible = true, dismissOnContent = false, blocking = false, returnFocusRef, ariaLabel, labelledBy, keepRoomFor, className = "", title, actions, children }: ModalProps) {
   const [mounted, visible] = useFadeMount(open);
   const backdrop = useRef<HTMLDivElement>(null), dialog = useRef<HTMLDivElement>(null), {hold, opened} = useHeldTop(mounted, keepRoomFor, backdrop, dialog);
   const blocked = blocking && open && mounted;
@@ -238,10 +238,10 @@ export function Modal({ open, onClose, dismissible = true, dismissOnContent = fa
   if (!mounted) return null;
   return (
     <div ref={backdrop} className={`sd-modal-bg${visible ? " sd-in" : ""}`} onClick={interactive ? close : undefined}>
-      <div ref={dialog} className={`sd-modal${className ? " " + className : ""}`} role="dialog" aria-modal="true" data-dismissible={interactive}
-        aria-label={ariaLabel} aria-labelledby={labelledBy} tabIndex={blocking ? -1 : undefined} onClick={(e) => {e.stopPropagation();if(interactive&&dismissOnContent&&e.target instanceof Element&&!e.target.closest('button,a,input,textarea,select,label,summary,[role=button]'))close();}}
+      <div ref={dialog} className={`sd-modal${className ? " " + className : ""}`} role="dialog" aria-modal="true" data-dismissible={interactive} data-laid-out={title !== undefined}
+        aria-label={ariaLabel ?? title} aria-labelledby={labelledBy} tabIndex={blocking ? -1 : undefined} onClick={(e) => {e.stopPropagation();if(interactive&&dismissOnContent&&e.target instanceof Element&&!e.target.closest('button,a,input,textarea,select,label,summary,[role=button]'))close();}}
         onPointerDownCapture={hold} onKeyDownCapture={hold} onClickCapture={opened} onKeyDown={containFocus}>
-        {children}
+        {title === undefined ? children : <ModalLayout title={title} actions={actions}>{children}</ModalLayout>}
       </div>
     </div>
   );
