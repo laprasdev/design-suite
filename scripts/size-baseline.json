@@ -5,7 +5,7 @@
     "catalog/scan.mjs": {"lines":58,"longLines":9,"importLines":2},
     "scripts/build.mjs": {"lines":21,"longLines":1,"importLines":4},
     "src/color.ts": {"lines":206,"longLines":1,"importLines":1},
-    "src/layout.ts": {"lines":387,"longLines":12,"importLines":1},
+    "src/layout.ts": {"lines":393,"longLines":12,"importLines":1},
     "src/react/ActionBar.tsx": {"lines":15,"longLines":2,"importLines":5},
     "src/react/Bar.tsx": {"lines":17,"longLines":2,"importLines":2},
     "src/react/BarParticipants.tsx": {"lines":49,"longLines":12,"importLines":6},

@@ -159,7 +159,7 @@ export function SegmentedControl<V extends SegmentValue>(props: SegmentedControl
       {filled&&<span ref={indicator} className="seg-indicator" aria-hidden="true"/>}
       {options.map((o,index) => {
         const selected=chosen(o.value);
-        const optionProps={className:o.className,style:o.style,id:o.id,title:o.title,role:tabs?'tab':undefined,'aria-selected':tabs?selected:undefined,'aria-pressed':tabs?undefined:multiple&&o.mixed?'mixed' as const:selected,'aria-controls':o.controls,tabIndex:tabs?(selected?0:-1):undefined,'data-on':selected,'data-mixed':multiple&&o.mixed||undefined,...o.data,'data-unavailable':o.disabled||undefined,[SEGMENT_GROUP_START_ATTRIBUTE]:index>0&&o.group!==options[index-1].group||undefined};
+        const optionProps={...o.data,className:o.className,style:o.style,id:o.id,title:o.title,role:tabs?'tab':undefined,'aria-selected':tabs?selected:undefined,'aria-pressed':tabs?undefined:multiple&&o.mixed?'mixed' as const:selected,'aria-controls':o.controls,tabIndex:tabs?(selected?0:-1):undefined,'data-on':selected,'data-mixed':multiple&&o.mixed||undefined,'data-unavailable':o.disabled||undefined,[SEGMENT_GROUP_START_ATTRIBUTE]:index>0&&o.group!==options[index-1].group||undefined};
         const label=<Label kind="action">{o.label}{swept&&<span className={TextSweepElement.className} aria-hidden="true">{o.label}</span>}</Label>,select=()=>choose(o.value,selected);
         // An option's `detail` is hover/focus help, shared with settings through HoverDetail.
         // An option unavailable on its own keeps its help: hovering or pressing it explains why.

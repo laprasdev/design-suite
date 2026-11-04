@@ -15,6 +15,9 @@ function filledStyle(rows: number, fill: boolean): React.CSSProperties {
   };
 }
 
+/** The height that gives `rows` rows the room for controls of one size, whichever band they sit in. */
+export const filledGridHeight = (rows: number) => rows * G.bandRowPitch + G.fillGap * (rows - 1) + G.fillPadding * 2;
+
 /**
  * A page's grid: the same four columns, each growing with its tile up to `fillColumnMax`. Rows take what their fields
  * need and gather at the top, so what a tile has to spare collects below the module as one block. `fill` instead

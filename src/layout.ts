@@ -321,7 +321,13 @@ export const LayoutDimensions = {
     sensorReachMeters: 5,
     // A sensor's distance moves in centimetres, the two decimals it reads in, so what's written is what shows.
     sensorDistanceStep: 0.01,
-    inputPadding: 4, railWidth: 112, railRowMin: 44, railLine: 4,
+    inputPadding: 4,
+    // A rail of kinds: wide enough for BLEND SHAPES on one line, an icon-over-name row, and the mode line.
+    railWidth: 112,
+    railRowMin: 44,
+    railLine: 4,
+    // Each row of a kind's band in a stack gets this much, so every band's controls are one size.
+    bandRowPitch: 112,
   },
 
   // The Envelope module on a page: four phase cells over the graph, the graph taking φ of what's left.

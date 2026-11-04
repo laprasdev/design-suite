@@ -63,11 +63,9 @@
 .seg[data-icon-only=true] button svg{display:block;flex:none;margin:0}
 /* Intrinsic SVGs need a size; explicit artwork and consumer sizing take precedence. */
 :where(.seg[data-icon-only=true] button svg:not([width]):not([height])) { width:var(--header-icon-size);height:var(--header-icon-size); }
-/* A vertical joined control is a rail: rows divided by a rule across, sharing its height, scrolling when they would be shorter than their own minimum. */
-.seg--joined[data-orientation=vertical] { flex-wrap:nowrap; }
+/* A vertical joined control is a rail: no frame of its own, rows divided by a rule across, sharing its height, scrolling when they would be shorter than their own minimum. */
+.seg--joined[data-orientation=vertical] { flex-wrap:nowrap;border:0;border-radius:0;background:transparent;box-shadow:none; }
 .seg--joined[data-orientation=vertical]>button+button { border-inline-start:0;border-block-start:var(--line-width) solid var(--segment-divider,var(--line)); }
-.seg--joined[data-orientation=vertical]>button:first-of-type { border-start-start-radius:inherit;border-start-end-radius:inherit;border-end-start-radius:0; }
-.seg--joined[data-orientation=vertical]>button:last-child { border-end-start-radius:inherit;border-end-end-radius:inherit;border-start-end-radius:0; }
 .seg[data-orientation=vertical][data-fit]>button { flex:1 1 0;min-height:0; }
 .seg[data-orientation=vertical][data-scroll] { overflow-x:hidden;overflow-y:auto; }
 .seg--joined[data-orientation=vertical] button>.bd-label { flex:1;justify-content:center; }
