@@ -109,7 +109,7 @@ export function NodeGraph<N extends GraphNode>({
     <div
       className={`bd-nodegraph-fit ${className}`}
       ref={ref}
-      style={{ position: "relative", width: "100%", overflow: "hidden", height: fit ? height * scale : height }}
+      style={{ height: fit ? height * scale : height }}
     >
       <div
         className="bd-nodegraph"

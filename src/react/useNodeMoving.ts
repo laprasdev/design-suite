@@ -31,11 +31,11 @@ interface Gesture {
   pressed?: string;
 }
 
-// Selecting and moving nodes on a NodeGraph: drag one to move it, drag across empty space to select several (Shift adds
-// to the selection, and Shift-click toggles one), then drag any selected node to move them all. Escape, a click on
-// empty space or a plain click on a node clears the selection. Holding Space leaves a drag on empty space to whatever
-// pans the canvas. Points are in canvas pixels, read through the surface's box on screen, so any zoom around the graph
-// is accounted for.
+// Selecting and moving nodes on a NodeGraph: drag one to move it, Shift and a drag across empty space selects several
+// (adding to the selection; Shift-click toggles one), then drag any selected node to move them all. Escape, a press on
+// empty space or a plain click on a node clears the selection. A plain drag on empty space is left to whatever pans the
+// canvas, as in any node editor. Points are in canvas pixels, read through the surface's box on screen, so any zoom
+// around the graph is accounted for.
 export function useNodeMoving<N extends MovableNode>(
   nodes: readonly N[], width: number, moves: NodeMoves, onMovesChange?: (moves: NodeMoves) => void,
 ) {
@@ -88,7 +88,6 @@ export function useNodeMoving<N extends MovableNode>(
     setMarquee(null);
     if (g.kind === "drag" && g.moved) suppressClick.current = true;
     if (g.kind === "drag" && !g.moved && g.pressed) setSelected(new Set());
-    if (g.kind === "marquee" && !g.moved && !e.shiftKey) setSelected(new Set());
   };
   const nodeProps = (id: string) => ({
     "data-selected": selected.has(id) || undefined,
@@ -123,8 +122,9 @@ export function useNodeMoving<N extends MovableNode>(
     "data-moving": "",
     onPointerDown: (e: ReactPointerEvent<HTMLDivElement>) => {
       if (e.button !== 0 || isPanKeyHeld()) return;
+      if (!e.shiftKey) { if (selected.size) setSelected(new Set()); return; }
       e.stopPropagation();
-      begin(e, "marquee", [], e.shiftKey ? selected : new Set());
+      begin(e, "marquee", [], selected);
     },
     onPointerMove: move,
     onPointerUp: end,
