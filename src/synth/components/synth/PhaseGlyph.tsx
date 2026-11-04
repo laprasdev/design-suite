@@ -7,21 +7,29 @@ import type {PhaseGlyphValue} from '../../../fields.ts';
 const RAMP_PATH = 'M4.17 8L7.1 8A.9 .9 0 0 0 8 7.1L8 4.17A.9 .9 0 0 0 6.465 3.535L3.535 6.465A.9 .9 0 0 0 4.17 8Z';
 const BLOCK = {x: 12, y: 2, size: 6, radius: 1.2};
 const UNLIT_OPACITY = 0.45;
+const INHERITED_OPACITY = 0.5;
 const VIEW_WIDTH = 20, VIEW_HEIGHT = 10;
 
 export type {PhaseGlyphValue};
+/** What the glyph's fill says of the mode it sits beside: filled when set, half when inherited, outlined when not. */
+export const PhaseGlyphMode = {SET: 'set', INHERITED: 'inherited', UNSET: 'unset'} as const;
+export type PhaseGlyphModeValue = typeof PhaseGlyphMode[keyof typeof PhaseGlyphMode];
 export interface PhaseGlyphProps {
   value: PhaseGlyphValue;
   onChange?: (value: PhaseGlyphValue) => void;
   ariaLabel: string;
   /** Drawn height. The width follows from it. */
   height?: number;
+  /** Defaults to SET, the fill the value alone gives. */
+  mode?: PhaseGlyphModeValue;
 }
 
-export function PhaseGlyph({value, onChange, ariaLabel, height = VIEW_HEIGHT}: PhaseGlyphProps) {
+export function PhaseGlyph(
+  {value, onChange, ariaLabel, height = VIEW_HEIGHT, mode = PhaseGlyphMode.SET}: PhaseGlyphProps,
+) {
   const color = useStyle().getEffectiveStyle().primaryColor;
-  const paint = (lit: boolean) => (lit
-    ? {fill: color, stroke: 'none'}
+  const paint = (cell: boolean) => (cell && mode !== PhaseGlyphMode.UNSET
+    ? {fill: color, stroke: 'none', ...(mode === PhaseGlyphMode.INHERITED && {fillOpacity: INHERITED_OPACITY})}
     : {fill: 'none', stroke: hexToRgba(color, UNLIT_OPACITY), strokeWidth: 1, strokeLinejoin: 'round' as const});
   // One cell always stays lit: no phase at all is the module's switch, not the glyph.
   const toggle = (cell: keyof PhaseGlyphValue) => {
