@@ -321,7 +321,7 @@ export const LayoutDimensions = {
     sensorReachMeters: 5,
     // A sensor's distance moves in centimetres, the two decimals it reads in, so what's written is what shows.
     sensorDistanceStep: 0.01,
-    inputPadding: 4,
+    inputPadding: 4, railWidth: 112, railRowMin: 44, railLine: 4,
   },
 
   // The Envelope module on a page: four phase cells over the graph, the graph taking φ of what's left.
