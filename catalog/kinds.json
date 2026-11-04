@@ -72,7 +72,8 @@
    "kitGap": true,
    "kit": [
     "Knob"
-   ]
+   ],
+   "note": "Forms: knob, and a range as DualTickRangeKnob, which a hold toggles."
   },
   "Slider": {
    "data": "bounded number or range",
@@ -93,7 +94,7 @@
    "kit": [
     "Slider"
    ],
-   "note": "Forms: cell, setting, range."
+   "note": "Forms: cell, setting, range. A range row on a page is ModuleFieldRows, its low and high values beside the track, and a hold toggles it."
   },
   "IntegerIncrementer": {
    "data": "integer",

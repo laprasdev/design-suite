@@ -40,6 +40,8 @@ export const ModuleGridDimensions = {
     rowLabelWidth: 56,
     rowValueWidth: 96,
     rowGap: 16,
+    // A range row's low or high value beside its track: wide enough for a number to two decimals.
+    rowEndWidth: 40,
     headerSwitchHeight: 14,
     phaseGlyphHeight: 14,
     nameIconHeight: 12,

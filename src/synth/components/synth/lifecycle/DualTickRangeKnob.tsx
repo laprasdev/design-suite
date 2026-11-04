@@ -14,6 +14,7 @@ import {
 } from '../../../design/constants/KnobConfig.ts';
 import { useTooltipSafe } from '../TooltipContext.tsx';
 import { KnobInnerCircle } from '../base/index.ts';
+import { RangeLimitLabels } from './RangeLimitLabels.tsx';
 
 // =====================================================
 // DUAL TICK RANGE KNOB - Config-based architecture
@@ -42,6 +43,8 @@ export interface DualTickRangeKnobProps {
   maxOpacity?: number;
   minimumGapFraction?: number;
   showToggle?: boolean;
+  /** The range's own ends, in tiny type at the ring's ends. A page module leaves them off, as its values say them. */
+  showLimits?: boolean;
   toggleValue?: boolean;
   onToggleChange?: (v: boolean) => void;
   tooltip?: string;
@@ -69,6 +72,7 @@ export function DualTickRangeKnob({
   maxOpacity = 1,
   minimumGapFraction = 0.02,
   showToggle = false,
+  showLimits = true,
   toggleValue = true,
   onToggleChange,
   tooltip,
@@ -286,29 +290,8 @@ export function DualTickRangeKnob({
             }}
           />
         )}
-        {/* Tiny min/max labels at horseshoe ends - pico font, 30% opacity */}
-        <text
-          x={minLabelX}
-          y={minLabelY}
-          fontSize="6"
-          fill={style.textColor}
-          fillOpacity={0.3}
-          textAnchor="end"
-          fontWeight="normal"
-        >
-          {min}
-        </text>
-        <text
-          x={maxLabelX}
-          y={maxLabelY}
-          fontSize="6"
-          fill={style.textColor}
-          fillOpacity={0.3}
-          textAnchor="start"
-          fontWeight="normal"
-        >
-          {max}
-        </text>
+        {showLimits && <RangeLimitLabels min={min} max={max} color={style.textColor}
+          minAt={{ x: minLabelX, y: minLabelY }} maxAt={{ x: maxLabelX, y: maxLabelY }} />}
       </svg>
     );
   };
