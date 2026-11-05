@@ -47,3 +47,4 @@ export {
   type PageDirection,type PageTiming,type PageAnimation,type PageScroll,type PageCopy,type PageRegions,type PageMotion,
 } from './pageMotion.ts';
 export {PAGE_MOTION} from './motion.ts';
+export {remapPageCopyIds} from './pageCopyIds.ts';
