@@ -57,16 +57,16 @@ export function restorePageScroll(root: HTMLElement,scrolled: PageScroll) {
 export function capturePage(page: HTMLElement): PageCopy {
  const copy=page.cloneNode(true);
  if(!(copy instanceof HTMLElement))throw new Error('A page copies as an element.');
+ remapPageCopyIds(copy,page);
  return {copy,height:cssRect(page).height,scrolled:capturePageScroll(page)};
 }
 export function placePageCopy(root: HTMLElement,{copy,height,scrolled}: PageCopy,
  className: string=PageMotionElement.OUTGOING) {
- copy.classList.add(className);
+ copy.classList.add(PageMotionElement.OUTGOING,className);
  copy.hidden=false;
  copy.inert=true;
  copy.setAttribute('aria-hidden','true');
  copy.style.height=`${height}px`;
- remapPageCopyIds(copy);
  root.append(copy);
  restorePageScroll(copy,scrolled);
  return copy;

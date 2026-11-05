@@ -89,6 +89,15 @@ motion helpers also support stationary chrome within a composed page; applicatio
 name those regions. The consumer owns routes, push/Back controls, guards and the
 retained entries' lifetime. Removing an entry unmounts it. The existing
 `<Crossfade view={key}>{content}</Crossfade>` keeps its compact fade behavior.
+Hidden retained pages still run React effects: consumers must deactivate their
+header/footer portals, dialogs and global input handlers using the active page state.
+
+Outgoing copies remap local IDs and references and preserve authored rules from
+readable document stylesheets, including inheritance from each SVG `use` instance.
+Affected ID rules in cross-origin stylesheets that deny CSSOM access, or imports
+with `layer()`/`supports()` modifiers, cannot be copied; those rules must be inline,
+inside the copied page, or in a readable application stylesheet. Global font,
+keyframe and property definitions stay with their existing stylesheet owner.
 
 Use `Modal` for short confirmations and bounded pickers. `ViewStack` keeps its
 existing modal behavior; the page form does not add a backdrop or Escape handler.
