@@ -66,8 +66,11 @@ export function CrossfadePage({views,className='',focusRef}: CrossfadePageProps)
   const direction=pageStackDirection(previous?.keys??[],keys);
   const focus=()=>{
    const prior=direction<0?retained?.focus:null;
-   const target=prior?.isConnected&&node.contains(prior)?prior:focusRef?.current??node;
-   target.focus({preventScroll:true});
+   for(const target of [prior&&node.contains(prior)?prior:null,focusRef?.current,node]) {
+    if(!target?.isConnected)continue;
+    target.focus({preventScroll:true});
+    if(node.ownerDocument.activeElement===target)return;
+   }
   };
   if(!previous){if(focusRef?.current)focus();return;}
   if(!outgoing||reducedMotion()){focus();return;}

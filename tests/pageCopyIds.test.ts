@@ -21,3 +21,21 @@ test('external assets, colors and unknown paint references remain unchanged',()=
  const value='color:#fff;background:url(https://example.test/art.svg#paint);fill:url(#outside)';
  assert.equal(pageCopyUrls(value,ids),value);
 });
+
+test('computed absolute URLs remap only definitions in the same document',()=>{
+ const document='https://example.test/workspace?view=page#current';
+ assert.equal(pageCopyUrls('url("https://example.test/workspace?view=page#paint")',ids,document),
+  'url("#copy-paint")');
+ const other='url("https://example.test/workspace?view=other#paint")';
+ assert.equal(pageCopyUrls(other,ids,document),other);
+ assert.equal(pageCopyUrls('url("https://example.test/art.svg#paint")',ids,document),
+  'url("https://example.test/art.svg#paint")');
+});
+
+test('copied authored stylesheet assets retain their stylesheet-relative location',()=>{
+ assert.equal(pageCopyUrls('fill:url(#paint);background:url(../art/tile.svg)',ids,
+  'https://example.test/page','https://example.test/styles/theme.css'),
+  'fill:url("#copy-paint");background:url("https://example.test/art/tile.svg")');
+ assert.equal(pageCopyUrls('fill:url(page#paint)',ids,'https://example.test/app/page',
+  'https://example.test/styles/theme.css'),'fill:url("https://example.test/styles/page#paint")');
+});
