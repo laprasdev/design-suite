@@ -68,7 +68,7 @@
 .setting-choice { display:flex;align-items:center;flex-wrap:wrap;gap:var(--field-gap) var(--section-gap);min-width:0;max-width:100%; }
 .setting-choice>.seg { flex-wrap:wrap;box-sizing:border-box; }
 .setting-choice>.seg button { min-width:0;max-width:100%;white-space:normal; }
-.setting-choice-detail,.meter-label { color:var(--dim);font-size:var(--caption-size);font-weight:400;line-height:1.4; }
+.setting-choice-detail,.meter-label { color:var(--dim);font-size:max(12px,var(--caption-size));font-weight:400;line-height:1.4; }
 .app-root .setting-option { display:flex;align-items:center;gap:var(--field-gap);width:100%;min-height:24px;padding:2px 0;text-align:left;border:0;border-radius:0;background:transparent;color:var(--text); }
 .setting-option strong { display:block;font-size:12px; }
 .setting-option[aria-pressed=true] strong { color:var(--pink); }

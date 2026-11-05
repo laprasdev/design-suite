@@ -17,10 +17,11 @@ export interface CycleProps<V> {
   label?: string;
   glyph?: ReactNode;
   className?: string;
+  disabled?: boolean;
 }
 import { Label, Glyph } from "./accents.tsx";
 
-export function Cycle<V>({ options, value, onChange, label, glyph, className = "" }: CycleProps<V>) {
+export function Cycle<V>({ options, value, onChange, label, glyph, className = "", disabled }: CycleProps<V>) {
   const idx = Math.max(
     0,
     options.findIndex((o) => o.value === value)
@@ -30,7 +31,7 @@ export function Cycle<V>({ options, value, onChange, label, glyph, className = "
 
   return (
     <button
-      type="button"
+      type="button" disabled={disabled || !options.length}
       className={`bd-cycle${className ? " " + className : ""}`}
       data-accent={cur?.accent ? "true" : "false"}
       onClick={next}

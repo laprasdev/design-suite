@@ -1,3 +1,4 @@
+import { knobSkinConfig, skinForm } from '../../../skinForms.ts';
 import React, { useCallback, useEffect, useState, useRef } from 'react';
 import { useStyle } from '../../StyleContext.tsx';
 import { getColorScheme, getInsetShadow, resolveColorType, hexToRgba, type AnyColor } from '../../../color.ts';
@@ -5,6 +6,7 @@ import { D, F, O, TransitionKeys, Borders, T } from '../../design/index.ts';
 import {
   type KnobConfig,
   KnobPreset,
+  KnobForm,
   type KnobPresetKey,
   KnobSize,
   KnobLayout,
@@ -15,6 +17,7 @@ import {
   getKnobDimensions,
   getKnobSensitivity
 } from '../../design/constants/KnobConfig.ts';
+import {KnobFace, KnobLineIndicator, HorseshoeRing} from '../../../react/KnobFace.tsx';
 import { useKnobDrag, KnobInnerCircle } from './base/index.ts';
 import { useTooltipSafe } from './TooltipContext.tsx';
 import { ModulationRings } from './ModulationRings.tsx';
@@ -24,69 +27,10 @@ import type { ModulationProps } from './modulation.ts';
 // UNIFIED KNOB COMPONENT - Config-based architecture
 // =====================================================
 
+export {HorseshoeRing} from '../../../react/KnobFace.tsx';
 export type KnobColor = AnyColor;
 
 const RING_INSET = 2;
-
-// =====================================================
-// HORSESHOE RING - SVG arc for knob fill
-// =====================================================
-interface HorseshoeRingProps {
-  percentage: number;
-  color?: string;
-  size?: number;
-  strokeWidth?: number;
-  startAngle?: number;
-  endAngle?: number;
-}
-
-export function HorseshoeRing({
-  percentage,
-  color = '#4dd4e8',
-  size = 60,
-  strokeWidth = 3,
-  startAngle = 225,
-  endAngle = 495
-}: HorseshoeRingProps) {
-  const { getEffectiveStyle } = useStyle();
-  const style = getEffectiveStyle();
-
-  const center = size / 2;
-  const radius = (size - strokeWidth) / 2 - RING_INSET;
-  const startRad = (startAngle - 90) * (Math.PI / 180);
-  const endRad = (endAngle - 90) * (Math.PI / 180);
-  const totalAngle = endAngle - startAngle;
-  const currentAngle = startAngle + (totalAngle * percentage);
-  const currentRad = (currentAngle - 90) * (Math.PI / 180);
-
-  const x1 = center + radius * Math.cos(startRad);
-  const y1 = center + radius * Math.sin(startRad);
-  const x2 = center + radius * Math.cos(currentRad);
-  const y2 = center + radius * Math.sin(currentRad);
-  const largeArc = (currentAngle - startAngle) > 180 ? 1 : 0;
-  const inactiveStroke = hexToRgba(style.knobGradient.at(-1)!, O.high);
-
-  return (
-    <svg width={size} height={size} style={{ position: 'absolute', top: 0, left: 0 }}>
-      <path
-        d={`M ${x1} ${y1} A ${radius} ${radius} 0 1 1 ${center + radius * Math.cos(endRad)} ${center + radius * Math.sin(endRad)}`}
-        fill="none"
-        stroke={inactiveStroke}
-        strokeWidth={strokeWidth}
-        strokeLinecap="round"
-      />
-      {percentage > 0 && (
-        <path
-          d={`M ${x1} ${y1} A ${radius} ${radius} 0 ${largeArc} 1 ${x2} ${y2}`}
-          fill="none"
-          stroke={color}
-          strokeWidth={strokeWidth}
-          strokeLinecap="round"
-        />
-      )}
-    </svg>
-  );
-}
 
 // =====================================================
 // KNOB INDICATOR - Position marker
@@ -130,19 +74,6 @@ export function KnobIndicator({
       }}
     />
   );
-}
-
-// A line inside the body, for the minimal knob: the value reads off the body as well as the arc.
-const LINE_INDICATOR_FROM = 0.44;
-const LINE_INDICATOR_TO = 0.83;
-const LINE_INDICATOR_WIDTH = 2;
-function KnobLineIndicator({ percentage, size, innerSize, color, dimmed }: { percentage: number; size: number; innerSize: number; color: string; dimmed: boolean }) {
-  const center = size / 2, radius = innerSize / 2, angle = (225 + 270 * percentage) * Math.PI / 180;
-  const at = (fraction: number) => [center + radius * fraction * Math.sin(angle), center - radius * fraction * Math.cos(angle)];
-  const [x1, y1] = at(LINE_INDICATOR_FROM), [x2, y2] = at(LINE_INDICATOR_TO);
-  return <svg width={size} height={size} style={{ position: 'absolute', top: 0, left: 0, pointerEvents: 'none' }}>
-    <line x1={x1} y1={y1} x2={x2} y2={y2} stroke={color} strokeWidth={LINE_INDICATOR_WIDTH} strokeLinecap="round" opacity={dimmed ? O.low : 1} />
-  </svg>;
 }
 
 // =====================================================
@@ -340,12 +271,12 @@ export function Knob({
   selectedSource,
   onSelectSource
 }: KnobProps) {
-  const { getEffectiveStyle } = useStyle();
+  const { getEffectiveStyle, skin } = useStyle();
   const style = getEffectiveStyle();
   const { setTooltip, descriptions } = useTooltipSafe();
 
   // Resolve config: explicit config > preset with overrides
-  const baseConfig = configProp ?? KnobPreset[preset];
+  const baseConfig = knobSkinConfig(configProp ?? KnobPreset[preset], configProp?.form ? undefined : skinForm(skin, 'knob'));
   const config: KnobConfig = {
     ...baseConfig,
     size: sizeOverride ?? baseConfig.size,
@@ -354,6 +285,7 @@ export function Knob({
 
   // Get derived dimensions from config
   const dims = getKnobDimensions(config);
+  const form = config.form ?? KnobForm.CLASSIC, flatFace = form !== KnobForm.CLASSIC;
 
   // Resolve color using unified utility
   const scheme = getColorScheme(resolveColorType(color), style);
@@ -432,7 +364,7 @@ export function Knob({
 
       {/* Horseshoe ring */}
       <div style={{
-        filter: (isDragging || isHovered) ? `drop-shadow(0 0 ${dims.glowRadius}px ${scheme.glow})` : 'none',
+        filter: !flatFace && (isDragging || isHovered) ? `drop-shadow(0 0 ${dims.glowRadius}px ${scheme.glow})` : 'none',
         transition: TransitionKeys.normal
       }}>
         <HorseshoeRing
@@ -444,7 +376,8 @@ export function Knob({
       </div>
 
       {/* Inner circle */}
-      <KnobInnerCircle
+      {flatFace ? <KnobFace percentage={normalizedValue} size={dims.size} innerSize={dims.innerSize}
+        color={scheme.main} form={form} /> : <KnobInnerCircle appearance={config.form}
         innerSize={dims.innerSize}
         innerPadding={dims.innerPadding}
         size={config.size}
@@ -452,10 +385,10 @@ export function Knob({
         style={style}
         isActive={isDragging || isHovered}
         hoverGlow={dims.hoverGlow}
-      />
+      />}
 
       {/* Center dot */}
-      {showCenterDot && (
+      {!flatFace && showCenterDot && (
         <div
           style={{
             position: 'absolute',
@@ -474,7 +407,7 @@ export function Knob({
       )}
 
       {/* Position indicator */}
-      {hasFeature(config, KnobFeature.LINE_INDICATOR)
+      {!flatFace && (hasFeature(config, KnobFeature.LINE_INDICATOR)
         ? <KnobLineIndicator percentage={normalizedValue} size={dims.size} innerSize={dims.innerSize} color={scheme.main} dimmed={isDisabled} />
         : <KnobIndicator
         percentage={normalizedValue}
@@ -482,7 +415,7 @@ export function Knob({
         color={scheme.main}
         indicatorWidth={dims.indicatorWidth}
         indicatorHeight={dims.indicatorHeight}
-      />}
+      />)}
 
       {modulators && modulators.length > 0 && !isDisabled && (
         <ModulationRings modulators={modulators} selectedSource={selectedSource} onSelectSource={onSelectSource}
@@ -637,6 +570,7 @@ export {
   KnobLayout,
   KnobLabelStyle,
   KnobFeature,
-  KnobPreset
+  KnobPreset,
+  KnobForm
 } from '../../design/constants/KnobConfig.ts';
 export type { KnobConfig, KnobPresetKey } from '../../design/constants/KnobConfig.ts';

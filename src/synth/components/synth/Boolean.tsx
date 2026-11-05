@@ -1,3 +1,4 @@
+import {SwitchBoolean} from '../../../react/inputs/SwitchBoolean.tsx';
 import React, { useEffect, useState, useCallback } from 'react';
 import { useStyle } from '../../StyleContext.tsx';
 import { getColorScheme, getBooleanStyles, getInsetShadow, type ColorType } from '../../../color.ts';
@@ -27,6 +28,7 @@ export interface BooleanProps {
   oscillateSpeed?: number;
   label?: string; // For tooltip generation
   tooltip?: string; // Override auto-generated tooltip
+  disabled?: boolean;
 }
 
 // Size mappings — lazily evaluated to avoid circular-init TDZ
@@ -60,13 +62,6 @@ export interface SwitchBooleanProps {
   height?: number;
   disabled?: boolean;
 }
-const SWITCH_HEIGHT=10, SWITCH_WIDTH_RATIO=2, SWITCH_INSET_RATIO=0.2;
-function SwitchBoolean({value,onChange,ariaLabel,height=SWITCH_HEIGHT,disabled=false}: SwitchBooleanProps) {
- const style=useStyle().getEffectiveStyle(), color=style.primaryColor, width=height*SWITCH_WIDTH_RATIO, inset=height*SWITCH_INSET_RATIO, thumb=height-inset*2;
- return <button type="button" role="switch" aria-checked={value} aria-label={ariaLabel} disabled={disabled} onClick={()=>onChange(!value)} style={{position:'relative',flex:'none',width,height,padding:0,border:'none',borderRadius:height/2,cursor:disabled?C.notAllowed:C.pointer,background:value?color:style.knobGradient.at(-1),transition:TransitionKeys.normal}}>
-  <span style={{position:'absolute',top:inset,left:value?width-inset-thumb:inset,width:thumb,height:thumb,borderRadius:'50%',background:value?style.backgroundColor:color,transition:TransitionKeys.normal}}/>
- </button>;
-}
 export function Boolean(props: BooleanProps|SettingBooleanProps|SwitchBooleanProps) {
  if('form' in props&&props.form===BooleanForm.SWITCH) return <SwitchBoolean {...props}/>;
   return 'form' in props&&props.form===BooleanForm.SETTING?<SettingBoolean {...props}/>:<CellBoolean {...props as BooleanProps}/>;
@@ -82,7 +77,7 @@ function CellBoolean({
   rounded = true,
   oscillateSpeed = D.timing.oscillateNormal,
   label,
-  tooltip
+  tooltip, disabled
 }: BooleanProps) {
   const { getEffectiveStyle } = useStyle();
   const style = getEffectiveStyle();
@@ -158,6 +153,7 @@ function CellBoolean({
 
   return (
     <button
+      type="button" disabled={disabled} aria-label={label}
       data-control-anchor="leading"
       onClick={() => onChange?.(!value)}
       onMouseEnter={handleMouseEnter}

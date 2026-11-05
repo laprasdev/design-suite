@@ -5,25 +5,35 @@
 //
 // Domain-free. The consumer passes:
 //   nodes:      [{ id, x, y, w, h, accent?, data? }]
-//   edges:      [{ from: [nodeId, side, t?], to: [nodeId, side, t?] }]
+//   edges:      [{ from: [nodeId, side, t?], to: [nodeId, side, t?], flow? }]
 //   renderNode: (node) => ReactNode        // content inside each node
 //   children:   extra absolutely-positioned overlay content (labels, etc.)
+//
+// With `onMovesChange`, nodes can be moved (see useNodeMoving): drag one, or select several and drag them together.
+// `moves` are offsets from each node's laid-out place, which the consumer keeps.
+// An edge with `flow` carries a few lights along it, for work moving through.
+// `groups` draw collapsible member frames; drag their headings to move them with their members.
+// Group offsets share `moves` with nodes; the consumer owns folding and layout.
+// `onTiesChange` enables Shift-drag wire sweeps and twist ties; Alt-drag selects nodes.
+// `onGroupResize` enables gestures on every group edge; the consumer reflows its members.
+// Keep `ties` alongside moves. Edge ids must remain stable when nodes move.
+// `interactionSurface` can extend selection to a surrounding pan/zoom viewport.
 // =====================================================
-import React, { useState, useRef, useLayoutEffect, type ReactNode } from "react";
+import React, { useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 import { Node } from "./Node.tsx";
-import { edgePoint, linkPath, type NodeBox, type NodeSide } from "./geometry.ts";
+import { GraphWires } from "./GraphWires.tsx";
+import { NodeGroups } from "./NodeGroups.tsx";
+import { groupFrames } from "./groupGeometry.ts";
+import type { GraphNode, GraphEdge, GraphGroup, GraphGroupResize, TwistTie } from "./nodeGraphTypes.ts";
+import { movedGraph } from "./nodeGraphTypes.ts";
+export { graphEdgeId, movedGraph } from "./nodeGraphTypes.ts";
+export type {
+  GraphNode, GraphEdge, GraphGroup, GraphGroupResize, GroupEdge, GroupResizePhase, EdgeEnd, TwistTie,
+} from "./nodeGraphTypes.ts";
+import { useNodeMoving, type NodeMoves } from "./useNodeMoving.ts";
 
-// A node on the canvas: its id, box and accent, and the consumer's own fields.
-export interface GraphNode extends NodeBox {
-  id: string;
-  accent?: boolean;
-}
-// An edge end: a node, the side it leaves from, and where along that side.
-export type EdgeEnd = readonly [id: string, side: NodeSide, t?: number];
-export interface GraphEdge {
-  from: EdgeEnd;
-  to: EdgeEnd;
-}
+export type { NodeMove, NodeMoves } from "./useNodeMoving.ts";
+
 export interface NodeGraphProps<N extends GraphNode> {
   width: number;
   height: number;
@@ -34,7 +44,19 @@ export interface NodeGraphProps<N extends GraphNode> {
   showPorts?: boolean;
   className?: string;
   children?: ReactNode;
+  moves?: NodeMoves;
+  onMovesChange?(moves: NodeMoves): void;
+  groups?: readonly GraphGroup[];
+  /** Route a single terminal output along each expanded group boundary. */
+  groupOutputs?: boolean;
+  onGroupToggle?(id: string): void;
+  onGroupResize?: GraphGroupResize;
+  ties?: readonly TwistTie[];
+  onTiesChange?(ties: readonly TwistTie[]): void;
+  interactionSurface?: RefObject<HTMLElement | null>;
 }
+
+const NO_MOVES: NodeMoves = Object.freeze({});
 
 function useFitScale(contentWidth: number, enabled: boolean) {
   const ref = useRef<HTMLDivElement>(null);
@@ -62,52 +84,49 @@ export function NodeGraph<N extends GraphNode>({
   showPorts = true,
   className = "",
   children,
+  moves = NO_MOVES,
+  onMovesChange, groups = [], groupOutputs = false, onGroupToggle, onGroupResize,
+  ties, onTiesChange, interactionSurface,
 }: NodeGraphProps<N>) {
-  const byId = Object.fromEntries(nodes.map((n) => [n.id, n]));
   const { ref, scale } = useFitScale(width, fit);
-
-  const links = edges.map((e) => {
-    const a = edgePoint(byId[e.from[0]], e.from[1], e.from[2] ?? 0.5);
-    const b = edgePoint(byId[e.to[0]], e.to[1], e.to[2] ?? 0.5);
-    return { d: linkPath(a, b, e.from[1]), a, b };
-  });
+  const marqueeKey = onTiesChange ? "altKey" : "shiftKey";
+  const { surface, marquee, nodeProps, groupProps, surfaceProps } = useNodeMoving(
+    nodes, width, moves, onMovesChange, marqueeKey, groups);
+  const { nodes: shown, groups: moved } = movedGraph(nodes, groups, moves);
+  const frames = groupFrames(moved, shown);
 
   return (
     <div
       className={`bd-nodegraph-fit ${className}`}
       ref={ref}
-      style={{ position: "relative", width: "100%", overflow: "hidden", height: fit ? height * scale : height }}
+      data-organizing={!!(onMovesChange || onTiesChange || onGroupResize) || undefined}
+      style={{ height: fit ? height * scale : height }}
     >
       <div
         className="bd-nodegraph"
+        ref={surface}
         style={{ width, height, transform: fit ? `scale(${scale})` : undefined }}
+        {...surfaceProps}
       >
-        <svg
-          className="bd-edges"
-          width={width}
-          height={height}
-          viewBox={`0 0 ${width} ${height}`}
-          aria-hidden="true"
-        >
-          {links.map((l, i) => (
-            <path key={i} className="bd-edge" d={l.d} />
-          ))}
-          {showPorts &&
-            links.map((l, i) => (
-              <g key={`p${i}`}>
-                <circle className="bd-port" cx={l.a.x} cy={l.a.y} r="3.1" />
-                <circle className="bd-port" cx={l.b.x} cy={l.b.y} r="3.1" />
-              </g>
-            ))}
-        </svg>
+        <NodeGroups groups={frames} nodes={shown} onToggle={onGroupToggle} onResize={onGroupResize}
+          groupProps={groupProps} />
+        <GraphWires surface={surface} width={width} height={height} nodes={shown} edges={edges}
+          groups={groupOutputs ? frames : undefined} showPorts={showPorts} ties={ties}
+          onTiesChange={onTiesChange} interactionSurface={interactionSurface} />
 
         {children}
 
-        {nodes.map((n) => (
-          <Node key={n.id} x={n.x} y={n.y} w={n.w} h={n.h} accent={n.accent}>
+        {shown.map((n) => (
+          <Node key={n.id} x={n.x} y={n.y} w={n.w} h={n.h} accent={n.accent} {...nodeProps(n.id)}>
             {renderNode(n)}
           </Node>
         ))}
+        {marquee && (
+          <div
+            className="bd-marquee"
+            style={{ left: marquee.x, top: marquee.y, width: marquee.w, height: marquee.h }}
+          />
+        )}
       </div>
     </div>
   );

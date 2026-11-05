@@ -7,7 +7,8 @@ import { D, O, T } from '../../synth/design/index.ts';
  * An icon and its name that opens something. Dim when this case doesn't use it, and quiet when nothing is set in it,
  * and it still opens either way.
  */
-export function ModuleToolButton({ label, icon, title, dim, set, onPress }: {
+export function ModuleToolButton({ label, icon, title, dim, set, onPress, disabled, iconOnly }: {
+  disabled?: boolean; iconOnly?: boolean;
   label: string; icon: React.ReactNode; title?: string; dim?: boolean; set?: boolean; onPress: () => void;
 }) {
   const style = useStyle().getEffectiveStyle();
@@ -16,8 +17,9 @@ export function ModuleToolButton({ label, icon, title, dim, set, onPress }: {
     border: 'none', background: 'transparent', cursor: 'pointer', textTransform: 'uppercase',
     color: set ? style.primaryColor : hexToRgba(style.textColor, O.high), opacity: dim ? O.medium : O.full,
   };
-  return <button type="button" data-module-tool={label} data-tool-used={!dim} data-tool-set={set} title={title}
-    aria-label={label} onClick={onPress} style={buttonStyle}>
-    {icon}<span style={{ overflowWrap: 'anywhere' }}>{label}</span>
+  return <button type="button" data-module-tool={label} data-tool-used={!dim} data-tool-set={set}
+    title={title ?? (iconOnly ? label : undefined)}
+    aria-label={label} disabled={disabled} onClick={onPress} style={buttonStyle}>
+    {icon}{!iconOnly && <span style={{ overflowWrap: 'anywhere' }}>{label}</span>}
   </button>;
 }

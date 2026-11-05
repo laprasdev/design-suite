@@ -1,0 +1,44 @@
+.bd-goo-defs {position:absolute;}
+.bd-goo {
+ position:absolute;z-index:2;pointer-events:none;
+ --goo-fill:color-mix(in srgb,var(--task-color) 28%,var(--card));
+}
+.bd-goo-shapes {position:absolute;inset:0;}
+.bd-goo-shapes>span {position:absolute;display:block;background:var(--goo-fill);}
+.bd-goo[data-direction=left] .bd-goo-shapes {transform:scaleX(-1);}
+.bd-goo-stub {left:-10px;top:-6px;width:16px;height:12px;border-radius:3px;}
+.bd-goo-body {
+ left:3px;top:-8px;width:16px;height:16px;border-radius:8px;
+ transition:width .5s cubic-bezier(.34,1.7,.5,1),height .5s cubic-bezier(.34,1.7,.5,1),
+  top .5s cubic-bezier(.34,1.7,.5,1),border-radius .4s ease;
+}
+.bd-goo[data-open] .bd-goo-body {
+ top:var(--goo-top);width:var(--goo-width);height:var(--goo-height);border-radius:14px;
+}
+.bd-goo>.bd-goo-nub {
+ position:absolute;left:3px;top:-8px;width:16px;height:16px;padding:0;border:0;
+ border-radius:50%;cursor:pointer;background:transparent;color:var(--task-color);pointer-events:auto;
+ display:grid;place-items:center;transition:top .5s cubic-bezier(.34,1.7,.5,1);
+}
+.bd-goo[data-open]:not([data-stationary])>.bd-goo-nub {top:calc(var(--goo-top) + 2px);}
+.bd-goo[data-stationary]>.bd-goo-nub {left:-8px;}
+.bd-goo-nub:focus-visible {outline:1px solid currentColor;outline-offset:2px;}
+.bd-goo-nub:not([data-icon])::after {
+ content:"";position:absolute;inset:4px;
+ background:linear-gradient(currentColor,currentColor) center/8px 1.5px no-repeat,
+  linear-gradient(currentColor,currentColor) center/1.5px 8px no-repeat;
+ transition:transform .35s ease;
+}
+.bd-goo[data-open]>.bd-goo-nub::after {transform:rotate(45deg);}
+.bd-goo-content {
+ position:absolute;left:22px;top:calc(var(--goo-top) + 6px);opacity:0;visibility:hidden;
+ pointer-events:none;transition:opacity .15s ease,visibility .15s;
+}
+.bd-goo[data-open]>.bd-goo-content {
+ opacity:1;visibility:visible;pointer-events:auto;transition:opacity .25s ease .18s,visibility 0s;
+}
+.bd-goo[data-direction=left]>.bd-goo-content {left:calc(-1 * var(--goo-width) - 3px);}
+.bd-goo[data-stationary]>.bd-goo-content {top:var(--goo-top);}
+@media (prefers-reduced-motion:reduce) {
+ .bd-goo-body,.bd-goo-nub,.bd-goo-nub::after,.bd-goo-content {transition:none!important;}
+}

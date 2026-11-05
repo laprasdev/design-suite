@@ -1,3 +1,10 @@
+import {RangeKnobArc} from '../../../../react/inputs/RangeKnobArc.tsx';
+import {KnobFace} from '../../../../react/KnobFace.tsx';
+import {skinForm, knobSkinConfig} from '../../../../skinForms.ts';
+import {KnobForm} from '../../../design/constants/KnobConfig.ts';
+import {ModulationRings} from '../ModulationRings.tsx';
+import {type ModulationProps} from '../modulation.ts';
+import {useOwnedControlGesture as useControlGesture} from '../../../../react/inputs/useOwnedControlGesture.ts';
 import React, { useState, useRef, useCallback } from 'react';
 import { useStyle } from '../../../StyleContext.tsx';
 import { getColorScheme, resolveColorType, hexToRgba, type AnyColor, getInsetShadow } from '../../../../color.ts';
@@ -14,6 +21,7 @@ import {
 } from '../../../design/constants/KnobConfig.ts';
 import { useTooltipSafe } from '../TooltipContext.tsx';
 import { KnobInnerCircle } from '../base/index.ts';
+import { RangeLimitLabels } from './RangeLimitLabels.tsx';
 
 // =====================================================
 // DUAL TICK RANGE KNOB - Config-based architecture
@@ -25,7 +33,7 @@ const START_ANGLE = 225;
 const END_ANGLE = 495;
 const ANGLE_RANGE = END_ANGLE - START_ANGLE; // 270°
 
-export interface DualTickRangeKnobProps {
+export interface DualTickRangeKnobProps extends ModulationProps {
   minValue: number;
   maxValue: number;
   onMinChange: (v: number) => void;
@@ -42,6 +50,8 @@ export interface DualTickRangeKnobProps {
   maxOpacity?: number;
   minimumGapFraction?: number;
   showToggle?: boolean;
+  /** The range's own ends, in tiny type at the ring's ends. A page module leaves them off, as its values say them. */
+  showLimits?: boolean;
   toggleValue?: boolean;
   onToggleChange?: (v: boolean) => void;
   tooltip?: string;
@@ -69,20 +79,24 @@ export function DualTickRangeKnob({
   maxOpacity = 1,
   minimumGapFraction = 0.02,
   showToggle = false,
+  showLimits = true,
   toggleValue = true,
   onToggleChange,
   tooltip,
   preset = 'range',
   config: configProp,
   size: sizeOverride,
-  layout: layoutOverride
+  layout: layoutOverride, modulators, selectedSource, onSelectSource
 }: DualTickRangeKnobProps) {
-  const { getEffectiveStyle } = useStyle();
+  const { getEffectiveStyle, skin } = useStyle();
+  const gesture = useControlGesture();
+  React.useEffect(() => gesture.end, [gesture]);
   const style = getEffectiveStyle();
   const { setTooltip, descriptions } = useTooltipSafe();
 
   // Resolve config: explicit config > preset with overrides
-  const baseConfig = configProp ?? KnobPreset[preset];
+  const baseConfig = knobSkinConfig(configProp ?? KnobPreset[preset],
+    configProp?.form ? undefined : skinForm(skin, 'knob'));
   const config: KnobConfig = {
     ...baseConfig,
     size: sizeOverride ?? baseConfig.size,
@@ -172,6 +186,7 @@ export function DualTickRangeKnob({
 
     const tick = getCloserTick(e);
     if (tick === 'min' ? minDisabled : maxDisabled) return;
+    gesture.begin();
     setActiveTick(tick);
     dragStartY.current = e.clientY;
     dragStartValue.current = tick === 'min' ? minValue : maxValue;
@@ -179,7 +194,7 @@ export function DualTickRangeKnob({
 
   const handleMouseMove = useCallback((e: MouseEvent) => {
     if (!activeTick) return;
-    if (e.buttons === 0) { setActiveTick(null); return; }
+    if (e.buttons === 0) { setActiveTick(null); gesture.end(); return; }
 
     const deltaY = dragStartY.current - e.clientY;
     // Use much lower sensitivity - 0.002 per pixel for smooth control
@@ -196,18 +211,18 @@ export function DualTickRangeKnob({
     }
   }, [activeTick, min, max, minValue, maxValue, minimumGapFraction, onMinChange, onMaxChange]);
 
-  const handleMouseUp = useCallback(() => setActiveTick(null), []);
+  const handleMouseUp = useCallback(() => {setActiveTick(null); gesture.end();}, [gesture]);
 
   const cancelDrag = useCallback(() => {
     if (!activeTick) return;
     if (activeTick === 'min') onMinChange(dragStartValue.current);
     else onMaxChange(dragStartValue.current);
-    setActiveTick(null);
-  }, [activeTick, onMinChange, onMaxChange]);
+    setActiveTick(null); gesture.end();
+  }, [activeTick, onMinChange, onMaxChange, gesture]);
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (e.key === 'Escape') cancelDrag();
-    else if (e.key === 'Enter' || e.key === 'Tab') setActiveTick(null);
+    else if (e.key === 'Enter' || e.key === 'Tab') handleMouseUp();
   }, [cancelDrag]);
 
   React.useEffect(() => {
@@ -223,95 +238,6 @@ export function DualTickRangeKnob({
       window.removeEventListener('blur', handleMouseUp);
     };
   }, [activeTick, handleMouseMove, handleMouseUp, handleKeyDown]);
-
-  // Render the horseshoe ring - simplified approach matching HorseshoeRing from Knob.tsx
-  const renderRangeArc = () => {
-    const radius = (dims.size - dims.stroke) / 2 - 2;
-    const center = dims.size / 2;
-    const inactiveStroke = hexToRgba(style.knobGradient.at(-1)!, O.high);
-
-    // Background arc: full horseshoe from START_ANGLE to END_ANGLE
-    const startRad = (START_ANGLE - 90) * (Math.PI / 180);
-    const endRad = (END_ANGLE - 90) * (Math.PI / 180);
-    const bgX1 = center + radius * Math.cos(startRad);
-    const bgY1 = center + radius * Math.sin(startRad);
-    const bgX2 = center + radius * Math.cos(endRad);
-    const bgY2 = center + radius * Math.sin(endRad);
-
-    // Active arc: from min position to max position
-    const minAngle = valueToAngle(normalizedMin);
-    const maxAngle = valueToAngle(normalizedMax);
-    const minRad = (minAngle - 90) * (Math.PI / 180);
-    const maxRad = (maxAngle - 90) * (Math.PI / 180);
-    const activeX1 = center + radius * Math.cos(minRad);
-    const activeY1 = center + radius * Math.sin(minRad);
-    const activeX2 = center + radius * Math.cos(maxRad);
-    const activeY2 = center + radius * Math.sin(maxRad);
-
-    // Large arc flag: 1 if arc spans > 180 degrees
-    const arcSpan = maxAngle - minAngle;
-    const largeArc = arcSpan > 180 ? 1 : 0;
-
-    // Min/max label positions (just outside horseshoe ends)
-    const labelOffset = 3;
-    const minLabelX = bgX1 - labelOffset;
-    const minLabelY = bgY1 + 2;
-    const maxLabelX = bgX2 + labelOffset;
-    const maxLabelY = bgY2 + 2;
-
-    return (
-      <svg width={dims.size} height={dims.size} style={{ position: 'absolute', top: 0, left: 0, overflow: 'visible' }}>
-        {/* Background: full horseshoe arc */}
-        <path
-          d={`M ${bgX1} ${bgY1} A ${radius} ${radius} 0 1 1 ${bgX2} ${bgY2}`}
-          fill="none"
-          stroke={inactiveStroke}
-          strokeWidth={dims.stroke}
-          strokeLinecap="round"
-        />
-        {/* Active: range from min to max - only render if valid range */}
-        {normalizedMax > normalizedMin && (
-          <path
-            d={`M ${activeX1} ${activeY1} A ${radius} ${radius} 0 ${largeArc} 1 ${activeX2} ${activeY2}`}
-            fill="none"
-            stroke={scheme.main}
-            opacity={Math.max(minOpacity, maxOpacity)}
-            strokeWidth={dims.stroke}
-            strokeLinecap="round"
-            style={{
-              filter: (activeTick || isHovered)
-                ? `drop-shadow(0 0 ${dims.glowRadius}px ${scheme.glow})`
-                : `drop-shadow(0 0 ${LayoutDimensions.knob.glowSmall}px ${scheme.glow})`,
-              transition: TransitionKeys.normal
-            }}
-          />
-        )}
-        {/* Tiny min/max labels at horseshoe ends - pico font, 30% opacity */}
-        <text
-          x={minLabelX}
-          y={minLabelY}
-          fontSize="6"
-          fill={style.textColor}
-          fillOpacity={0.3}
-          textAnchor="end"
-          fontWeight="normal"
-        >
-          {min}
-        </text>
-        <text
-          x={maxLabelX}
-          y={maxLabelY}
-          fontSize="6"
-          fill={style.textColor}
-          fillOpacity={0.3}
-          textAnchor="start"
-          fontWeight="normal"
-        >
-          {max}
-        </text>
-      </svg>
-    );
-  };
 
   // Render a draggable tick indicator
   const renderTick = (normalized: number, type: 'min' | 'max') => {
@@ -374,8 +300,13 @@ export function DualTickRangeKnob({
         flexShrink: 0
       }}
     >
-      {renderRangeArc()}
-      <KnobInnerCircle
+      <RangeKnobArc size={dims.size} stroke={dims.stroke} low={normalizedMin} high={normalizedMax}
+        inactive={hexToRgba(style.knobGradient.at(-1)!, O.high)} color={scheme.main}
+        opacity={Math.max(minOpacity, maxOpacity)} min={min} max={max} text={style.textColor} showLimits={showLimits}
+        glow={style.isFlat ? undefined : `drop-shadow(0 0 ${dims.glowRadius}px ${scheme.glow})`}/>
+      {config.form && config.form !== KnobForm.CLASSIC ? <KnobFace form={config.form} percentage={normalizedMax}
+        size={dims.size} innerSize={dims.innerSize} color={scheme.main}/> :
+      <KnobInnerCircle appearance={config.form}
         innerSize={dims.innerSize}
         innerPadding={dims.innerPadding}
         size={config.size}
@@ -383,7 +314,7 @@ export function DualTickRangeKnob({
         style={style}
         isActive={activeTick !== null || isHovered}
         hoverGlow={dims.hoverGlow}
-      />
+      />}
       <svg
         width={dims.size}
         height={dims.size}
@@ -394,6 +325,9 @@ export function DualTickRangeKnob({
           {renderTick(normalizedMax, 'max')}
         </g>
       </svg>
+      {!isDisabled && <ModulationRings modulators={modulators} selectedSource={selectedSource}
+        onSelectSource={onSelectSource} size={dims.size} radius={(dims.size - dims.stroke) / 2 - 2}
+        thickness={dims.stroke} fraction={normalizedMax} originFraction={normalizedMin} span={max - min}/>}
     </div>
   );
 

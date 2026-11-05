@@ -4,6 +4,8 @@
 @import "./portraits-modal.css";
 @import "./foundation.css";
 @import "./bar.css";
+@import "./page-bar.css";
+@import "./table/record-table.css";
 @import "./action-bar.css";
 @import "./hover-detail.css";
 @import "./segmented-control.css";
@@ -17,3 +19,8 @@
 @import "./crossfade.css";
 @import "./loading.css";
 @import "./table.css";
+@import "./gallery/elementsGallery.css";
+
+@import "./goo-expander.css";
+
+@import "./inputs/slider-progress.css";

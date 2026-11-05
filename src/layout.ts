@@ -2,6 +2,7 @@
 // LAYOUT DIMENSIONS - All numeric constants
 // =====================================================
 import { RoutingDimensions } from './routingLayout.ts';
+import { MODULE_CONTROL_MAX, ModuleGridDimensions } from './moduleGridLayout.ts';
 
 // Golden ratio constants
 export const PHI = 1.618033988749895;
@@ -14,9 +15,6 @@ export const Relativity = {
   PhiInverse: 0.618, // ~61.8% - larger portion
   OneMinusPhiInverse: 0.382,
 } as const;
-
-// The largest a knob on a page's module grows, which the grid's columns are measured against.
-const MODULE_CONTROL_MAX = 88;
 
 export const LayoutDimensions = {
   // Viewport
@@ -245,83 +243,9 @@ export const LayoutDimensions = {
 
   // A module on the four-column grid: its fixed size in the rack, and how it fills a page's tile
   moduleGrid: {
-    columns: 4,
-    rows: 2,
-    cellWidth: 75,
-    rowHeight: 76,
-    sidePadding: 10,
-    ringHeadroom: 16,
-    footPadding: 0,
-    tightLine: 1.15,
-    fillPadding: 8,
-    fillGap: 8,
+    ...ModuleGridDimensions,
     // On a page a column grows with its tile only to φ of the largest knob, so a few fields stay together rather than spreading across a wide tile.
     fillColumnMax: Math.round(MODULE_CONTROL_MAX * PHI),
-    headerGap: 8,
-    headerLineHeight: 29,
-    headerTitleGap: 16,
-    headerInset: 12,
-    tabMinWidth: 18,
-    tabMinHeight: 14,
-    iconHeight: 14,
-    tabIconHeight: 20,
-    fieldGap: 6,
-    fieldTextRoom: 44,
-    controlShare: 0.85,
-    controlMin: 44,
-    controlMax: MODULE_CONTROL_MAX,
-    knobDragPx: 200,
-    // A whole-number field, like a frame count, moves at most this many per pixel dragged, so it can be dragged onto any value.
-    wholeStepsPerPixel: 1,
-    optionColumns: 3,
-    optionGap: 4,
-    optionPaddingBlock: 6,
-    optionPaddingInline: 4,
-    rowLabelWidth: 56,
-    rowValueWidth: 96,
-    rowGap: 16,
-    headerSwitchHeight: 14,
-    phaseGlyphHeight: 14,
-    nameIconHeight: 12,
-    // A yes/no field as one line: its dot, drawn at the name's size, then the name. The line is as tall as a module header's, which is what it gives to press.
-    yesNoDot: 12,
-    yesNoStroke: 1.5,
-    yesNoDash: 2,
-    yesNoLine: 29,
-    nameIconGap: 4,
-    headerControlsPadding: 8,
-    noticePadding: 12,
-    detailLineGap: 12,
-    detailDepthDragPx: 180,
-    bodyGap: 12,
-    columnGap: 12,
-    rulesIndent: 16,
-    choiceOptionsMax: 6,
-    groupGap: 4,
-    groupPaddingBlock: 3,
-    groupPaddingInline: 8,
-    groupStripPadding: 8,
-    curveWidth: 96,
-    curveHeight: 40,
-    curveLine: 1.5,
-    openButtonWidth: 44,
-    openButtonHeight: 20,
-    swatchHeight: 24,
-    swatchWidth: 44,
-    ringNumeralSize: 12,
-    crumbGap: 8,
-    relationshipTypeColumns: 2,
-    statesRowGap: 8,
-    gesturePhaseHeight: 20,
-    gestureColumnWidth: 200,
-    toolIconHeight: 20,
-    layerBits: 32,
-    layerColumns: 8,
-    numberInputWidth: 88,
-    sensorReachMeters: 5,
-    // A sensor's distance moves in centimetres, the two decimals it reads in, so what's written is what shows.
-    sensorDistanceStep: 0.01,
-    inputPadding: 4,
   },
 
   // The Envelope module on a page: four phase cells over the graph, the graph taking φ of what's left.

@@ -29,7 +29,7 @@
     "GameViewTabs",
     "PageNavigation"
    ],
-   "note": "Inside an ActionBar it takes the text form by itself; a control's own props still win."
+   "note": "Inside an ActionBar it takes the text form by itself; a control's own props still win. Vertical, joined, tabs, fit and scroll make a rail of kinds: rows share its height, the chosen row's indicator slides, and an option's own style draws a line at its edge. ModuleGroups is the text form for a tab's groups, and inline it sits on a row of its own controls, such as a band's tag."
   },
   "Cycle": {
    "data": "enum, one option visible",
@@ -72,7 +72,8 @@
    "kitGap": true,
    "kit": [
     "Knob"
-   ]
+   ],
+   "note": "Forms: classic, thin outline, cut-out indicator; range as DualTickRangeKnob."
   },
   "Slider": {
    "data": "bounded number or range",
@@ -93,7 +94,7 @@
    "kit": [
     "Slider"
    ],
-   "note": "Forms: cell, setting, range."
+   "note": "Forms: cell, thin line, setting, range, progress. The thin form shares cell drag and value behavior. Progress is a readonly weighted distribution on the rounded Synth track; consumers own segment labels, colors and activity."
   },
   "IntegerIncrementer": {
    "data": "integer",
@@ -136,7 +137,11 @@
    "web": [
     "RuntimePreview"
    ],
-   "kitGap": true
+   "kit": [
+    "createModelStage",
+    "ModelPreview"
+   ],
+   "note": "Browser GLB presentation uses /preview3d and the complete view uses /preview3d/react; state evaluation and native camera adapters stay with their owners."
   },
   "NodeGraph": {
    "data": "node network",
@@ -149,6 +154,9 @@
    ],
    "kit": [
     "NodeGraph",
+    "GraphWires",
+    "graphRoutes",
+    "graphDots",
     "Node",
     "bezierPath",
     "edgePoint"
@@ -200,7 +208,9 @@
    "kit": [
     "ViewStack",
     "Button",
-    "Modal"
+    "Modal",
+    "GooExpander",
+    "GraphDisplay"
    ],
    "core": [
     "MenuCard",
@@ -233,7 +243,7 @@
   "ActionBar": {
    "data": "the current actors and their state",
    "webFirst": "baseball core ActionBar",
-   "note": "Web-first. Reaches C# once promoted in the language.",
+   "note": "Web-first. Optional notice shows feedback beneath the header with action-label typography and an optional recovery action. Reaches C# once promoted in the language.",
    "core": [
     "ActionBar",
     "Bar",
@@ -243,7 +253,9 @@
    "kit": [
     "ActionBar",
     "Bar",
-    "BarParticipants"
+    "BarParticipants",
+    "PageHeaderBar",
+    "PageFooter"
    ]
   },
   "CaretButton": {
@@ -266,14 +278,17 @@
   },
   "Crossfade": {
    "data": "one visible pane at a time",
+   "note": "Compact form fades peer panes. The page form retains a controlled keyed stack, state and scroll; push and Back slide between pages. Callers own routes, guards and deactivating effects on hidden pages. The card-flip motion helper turns retained module surfaces in place; consumers own navigation and visible layers.",
    "kit": [
-    "Crossfade"
+    "Crossfade",
+    "animateCardFlip"
    ]
   },
   "DataTable": {
    "data": "named counts and notes",
    "kit": [
-    "DataTable"
+    "DataTable",
+    "RecordTable"
    ]
   }
  }

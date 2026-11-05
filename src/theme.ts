@@ -1,5 +1,5 @@
 import { Shadows, Typography } from "./tokens.ts";
-import { LayoutDimensions } from "./layout.ts";
+import { LayoutDimensions, PHI } from "./layout.ts";
 // =====================================================
 // THEME — the generic aesthetic structure. `createTheme` normalizes a partial
 // spec into a full semantic token set (consumers override only what they need).
@@ -10,7 +10,16 @@ import { LayoutDimensions } from "./layout.ts";
 import { hexToRgba } from "./color.ts";
 
 // A theme's overrides: its name, colors, radii, stroke and inset.
+export const THEME_TYPOGRAPHY = Object.freeze({
+  reading: '-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,system-ui,sans-serif',
+  chrome: '"Bloom SF Pro Display",-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,system-ui,sans-serif',
+  code: 'ui-monospace,"SF Mono",Menlo,monospace',
+  bodySize: 15, controlSize: 13, lineHeight: 1.6,
+});
+export type ThemeTypography = { [K in keyof typeof THEME_TYPOGRAPHY]:
+  typeof THEME_TYPOGRAPHY[K] extends number ? number : string };
 export interface ThemeSpec {
+  typography?: Partial<ThemeTypography>;
   name?: string;
   colors?: Partial<Record<"bg" | "stage" | "surface" | "surfaceHi" | "line" | "bevel" | "text" | "dim" | "faint" | "accent" | "accentDeep" | "accentWash" | "teal" | "amber" | "gold" | "goldLight" | "grass" | "sand" | "scarlet", string>>;
   radius?: { lg?: number; sm?: number };
@@ -22,6 +31,7 @@ export function createTheme(spec: ThemeSpec = {}) {
   const accent = c.accent || "#c4678f";
   return {
     name: spec.name || "bloom-dark",
+    typography: {...THEME_TYPOGRAPHY, ...spec.typography},
     colors: {
       bg: c.bg || "#151515",
       stage: c.stage || "#0d0d11",
@@ -55,11 +65,18 @@ export function createTheme(spec: ThemeSpec = {}) {
 
 // Fired when a host swaps its palette, so controls that measure themselves can redraw.
 export const PALETTE_CHANGE_EVENT = "palette-change";
-type Theme = ReturnType<typeof createTheme>;
+export type Theme = ReturnType<typeof createTheme>;
 // The custom properties the composed controls read, from one theme.
 export function themeVariables(t: Theme): Record<string, string> {
-  const c = t.colors;
+  const c = t.colors, type = t.typography ?? THEME_TYPOGRAPHY;
   return {
+    "--phi": String(PHI),
+    "--font": type.reading, "--font-reading": type.reading, "--font-chrome": type.chrome,
+    "--font-code": type.code, "--type-body": `${type.bodySize}px`, "--type-control": `${type.controlSize}px`,
+    "--leading-body": String(type.lineHeight),
+    "--color-surface": c.surface, "--color-surface-hi": c.surfaceHi, "--color-line": c.line,
+    "--color-text": c.text, "--color-dim": c.dim, "--color-accent": c.accent,
+    "--color-accent-deep": c.accentDeep, "--surface-chrome": c.surface,
     "--bg": c.bg, "--stage": c.stage, "--card": c.surface, "--card-hi": c.surfaceHi, "--line": c.line, "--bevel": c.bevel,
     "--text": c.text, "--selection-foreground": c.text, "--dim": c.dim, "--faint": c.faint,
     "--pink": c.accent, "--pink-deep": c.accentDeep, "--pink-wash": c.accentWash, "--teal": c.teal,

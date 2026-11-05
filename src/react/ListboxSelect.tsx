@@ -1,3 +1,4 @@
+import {Button} from './Button.tsx';
 import {ApplicationElement} from './applicationElements.ts';
 import {useEffect,useId,useLayoutEffect,useRef,useState,type KeyboardEvent,type ReactNode} from 'react';
 import {createPortal} from 'react-dom';
@@ -29,6 +30,7 @@ export interface ListboxSelectProps<V extends string|number> {
  options: readonly ListboxOption<V>[];
  value: V|null|undefined;
  onChange(value: NoInfer<V>): void;
+ onCreate?(name: string): void;
  label: string;
  title?: string;
  disabled?: boolean;
@@ -41,7 +43,7 @@ export interface ListboxSelectProps<V extends string|number> {
  iconOnly?: boolean;
  renderOption?(option: ListboxOption<V>): ReactNode;
 }
-export function ListboxSelect<V extends string|number>({options,value,onChange,label,title,disabled=false,above=false,field=false,className='',children,searchSubject,searchSize,iconOnly=false,renderOption}: ListboxSelectProps<V>) {
+export function ListboxSelect<V extends string|number>({options,value,onChange,label,title,disabled=false,above=false,field=false,className='',children,searchSubject,searchSize,iconOnly=false,renderOption,onCreate}: ListboxSelectProps<V>) {
  const id=useId(),listId=`${id}-list`,optionId=(index: number)=>`${id}-option-${index}`;
  const trigger=useRef<HTMLButtonElement>(null),panel=useRef<HTMLDivElement>(null),list=useRef<HTMLUListElement>(null),input=useRef<HTMLInputElement>(null),search=useRef<TypeaheadSearch>({text:'',at:0});
  const [open,setOpen]=useState(false),[active,setActive]=useState(0),[query,setQuery]=useState('');
@@ -49,6 +51,10 @@ export function ListboxSelect<V extends string|number>({options,value,onChange,l
  const position=useAnchoredPopover(open,trigger,panel,{above,scroll:false});
  const labels=shown.map(option=>option.label),chosen=shown.findIndex(option=>option.value===value),start=Math.max(0,chosen);
  const show=(index: number)=>{setActive(index);setOpen(true);};
+ const create=()=>{
+  const name=query.trim();if(!name||!onCreate)return;
+  setOpen(false);setQuery('');trigger.current?.focus();onCreate(name);
+ };
  const choose=(index: number)=>{if(!shown[index])return;setOpen(false);setQuery('');trigger.current?.focus();if(shown[index].value!==value)onChange(shown[index].value);};
  const find=(key: string,from: number)=>{search.current=typeahead(search.current,key,Date.now());return typeaheadMatch(labels,search.current.text,from);};
  const closedKey=(e: KeyboardEvent)=>{
@@ -61,6 +67,7 @@ export function ListboxSelect<V extends string|number>({options,value,onChange,l
   if(e.key==='Tab'){trigger.current?.focus();setOpen(false);setQuery('');return;}
   if(LISTBOX_MOVES[e.key]&&(!searchSubject||['ArrowUp','ArrowDown'].includes(e.key))){e.preventDefault();setActive(LISTBOX_MOVES[e.key](active,shown.length));return;}
   if(!searchSubject&&typesText(e)&&(e.key!==' '||searching(search.current,Date.now()))){e.preventDefault();const found=find(e.key,active);if(found!==undefined)setActive(found);return;}
+  if(e.key==='Enter'&&!shown.length&&onCreate){e.preventDefault();create();return;}
   if(e.key==='Enter'||!searchSubject&&e.key===' '){e.preventDefault();choose(active);}
  };
  useEffect(()=>{if(disabled)setOpen(false);},[disabled]);
@@ -84,7 +91,9 @@ export function ListboxSelect<V extends string|number>({options,value,onChange,l
     {shown.map((option,index)=><li key={option.value} id={optionId(index)} role="option" aria-label={option.label} title={option.title??(iconOnly?option.label:undefined)} aria-selected={option.value===value} data-active={index===active||undefined} className={ListboxElement.OPTION.className}
      onMouseDown={e=>e.preventDefault()} onMouseMove={()=>setActive(index)} onClick={()=>choose(index)}>{renderOption?renderOption(option):<span className={ListboxElement.CONTENT.className}>{option.leading}<span className={ListboxElement.LABEL.className}>{option.label}</span>{option.trailing&&<span className={ListboxElement.IMPACT.className}>{option.trailing}</span>}</span>}{index===active&&option.description&&<small className={ListboxElement.DETAIL.className}>{option.description}</small>}</li>)}
    </ul>
-   {!shown.length&&<span role="status">{searchCopy.empty}</span>}
+   {onCreate&&query.trim()&&!options.some(option=>option.label.toLocaleLowerCase()===query.trim().toLocaleLowerCase())&&
+    <Button onClick={create}>Create {query.trim()}</Button>}
+   {!shown.length&&!onCreate&&<span role="status">{searchCopy.empty}</span>}
   </div>,trigger.current?.closest(ApplicationElement.ROOT.selector)??document.body)}
  </>;
 }

@@ -1,0 +1,364 @@
+[
+  {
+    "id": "knob",
+    "label": "Knobs",
+    "sample": "number",
+    "options": [
+      {
+        "id": "cutout",
+        "label": "Cut-out indicator",
+        "states": [
+          "set",
+          "unset",
+          "inherited",
+          "disabled"
+        ]
+      },
+      {
+        "id": "minimal",
+        "label": "Thin outline",
+        "states": [
+          "set",
+          "unset",
+          "inherited",
+          "disabled"
+        ]
+      },
+      {
+        "id": "fine",
+        "label": "Fine",
+        "states": [
+          "set",
+          "unset",
+          "inherited",
+          "disabled"
+        ]
+      },
+      {
+        "id": "line",
+        "label": "Line",
+        "states": [
+          "set",
+          "unset",
+          "inherited",
+          "disabled"
+        ]
+      },
+      {
+        "id": "ticks",
+        "label": "Ticks",
+        "states": [
+          "set",
+          "unset",
+          "inherited",
+          "disabled"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "slider",
+    "label": "Sliders",
+    "sample": "number",
+    "options": [
+      {
+        "id": "minimal",
+        "label": "Thin line"
+      },
+      {
+        "id": "line",
+        "label": "Line"
+      },
+      {
+        "id": "track",
+        "label": "Track"
+      },
+      {
+        "id": "setting",
+        "label": "Setting"
+      }
+    ]
+  },
+  {
+    "id": "range",
+    "label": "Ranges",
+    "sample": "number",
+    "options": [
+      {
+        "id": "track",
+        "label": "Track"
+      },
+      {
+        "id": "dial",
+        "label": "Dual dial",
+        "states": [
+          "set",
+          "unset",
+          "inherited",
+          "disabled"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "number",
+    "label": "Numbers",
+    "sample": "number",
+    "options": [
+      {
+        "id": "input",
+        "label": "Typed"
+      },
+      {
+        "id": "horizontal",
+        "label": "Horizontal"
+      },
+      {
+        "id": "vertical",
+        "label": "Vertical"
+      },
+      {
+        "id": "meter",
+        "label": "Meter"
+      }
+    ]
+  },
+  {
+    "id": "yes-no",
+    "label": "Booleans",
+    "sample": "choice",
+    "options": [
+      {
+        "id": "dot",
+        "label": "Dot",
+        "states": [
+          "set",
+          "unset",
+          "inherited",
+          "disabled"
+        ]
+      },
+      {
+        "id": "switch",
+        "label": "Switch"
+      },
+      {
+        "id": "cell",
+        "label": "Cell"
+      },
+      {
+        "id": "setting",
+        "label": "Setting"
+      }
+    ]
+  },
+  {
+    "id": "choice",
+    "label": "Choices",
+    "sample": "choice",
+    "options": [
+      {
+        "id": "joined",
+        "label": "Joined"
+      },
+      {
+        "id": "text",
+        "label": "Text"
+      },
+      {
+        "id": "icons",
+        "label": "Icons"
+      },
+      {
+        "id": "cycle",
+        "label": "Cycle"
+      },
+      {
+        "id": "select",
+        "label": "Select"
+      }
+    ]
+  },
+  {
+    "id": "flags",
+    "label": "Flags",
+    "sample": "choice",
+    "options": [
+      {
+        "id": "joined",
+        "label": "Joined"
+      },
+      {
+        "id": "icons",
+        "label": "Icons"
+      }
+    ]
+  },
+  {
+    "id": "vector",
+    "label": "Vectors",
+    "sample": "detail",
+    "options": [
+      {
+        "id": "inputs",
+        "label": "Typed"
+      },
+      {
+        "id": "knobs",
+        "label": "Dials"
+      }
+    ]
+  },
+  {
+    "id": "color",
+    "label": "Color",
+    "sample": "detail",
+    "options": [
+      {
+        "id": "swatch",
+        "label": "Swatch + alpha"
+      }
+    ]
+  },
+  {
+    "id": "text",
+    "label": "Text",
+    "sample": "detail",
+    "options": [
+      {
+        "id": "input",
+        "label": "Line"
+      }
+    ]
+  },
+  {
+    "id": "layers",
+    "label": "Layers",
+    "sample": "choice",
+    "options": [
+      {
+        "id": "bits",
+        "label": "Bits"
+      }
+    ]
+  },
+  {
+    "id": "reference",
+    "label": "References",
+    "sample": "choice",
+    "options": [
+      {
+        "id": "select",
+        "label": "Select"
+      }
+    ]
+  },
+  {
+    "id": "curve",
+    "label": "Curves",
+    "sample": "detail",
+    "options": [
+      {
+        "id": "line",
+        "label": "Line"
+      }
+    ]
+  },
+  {
+    "id": "phases",
+    "label": "Phases",
+    "sample": "choice",
+    "options": [
+      {
+        "id": "glyph",
+        "label": "Glyph",
+        "states": [
+          "set",
+          "unset",
+          "inherited",
+          "disabled"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "opens",
+    "label": "Details",
+    "sample": "detail",
+    "options": [
+      {
+        "id": "chevron",
+        "label": "Chevron"
+      },
+      {
+        "id": "tool",
+        "label": "Icon"
+      }
+    ]
+  },
+  {
+    "id": "readout",
+    "label": "Readouts",
+    "sample": "detail",
+    "options": [
+      {
+        "id": "value",
+        "label": "Value"
+      }
+    ]
+  },
+  {
+    "id": "modulation",
+    "label": "Modulation",
+    "sample": "number",
+    "options": [
+      {
+        "id": "single",
+        "label": "Single",
+        "assignable": false
+      },
+      {
+        "id": "stacked",
+        "label": "Stacked",
+        "assignable": false
+      },
+      {
+        "id": "bipolar",
+        "label": "Bipolar",
+        "assignable": false
+      }
+    ]
+  },
+  {
+    "id": "graph",
+    "label": "Graphs",
+    "sample": "detail",
+    "options": [
+      {
+        "id": "unipolar",
+        "label": "Unipolar",
+        "assignable": false
+      },
+      {
+        "id": "bipolar",
+        "label": "Bipolar",
+        "assignable": false
+      }
+    ]
+  },
+  {
+    "id": "container",
+    "label": "Module frames",
+    "sample": "detail",
+    "options": [
+      {
+        "id": "cutout",
+        "label": "Thin cutout"
+      },
+      {
+        "id": "flat",
+        "label": "Flat"
+      }
+    ]
+  }
+]

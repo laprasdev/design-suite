@@ -1,5 +1,7 @@
 import React from 'react';
+import {useControlGesture} from './base/useControlBehavior.ts';
 import { ChevronUp, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
+import {T} from '../../design/index.ts';
 import { useStyle } from '../../StyleContext.tsx';
 import { getColorScheme, getInsetShadow } from '../../../color.ts';
 import {METER_VALUE_ATTRIBUTE,METER_FIXED_ATTRIBUTE} from '../../../react/settingElements.ts';
@@ -14,6 +16,9 @@ interface IntegerIncrementerProps {
   variant?: 'vertical' | 'horizontal';
   className?: string;
   displayValue?: string;
+  children?: React.ReactNode;
+  disabled?: boolean;
+  ariaLabel?: string;
 }
 
 // One integer control, two forms: chevrons that step it, or a row of pips to pick from.
@@ -56,14 +61,16 @@ function StepperIncrementer({
   step = 1,
   variant = 'vertical',
   className = '',
-  displayValue
+  displayValue, children, disabled = false, ariaLabel = 'Value'
 }: IntegerIncrementerProps) {
   const { getEffectiveStyle } = useStyle();
   const style = getEffectiveStyle();
   const scheme = getColorScheme('primary', style);
 
-  const increment = () => onChange?.(Math.min(value + step, max));
-  const decrement = () => onChange?.(Math.max(value - step, min));
+  const gesture = useControlGesture();
+  const change = (next: number) => {gesture.begin(); onChange?.(next); gesture.end();};
+  const increment = () => change(Math.min(value + step, max));
+  const decrement = () => change(Math.max(value - step, min));
 
   const isVertical = variant === 'vertical';
   const UpIcon = isVertical ? ChevronUp : ChevronRight;
@@ -79,7 +86,7 @@ function StepperIncrementer({
     <div className={`flex ${isVertical ? 'flex-col' : 'flex-row'} items-center gap-0.5 ${className}`}>
       <button
         onClick={decrement}
-        disabled={value <= min}
+        type="button" aria-label={`Decrease ${ariaLabel}`} disabled={disabled || !onChange || value <= min}
         className="w-5 h-5 flex items-center justify-center rounded-sm transition-all"
         style={buttonStyle}
       >
@@ -87,21 +94,21 @@ function StepperIncrementer({
       </button>
       
       <div 
-        className="min-w-[32px] h-5 flex items-center justify-center text-[11px] rounded-sm px-1"
+        className="min-w-[32px] h-5 flex items-center justify-center rounded-sm px-1"
         style={{
           background: style.cutoutBorder,
           boxShadow: getInsetShadow('medium'),
           border: '1px solid rgba(0, 0, 0, 0.4)',
           color: scheme.main,
-          fontWeight: 600
+          fontWeight: 600, fontSize: T.moduleValue.fontSize
         }}
       >
-        {displayValue ?? value}
+        {children ?? displayValue ?? value}
       </div>
       
       <button
         onClick={increment}
-        disabled={value >= max}
+        type="button" aria-label={`Increase ${ariaLabel}`} disabled={disabled || !onChange || value >= max}
         className="w-5 h-5 flex items-center justify-center rounded-sm transition-all"
         style={buttonStyle}
       >

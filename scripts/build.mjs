@@ -14,8 +14,11 @@ const outdir=resolve(root,'dist');
 await rm(outdir,{recursive:true,force:true});
 await mkdir(outdir,{recursive:true});
 await build({absWorkingDir:root,entryPoints,outdir,bundle:true,splitting:true,format:'esm',
-  platform:'neutral',target:'es2022',jsx:'automatic',external:['react','react/*','react-dom','react-dom/*','lucide-react'],
+  platform:'neutral',target:'es2022',jsx:'automatic',
+  external:['react','react/*','react-dom','react-dom/*','lucide-react','three','three/*'],
   logLevel:'warning'});
-await build({absWorkingDir:root,entryPoints:[resolve(root,'src/react/styles.css')],
-  outfile:resolve(outdir,'react/styles.css'),bundle:true,logLevel:'warning'});
+for (const entry of entries.filter(entry=>entry.source?.endsWith('.css'))) {
+  await build({absWorkingDir:root,entryPoints:[resolve(root,entry.source)],
+    outfile:resolve(root,entry.default),bundle:true,logLevel:'warning'});
+}
 console.log(`Built ${manifest.name}@${manifest.version}: ${entries.length} public entrypoints.`);

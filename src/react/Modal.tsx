@@ -17,7 +17,6 @@ import { useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefO
 import {focusableControls} from './focusable.ts';
 import {KEPT_ROOM_ATTRIBUTE,SCROLL_STEP_PX,keptRoom,modalGrowthLimit} from './modalRoom.ts';
 import { cssRect } from './cssZoom.ts';
-
 const FADE_MS = 200;
 
 /* Keep a node mounted through its fade-out, returning [mounted, visible].

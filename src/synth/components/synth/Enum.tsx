@@ -1,3 +1,5 @@
+import {OptionsEnum} from '../../../react/inputs/OptionsEnum.tsx';
+export {OptionsEnum};
 import React, { useState, useCallback } from 'react';
 import { useStyle } from '../../StyleContext.tsx';
 import { getColorScheme, mapLegacyColor, getInsetShadow, hexToRgba, type ColorType } from '../../../color.ts';
@@ -106,7 +108,7 @@ export function Enum<T = string>(props: EnumProps<T>) {
   }
 
   if (props.variant === 'options') {
-    return <OptionsEnumRenderer {...props as SingleSelectEnumProps<T>} scheme={scheme} style={style} className={className} />;
+    return <OptionsEnum {...props as SingleSelectEnumProps<T>} />;
   }
 
   if (isMultiSelect(props)) {
@@ -315,32 +317,6 @@ function FullDistinctRenderer<T>({ options, isSelected: isSel, onSelect, scheme,
 // OPTIONS - Every choice in view on a module's grid, wrapping to fit
 // =====================================================
 // Given `columns`, the choices keep to that many column lines. Without, each takes the room its words need and they wrap to another row rather than cut a word.
-function OptionsEnumRenderer<T>({ options, value, onChange, disabled, scheme, style, className = '', columns, litValues }: SingleSelectEnumProps<T> & RendererProps<T>) {
-  const fmtLabel = useEnumLabel();
-  const { optionGap, optionPaddingBlock, optionPaddingInline } = D.moduleGrid;
-  const flow: React.CSSProperties = columns ? { display: F.grid, gridTemplateColumns: `repeat(${Math.min(columns, options.length)}, minmax(0, 1fr))` } : { display: 'flex', flexWrap: 'wrap' };
-  return (
-    <div className={className} data-enum-options style={{ ...flow, width: '100%', gap: optionGap }}>
-      {options.map((option, index) => {
-        const selected = litValues ? litValues.includes(option.value) : option.value === value;
-        return (
-          <button key={index} type="button" disabled={disabled} aria-pressed={selected} title={option.tooltip ?? option.label}
-            onClick={() => onChange?.(option.value)}
-            style={{
-              ...T.moduleLabel, minWidth: 0, padding: `${optionPaddingBlock}px ${optionPaddingInline}px`, ...(columns ? {} : { flex: '1 0 auto', maxWidth: '100%', overflowWrap: 'anywhere' }),
-              borderRadius: D.radius.button, border: 'none', cursor: disabled ? C.notAllowed : C.pointer,
-              background: selected ? scheme.main : hexToRgba(scheme.main, O.trace),
-              color: selected ? style.backgroundColor : style.textColor,
-              transition: TransitionKeys.fast,
-            }}>
-            {fmtLabel(option)}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
 // =====================================================
 // FLOATING GRID PICKER - Opens above cycling enum on long-press
 // =====================================================
@@ -730,10 +706,6 @@ export function BaseFullDisplayEnum<T = string>(props: Omit<SingleSelectEnumProp
 
 export function CyclingEnum<T = string>(props: Omit<SingleSelectEnumProps<T>, 'variant'>) {
   return <Enum {...props} variant="cycling" />;
-}
-
-export function OptionsEnum<T = string>(props: Omit<SingleSelectEnumProps<T>, 'variant'>) {
-  return <Enum {...props} variant="options" />;
 }
 
 export function MultiSelectEnum<T = string>(props: Omit<MultiSelectEnumProps<T>, 'variant'> & { variant?: never }) {

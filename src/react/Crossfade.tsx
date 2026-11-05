@@ -6,13 +6,20 @@
 // names it with `view`.
 // =====================================================
 import React, { useState, useEffect, type ReactNode } from "react";
+import {CrossfadePage,type CrossfadePageProps} from './CrossfadePage.tsx';
 
-export interface CrossfadeProps {
+interface CrossfadePaneProps {
+  form?: never;
   view: string;
   children: ReactNode;
 }
+export type CrossfadeProps=CrossfadePaneProps|CrossfadePageProps;
 
-export function Crossfade({ view, children }: CrossfadeProps) {
+export function Crossfade(props: CrossfadeProps) {
+  return props.form==='page'?<CrossfadePage {...props}/>:<CrossfadePane {...props}/>;
+}
+
+function CrossfadePane({ view, children }: CrossfadePaneProps) {
   const [displayed, setDisplayed] = useState({ key: view, node: children });
   const [leaving, setLeaving] = useState(false);
   useEffect(() => {

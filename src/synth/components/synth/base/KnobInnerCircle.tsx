@@ -11,6 +11,7 @@ import { KnobSize } from '../../../design/constants/KnobConfig.ts';
 
 export interface KnobInnerCircleProps {
   /** Inner circle size in pixels */
+  appearance?: string;
   innerSize: number;
   /** Padding from knob edge */
   innerPadding: number;
@@ -23,7 +24,7 @@ export interface KnobInnerCircleProps {
     glow: string;
   };
   /** Style object from getEffectiveStyle() */
-  style: Pick<StyleTheme, 'knobGradient'>;
+  style: Pick<StyleTheme, 'knobGradient' | 'components'>;
   /** Whether knob is hovered or being dragged */
   isActive?: boolean;
   /** Hover glow radius - defaults to LayoutDimensions.knob.hoverGlow */
@@ -35,7 +36,7 @@ export interface KnobInnerCircleProps {
  * Ensures consistent appearance across all knob types.
  */
 export function KnobInnerCircle({
-  innerSize,
+  innerSize, appearance,
   innerPadding,
   size,
   scheme,
@@ -59,8 +60,12 @@ export function KnobInnerCircle({
     return `0 3px 6px rgba(0, 0, 0, 0.5), inset 0 2px 4px ${scheme.inner}, inset 0 -2px 4px rgba(0, 0, 0, 0.7)${activeGlow}`;
   };
 
+  const face = appearance ? undefined : style.components?.['knob.inner'];
+  const background = face?.palette?.cutoutBackground ?? face?.palette?.background;
+  const edge = face?.border?.width ?? face?.edge?.width ?? 1;
+  const border = face?.palette?.border ?? face?.palette?.cutoutBorder ?? scheme.inner;
   return (
-    <div
+    <div data-knob-face
       style={{
         position: 'absolute',
         width: innerSize,
@@ -68,9 +73,9 @@ export function KnobInnerCircle({
         top: innerPadding,
         left: innerPadding,
         borderRadius: '50%',
-        background: getKnobGradient(style),
-        boxShadow: getBoxShadow(),
-        border: `1px solid ${scheme.inner}`,
+        background: background ?? getKnobGradient(style),
+        boxShadow: face?.shadow?.opacity === 0 ? 'none' : getBoxShadow(),
+        border: `${edge}px solid ${border}`,
         transition: TransitionKeys.normal
       }}
     />

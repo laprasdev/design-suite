@@ -10,8 +10,8 @@ A rendered control is resolved from four independent choices, in this order:
 |---|---|---|
 | Kind | The component, chosen by the data it edits | MultiChoice, Knob, Slider, ActionBar |
 | Form | A named variant of a kind | text, joined, icons, tabs, pills |
-| Theme | The general structure | flat, cutout |
-| Skin | The palette | bloom, serum, analog |
+| Skin | Component form assignments | flat, classic, a named mix |
+| Palette | Colors, independently of the skin | bloom, serum, analog |
 
 `WidgetInteractionStatus` variants apply last.
 
@@ -64,8 +64,159 @@ import '@looms/bloom-design/react/styles.css';
 | `/tokens`, `/layout`, `/color`, `/theme`, `/skins` | Focused framework-independent APIs |
 | `/react` | Composed controls: bars, segmented controls, dialogs, portraits, node graphs and the shared kinds |
 | `/modal-room` | Dialog growth and measurement contract |
+| `/preview3d` | Optional browser GLB stage: camera, lights, materials, clips and diagnostic skeleton |
+| `/preview3d/model` | Preview types and settings without importing Three |
+| `/preview3d/react` | Complete `ModelPreview` view with selection, playback, display and camera controls |
+| `/preview3d/styles.css` | Complete styles for `ModelPreview`, including the shared control styles |
 | `/react/styles.css` | All component styles; import once |
 | `/synth/*` | The web synth's controls and design layer, as source |
+
+## Pages and dialogs
+
+Browsing and editing flows occupy pages. `Crossfade`'s page form takes a controlled
+`readonly StackView[]`, using the same `{key, node}` entries as `ViewStack`:
+
+```tsx
+<Crossfade form="page" views={pages} className="workspace-pages" focusRef={headingRef}/>
+```
+
+The last entry is visible. Push by appending an entry: its page enters from the
+right while the previous page leaves left and fades. Back removes entries and
+reverses that motion. Replacing an unrelated page fades in place. Stable keys
+retain their React mounts, form state and scroll positions; inactive pages are
+hidden and inert. Back restores the retained page's focused control. The optional
+`focusRef` names a destination heading or control; otherwise the page takes focus.
+Reduced motion settles immediately, and a new navigation cancels the old motion.
+
+Keep the fixed header and footer outside the moving page body. The exported page
+motion helpers also support stationary chrome within a composed page; applications
+name those regions. The consumer owns routes, push/Back controls, guards and the
+retained entries' lifetime. Removing an entry unmounts it. The existing
+`<Crossfade view={key}>{content}</Crossfade>` keeps its compact fade behavior.
+For composed pages, `animateCardFlip(outgoing, incoming)` rotates each supplied surface in place, using the shared
+page duration and easing. It returns the same cancellable `PageMotion` handle; the caller owns retained mounts.
+Hidden retained pages still run React effects: consumers must deactivate their
+header/footer portals, dialogs and global input handlers using the active page state.
+
+Outgoing copies remap local IDs and references and preserve authored rules from
+readable document stylesheets, including inheritance from each SVG `use` instance.
+Affected ID rules in cross-origin stylesheets that deny CSSOM access, or imports
+with `layer()`/`supports()` modifiers, cannot be copied; those rules must be inline,
+inside the copied page, or in a readable application stylesheet. Global font,
+keyframe and property definitions stay with their existing stylesheet owner.
+
+The motion helper lifecycle is `capturePage(source)` → `placePageCopy(parent, snapshot)`
+→ `removePageCopy(snapshot)`. Capture leaves both content and its stylesheet detached;
+placement mounts the stylesheet outside the content, and removal disposes both.
+Passing an empty detached wrapper to `capturePage(source, wrapper)` captures only
+the source's children and keeps the wrapper's layout. Consumers retain the snapshot
+for cleanup; `.copy` and the placement result expose its element for animation.
+
+Use `Modal` for short confirmations and bounded pickers. `ViewStack` keeps its
+existing modal behavior; the page form does not add a backdrop or Escape handler.
+
+## 3D preview
+
+The browser renderer for the existing `RenderTextureView` kind lives in `/preview3d`.
+Install the optional `three@0.180.0` peer and load this entry only when a 3D view opens.
+The package root and `/react` do not import it. Use `/preview3d/model` for eager data imports.
+
+```ts
+const {createModelStage} = await import('@looms/bloom-design/preview3d');
+const dispose = createModelStage(host, {id, path, attachments}, theme, controller => {
+  controller.setAnimation(clipName);
+  controller.setPlaying(true);
+}, showError);
+// Call dispose when the view closes; it is safe to call more than once.
+```
+
+Supply an asset URL, attachment bone names and theme colors. The default policy preserves the
+player catalog's two-unit height, floor centering, lighting, floor, grid and orbit camera.
+The sixth argument changes these independently: `normalizeHeight: null` retains authored scale;
+`centerOnFloor: false` retains authored placement; `floor`, `grid` and `orbit` each accept `false`.
+`setTransform` applies position, quaternion and scale to a presentation wrapper without changing
+the asset's authored or normalized transform. `setCamera({position, target})` holds an external
+camera, with orbit disabled, until `resetCamera()` returns to automatic framing.
+
+For engine-owned single-clip timing, pass `clock: 'external'` to `createModelStage`, bind a clip with `setAnimation`, then call `setAnimationTime` with resolved clip-local seconds. The sampler accepts the exact duration endpoint and backward/repeated samples; it rejects invalid times without changing the pose. External mode never advances from render time and refuses local Play. Layer blending, masks and material publication still require the runtime binding contract. The standalone `ModelPreview` retains its local clock.
+
+For the complete view, load `/preview3d/react` when the preview opens and import
+`@looms/bloom-design/preview3d/styles.css`. It composes the existing suite controls and theme
+variables; use the standard `app-root` host that the suite controls share.
+
+```tsx
+<ModelPreview assets={assets} selectedId={selectedId} onSelectAsset={setSelectedId} theme={theme}/>
+```
+
+Each supplied `ModelPreviewAsset` has `id`, `name`, `path`, `idleAnimation`, `animations`
+(`name` and `label`) and `attachments`. A single asset needs no `onSelectAsset` handler.
+All controls sit above the stage, including Rest Pose, Play/Pause, Surface, Model/Rig/Both and camera reset.
+Reduced-motion preferences pause automatic playback; the user can still press Play.
+The component accepts `stageOptions`, `className` and an optional `reviewKey` for existing consumers.
+Its canonical `modelPreviewReview` handle lives on `ModelPreviewElement.STAGE`.
+`MODEL_PREVIEW_TEXT` and `MODEL_PREVIEW_DISPLAY_OPTIONS` from `/preview3d/model` own the
+labels and mode choices used by the view and consumer browser checks.
+
+The diagnostic Surface control selects Lit, Clay, Color or Emission. Lit preserves the loaded
+materials; Clay removes surface detail to inspect shape; Color shows unlit base color; Emission
+shows the authored emissive channel. A model with no configured emission reports “No emission”.
+Bloom is not implemented. These temporary inspection modes preserve alpha cutouts, skinning and
+morphing; they do not publish or sample runtime materials. Unsupported shaders remain Lit.
+`setMaterialMode` exposes the same inspection command. Snapshots include `materialMode`,
+`materialInspectionAvailable` and `emissiveMaterialCount`; `/preview3d/model` exports the
+`MODEL_PREVIEW_MATERIAL_TEXT` and `MODEL_PREVIEW_MATERIAL_OPTIONS` used by the controls.
+
+The controller exposes clip selection, playback, display mode and a diagnostic snapshot.
+`setDisplay('rig')` shows bright bone lines and joint markers while hiding the model's renderables;
+`'both'` overlays the rig, and `'model'` restores the asset's authored visibility. `setSkeleton`
+remains compatible as a shortcut to Both/Model. Rig frames all bone positions; Both frames
+the union of the mesh and rig; Model keeps the catalog framing. Snapshots include `display`, `modelVisible`, `visibleModelMeshes`,
+`rigVisible`, `boneCount` and `visibleRigJoints` alongside the original animation evidence.
+`reviewKey` optionally exposes that controller on the host for browser acceptance checks.
+`onReady` means the GLB is loaded; it does not signal a connected or running state machine.
+Disposal removes the canvas and review handle, frees renderer resources and suppresses late load callbacks.
+
+The stage defaults to `clock: 'local'` for diagnostic playback. An external caller can select
+`clock: 'external'`, bind one clip with `setAnimation(name)`, then call `setAnimationTime(timeSeconds)`
+with an already resolved, absolute time within that clip. The valid interval includes both zero
+and the clip duration; repeated samples and backward seeks are supported. Invalid, negative or
+out-of-range times throw without changing the pose or sampled time. This input is not simulation
+time, and the stage does not wrap, clamp or resolve loops.
+
+External stages reject `setPlaying(true)`, report `playing: false` and never advance from render
+frames or focus changes. Local stages reject `setAnimationTime`. `ModelPreview` controls its own clock;
+its `stageOptions` exclude `clock`. This primitive samples one
+bound clip and does not implement locomotion blending, animation layers or material publication.
+
+`ModelPreview.presentation` is a bounded pose-only runtime input. Omit it for the local diagnostic
+view; pass `null` to wait for runtime data; pass `{modelId, pose, animationLayers: [], partPoses: [],
+materials: []}` to apply a pose. All three empty arrays are required. The validator rejects any
+nonempty unsupported channel before applying the pose. `modelId` must match `selectedId`, and the
+full pose must contain finite `position`, `rotationQuaternion` and `scale` tuples. Quaternion
+length must differ from one by no more than `MODEL_PREVIEW_QUATERNION_TOLERANCE` (`1e-4`).
+`modelPreviewPresentation(value, selectedId)` validates and deep-copies the accepted input.
+
+Runtime mode forces an external clock, rest pose and authored scale/placement. It hides the model
+picker, animation selection, playback and Surface controls; display modes and camera controls remain.
+Runtime views retain the loaded Lit materials.
+Null or invalid inputs clear pending data and show waiting/error status while retaining the last
+valid visible pose. A later valid pose recovers without reloading. A loading GLB receives only the
+latest validated matching input. Fresh presentation objects do not reload the asset. Asset id,
+path, optional `revision` and attachment bindings identify an instance; changing any invalidates
+it, as does switching between local and runtime modes. Change `revision` when the same URL's
+contents or pose-alignment binding changes.
+
+`modelPoseForBinding(pose, {reflectZ, rotationQuaternion})` is a pure coordinate adapter. Positions
+enter and leave in metres. Optional Z reflection maps position to `[x,y,-z]` and rotation to
+`[-x,-y,z,w]`, then postmultiplies the declared local model-alignment quaternion. The composed
+rotation is normalized to remove accepted norm/roundoff drift; scale values are unchanged.
+`MODEL_PREVIEW_CAPABILITIES` advertises pose support and no animation-layer, part-pose or material
+support. The host owns session, epoch, publication, generation and binding-revision guards;
+this surface does not interpret a runtime frame or evaluate gameplay.
+
+Consumers own asset catalogs, character selection, UI and the bridge from runtime output to these
+presentation commands. The state-machine engine evaluates states; this renderer does not.
+Native Unity previews keep their camera adapter to the same runtime contract.
 
 ## Verify
 
@@ -80,3 +231,56 @@ npm run build
 Sports rules, state-machine modules, application routes, services and branded assets stay with their owners. This package never imports from an app.
 
 `UNLICENSED`: published for reading and for use by the projects that depend on it.
+
+## Theme data source
+
+`ThemeData` is the shared read-only theme contract: `{skin, theme}`. A host supplies
+`connectThemeSource(() => data)`; consumers bind to its window and explicit origin through
+`connectThemeClient(sourceWindow, origin, receive)`. Both use the versioned `looms.theme` protocol,
+with subscribe, update and unsubscribe messages. Source/origin and payload shape are validated.
+The source publishes resolved theme data; consumers apply `themeVariables(data.theme)` without
+reconstructing a palette. `createSkinTheme(name)` and synth controls use the same `skinPalette` resolver.
+
+React consumers can bind a source URL with `useThemeSource(url)`. Workbench exposes its selected
+theme at `http://workbench.localhost/?theme-source`; storage changes update all subscribers and
+Workbench tabs. The Elements gallery uses this source for its shell and scopes preview skins to
+the samples. New Knob forms `thin` and `cutout`, and Slider form `thin`, share the existing value
+and drag behavior. The cutout knob masks the indicator out of the face, exposing the surface below.
+
+## Component skins and palettes
+
+`ComponentSkin` stores candidates and one active form per element kind. `SkinAssignments` is the versioned data
+contract; `parseSkinAssignments` reads existing shortlists without losing candidates. `assignSkinChoice` applies
+one revision-checked create, assign, activate or independent feedback action. Storage belongs to the host, not the component library.
+`ElementsGallery` receives this data and callbacks; its full page header/footer use `PageHeaderBar` and `PageFooter`,
+and its comparisons use core-derived `RecordTable`. Generic table geometry, grouped/windowed rows and page surfaces
+live here. Consumer identity cells, sorting/data, journeys and portals remain with their apps.
+
+Feedback is keyed by element/form outside the skin assignments. A note neither selects nor activates a form; older
+v2 payloads without feedback read as empty. `ThemeData.theme.typography` carries reading/chrome/code font families,
+body/control sizes and line height. Legacy theme messages retain the canonical Workbench defaults.
+
+A gallery host can register additional `groups` and `samples` through the same renderer contract. Preview size belongs
+to group metadata; authoring data and draft writes belong to the consumer. Synth registers its actual nodes and
+modules, and the shared table provides assignment, feedback and comparison behavior without importing Synth.
+`GooExpander` is the Activity side-tab form: it animates an absolute fused shape, supports left expansion with a
+stationary icon, keeps closed controls inert, and respects reduced motion. Workbench supplies facts/tone; Synth
+supplies output terminals. `GraphDisplay`, `GraphFill` and `graphEdgeFade` share the classic graph treatment.
+
+`StyleProvider` accepts optional controlled `skin` and `palette` inputs. A component skin changes presentation,
+not values, bounds, bitmasks, graph polarity or authoring states. The palette-only projection uses canonical base
+geometry with the selected color roles; scoped previews start from clean defaults and can disable document styling.
+Legacy `skin` JSON filenames, `ThemeData.skin`, Unity assets and existing provider callers retain their established
+meaning for compatibility. No serialized rename is implied by the new UI vocabulary.
+
+`Slider` has a readonly `progress` form for weighted distributions: pass stable `{id, value, color, active?}` segments and an `aria-label`. It shares the rounded Synth track; `compact` uses its original thickness. Existing cell, thin, setting and range forms retain their gestures. Consumers own domain counts and activity; reduced motion keeps progress static.
+
+`GraphWires` can attach to a consumer's existing node canvas without adding a second node-drag system. Supply stable
+edge IDs, node boxes, port fractions and optional edge colors; mark custom node roots with `data-graph-node` so
+Shift sweeps leave their controls alone. Ties change drawing routes only. The interaction viewport may differ from
+the scaled drawing surface. Escape, blur, pointer cancellation, lost capture and unmount cancel a pending gesture.
+`graphDots` supplies the Workbench dot field; `graphEdgeFade` can mask its background without fading controls.
+
+Module tabs compose the shared `SegmentedControl`, including keyboard navigation and bounded scrolling; `labelActive`
+puts the current name inside its button. `ModuleToolButton.iconOnly` retains its accessible name and tooltip.
+Controller capsule shoulders and rounded D-pad bars are shared drawing helpers; gesture bindings belong to consumers.

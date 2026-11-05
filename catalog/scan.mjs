@@ -42,7 +42,9 @@ export async function scan() {
   const composable = await read(`${SUITE_SYNTH}/design/Composable.ts`);
   const hci = composable.match(/export interface HciDataComposable \{([\s\S]*?)\n\}/)?.[1] ?? '';
   const either = async (...fs) => { for (const f of fs) { try { return await read(f); } catch { /* next */ } } return null; };
-  const kit = await read(`${SUITE}/src/react/index.ts`);
+  const kit = [await read(`${SUITE}/src/react/index.ts`),
+    await read(`${SUITE}/src/react/preview3d/index.ts`),
+    await read(`${SUITE}/src/react/preview3d/react.ts`)].join('\n');
   const kitRoot = await read(`${SUITE}/src/index.ts`);
   const gui = await either(`${BB}/packages/showdown-gui/src/react/index.ts`, `${BB}/packages/showdown-gui/src/react/index.js`) ?? '';
   const STYLES = (await readdir(`${BB}/src`)).includes('styles') ? `${BB}/src/styles` : `${BB}/src/baseball/styles`;

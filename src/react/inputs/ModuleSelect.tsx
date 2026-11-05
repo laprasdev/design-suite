@@ -1,4 +1,6 @@
 import React from 'react';
+import {skinForm} from '../../skinForms.ts';
+import {SkinChoice} from './SkinChoice.tsx';
 import { useStyle } from '../../synth/StyleContext.tsx';
 import { T } from '../../synth/design/index.ts';
 import { cutoutBox, inputOpacity } from './inputStyle.ts';
@@ -6,6 +8,7 @@ import { cutoutBox, inputOpacity } from './inputStyle.ts';
 interface SelectOption<Value> { value: Value; label: string; group?: string }
 interface SelectProps<Value> {
   value: Value; options: SelectOption<Value>[]; onChange?: (value: Value) => void; ariaLabel: string;
+  skinKind?: 'choice';
   disabled?: boolean; fill?: boolean; title?: string;
 }
 
@@ -15,9 +18,12 @@ interface SelectProps<Value> {
  * it short.
  */
 export function ModuleSelect<Value extends string | number>(
-  { value, options, onChange, ariaLabel, disabled, fill, title }: SelectProps<Value>,
+  { value, options, onChange, ariaLabel, disabled, fill, title, skinKind }: SelectProps<Value>,
 ) {
-  const style = useStyle().getEffectiveStyle();
+  const context = useStyle(), style = context.getEffectiveStyle();
+  const form = skinKind && skinForm(context.skin, skinKind);
+  if (form) return <SkinChoice appearance={form} ariaLabel={ariaLabel} options={options}
+    value={value} onChange={onChange} disabled={disabled}/>;
   const item = (option: SelectOption<Value>) =>
     <option key={String(option.value)} value={String(option.value)}>{option.label}</option>;
   const inGroup = (group: string) => options.filter(option => option.group === group).map(item);

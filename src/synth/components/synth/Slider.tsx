@@ -1,4 +1,10 @@
+import {SettingSlider, SkinRangeSlider} from '../../../react/inputs/SettingSlider.tsx';
+import {skinForm} from '../../../skinForms.ts';
+import {ModulationTracks, modulationTrackHeight} from '../../../react/inputs/ModulationTracks.tsx';
+import type {ModulationProps} from './modulation.ts';
 import React from 'react';
+import {SliderTrack, SLIDER_TRACK_HEIGHT as TRACK_HEIGHT} from '../../../react/inputs/SliderTrack.tsx';
+import {SliderProgress, type SliderProgressProps} from '../../../react/inputs/SliderProgress.tsx';
 import { useStyle } from '../../StyleContext.tsx';
 import { getColorScheme, resolveColorType, getKnobGradient, hexToRgba, type AnyColor } from '../../../color.ts';
 import { D, F, C, O, T, TransitionKeys, P } from '../../design/index.ts';
@@ -6,19 +12,19 @@ import { useControlBehavior } from './base/index.ts';
 import { useTooltipSafe } from './TooltipContext.tsx';
 import {HoverDetail} from '../../../react/HoverDetail.tsx';
 import {ResetIcon} from '../../../react/HeaderIconButton.tsx';
-import {RangeSlider, type RangeSliderProps} from './RangeSlider.tsx';
+import {type RangeSliderProps} from './RangeSlider.tsx';
 
 // =====================================================
 // SLIDER - Compact horizontal fader (knob aesthetic)
 // =====================================================
 
-const TRACK_HEIGHT = 3;
+
 const FADER_WIDTH = 6;
 const FADER_HEIGHT = 12;
 const DEFAULT_WIDTH = 100;
 
-export interface SliderProps {
-  form?: typeof SliderForm.CELL;
+export interface SliderProps extends ModulationProps {
+  form?: typeof SliderForm.CELL | typeof SliderForm.THIN;
   value: number;
   onChange?: (v: number) => void;
   min?: number;
@@ -39,45 +45,35 @@ export interface SliderProps {
 // SUB-COMPONENTS
 // =====================================================
 
-function SliderTrack({ color, width }: { color: string; width: number | '100%' }) {
-  return (
-    <div style={{
-      width, height: TRACK_HEIGHT, borderRadius: TRACK_HEIGHT,
-      background: hexToRgba(color, O.high),
-      position: P.absolute as 'absolute', top: '50%', transform: 'translateY(-50%)'
-    }} />
-  );
-}
-
-function SliderFill({ fraction, zeroFraction, color, glow, active }: {
-  fraction: number; zeroFraction: number; color: string; glow: string; active: boolean;
+function SliderFill({ fraction, zeroFraction, color, glow, active, thin }: {
+  fraction: number; zeroFraction: number; color: string; glow: string; active: boolean; thin: boolean;
 }) {
   const left = Math.min(fraction, zeroFraction);
   const width = Math.abs(fraction - zeroFraction);
   return (
     <div style={{
       position: P.absolute as 'absolute', top: '50%', transform: 'translateY(-50%)',
-      left: `${left * 100}%`, width: `${width * 100}%`, height: D.knob.strokeThin,
+      left: `${left * 100}%`, width: `${width * 100}%`, height: thin ? 1 : D.knob.strokeThin,
       background: color, borderRadius: D.knob.strokeThin,
-      boxShadow: active ? `0 0 ${D.knob.glowSmall}px ${glow}` : 'none',
+      boxShadow: active && !thin ? `0 0 ${D.knob.glowSmall}px ${glow}` : 'none',
       transition: TransitionKeys.fast
     }} />
   );
 }
 
-function SliderFader({ fraction, scheme, style, active }: {
+function SliderFader({ fraction, scheme, style, active, thin }: {
   fraction: number; scheme: ReturnType<typeof getColorScheme>;
-  style: any; active: boolean;
+  style: any; active: boolean; thin: boolean;
 }) {
   const glow = active ? `, 0 0 ${D.knob.glowSmall}px ${scheme.glow}` : '';
   return (
     <div style={{
       position: P.absolute as 'absolute', top: '50%',
       left: `${fraction * 100}%`, transform: 'translate(-50%, -50%)',
-      width: FADER_WIDTH, height: FADER_HEIGHT, borderRadius: D.radius.tiny,
-      background: getKnobGradient(style),
-      border: `1px solid ${scheme.inner}`,
-      boxShadow: `0 1px 3px rgba(0,0,0,0.5), inset 0 1px 2px ${scheme.inner}${glow}`,
+      width: thin ? 2 : FADER_WIDTH, height: FADER_HEIGHT, borderRadius: thin ? 0 : D.radius.tiny,
+      background: thin ? scheme.main : getKnobGradient(style),
+      border: thin ? 'none' : `1px solid ${scheme.inner}`,
+      boxShadow: thin ? 'none' : `0 1px 3px rgba(0,0,0,0.5), inset 0 1px 2px ${scheme.inner}${glow}`,
       transition: TransitionKeys.fast
     }} />
   );
@@ -88,38 +84,34 @@ function SliderFader({ fraction, scheme, style, active }: {
 // =====================================================
 
 // One slider, three forms: a bare track for a module's grid, a labelled row with its written value and a reset, or a two-ended range.
-export const SliderForm=Object.freeze({CELL:'cell',SETTING:'setting',RANGE:'range'} as const);
-export interface SettingSliderProps {
+export const SliderForm=Object.freeze({
+ CELL:'cell',THIN:'thin',SETTING:'setting',RANGE:'range',PROGRESS:'progress',
+} as const);
+export interface SettingSliderProps extends ModulationProps {
   form: typeof SliderForm.SETTING;
   label: string;
   detail?: string;
   value: number;
   min: number;
   max: number;
-  step: number;
-  defaultValue: number;
+  step: number | 'any';
+  defaultValue?: number;
   onChange(value: number): void;
-  resetLabel: string;
+  resetLabel?: string;
+  disabled?: boolean;
   format?: (value: number)=>React.ReactNode;
   compact?: boolean;
 }
-function SettingSlider({label,detail,value,min,max,step,defaultValue,onChange,resetLabel,format=String,compact=false}: SettingSliderProps) {
- const changed=value!==defaultValue;
- return <div className="range-control" data-compact={compact||undefined} data-changed={changed}>
-  {!compact&&<span className="range-control-label">{detail?<HoverDetail label={label} content={detail}>{label}</HoverDetail>:label}</span>}
-  <input type="range" min={min} max={max} step={step} value={value} aria-label={label} title={compact?detail:undefined} onChange={event=>onChange(Number(event.target.value))}/>
-  <output>{format(value)}</output>
-  <button type="button" className="range-control-reset" aria-label={resetLabel} title={resetLabel} disabled={!changed} onClick={()=>onChange(defaultValue)}><ResetIcon/></button>
- </div>;
-}
-
-export function Slider(props: SliderProps|SettingSliderProps|(RangeSliderProps&{form:typeof SliderForm.RANGE})) {
-  if('form' in props&&props.form===SliderForm.RANGE) return <RangeSlider {...props}/>;
+export function Slider(
+ props: SliderProps|SettingSliderProps|SliderProgressProps|(RangeSliderProps&{form:typeof SliderForm.RANGE})
+) {
+  if(props.form===SliderForm.PROGRESS) return <SliderProgress {...props}/>;
+  if('form' in props&&props.form===SliderForm.RANGE) return <SkinRangeSlider {...props}/>;
   return 'form' in props&&props.form===SliderForm.SETTING?<SettingSlider {...props}/>:<CellSlider {...props as SliderProps}/>;
 }
 
-function CellSlider({ value, onChange, min: minProp = 0, max, label, color, disabled, tooltip, isInteger, width, fill, className, sensitivity }: SliderProps) {
-  const { getEffectiveStyle } = useStyle();
+function CellSlider({ form, value, onChange, min: minProp = 0, max, label, color, disabled, tooltip, isInteger, width, fill, className, sensitivity, modulators = [], selectedSource, onSelectSource }: SliderProps) {
+  const { getEffectiveStyle, skin } = useStyle();
   const style = getEffectiveStyle();
   const { setTooltip } = useTooltipSafe();
 
@@ -135,12 +127,14 @@ function CellSlider({ value, onChange, min: minProp = 0, max, label, color, disa
   );
 
   const active = isDragging || isHovered;
+  const thin = form === SliderForm.THIN || (!form && skinForm(skin, 'slider') === 'minimal');
+  const thickness = thin ? 1 : TRACK_HEIGHT, topRoom = modulationTrackHeight(modulators.length, thickness);
 
   const fillStyle = fill ? { flex: 1, minWidth: 0 } as const : {};
   return (
     <div
-      className={className}
-      style={{ display: F.flex, alignItems: F.center, gap: D.spacing.microGap, cursor: disabled ? C.notAllowed : C.pointer, ...fillStyle }}
+      className={className} data-slider-form={form ?? SliderForm.CELL}
+      style={{ display: F.flex, alignItems: F.center, gap: D.spacing.microGap, cursor: disabled ? C.notAllowed : C.pointer, ...fillStyle, paddingTop: topRoom }}
       onMouseEnter={() => { setIsHovered(true); tooltip && setTooltip(tooltip); }}
       onMouseLeave={() => { setIsHovered(false); tooltip && setTooltip(null); }}
       onPointerDown={handlePointerDown}
@@ -148,9 +142,13 @@ function CellSlider({ value, onChange, min: minProp = 0, max, label, color, disa
       onDoubleClick={() => !disabled && onChange?.(minProp)}
     >
       <div style={{ position: P.relative as 'relative', height: FADER_HEIGHT + D.spacing.microGap, display: F.flex, alignItems: F.center, ...(fill ? { flex: 1 } : { width: trackWidth }) }}>
-        <SliderTrack color={style.knobGradient.at(-1)!} width={fill ? '100%' : trackWidth} />
-        <SliderFill fraction={fraction} zeroFraction={zeroFraction} color={scheme.main} glow={scheme.glow} active={active} />
-        <SliderFader fraction={fraction} scheme={scheme} style={style} active={active} />
+        {!disabled && <ModulationTracks low={minProp} high={value} min={minProp} max={max}
+          thickness={thickness} bottom={(FADER_HEIGHT + D.spacing.microGap - thickness) / 2}
+          modulators={modulators} selectedSource={selectedSource} onSelectSource={onSelectSource}/>}
+        <SliderTrack background={hexToRgba(style.knobGradient.at(-1)!, O.high)}
+          width={fill ? '100%' : trackWidth} thin={thin} />
+        <SliderFill fraction={fraction} zeroFraction={zeroFraction} color={scheme.main} glow={scheme.glow} active={active} thin={thin} />
+        <SliderFader fraction={fraction} scheme={scheme} style={style} active={active} thin={thin} />
       </div>
     </div>
   );

@@ -1,35 +1,40 @@
 import React from 'react';
 import { useStyle } from '../../synth/StyleContext.tsx';
-import { hexToRgba } from '../../color.ts';
-import { D, O, T } from '../../synth/design/index.ts';
+import { D, T } from '../../synth/design/index.ts';
+import { SegmentedControl, TEXT_SEGMENT_VARIANT } from '../SegmentedControl.tsx';
+import { useStyleThemeVariables } from '../styleTheme.ts';
 
 const G = D.moduleGrid;
 const STRIP: React.CSSProperties = {
-  flexShrink: 0, maxWidth: '100%', boxSizing: 'border-box', display: 'flex', flexWrap: 'wrap', gap: G.groupGap,
+  flexShrink: 0, maxWidth: '100%', boxSizing: 'border-box', display: 'flex',
   padding: `${G.groupStripPadding}px ${G.headerInset}px 0`,
 };
+// Inline, the strip sits on the row it is in, as tall as its chips and centred on the row's line.
+const INLINE_STRIP: React.CSSProperties = { ...STRIP, padding: 0 };
+const CONTROL: React.CSSProperties = {
+  flexWrap: 'wrap', gap: G.groupGap,
+  '--segment-padding-block': `${G.groupPaddingBlock}px`, '--segment-padding-inline': `${G.groupPaddingInline}px`,
+};
+// The label type every other label on a module wears, so a group reads as part of the same page.
+const LABEL: React.CSSProperties = { ...T.moduleLabel, textTransform: 'uppercase' };
 
 /**
- * Text chips for the groups inside a tab: the second level, when a tab holds more than one grid can. A dim chip has
- * nothing set inside it.
+ * The groups inside a tab, when it holds more than one grid can: the second level, as the SegmentedControl's text
+ * form, so the open one slides as the first level's does. A group with nothing set inside it reads dim.
  */
-export function ModuleGroups<Id extends string>({ groups, value, onChange, ariaLabel }: {
+export function ModuleGroups<Id extends string>({ groups, value, onChange, ariaLabel, inline, disabled }: {
   groups: { id: Id; label: string; set: boolean }[]; value: Id; onChange: (id: Id) => void; ariaLabel: string;
+  /** On a row of its own controls, such as a band's tag, rather than under a module's header. */
+  inline?: boolean; disabled?: boolean;
 }) {
-  const style = useStyle().getEffectiveStyle();
-  const chipStyle = (open: boolean, set: boolean): React.CSSProperties => ({
-    ...T.moduleLabel, padding: `${G.groupPaddingBlock}px ${G.groupPaddingInline}px`, border: 'none',
-    borderRadius: D.radius.button, cursor: 'pointer', textTransform: 'uppercase',
-    background: open ? hexToRgba(style.primaryColor, O.subtle) : 'transparent',
-    color: open || set ? style.primaryColor : hexToRgba(style.textColor, O.high),
-  });
-  return <div role="tablist" aria-label={ariaLabel} data-module-groups style={STRIP}>
-    {groups.map(group => {
-      const open = group.id === value;
-      return <button key={group.id} type="button" role="tab" aria-selected={open} data-group={group.id}
-        data-group-set={group.set} onClick={() => onChange(group.id)} style={chipStyle(open, group.set)}>
-        {group.label}
-      </button>;
-    })}
+  const { primaryColor } = useStyle().getEffectiveStyle();
+  const options = groups.map(group => ({
+    value: group.id, label: <span style={LABEL}>{group.label}</span>, ariaLabel: group.label,
+    style: group.set ? { color: primaryColor } : undefined,
+    data: { 'data-group': group.id, 'data-group-set': group.set },
+  }));
+  return <div data-module-groups style={{ ...(inline ? INLINE_STRIP : STRIP), ...useStyleThemeVariables() }}>
+    <SegmentedControl<Id> tabs variant={TEXT_SEGMENT_VARIANT} ariaLabel={ariaLabel} value={value}
+      onChange={onChange} disabled={disabled} style={CONTROL} options={options} />
   </div>;
 }

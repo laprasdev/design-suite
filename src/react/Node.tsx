@@ -2,9 +2,9 @@
 // Node — a generic beveled card, absolutely positioned. Domain-free: the
 // consumer supplies position, size, an optional accent flag, and any content.
 // =====================================================
-import React, { type CSSProperties, type ReactNode } from "react";
+import React, { type CSSProperties, type HTMLAttributes, type ReactNode } from "react";
 
-export interface NodeProps {
+export interface NodeProps extends Omit<HTMLAttributes<HTMLDivElement>, "style" | "className" | "children"> {
   x: number;
   y: number;
   w: number;
@@ -15,11 +15,12 @@ export interface NodeProps {
   children?: ReactNode;
 }
 
-export function Node({ x, y, w, h, accent = false, className = "", style, children }: NodeProps) {
+export function Node({ x, y, w, h, accent = false, className = "", style, children, ...rest }: NodeProps) {
   return (
     <div
       className={`bd-node${accent ? " bd-node--accent" : ""}${className ? " " + className : ""}`}
       style={{ position: "absolute", left: x, top: y, width: w, height: h, ...style }}
+      {...rest}
     >
       {children}
     </div>
