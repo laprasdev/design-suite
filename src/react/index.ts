@@ -55,10 +55,9 @@ export {
   CrossfadePageElement,PAGE_STACK_MOVING,PAGE_STACK_DIRECTION,type CrossfadePageProps,
 } from './CrossfadePage.tsx';
 export {
-  pageFrames,capturePage,capturePageScroll,restorePageScroll,placePageCopy,animatePage,
+  pageFrames,capturePage,capturePageScroll,restorePageScroll,placePageCopy,removePageCopy,animatePage,
   PAGE_FADE,PAGE_FADE_IN,PAGE_FADE_OUT,PageMotionElement,
   type PageDirection,type PageTiming,type PageAnimation,type PageScroll,type PageCopy,type PageRegions,type PageMotion,
 } from './pageMotion.ts';
 export {PAGE_MOTION} from './motion.ts';
-export {remapPageCopyIds} from './pageCopyIds.ts';
 export { DataTable, type DataTableProps } from './DataTable.tsx';

@@ -107,7 +107,7 @@ function nextCopyId(document: Document) {
 // Pass the matching live source to retain appearance owned by outside CSS,
 // including ID selectors that will no longer match after the copy is renamed.
 // A constructed wrapper can keep its own layout while copying its source's children.
-export function remapPageCopyIds(copy: HTMLElement,source?: HTMLElement,includeRoot=true) {
+export function remapPageCopyIds(copy: HTMLElement,source?: HTMLElement,includeRoot=true): HTMLStyleElement|null {
  const nodes=[copy,...copy.querySelectorAll('*')],ids=new Map<string,string>();
  for(const node of nodes) {
   const id=node.getAttribute('id');
@@ -120,7 +120,7 @@ export function remapPageCopyIds(copy: HTMLElement,source?: HTMLElement,includeR
   if(!copy.id)copy.id=nextCopyId(copy.ownerDocument);
   ids.set(source.id,copy.id);
  }
- if(!ids.size)return;
+ if(!ids.size)return null;
  if(!copy.id)copy.id=nextCopyId(copy.ownerDocument);
  const documentUrl=source?.ownerDocument.URL??copy.ownerDocument.URL;
  const referenced=new Set(nodes.filter(node=>node instanceof SVGElement&&node.localName==='use')
@@ -145,6 +145,7 @@ export function remapPageCopyIds(copy: HTMLElement,source?: HTMLElement,includeR
   const style=copy.ownerDocument.createElement('style');
   style.setAttribute(COPY_STYLE_ATTRIBUTE,'');
   style.textContent=pageCopyStyles(authoredPageStyles(source.ownerDocument),ids,roots,includeRoot);
-  copy.append(style);
+  return style;
  }
+ return null;
 }
