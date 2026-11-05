@@ -67,6 +67,32 @@ import '@looms/bloom-design/react/styles.css';
 | `/react/styles.css` | All component styles; import once |
 | `/synth/*` | The web synth's controls and design layer, as source |
 
+## Pages and dialogs
+
+Browsing and editing flows occupy pages. `Crossfade`'s page form takes a controlled
+`readonly StackView[]`, using the same `{key, node}` entries as `ViewStack`:
+
+```tsx
+<Crossfade form="page" views={pages} className="workspace-pages" focusRef={headingRef}/>
+```
+
+The last entry is visible. Push by appending an entry: its page enters from the
+right while the previous page leaves left and fades. Back removes entries and
+reverses that motion. Replacing an unrelated page fades in place. Stable keys
+retain their React mounts, form state and scroll positions; inactive pages are
+hidden and inert. Back restores the retained page's focused control. The optional
+`focusRef` names a destination heading or control; otherwise the page takes focus.
+Reduced motion settles immediately, and a new navigation cancels the old motion.
+
+Keep the fixed header and footer outside the moving page body. The exported page
+motion helpers also support stationary chrome within a composed page; applications
+name those regions. The consumer owns routes, push/Back controls, guards and the
+retained entries' lifetime. Removing an entry unmounts it. The existing
+`<Crossfade view={key}>{content}</Crossfade>` keeps its compact fade behavior.
+
+Use `Modal` for short confirmations and bounded pickers. `ViewStack` keeps its
+existing modal behavior; the page form does not add a backdrop or Escape handler.
+
 ## Verify
 
 ```sh

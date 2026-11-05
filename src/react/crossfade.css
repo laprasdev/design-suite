@@ -12,3 +12,12 @@
 @media (prefers-reduced-motion: reduce) {
   .bd-pane { animation: none; transition: none; }
 }
+
+/* Page form keeps earlier pages mounted, out of layout and keyboard navigation. */
+.bd-page-stack { position:relative;display:grid;min-width:0;min-height:0;overflow:hidden; }
+.bd-page-stack>.bd-page { grid-area:1 / 1;min-width:0;min-height:0;overflow:auto; }
+.bd-page-stack>.bd-page[hidden] { display:none; }
+.bd-page-out { position:absolute!important;inset:0 0 auto;width:100%;pointer-events:none; }
+.bd-page-out.bd-page-scaffold,.bd-page-out :is(.bd-page-scaffold,.bd-page-chrome) {
+  background:transparent!important;border-color:transparent!important;box-shadow:none!important;
+}

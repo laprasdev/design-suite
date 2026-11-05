@@ -51,4 +51,13 @@ export { StyleProvider, useStyle } from '../synth/StyleContext.tsx';
 export { CaretButton, type CaretButtonProps } from './CaretButton.tsx';
 export { PhotoStrip, PhotoCompare, type StripPhoto, type CompareCapture } from './Photos.tsx';
 export { Crossfade, type CrossfadeProps } from './Crossfade.tsx';
+export {
+  CrossfadePageElement,PAGE_STACK_MOVING,PAGE_STACK_DIRECTION,type CrossfadePageProps,
+} from './CrossfadePage.tsx';
+export {
+  pageFrames,capturePage,capturePageScroll,restorePageScroll,placePageCopy,animatePage,
+  PAGE_FADE,PAGE_FADE_IN,PAGE_FADE_OUT,PageMotionElement,
+  type PageDirection,type PageTiming,type PageAnimation,type PageScroll,type PageCopy,type PageRegions,type PageMotion,
+} from './pageMotion.ts';
+export {PAGE_MOTION} from './motion.ts';
 export { DataTable, type DataTableProps } from './DataTable.tsx';
