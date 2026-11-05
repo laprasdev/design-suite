@@ -3,8 +3,8 @@ import type {StackView} from './ViewStack.tsx';
 import {reducedMotion} from './motion.ts';
 import {pageStackDirection,pageStackKeys} from './pageStack.ts';
 import {
- animatePage,capturePage,capturePageScroll,restorePageScroll,placePageCopy,pageFrames,
- type PageCopy,type PageScroll,
+ animatePage,capturePage,captureRetainedPageScroll,restoreRetainedPageScroll,placePageCopy,pageFrames,
+ type PageCopy,type RetainedPageScroll,
 } from './pageMotion.ts';
 
 export const CrossfadePageElement=Object.freeze({SURFACE:'bd-page-stack',PAGE:'bd-page'});
@@ -19,7 +19,7 @@ export interface CrossfadePageProps {
  focusRef?: RefObject<HTMLElement>;
 }
 interface RetainedPage {
- scroll: PageScroll;
+ scroll: RetainedPageScroll;
  focus: HTMLElement|null;
 }
 interface ShownPage {
@@ -42,7 +42,7 @@ export function CrossfadePage({views,className='',focusRef}: CrossfadePageProps)
  if(before?.node&&before.key!==key&&(leaving.current?.from!==before||leaving.current.to!==key)) {
   const active=document.activeElement;
   saved.current.set(before.key!,{
-   scroll:capturePageScroll(before.node),
+   scroll:captureRetainedPageScroll(before.node),
    focus:active instanceof HTMLElement&&before.node.contains(active)?active:null,
   });
   leaving.current={from:before,to:key,copy:capturePage(before.node)};
@@ -62,7 +62,7 @@ export function CrossfadePage({views,className='',focusRef}: CrossfadePageProps)
   leaving.current=null;
   if(!node)return;
   const retained=key===undefined?undefined:saved.current.get(key);
-  if(retained)restorePageScroll(node,retained.scroll);
+  if(retained)restoreRetainedPageScroll(node,retained.scroll);
   const direction=pageStackDirection(previous?.keys??[],keys);
   const focus=()=>{
    const prior=direction<0?retained?.focus:null;

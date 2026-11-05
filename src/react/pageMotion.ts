@@ -1,5 +1,6 @@
 import {PAGE_MOTION,VIEW_SLIDE} from './motion.ts';
 import {cssRect} from './cssZoom.ts';
+import {remapPageCopyIds} from './pageCopyIds.ts';
 
 export type PageDirection=-1|0|1;
 export type PageTiming=KeyframeAnimationOptions&{duration: number,delay?: number};
@@ -26,6 +27,7 @@ export function pageFrames(direction: PageDirection): {outgoing: PageAnimation,i
 }
 
 export type PageScroll=readonly [index: number,top: number,left: number][];
+export type RetainedPageScroll=readonly [node: Element,top: number,left: number][];
 export interface PageCopy {
  copy: HTMLElement;
  height: number;
@@ -34,6 +36,15 @@ export interface PageCopy {
 export function capturePageScroll(root: HTMLElement): PageScroll {
  return [root,...root.querySelectorAll('*')].flatMap((node,index): PageScroll=>
   node.scrollTop||node.scrollLeft?[[index,node.scrollTop,node.scrollLeft]]:[]);
+}
+// Retained React pages may reorder their keyed descendants while hidden.
+// Their saved positions follow live nodes, whereas exact DOM clones use indices.
+export function captureRetainedPageScroll(root: HTMLElement): RetainedPageScroll {
+ const nodes=[root,...root.querySelectorAll('*')];
+ return capturePageScroll(root).map(([index,top,left])=>[nodes[index],top,left]);
+}
+export function restoreRetainedPageScroll(root: HTMLElement,scrolled: RetainedPageScroll) {
+ for(const [node,top,left] of scrolled)if(root.contains(node))Object.assign(node,{scrollTop:top,scrollLeft:left});
 }
 export function restorePageScroll(root: HTMLElement,scrolled: PageScroll) {
  const nodes=[root,...root.querySelectorAll('*')];
@@ -55,7 +66,7 @@ export function placePageCopy(root: HTMLElement,{copy,height,scrolled}: PageCopy
  copy.inert=true;
  copy.setAttribute('aria-hidden','true');
  copy.style.height=`${height}px`;
- for(const node of [copy,...copy.querySelectorAll('[id]')])node.removeAttribute('id');
+ remapPageCopyIds(copy);
  root.append(copy);
  restorePageScroll(copy,scrolled);
  return copy;
