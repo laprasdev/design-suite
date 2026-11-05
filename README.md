@@ -99,6 +99,13 @@ with `layer()`/`supports()` modifiers, cannot be copied; those rules must be inl
 inside the copied page, or in a readable application stylesheet. Global font,
 keyframe and property definitions stay with their existing stylesheet owner.
 
+The motion helper lifecycle is `capturePage(source)` → `placePageCopy(parent, snapshot)`
+→ `removePageCopy(snapshot)`. Capture leaves both content and its stylesheet detached;
+placement mounts the stylesheet outside the content, and removal disposes both.
+Passing an empty detached wrapper to `capturePage(source, wrapper)` captures only
+the source's children and keeps the wrapper's layout. Consumers retain the snapshot
+for cleanup; `.copy` and the placement result expose its element for animation.
+
 Use `Modal` for short confirmations and bounded pickers. `ViewStack` keeps its
 existing modal behavior; the page form does not add a backdrop or Escape handler.
 

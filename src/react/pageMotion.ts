@@ -32,6 +32,8 @@ export interface PageCopy {
  copy: HTMLElement;
  height: number;
  scrolled: PageScroll;
+ stylesheet: HTMLStyleElement|null;
+ sourceRoot: boolean;
 }
 export function capturePageScroll(root: HTMLElement): PageScroll {
  return [root,...root.querySelectorAll('*')].flatMap((node,index): PageScroll=>
@@ -54,22 +56,31 @@ export function restorePageScroll(root: HTMLElement,scrolled: PageScroll) {
  }
 }
 // Capture DOM, not React children: leaving a page never mounts effects twice.
-export function capturePage(page: HTMLElement): PageCopy {
- const copy=page.cloneNode(true);
+// An empty detached wrapper captures the source's children with caller-owned layout.
+export function capturePage(page: HTMLElement,wrapper?: HTMLElement): PageCopy {
+ if(wrapper&&(wrapper.isConnected||wrapper.hasChildNodes())) {
+  throw new Error('A page contents copy needs an empty detached wrapper.');
+ }
+ const copy=wrapper??page.cloneNode(true);
  if(!(copy instanceof HTMLElement))throw new Error('A page copies as an element.');
- remapPageCopyIds(copy,page);
- return {copy,height:cssRect(page).height,scrolled:capturePageScroll(page)};
+ if(wrapper)for(const child of page.childNodes)copy.append(child.cloneNode(true));
+ const sourceRoot=!wrapper,stylesheet=remapPageCopyIds(copy,page,sourceRoot);
+ return {copy,height:cssRect(page).height,scrolled:capturePageScroll(page),stylesheet,sourceRoot};
 }
-export function placePageCopy(root: HTMLElement,{copy,height,scrolled}: PageCopy,
- className: string=PageMotionElement.OUTGOING) {
- copy.classList.add(PageMotionElement.OUTGOING,className);
+export function placePageCopy(root: HTMLElement,{copy,height,scrolled,stylesheet,sourceRoot}: PageCopy,
+ className?: string) {
+ if(sourceRoot){copy.classList.add(PageMotionElement.OUTGOING);copy.style.height=`${height}px`;}
+ if(className)copy.classList.add(className);
  copy.hidden=false;
  copy.inert=true;
  copy.setAttribute('aria-hidden','true');
- copy.style.height=`${height}px`;
+ if(stylesheet)copy.ownerDocument.head.append(stylesheet);
  root.append(copy);
  restorePageScroll(copy,scrolled);
  return copy;
+}
+export function removePageCopy({copy,stylesheet}: PageCopy) {
+ copy.remove();stylesheet?.remove();
 }
 
 // Chrome stays still while its contents fade. A composed region may instead

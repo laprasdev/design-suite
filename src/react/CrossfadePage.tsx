@@ -3,7 +3,7 @@ import type {StackView} from './ViewStack.tsx';
 import {reducedMotion} from './motion.ts';
 import {pageStackDirection,pageStackKeys} from './pageStack.ts';
 import {
- animatePage,capturePage,captureRetainedPageScroll,restoreRetainedPageScroll,placePageCopy,pageFrames,
+ animatePage,capturePage,captureRetainedPageScroll,restoreRetainedPageScroll,placePageCopy,removePageCopy,pageFrames,
  type PageCopy,type RetainedPageScroll,
 } from './pageMotion.ts';
 
@@ -80,7 +80,7 @@ export function CrossfadePage({views,className='',focusRef}: CrossfadePageProps)
   node.inert=true;
   const exit=animatePage(copy,...frames.outgoing),enter=animatePage(node,...frames.incoming);
   const stop=()=>{
-   exit.cancel();enter.cancel();copy.remove();node.inert=false;
+   exit.cancel();enter.cancel();removePageCopy(outgoing);node.inert=false;
    root.removeAttribute(PAGE_STACK_MOVING);root.removeAttribute(PAGE_STACK_DIRECTION);
   };
   motion.current=stop;
