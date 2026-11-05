@@ -49,7 +49,7 @@ export function capturePage(page: HTMLElement): PageCopy {
  return {copy,height:cssRect(page).height,scrolled:capturePageScroll(page)};
 }
 export function placePageCopy(root: HTMLElement,{copy,height,scrolled}: PageCopy,
- className=PageMotionElement.OUTGOING) {
+ className: string=PageMotionElement.OUTGOING) {
  copy.classList.add(className);
  copy.hidden=false;
  copy.inert=true;
