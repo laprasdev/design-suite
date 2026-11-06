@@ -1,3 +1,4 @@
+/// <reference path="./react-css.d.ts" />
 // @looms/bloom-design/react — generic React primitives.
 // Import styles once: `import "@looms/bloom-design/react/styles.css"`.
 export { Node, type NodeProps } from "./Node.tsx";
@@ -84,3 +85,5 @@ export {GraphDisplay, GraphFill} from './GraphDisplay.tsx';
 export {animateCardFlip} from './cardFlip.ts';
 
 export {ControllerShoulder, ControllerDpad} from './controllerShapes.tsx';
+
+export { ModuleTextInput, TextInput, type TextInputProps } from './inputs/ModuleTextInput.tsx';

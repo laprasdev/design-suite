@@ -1,0 +1,6 @@
+.bd-text-input:not(.bd-module-text) {
+  color:var(--text);background:var(--bg);border:var(--line-width) solid var(--line);
+  border-radius:var(--r-sm);padding:var(--field-gap);font:inherit;font-size:var(--type-control);
+}
+.bd-text-input:not(.bd-module-text):focus-visible { outline:var(--focus-width,2px) solid var(--pink);outline-offset:2px; }
+.bd-text-input:not(.bd-module-text):disabled { color:var(--dim); }

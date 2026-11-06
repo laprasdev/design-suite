@@ -290,6 +290,14 @@
     "DataTable",
     "RecordTable"
    ]
+  },
+  "Text": {
+   "data": "text",
+   "kit": [
+    "TextInput",
+    "ModuleTextInput"
+   ],
+   "note": "Single-line, multiline and credential fields use the same text control. Native input attributes retain browser password-manager and validation behavior."
   }
  }
 }
