@@ -24,7 +24,7 @@ export type LifecyclePhaseValue = typeof LifecyclePhase[keyof typeof LifecyclePh
 
 /** Where a task is on its way to done, in the order it moves. */
 export const TaskStage = Object.freeze({
-  WAITING: 'waiting', READY: 'ready', WORKING: 'working', REVIEW: 'review', DONE: 'done',
+  WAITING: 'waiting', READY: 'ready', WORKING: 'working', REVIEW: 'review', DONE: 'done', RESOLVED: 'resolved',
 } as const);
 export type TaskStageValue = typeof TaskStage[keyof typeof TaskStage];
 
@@ -45,7 +45,7 @@ export type ReviewStatusValue = typeof ReviewStatus[keyof typeof ReviewStatus];
 export const LogVerb = Object.freeze({
   ADDED: 'added', ASKED: 'asked', CLAIMED: 'claimed', RELEASED: 'released', NOTED: 'noted', FINISHED: 'finished',
   ATTACHED: 'attached', REVISED: 'revised', WITHDREW: 'withdrew', LINKED: 'linked', PROPOSED: 'proposed',
-  REVIEWED: 'reviewed', ASSIGNED: 'assigned',
+  REVIEWED: 'reviewed', ASSIGNED: 'assigned', RESOLVED: 'resolved',
 } as const);
 export type LogVerbValue = typeof LogVerb[keyof typeof LogVerb];
 
@@ -114,6 +114,15 @@ export interface NodeWithdrawal {
   at: number;
 }
 
+/** A conversation settled the work; this records evidence without an owner answer or approval. */
+export interface NodeResolution {
+  by: string;
+  at: number;
+  reason: string;
+  reference: string;
+  excerpt: string;
+}
+
 /** Where a node stands, and its own log. */
 export interface NodeStatus {
   state: NodeStateValue;
@@ -124,6 +133,7 @@ export interface NodeStatus {
   assignedTo?: string;
   doneBy?: string;
   withdrawn?: NodeWithdrawal;
+  resolved?: NodeResolution;
   phase?: LifecyclePhaseValue;
   reviews?: Partial<Record<ReviewerValue, NodeReview>>;
 }

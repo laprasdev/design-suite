@@ -24,11 +24,12 @@ import { Node } from "./Node.tsx";
 import { GraphWires } from "./GraphWires.tsx";
 import { NodeGroups } from "./NodeGroups.tsx";
 import { groupFrames } from "./groupGeometry.ts";
-import type { GraphNode, GraphEdge, GraphGroup, GraphGroupResize, TwistTie } from "./nodeGraphTypes.ts";
+import type { GraphNode, GraphEdge, GraphGroup, GraphGroupResize, GroupOutlets, TwistTie } from "./nodeGraphTypes.ts";
 import { movedGraph } from "./nodeGraphTypes.ts";
 export { graphEdgeId, movedGraph } from "./nodeGraphTypes.ts";
 export type {
-  GraphNode, GraphEdge, GraphGroup, GraphGroupResize, GroupEdge, GroupResizePhase, EdgeEnd, TwistTie,
+  GraphNode, GraphEdge, GraphGroup, GraphGroupResize, GroupEdge, GroupResizePhase,
+  GroupOutlet, GroupOutlets, EdgeEnd, TwistTie,
 } from "./nodeGraphTypes.ts";
 import { useNodeMoving, type NodeMoves } from "./useNodeMoving.ts";
 
@@ -49,6 +50,8 @@ export interface NodeGraphProps<N extends GraphNode> {
   groups?: readonly GraphGroup[];
   /** Route a single terminal output along each expanded group boundary. */
   groupOutputs?: boolean;
+  outlets?: GroupOutlets;
+  onOutletsChange?(outlets: GroupOutlets): void;
   onGroupToggle?(id: string): void;
   onGroupResize?: GraphGroupResize;
   ties?: readonly TwistTie[];
@@ -86,7 +89,7 @@ export function NodeGraph<N extends GraphNode>({
   children,
   moves = NO_MOVES,
   onMovesChange, groups = [], groupOutputs = false, onGroupToggle, onGroupResize,
-  ties, onTiesChange, interactionSurface,
+  ties, onTiesChange, outlets, onOutletsChange, interactionSurface,
 }: NodeGraphProps<N>) {
   const { ref, scale } = useFitScale(width, fit);
   const marqueeKey = onTiesChange ? "altKey" : "shiftKey";
@@ -99,7 +102,7 @@ export function NodeGraph<N extends GraphNode>({
     <div
       className={`bd-nodegraph-fit ${className}`}
       ref={ref}
-      data-organizing={!!(onMovesChange || onTiesChange || onGroupResize) || undefined}
+      data-organizing={!!(onMovesChange || onTiesChange || onGroupResize || onOutletsChange) || undefined}
       style={{ height: fit ? height * scale : height }}
     >
       <div
@@ -112,7 +115,8 @@ export function NodeGraph<N extends GraphNode>({
           groupProps={groupProps} />
         <GraphWires surface={surface} width={width} height={height} nodes={shown} edges={edges}
           groups={groupOutputs ? frames : undefined} showPorts={showPorts} ties={ties}
-          onTiesChange={onTiesChange} interactionSurface={interactionSurface} />
+          onTiesChange={onTiesChange} interactionSurface={interactionSurface}
+          outlets={outlets} onOutletsChange={onOutletsChange} />
 
         {children}
 

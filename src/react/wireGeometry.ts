@@ -1,13 +1,14 @@
 import { edgePoint, linkPath } from "./geometry.ts";
 import { graphRoutes, GRAPH_ROUTE_SPACE } from "./graphRoutes.ts";
 import { wirePath, WIRE_CORNER_RADIUS } from "./wirePath.ts";
+import { GRAPH_GRID } from "./graphGrid.ts";
 import { groupOutputRoutes } from "./groupOutputs.ts";
 import type { NodeBox } from "./geometry.ts";
-import { graphEdgeId, type GraphEdge, type GraphGroup, type GraphNode, type GraphPoint,
+import { graphEdgeId, type GroupOutlets, type GraphEdge, type GraphGroup, type GraphNode, type GraphPoint,
   type TwistTie } from "./nodeGraphTypes.ts";
 
 export const WIRE_GAP = 4;
-export const TIE_GRID = 8, TIE_RUN = 24;
+export const TIE_GRID = GRAPH_GRID, TIE_RUN = 24;
 export const snapTie = (point: GraphPoint): GraphPoint => ({
   x: Math.round(point.x / TIE_GRID) * TIE_GRID, y: Math.round(point.y / TIE_GRID) * TIE_GRID,
 });
@@ -42,7 +43,7 @@ export function freeTiePoint(
 }
 
 export function graphLinks(nodes: readonly GraphNode[], edges: readonly GraphEdge[], ties: readonly TwistTie[],
-  groups: readonly GraphGroup[] = []) {
+  groups: readonly GraphGroup[] = [], outlets: GroupOutlets = {}) {
   const byId = new Map(nodes.map(node => [node.id, node]));
   const ends = edges.map(edge => {
     const from = byId.get(edge.from[0]), to = byId.get(edge.to[0]);
@@ -69,7 +70,7 @@ export function graphLinks(nodes: readonly GraphNode[], edges: readonly GraphEdg
     const run = bundle.vertical ? { x: 0, y: TIE_RUN * direction } : { x: TIE_RUN * direction, y: 0 };
     through.set(id, [{ x: at.x - run.x, y: at.y - run.y }, { x: at.x + run.x, y: at.y + run.y }]);
   }
-  const outputs = groupOutputRoutes(nodes, edges, groups);
+  const outputs = groupOutputRoutes(nodes, edges, groups, outlets);
   const outputByEdge = new Map(outputs.flatMap(output => output.ids.map(id => [id, output] as const)));
   const routed = new Map(graphRoutes(nodes,
     edges.filter(edge => through.has(graphEdgeId(edge)) && !outputByEdge.has(graphEdgeId(edge))), edgePoint, through)
@@ -115,7 +116,7 @@ export function graphLinks(nodes: readonly GraphNode[], edges: readonly GraphEdg
       label: edge.label ?? `${edge.from[0]} → ${edge.to[0]}` };
   });
   return { links, bundles, outputs: outputs.map(output => {
-    return { group: output.group, ids: output.ids, at: output.at,
+    return { group: output.group, frame: output.frame, side: output.side, ids: output.ids, at: output.at,
       flow: edges.some(edge => output.ids.includes(graphEdgeId(edge)) && edge.flow), d: drawings.get(output.group)!.d };
   }) };
 }

@@ -1,19 +1,22 @@
 import { useEffect, useRef, useState, type RefObject } from "react";
+import { nearestGroupOutlet } from "./groupOutlets.ts";
 import { isPanKeyHeld } from "./panKey.ts";
 import { snapTie } from "./wireGeometry.ts";
 import { collectWires, sampleWires, type SweepWire } from "./wireSweep.ts";
-import type { GraphPoint, TwistTie, WireLink } from "./nodeGraphTypes.ts";
+import type { GraphPoint, GraphGroup, GroupOutlet, GroupOutlets, TwistTie, WireLink } from "./nodeGraphTypes.ts";
 
 const STILL_PX = 4;
 type Gesture = { pointer: number; capture: HTMLElement; start: GraphPoint; before: readonly TwistTie[] } &
   ({ kind: "collect"; screen: GraphPoint; moved: boolean; hit?: string;
     points: GraphPoint[]; wires: SweepWire[]; picked: Set<string> } |
-    { kind: "tie"; tie: TwistTie });
+    { kind: "tie"; tie: TwistTie } |
+    { kind: "outlet"; frame: GraphGroup; outlet: GroupOutlet; outlets: GroupOutlets });
 
 export function useWireGestures(
   surface: RefObject<HTMLDivElement | null>, width: number, links: readonly WireLink[],
   ties: readonly TwistTie[], onChange: ((ties: readonly TwistTie[]) => void) | undefined,
   onCollect: (ids: readonly string[], at: GraphPoint) => void, interactionSurface?: RefObject<HTMLElement | null>,
+  outlets: GroupOutlets = {}, onOutletsChange?: (outlets: GroupOutlets) => void,
 ) {
   const [selected, setSelected] = useState<readonly string[]>([]);
   const [sweep, setSweep] = useState<readonly GraphPoint[]>([]);
@@ -34,10 +37,10 @@ export function useWireGestures(
   };
   useEffect(() => {
     const element = interactionSurface?.current ?? surface.current;
-    if (!element || !onChange) return;
+    if (!element || (!onChange && !onOutletsChange)) return;
     const start = (event: PointerEvent) => {
       suppressClick.current = false;
-      if (!event.shiftKey || isPanKeyHeld() || event.button !== 0 ||
+      if (!onChange || !event.shiftKey || isPanKeyHeld() || event.button !== 0 ||
         (event.target as Element).closest(".bd-node,[data-graph-node],button")) return;
       event.preventDefault(); event.stopImmediatePropagation();
       element.setPointerCapture(event.pointerId);
@@ -61,9 +64,12 @@ export function useWireGestures(
       if (!current || current.pointer !== event.pointerId) return;
       event.stopImmediatePropagation(); event.preventDefault();
       if (current.kind === "collect") collect(current, event);
-      else {
+      else if (current.kind === "outlet") {
+        const outlet = nearestGroupOutlet(current.frame, point(event), current.outlet);
+        onOutletsChange?.({ ...current.outlets, [current.frame.id]: outlet });
+      } else {
         const at = point(event);
-        onChange(current.before.map(tie => tie.id === current.tie.id ? { ...tie,
+        onChange?.(current.before.map(tie => tie.id === current.tie.id ? { ...tie,
           ...snapTie({ x: current.tie.x + at.x - current.start.x, y: current.tie.y + at.y - current.start.y }),
         } : tie));
       }
@@ -82,9 +88,12 @@ export function useWireGestures(
           setSelected(was => was.includes(id) ? was.filter(key => key !== id) : [...was, id]);
         }
         suppressClick.current = !cancelled && (current.moved || !!current.hit);
-      } else if (cancelled) onChange(current.before);
+      } else if (cancelled) {
+        if (current.kind === "outlet") onOutletsChange?.(current.outlets);
+        else onChange?.(current.before);
+      }
       setSweep([]);
-      if (cancelled || current.kind === "tie" || current.moved) setSelected([]);
+      if (cancelled || current.kind !== "collect" || current.moved) setSelected([]);
       if (current.capture.hasPointerCapture(current.pointer)) current.capture.releasePointerCapture(current.pointer);
     };
     const end = (event: PointerEvent) => {
@@ -119,6 +128,13 @@ export function useWireGestures(
     selected: selected.filter(id => links.some(link => link.id === id)), sweep, clear: () => setSelected([]),
     select: (id: string, add: boolean) => setSelected(was => add
       ? was.includes(id) ? was.filter(key => key !== id) : [...was, id] : [id]),
+    startOutlet: (event: React.PointerEvent<HTMLButtonElement>, frame: GraphGroup, outlet: GroupOutlet) => {
+      if (event.button !== 0 || isPanKeyHeld()) return;
+      event.stopPropagation(); event.preventDefault();
+      event.currentTarget.focus(); event.currentTarget.setPointerCapture(event.pointerId);
+      gesture.current = { kind: "outlet", pointer: event.pointerId, capture: event.currentTarget,
+        start: point(event), before: ties, frame, outlet, outlets };
+    },
     startTie: (event: React.PointerEvent<HTMLButtonElement>, tie: TwistTie) => {
       if (event.button !== 0) return;
       event.stopPropagation(); event.preventDefault();

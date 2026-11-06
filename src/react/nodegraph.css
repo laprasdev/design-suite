@@ -46,6 +46,13 @@
 .bd-edge:where([data-group-source]) { stroke:color-mix(in srgb,var(--bd-accent) 18%,var(--bd-edge-stroke)); }
 .bd-edge-output { stroke:var(--bd-group-output, color-mix(in srgb,var(--bd-accent) 38%,var(--bd-edge-stroke))); }
 .bd-group-outlet { --bd-port-stroke:var(--bd-group-output, color-mix(in srgb,var(--bd-accent) 55%,var(--bd-edge-stroke))); }
+.bd-group-outlet-handle {
+  position:absolute;z-index:4;width:24px;height:24px;min-height:0;padding:0;
+  transform:translate(-50%,-50%);border:0;border-radius:50%;background:transparent;
+  cursor:grab;touch-action:none;
+}
+.bd-group-outlet-handle:active { cursor:grabbing; }
+.bd-group-outlet-handle:focus-visible { outline:1px solid var(--bd-node-selected); }
 .bd-port {
   fill: var(--bd-port-fill);
   stroke: var(--bd-port-stroke);

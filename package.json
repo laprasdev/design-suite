@@ -111,14 +111,16 @@
     "build": "node scripts/build.mjs",
     "prepare": "npm run build",
     "check": "tsc -p . && node scripts/size-gate.mjs",
-    "test": "node --test tests/*.test.ts"
+    "test": "node --test tests/*.test.ts",
+    "check:graph": "tsc -p tsconfig.graph-tests.json"
   },
   "devDependencies": {
     "@types/react": "^18.3.31",
     "@types/react-dom": "^18.3.7",
     "esbuild": "0.28.2",
     "three": "0.180.0",
-    "typescript": "^7.0.2"
+    "typescript": "^7.0.2",
+    "@types/node": "25.9.9"
   },
   "dependencies": {
     "lucide-react": "^0.487.0",

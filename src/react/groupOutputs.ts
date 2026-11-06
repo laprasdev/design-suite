@@ -1,7 +1,10 @@
 import { edgePoint, type NodeSide } from "./geometry.ts";
+import { groupOutletPosition } from "./groupOutlets.ts";
 import { GROUP_SPACE } from "./groupGeometry.ts";
 import { graphRoutes } from "./graphRoutes.ts";
-import { graphEdgeId, type GraphEdge, type GraphGroup, type GraphNode, type GraphPoint } from "./nodeGraphTypes.ts";
+import {
+  graphEdgeId, type GraphEdge, type GraphGroup, type GraphNode, type GraphPoint, type GroupOutlets,
+} from "./nodeGraphTypes.ts";
 
 const OPPOSITE: Record<NodeSide, NodeSide> = { top: "bottom", bottom: "top", left: "right", right: "left" };
 const SIDES = ["top", "right", "bottom", "left"] as const;
@@ -42,7 +45,7 @@ function perimeter(group: GraphGroup, entry: GraphPoint, from: NodeSide, exit: G
 
 /** One terminal output port can fan out to several consumers, sharing one feed and boundary outlet. */
 export function groupOutputRoutes(
-  nodes: readonly GraphNode[], edges: readonly GraphEdge[], groups: readonly GraphGroup[],
+  nodes: readonly GraphNode[], edges: readonly GraphEdge[], groups: readonly GraphGroup[], outlets: GroupOutlets = {},
 ) {
   const byId = new Map(nodes.map(node => [node.id, node]));
   return groups.flatMap(group => {
@@ -65,11 +68,13 @@ export function groupOutputRoutes(
       y: sum.y + point.y / targets.length }), { x: 0, y: 0 });
     const dx = (center.x - group.x - group.w / 2) / group.w;
     const dy = (center.y - group.y - group.h / 2) / group.h;
-    const side: NodeSide = Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? "left" : "right") : (dy < 0 ? "top" : "bottom");
+    const side: NodeSide = outlets[group.id]?.side
+      ?? (Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? "left" : "right") : (dy < 0 ? "top" : "bottom"));
     const port = edgePoint(node, source[1], source[2]), entry = wallPoint(group, source[1], port);
     // A port near the trailing corner makes the boundary run visible even when the next node is directly below.
     const inset = Math.min(GROUP_SPACE.inset, group.w / 4, group.h / 4);
-    const at = wallPoint(group, side, { x: group.x + group.w - inset, y: group.y + group.h - inset });
+    const at = outlets[group.id] ? groupOutletPosition(group, outlets[group.id])
+      : wallPoint(group, side, { x: group.x + group.w - inset, y: group.y + group.h - inset });
     const id = anchorId(group, nodes), gate = { id, x: entry.x, y: entry.y, w: 0, h: 0 };
     const feed = graphRoutes(nodes, [{ ...outgoing[0], id: graphEdgeId(outgoing[0]),
       to: [id, OPPOSITE[source[1]]] }], edgePoint, new Map(), [gate])[0];

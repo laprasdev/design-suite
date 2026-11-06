@@ -3,7 +3,8 @@
 export { Node, type NodeProps } from "./Node.tsx";
 export {
   NodeGraph, type GraphNode, type GraphEdge, type EdgeEnd, type NodeGraphProps, type NodeMove, type NodeMoves,
-  type GraphGroup, type GraphGroupResize, type GroupEdge, type GroupResizePhase, type TwistTie, graphEdgeId, movedGraph,
+  type GraphGroup, type GraphGroupResize, type GroupOutlet, type GroupOutlets,
+  type GroupEdge, type GroupResizePhase, type TwistTie, graphEdgeId, movedGraph,
 } from "./NodeGraph.tsx";
 export { isPanKeyHeld } from "./panKey.ts";
 export { bezierPath, edgePoint, linkPath, verticalBezierPath, type NodeBox, type NodeSide } from "./geometry.ts";

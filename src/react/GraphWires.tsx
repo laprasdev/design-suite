@@ -4,10 +4,12 @@ import { Button } from "./Button.tsx";
 import {
   bundleVertical, freeTiePoint, graphLinks, TIE_SIZE, TIE_RUN, snapTie, tieWidth, tieWires, wireMiddle,
 } from "./wireGeometry.ts";
+import { nearestGroupOutlet, stepGroupOutlet } from "./groupOutlets.ts";
 import { useWireGestures } from "./useWireGestures.ts";
-import type { GraphEdge, GraphGroup, GraphNode, GraphPoint, TwistTie } from "./nodeGraphTypes.ts";
+import type { GraphEdge, GraphGroup, GraphNode, GraphPoint, GroupOutlets, TwistTie } from "./nodeGraphTypes.ts";
 
 const FLOW_LIGHTS = 3, FLOW_SECONDS = 2.4, TIE_STEP = 8;
+const NO_OUTLETS: GroupOutlets = Object.freeze({});
 const NO_TIES: readonly TwistTie[] = Object.freeze([]);
 
 function FlowLights({ path }: { path: string }) {
@@ -21,14 +23,16 @@ function FlowLights({ path }: { path: string }) {
 
 export function GraphWires({
   surface, width, height, nodes, edges, groups, showPorts, ties = NO_TIES, onTiesChange, interactionSurface,
+  outlets = NO_OUTLETS, onOutletsChange,
 }: {
   surface: RefObject<HTMLDivElement | null>; width: number; height: number;
   nodes: readonly GraphNode[]; edges: readonly GraphEdge[]; groups?: readonly GraphGroup[]; showPorts: boolean;
+  outlets?: GroupOutlets; onOutletsChange?(outlets: GroupOutlets): void;
   ties?: readonly TwistTie[]; onTiesChange?(ties: readonly TwistTie[]): void;
   interactionSurface?: RefObject<HTMLElement | null>;
 }) {
   const { links, bundles, outputs } = useMemo(
-    () => graphLinks(nodes, edges, ties, groups), [nodes, edges, ties, groups]);
+    () => graphLinks(nodes, edges, ties, groups, outlets), [nodes, edges, ties, groups, outlets]);
   const collect = (ids: readonly string[], at: GraphPoint) => {
     const selected = links.filter(link => ids.includes(link.id));
     const vertical = bundleVertical(selected), span = tieWidth(selected.length);
@@ -36,7 +40,8 @@ export function GraphWires({
       { w: vertical ? span : TIE_RUN * 2, h: vertical ? TIE_RUN * 2 : span });
     onTiesChange?.(tieWires(ties, { id: `tie:${crypto.randomUUID()}`, edges: ids, ...position }));
   };
-  const wires = useWireGestures(surface, width, links, ties, onTiesChange, collect, interactionSurface);
+  const wires = useWireGestures(surface, width, links, ties, onTiesChange, collect,
+    interactionSurface, outlets, onOutletsChange);
   const picked = links.filter(link => wires.selected.includes(link.id));
   const middle = picked.length ? {
     x: picked.reduce((sum, link) => sum + wireMiddle(link).x, 0) / picked.length,
@@ -46,7 +51,7 @@ export function GraphWires({
   const untie = (id: string) => onTiesChange?.(ties.filter(item => item.id !== id));
   return <>
     <svg data-graph-wires className="bd-edges" width={width} height={height} viewBox={`0 0 ${width} ${height}`}
-      aria-hidden={!onTiesChange || undefined}>
+      aria-hidden={(!onTiesChange && !onOutletsChange) || undefined}>
       {links.map(link => <path key={link.id} data-selected={wires.selected.includes(link.id) || undefined}
         className={`bd-edge${link.flow ? " bd-edge--flow" : ""}`} data-group-source={link.groupOutput}
         style={link.color ? {'--bd-edge-stroke': link.color} as React.CSSProperties : undefined}
@@ -75,6 +80,24 @@ export function GraphWires({
       {wires.sweep.length > 1 && <path className="bd-wire-sweep"
         d={wires.sweep.map((point, i) => `${i ? "L" : "M"} ${point.x} ${point.y}`).join(" ")} />}
     </svg>
+    {showPorts && onOutletsChange && outputs.map(output => {
+      const position = outlets[output.group] ?? nearestGroupOutlet(output.frame, output.at);
+      return <Button key={`handle:${output.group}`} variant="text" className="bd-group-outlet-handle"
+        data-group-outlet-handle={output.group} aria-label={`Move ${output.frame.label} output`}
+        title="Drag along any wall · Arrows move around the frame · Delete restores automatic placement"
+        style={{ left: output.at.x, top: output.at.y }}
+        onPointerDown={event => wires.startOutlet(event, output.frame, position)}
+        onClick={event => event.stopPropagation()} onKeyDown={event => {
+          if (event.key === "Delete" || event.key === "Backspace") {
+            event.preventDefault(); event.stopPropagation();
+            const next = { ...outlets }; delete next[output.group]; onOutletsChange(next); return;
+          }
+          const direction = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[event.key];
+          if (!direction) return;
+          event.preventDefault(); event.stopPropagation();
+          onOutletsChange({ ...outlets, [output.group]: stepGroupOutlet(output.frame, position, direction) });
+        }} />;
+    })}
     {onTiesChange && bundles.map(bundle => <Button key={bundle.id} className="bd-twist-tie" variant="ghost"
       aria-label={`Twist tie: ${bundle.members.length} wires`}
       title="Drag to route · Arrows to move · Double-click or Delete to untie"

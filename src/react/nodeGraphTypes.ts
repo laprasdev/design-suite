@@ -24,6 +24,9 @@ export interface TwistTie extends GraphPoint { id: string; edges: readonly strin
 export interface GraphGroup extends NodeBox {
   id: string; label: string; members: readonly string[]; completed?: boolean;
 }
+/** Saved wall-relative output position, independent of layout/movement. */
+export interface GroupOutlet { side: NodeSide; offset: number }
+export type GroupOutlets = Readonly<Record<string, GroupOutlet>>;
 export type GroupEdge = NodeSide;
 export type GroupResizePhase = "start" | "move" | "end" | "cancel";
 export type GraphGroupResize = (id: string, size: Pick<NodeBox, "w" | "h">,
