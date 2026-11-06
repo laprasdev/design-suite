@@ -89,3 +89,5 @@ export {ControllerShoulder, ControllerDpad} from './controllerShapes.tsx';
 export { ModuleTextInput, TextInput, type TextInputProps } from './inputs/ModuleTextInput.tsx';
 
 export {CodeIcon, ServerIcon, LibraryIcon} from './HeaderIconButton.tsx';
+
+export {HeaderNavigation} from './PageBar.tsx';

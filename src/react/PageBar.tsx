@@ -1,6 +1,16 @@
 import {forwardRef, type ReactNode} from 'react';
 import {Bar, BarContents, type BarProps, type BarSlots} from './Bar.tsx';
 import {Button, type ButtonProps} from './Button.tsx';
+import {SegmentedControl, ICON_SEGMENT_VARIANT, type SingleSegmentProps,
+  type SegmentValue} from './SegmentedControl.tsx';
+
+/** Product data supplies the glyphs and destinations. */
+export function HeaderNavigation<Value extends SegmentValue>(props: SingleSegmentProps<Value>) {
+  return <nav className="app-bar-navigation" aria-label={props.ariaLabel}>
+    <SegmentedControl {...props} iconOnly variant={ICON_SEGMENT_VARIANT}/>
+  </nav>;
+}
+
 
 /** The full page header surface used by core. Applications own navigation and slot lifetimes. */
 export const PageHeaderBar = forwardRef<HTMLElement, Omit<BarProps, 'as'>>(function PageHeaderBar(
