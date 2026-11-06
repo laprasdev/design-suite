@@ -1,3 +1,4 @@
+export {CodeXml as CodeIcon, Server as ServerIcon, LibraryBig as LibraryIcon} from 'lucide-react';
 import type {ButtonHTMLAttributes,ReactNode} from 'react';
 
 // A header's square icon control. `active` marks the panel or mode it holds open.
