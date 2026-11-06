@@ -12,6 +12,8 @@ export const PAGE_STACK_MOVING='data-page-moving';
 export const PAGE_STACK_DIRECTION='data-page-direction';
 export interface CrossfadePageProps {
  form: 'page';
+ /** Ordered peer pages use the same stack, retaining each visited mount. */
+ activeKey?: string;
  views: readonly StackView[];
  className?: string;
  // An optional destination heading/control. Back prefers the retained page's
@@ -33,19 +35,22 @@ interface LeavingPage {
  copy: PageCopy;
 }
 
-// Every retained key is one React mount. Only its DOM snapshot travels out.
-export function CrossfadePage({views,className='',focusRef}: CrossfadePageProps) {
+// Every retained key is one React mount. Peer pages travel themselves; popped pages leave a DOM snapshot.
+export function CrossfadePage({views,className='',focusRef,activeKey}: CrossfadePageProps) {
  const surface=useRef<HTMLDivElement>(null),pages=useRef(new Map<string,HTMLDivElement>());
  const saved=useRef(new Map<string,RetainedPage>()),shown=useRef<ShownPage|null>(null);
  const leaving=useRef<LeavingPage|null>(null),motion=useRef<(()=>void)|null>(null);
- const keys=pageStackKeys(views),key=keys.at(-1),before=shown.current;
+ const visited=useRef(new Set<string>());
+ const keys=pageStackKeys(views),key=activeKey??keys.at(-1),before=shown.current;
+ if(activeKey!==undefined&&!keys.includes(activeKey))throw new Error('The active page must be registered.');
+ if(key!==undefined)visited.current.add(key);
  if(before?.node&&before.key!==key&&(leaving.current?.from!==before||leaving.current.to!==key)) {
   const active=document.activeElement;
   saved.current.set(before.key!,{
    scroll:captureRetainedPageScroll(before.node),
    focus:active instanceof HTMLElement&&before.node.contains(active)?active:null,
   });
-  leaving.current={from:before,to:key,copy:capturePage(before.node)};
+  if(activeKey===undefined)leaving.current={from:before,to:key,copy:capturePage(before.node)};
  }
  useLayoutEffect(()=>{
   const root=surface.current,node=key===undefined?null:pages.current.get(key)??null;
@@ -57,13 +62,15 @@ export function CrossfadePage({views,className='',focusRef}: CrossfadePageProps)
   if(previous&&previous.key===key&&previous.node===node)return;
   motion.current?.();
   motion.current=null;
-  for(const [id,page] of pages.current)page.inert=id!==key;
+  for(const [id,page] of pages.current){page.inert=id!==key;page.hidden=id!==key;}
   const outgoing=leaving.current?.from===previous&&leaving.current.to===key?leaving.current.copy:null;
   leaving.current=null;
   if(!node)return;
   const retained=key===undefined?undefined:saved.current.get(key);
   if(retained)restoreRetainedPageScroll(node,retained.scroll);
-  const direction=pageStackDirection(previous?.keys??[],keys);
+  const direction=activeKey!==undefined&&previous?.key!==undefined
+   ? Math.sign(keys.indexOf(key!)-keys.indexOf(previous.key)) as -1|0|1
+   : pageStackDirection(previous?.keys??[],keys);
   const focus=()=>{
    const prior=direction<0?retained?.focus:null;
    for(const target of [prior&&node.contains(prior)?prior:null,focusRef?.current,node]) {
@@ -73,14 +80,21 @@ export function CrossfadePage({views,className='',focusRef}: CrossfadePageProps)
    }
   };
   if(!previous){if(focusRef?.current)focus();return;}
-  if(!outgoing||reducedMotion()){focus();return;}
-  const copy=placePageCopy(root,outgoing),frames=pageFrames(direction);
+  const retainedOutgoing=activeKey!==undefined?previous.node:null;
+  if((!outgoing&&!retainedOutgoing)||reducedMotion()){focus();return;}
+  // Peer navigation animates the retained page itself: no duplicate iframe or running preview.
+  const copy=retainedOutgoing??placePageCopy(root,outgoing!),frames=pageFrames(direction);
+  if(retainedOutgoing){copy.hidden=false;copy.classList.add('bd-page-leaving');}
   root.setAttribute(PAGE_STACK_MOVING,'true');
   root.setAttribute(PAGE_STACK_DIRECTION,String(direction));
   node.inert=true;
-  const exit=animatePage(copy,...frames.outgoing),enter=animatePage(node,...frames.incoming);
+  const regions={chrome: '[data-page-bar]'};
+  const exit=animatePage(copy,...frames.outgoing,regions),enter=animatePage(node,...frames.incoming,regions);
   const stop=()=>{
-   exit.cancel();enter.cancel();removePageCopy(outgoing);node.inert=false;
+   exit.cancel();enter.cancel();
+   if(retainedOutgoing){copy.classList.remove('bd-page-leaving');copy.hidden=true;}
+   else removePageCopy(outgoing!);
+   node.inert=false;
    root.removeAttribute(PAGE_STACK_MOVING);root.removeAttribute(PAGE_STACK_DIRECTION);
   };
   motion.current=stop;
@@ -91,7 +105,8 @@ export function CrossfadePage({views,className='',focusRef}: CrossfadePageProps)
  });
  useLayoutEffect(()=>()=>{motion.current?.();motion.current=null;},[]);
  return <div ref={surface} className={`${CrossfadePageElement.SURFACE}${className?` ${className}`:''}`}>
-  {views.map(view=><div key={view.key} ref={node=>{
+  {views.filter(view=>activeKey===undefined||visited.current.has(view.key)).map(view=><div key={view.key}
+   ref={node=>{
    if(node)pages.current.set(view.key,node);else pages.current.delete(view.key);
   }} className={CrossfadePageElement.PAGE} hidden={view.key!==key} aria-hidden={view.key!==key||undefined}
    tabIndex={-1}>{view.node}</div>)}
