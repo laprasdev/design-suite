@@ -105,7 +105,8 @@ export function SegmentedControl<V extends SegmentValue>(props: SegmentedControl
       const delta=low<start?low-start:high>end?high-end:0;
       if(vertical)node.scrollTop+=delta;else node.scrollLeft+=delta;
     };
-    const observer=new ResizeObserver(reveal);observer.observe(node);observer.observe(selected);reveal();
+    const observer=new ResizeObserver(reveal);observer.observe(node);
+    node.querySelectorAll('button').forEach(option=>observer.observe(option,{box:'border-box'}));reveal();
     return()=>observer.disconnect();
   },[scroll,value,orientation]);
   useLayoutEffect(()=>{
@@ -122,8 +123,20 @@ export function SegmentedControl<V extends SegmentValue>(props: SegmentedControl
   useLayoutEffect(()=>{
     if(!filled)return;
     const update=()=>{
-      const frame=root.current,selected=frame?.querySelector<HTMLElement>('button[data-on="true"]'),node=indicator.current;if(!frame||!selected||!node)return;
-      const computed=getComputedStyle(selected),box: IndicatorBox={x:selected.offsetLeft,y:selected.offsetTop,w:selected.offsetWidth,h:selected.offsetHeight,color:computed.getPropertyValue('--segment-fill').trim()||computed.backgroundColor,radius:computed.borderRadius};
+      const frame=root.current,selected=frame?.querySelector<HTMLElement>('button[data-on="true"]'),node=indicator.current;
+      if(!frame||!node)return;
+      node.hidden=!selected;
+      if(!selected){animation.current?.cancel();previous.current=null;return;}
+      const computed=getComputedStyle(selected),frameStyle=getComputedStyle(frame),option=cssRect(frame,selected),origin=cssRect(frame);
+      if(!option.width||!option.height){node.hidden=true;animation.current?.cancel();previous.current=null;return;}
+      // The frame owns border-box sizing. Remove an ancestor's entrance scale as well
+      // as CSS zoom, keeping fractional option bounds in the frame's layout coordinates.
+      const scaleX=origin.width/parseFloat(frameStyle.width),scaleY=origin.height/parseFloat(frameStyle.height);
+      const box: IndicatorBox={
+        x:(option.left-origin.left)/scaleX-parseFloat(frameStyle.borderLeftWidth)+frame.scrollLeft,
+        y:(option.top-origin.top)/scaleY-parseFloat(frameStyle.borderTopWidth)+frame.scrollTop,
+        w:option.width/scaleX,h:option.height/scaleY,color:computed.getPropertyValue('--segment-fill').trim()||computed.backgroundColor,radius:computed.borderRadius,
+      };
       box.token=box.color;
       const current=previous.current;
       if(current&&current.x===box.x&&current.y===box.y&&current.w===box.w&&current.h===box.h&&current.value===value&&current.token===box.token)return;
@@ -134,8 +147,12 @@ export function SegmentedControl<V extends SegmentValue>(props: SegmentedControl
       const travels=!!current&&placed(current)&&placed(box)&&(current.value!==value||inFlight);
       const recolors=!!current&&placed(box)&&current.token!==box.token;
       // The indicator's place in the options' coordinates, which a scrolled frame offsets.
-      const actual=cssRect(frame,node),origin=cssRect(frame);
-      const from={...(travels?{x:actual.left-origin.left-frame.clientLeft+frame.scrollLeft,y:actual.top-origin.top-frame.clientTop+frame.scrollTop,w:actual.width,h:actual.height}:box),color:getComputedStyle(node).backgroundColor};
+      const actual=cssRect(frame,node);
+      const from={...(travels?{
+        x:(actual.left-origin.left)/scaleX-parseFloat(frameStyle.borderLeftWidth)+frame.scrollLeft,
+        y:(actual.top-origin.top)/scaleY-parseFloat(frameStyle.borderTopWidth)+frame.scrollTop,
+        w:actual.width/scaleX,h:actual.height/scaleY,
+      }:box),color:getComputedStyle(node).backgroundColor};
       animation.current?.cancel();Object.assign(node.style,{left:`${box.x}px`,top:`${box.y}px`,width:`${box.w}px`,height:`${box.h}px`,borderRadius:box.radius,background:box.color});
       // Resolve custom-property colors before animating between teams.
       box.color=getComputedStyle(node).backgroundColor;
@@ -143,7 +160,10 @@ export function SegmentedControl<V extends SegmentValue>(props: SegmentedControl
       previous.current={...box,value,travels};
     };
     const frame=root.current;if(!frame)return;
-    update();const observer=new ResizeObserver(update);observer.observe(frame);window.addEventListener(PALETTE_CHANGE_EVENT,update);return()=>{observer.disconnect();window.removeEventListener(PALETTE_CHANGE_EVENT,update);};
+    update();const observer=new ResizeObserver(update);observer.observe(frame);
+    frame.querySelectorAll('button').forEach(option=>observer.observe(option,{box:'border-box'}));
+    window.addEventListener(PALETTE_CHANGE_EVENT,update);
+    return()=>{observer.disconnect();window.removeEventListener(PALETTE_CHANGE_EVENT,update);};
   });
   const onKeyDown=(e: KeyboardEvent<HTMLDivElement>)=>{
     const previous=orientation==='vertical'?'ArrowUp':'ArrowLeft',next=orientation==='vertical'?'ArrowDown':'ArrowRight';
