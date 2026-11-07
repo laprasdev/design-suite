@@ -16,6 +16,8 @@ export { ViewStack, type StackView, type ViewStackProps } from "./ViewStack.tsx"
 export { PipRow, type PipRowProps } from "./PipRow.tsx";
 export { Button, type ButtonProps, type ButtonVariant } from "./Button.tsx";
 export { Modal, type ModalProps } from './Modal.tsx';
+export { ModalRow, type ModalRowProps, type ModalTitleProps } from './ModalLayout.tsx';
+export { ModalElement, MODAL_TITLED_ATTRIBUTE, MODAL_ROW_LABELLED_ATTRIBUTE } from './modalElements.ts';
 export { PlayerIcon, PlayerStatusRings, type PlayerIconProps, type PhotoRing, type StatusRing, type RingSegment, type Hand, type ActiveHand } from './PlayerIcon.tsx';
 export { focusableControls } from './focusable.ts';
 export { KEPT_ROOM_ATTRIBUTE, SCROLL_STEP_PX, modalGrowthLimit } from './modalRoom.ts';

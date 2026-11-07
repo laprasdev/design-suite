@@ -12,7 +12,7 @@
     "src/react/HeaderIconButton.tsx": {"lines":12,"longLines":5,"importLines":1},
     "src/react/HoverDetail.tsx": {"lines":57,"longLines":14,"importLines":4},
     "src/react/ListboxSelect.tsx": {"lines":90,"longLines":18,"importLines":8},
-    "src/react/Modal.tsx": {"lines":247,"longLines":20,"importLines":3},
+    "src/react/Modal.tsx": {"lines":249,"longLines":20,"importLines":6},
     "src/react/Photos.tsx": {"lines":52,"longLines":2,"importLines":1},
     "src/react/PlayerIcon.tsx": {"lines":139,"longLines":9,"importLines":2},
     "src/react/SearchField.tsx": {"lines":16,"longLines":2,"importLines":2},
@@ -57,5 +57,7 @@
     "tests/composable.test.ts": {"lines":54,"longLines":2,"importLines":6},
     "tests/skins.test.ts": {"lines":131,"longLines":3,"importLines":9}
   },
-  "allowances": []
+  "allowances": [
+    {"path":"src/react/Modal.tsx","step":"lane/modal-blueprint merge","reason":"The titled layout and its element contracts live in their own files (ModalLayout.tsx, modalElements.ts); Modal.tsx gains only the two lines importing them","date":"2026-11-07","from":{"lines":247,"importLines":3},"to":{"lines":249,"importLines":6}}
+  ]
 }

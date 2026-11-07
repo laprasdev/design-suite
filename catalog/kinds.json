@@ -196,6 +196,7 @@
   },
   "Container": {
    "data": "grouping and depth",
+   "note": "Modal has a titled form: its title, ModalRow rows on two shared columns and an actions row that stays in view while the rows scroll.",
    "containerForms": [
     "module",
     "cutout",
@@ -209,6 +210,7 @@
     "ViewStack",
     "Button",
     "Modal",
+    "ModalRow",
     "GooExpander",
     "GraphDisplay"
    ],
