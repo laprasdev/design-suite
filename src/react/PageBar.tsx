@@ -3,6 +3,7 @@ import {Bar, BarContents, type BarProps, type BarSlots} from './Bar.tsx';
 import {Button, type ButtonProps} from './Button.tsx';
 import {SegmentedControl, ICON_SEGMENT_VARIANT, type SingleSegmentProps,
   type SegmentValue} from './SegmentedControl.tsx';
+import {ActionNotice, type ActionBarNotice} from './ActionBar.tsx';
 
 /** Product data supplies the glyphs and destinations. */
 export function HeaderNavigation<Value extends SegmentValue>(props: SingleSegmentProps<Value>) {
@@ -13,10 +14,17 @@ export function HeaderNavigation<Value extends SegmentValue>(props: SingleSegmen
 
 
 /** The full page header surface used by core. Applications own navigation and slot lifetimes. */
-export const PageHeaderBar = forwardRef<HTMLElement, Omit<BarProps, 'as'>>(function PageHeaderBar(
-  {className = '', ...props}, ref,
+export interface PageHeaderBarProps extends Omit<BarProps, 'as'> {
+  notice?: ActionBarNotice|null;
+  /** At phone width the centre slot takes its own row below the left and right slots. */
+  centerRow?: boolean;
+}
+export const PageHeaderBar = forwardRef<HTMLElement, PageHeaderBarProps>(function PageHeaderBar(
+  {className = '', notice, centerRow, ...props}, ref,
 ) {
-  return <Bar {...props} as="header" data-page-bar="header" ref={ref} className={`app-bar ${className}`}/>;
+  return <><Bar {...props} as="header" data-page-bar="header" data-center-row={centerRow || undefined}
+    ref={ref} className={`page-surface app-bar ${className}`}/>
+    <ActionNotice notice={notice}/></>;
 });
 export interface FooterAction extends Omit<ButtonProps, 'children'> {label: ReactNode}
 export interface PageFooterProps extends Omit<BarProps, 'as' | 'slots'> {

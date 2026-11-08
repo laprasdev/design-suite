@@ -13,7 +13,7 @@ export { Label, Glyph, Divider, LightBox, type LabelKind } from "./accents.tsx";
 export { MonthGrid, type DayCell, type MonthGridProps } from "./Calendar.tsx";
 export { Cycle, type CycleOption, type CycleProps } from "./Cycle.tsx";
 export { ViewStack, type StackView, type ViewStackProps } from "./ViewStack.tsx";
-export { PipRow, type PipRowProps } from "./PipRow.tsx";
+export { PipRow, PipRowForm, type PipRowProps, type PipRowFormValue } from "./PipRow.tsx";
 export { Button, type ButtonProps, type ButtonVariant } from "./Button.tsx";
 export { Modal, type ModalProps } from './Modal.tsx';
 export { ModalRow, type ModalRowProps, type ModalTitleProps } from './ModalLayout.tsx';
