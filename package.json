@@ -112,7 +112,8 @@
     "prepare": "npm run build",
     "check": "tsc -p . && node scripts/size-gate.mjs",
     "test": "node --test tests/*.test.ts",
-    "check:graph": "tsc -p tsconfig.graph-tests.json"
+    "check:graph": "tsc -p tsconfig.graph-tests.json",
+    "check:forms": "tsc -p tsconfig.form-tests.json && node --test tests/photos.test.ts tests/pipRowForm.test.ts"
   },
   "devDependencies": {
     "@types/react": "^18.3.31",

@@ -274,6 +274,7 @@
   },
   "PhotoCompare": {
    "data": "labeled captures, compared",
+   "note": "PhotoCompareForm.INLINE fits an existing review row without outer margins. Public --photo-compare-max-height, --photo-compare-background and --photo-compare-caption-size tokens control its contained image and caption; default comparisons and PhotoStrip remain unchanged.",
    "kit": [
     "PhotoCompare"
    ]

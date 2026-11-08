@@ -35,10 +35,14 @@ export interface CompareCapture {
   title?: string;
 }
 
-export function PhotoCompare({ captures, className = "" }: { captures: readonly CompareCapture[]; className?: string }) {
+export const PhotoCompareForm = Object.freeze({ INLINE: 'inline' } as const);
+
+export function PhotoCompare({ captures, className = "", form }: {
+  captures: readonly CompareCapture[]; className?: string; form?: typeof PhotoCompareForm.INLINE;
+}) {
   if (!captures.length) return null;
   return (
-    <div className={`bd-compare${className ? " " + className : ""}`}>
+    <div className={`bd-compare${className ? " " + className : ""}`} data-photo-form={form}>
       {captures.map(c => (
         <figure key={c.src}>
           <a href={c.href ?? c.src} target="_blank" rel="noreferrer" title={c.title ?? c.label}>

@@ -13,7 +13,7 @@
     "src/react/HoverDetail.tsx": {"lines":57,"longLines":14,"importLines":4},
     "src/react/ListboxSelect.tsx": {"lines":90,"longLines":18,"importLines":8},
     "src/react/Modal.tsx": {"lines":249,"longLines":20,"importLines":6},
-    "src/react/Photos.tsx": {"lines":52,"longLines":2,"importLines":1},
+    "src/react/Photos.tsx": {"lines":52,"longLines":1,"importLines":1},
     "src/react/PlayerIcon.tsx": {"lines":139,"longLines":9,"importLines":2},
     "src/react/SearchField.tsx": {"lines":16,"longLines":2,"importLines":2},
     "src/react/SegmentedControl.tsx": {"lines":170,"longLines":23,"importLines":6},

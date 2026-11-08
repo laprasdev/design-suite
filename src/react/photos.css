@@ -17,3 +17,17 @@
 }
 .bd-compare img { display: block; width: 100%; height: auto; }
 .bd-compare figcaption { margin-top: 4px; }
+
+/* Inline comparisons live inside a caller's row. Their sizing and surface are public tokens;
+   default comparisons and photo strips keep their original layout and label styling. */
+.bd-compare[data-photo-form="inline"] { margin: 0; }
+.bd-compare[data-photo-form="inline"] a { cursor: zoom-in; }
+.bd-compare[data-photo-form="inline"] img {
+  max-height: var(--photo-compare-max-height, none);
+  object-fit: contain;
+  background: var(--photo-compare-background, transparent);
+}
+.bd-compare[data-photo-form="inline"] figcaption {
+  font-size: max(12px, var(--photo-compare-caption-size, var(--type-caption, 12px)));
+}
+.bd-compare[data-photo-form="inline"] figcaption:empty { display: none; }

@@ -55,7 +55,7 @@ export {Knob, KnobForm, KnobPreset, type KnobConfig} from '../synth/components/s
 export { Graph } from '../synth/components/synth/Graph.tsx';
 export { StyleProvider, useStyle } from '../synth/StyleContext.tsx';
 export { CaretButton, type CaretButtonProps } from './CaretButton.tsx';
-export { PhotoStrip, PhotoCompare, type StripPhoto, type CompareCapture } from './Photos.tsx';
+export { PhotoStrip, PhotoCompare, PhotoCompareForm, type StripPhoto, type CompareCapture } from './Photos.tsx';
 export { Crossfade, type CrossfadeProps } from './Crossfade.tsx';
 export {
   CrossfadePageElement,PAGE_STACK_MOVING,PAGE_STACK_DIRECTION,type CrossfadePageProps,
