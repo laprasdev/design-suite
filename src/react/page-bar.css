@@ -44,6 +44,11 @@
 .app-bar-navigation>.seg {--segment-padding-block:0;flex:none;gap:var(--header-gap);}
 .app-root .app-bar-navigation .seg button {width:var(--header-control);height:var(--header-control);padding:0;}
 .app-bar-navigation svg {width:var(--header-icon-size);height:var(--header-icon-size);}
+/* At either edge, the glyph meets the page gutter while its square hit area
+   reaches into the gutter. Navigation beside a brand or Back keeps its spacing. */
+[data-page-bar=header]>:is(.bar-left,.bar-right)>.app-bar-navigation:only-child {
+ margin-inline:calc((var(--header-icon-size) - var(--header-control)) / 2);
+}
 @media(max-width:760px) {
  .page-surface {--page-inset:12px;--page-gutter:var(--page-inset);}
  [data-page-bar=header] {--bar-columns:minmax(0,max-content) minmax(0,1fr) minmax(0,max-content);
