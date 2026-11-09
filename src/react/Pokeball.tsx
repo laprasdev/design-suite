@@ -44,7 +44,10 @@ export function PokeballSpinner({size,fit=false}: {size?: number,fit?: boolean})
 
 // Loading where it happens: inside a widget or beside the thing that's coming.
 interface IndicatorProps {children?: ReactNode,className?: string,size?: number}
-export function LoadingIndicator({children='Loading…',className='',size=28}: IndicatorProps) {
+export function LoadingIndicator({
+ children=<>Loading<span className={LoadingElement.DOTS.className} aria-hidden="true">...</span></>,
+ className='',size=28,
+}: IndicatorProps) {
  return <span className={`${LoadingElement.INDICATOR.className} ${className}`} role="status">
   <PokeballSpinner size={size}/>
   <span>{children}</span>
