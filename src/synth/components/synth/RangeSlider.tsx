@@ -1,29 +1,25 @@
 import React, {useRef, useState} from 'react';
 import {useStyle} from '../../StyleContext.tsx';
-import {LayoutDimensions} from '../../../layout.ts';
 import {getColorScheme, hexToRgba, resolveColorType, type AnyColor} from '../../../color.ts';
 import {Borders} from '../../../tokens.ts';
 import {O} from '../../design/index.ts';
-import {useControlGesture} from './base/useControlBehavior.ts';
-import {MODULATOR_LIVE_COLOR, RangeEnd, VALUE_THICKNESS, modulationLadder, modulatorColor, modulatorOpacity, type ControlModulator, type ModulationProps} from './modulation.ts';
+import {useOwnedControlGesture as useControlGesture} from '../../../react/inputs/useOwnedControlGesture.ts';
+import {VALUE_THICKNESS, type SliderModulationProps} from './modulation.ts';
+import {ModulationTracks} from '../../../react/inputs/ModulationTracks.tsx';
+import {skinFormOrDefault} from '../../../skinForms.ts';
+import {SkinDefault, SliderSkinForm, type SliderSkinFormValue} from '../../../skinKinds.ts';
 
-// A range as one rounded bar on a track you can see, with a dot at each end you can move. Each modulator is a thinner line above the end it moves, pointing where the value goes.
+// A range as one rounded bar on a track you can see, with a dot at each end you can move. Each modulator is a thinner line above the end it moves, pointing where the value goes. The box stays at its track's height, so modulators never move the track: lines overflow above it, and blended, one line and a circle a source sit inside the box's lower padding.
 const HIT_PADDING = 6;
 const NEAR_END_PX = 10;
 const THUMB_SIZE = 14;
 const THUMB_DOT = THUMB_SIZE / 2;
-const LINE_HIT_HEIGHT = 7;
-const LIVE_SCALE = 2.4;
-const CHEVRON_HEIGHT = 6;
-const CHEVRON_WIDTH = 3;
-const NUMERAL_SIZE = LayoutDimensions.moduleGrid.ringNumeralSize;
-const NUMERAL_OFFSET = 8;
 const BAR_GLOW = 6;
-const LINE_GLOW = 3;
 const Grip = Object.freeze({LOW: 'low', HIGH: 'high', BOTH: 'both'} as const);
 type GripValue = typeof Grip[keyof typeof Grip];
 
-export interface RangeSliderProps extends ModulationProps {
+export interface RangeSliderProps extends SliderModulationProps {
+  appearance?: SliderSkinFormValue;
   low: number;
   high: number;
   min: number;
@@ -45,17 +41,13 @@ const decimalsOf = (unit: number) => (String(unit).split('.')[1] ?? '').length;
 /** A value on whole units of `unit`, through the unit's own decimals, so a tenth is written as a tenth and not 16.000000000000004. */
 export const onUnit = (value: number, unit: number) => Number((Math.round(value / unit) * unit).toFixed(decimalsOf(unit)));
 
-function Chevron({at, pointsUp, color, width}: {at: number; pointsUp: boolean; color: string; width: number}) {
-  const tip = pointsUp ? CHEVRON_WIDTH : -CHEVRON_WIDTH;
-  return <svg width={CHEVRON_WIDTH * 2} height={CHEVRON_HEIGHT + width} style={{position: 'absolute', left: `${at}%`, top: '50%', transform: 'translate(-50%, -50%)', overflow: 'visible', pointerEvents: 'none'}}>
-    <path d={`M${CHEVRON_WIDTH} ${width / 2}L${CHEVRON_WIDTH + tip} ${(CHEVRON_HEIGHT + width) / 2}L${CHEVRON_WIDTH} ${CHEVRON_HEIGHT + width / 2}`} fill="none" stroke={color} strokeWidth={width} strokeLinecap="round" strokeLinejoin="round"/>
-  </svg>;
-}
-
-export function RangeSlider({low, high, min, max, onChange, step = 0, singleEnded = false, disabled = false, perPixel, quiet = false, color, ariaLabel, modulators = [], selectedSource, onSelectSource}: RangeSliderProps) {
-  const style = useStyle().getEffectiveStyle();
+export function RangeSlider({appearance, low, high, min, max, onChange, step = 0, singleEnded = false, disabled = false, perPixel, quiet = false, color, ariaLabel, modulators = [], modulationDisplay, selectedSource, onSelectSource}: RangeSliderProps) {
+  const context = useStyle(), style = context.getEffectiveStyle();
+  const visual = appearance ??
+    (singleEnded ? skinFormOrDefault(context.skin, SkinDefault.SLIDER) : SkinDefault.SLIDER.form);
+  const flat = visual === SliderSkinForm.MINIMAL || visual === SliderSkinForm.LINE;
+  const thickness = visual === SliderSkinForm.MINIMAL ? 1 : visual === SliderSkinForm.LINE ? 3 : VALUE_THICKNESS;
   const scheme = getColorScheme(resolveColorType(color), style);
-  const {line, gap} = modulationLadder(VALUE_THICKNESS);
   const track = useRef<HTMLDivElement>(null);
   // `fine` holds where the press landed and what the end held then, for a track too coarse to follow the pointer.
   const drag = useRef<{grip: GripValue; low: number; high: number; start: number; fine: {x: number; value: number} | null} | null>(null);
@@ -110,36 +102,15 @@ export function RangeSlider({low, high, min, max, onChange, step = 0, singleEnde
     else onChange?.(low, Math.max(low, clamp(onUnit(high + direction * unit, unit))));
   };
   const lit = (active || hovered) && !disabled;
-  const topRoom = modulators.length * (gap + line);
   const thumb = (grip: typeof Grip.LOW | typeof Grip.HIGH, value: number, label: string, lowest: number, highest: number) => (
     <div role="slider" tabIndex={disabled ? -1 : 0} aria-label={`${ariaLabel} ${label}`} aria-valuemin={lowest} aria-valuemax={highest} aria-valuenow={value} onKeyDown={nudge(grip)}
       onFocus={() => setHovered(true)} onBlur={() => setHovered(false)}
-      style={{position: 'absolute', left: `${percent(value)}%`, bottom: HIT_PADDING + VALUE_THICKNESS / 2, width: THUMB_SIZE, height: THUMB_SIZE, transform: 'translate(-50%, 50%)', outline: 'none', display: 'grid', placeItems: 'center'}}>
-      {!disabled && <span aria-hidden style={{width: THUMB_DOT, height: THUMB_DOT, borderRadius: '50%', boxSizing: 'border-box', background: quiet ? style.cutoutBackground : scheme.main, border: quiet ? `${Borders.standard.width}px dashed ${scheme.main}` : 'none', boxShadow: quiet || !lit ? 'none' : `0 0 ${BAR_GLOW}px ${scheme.glow}`}}/>}
+      style={{position: 'absolute', left: `${percent(value)}%`, bottom: HIT_PADDING + thickness / 2, width: THUMB_SIZE, height: THUMB_SIZE, transform: 'translate(-50%, 50%)', outline: 'none', display: 'grid', placeItems: 'center'}}>
+      {!disabled && <span aria-hidden style={{width: flat ? (visual === SliderSkinForm.MINIMAL ? 2 : 6) : THUMB_DOT, height: flat ? 12 : THUMB_DOT, borderRadius: flat ? 0 : '50%', boxSizing: 'border-box', background: quiet ? style.cutoutBackground : scheme.main, border: quiet ? `${Borders.standard.width}px dashed ${scheme.main}` : 'none', boxShadow: flat || quiet || !lit ? 'none' : `0 0 ${BAR_GLOW}px ${scheme.glow}`}}/>}
     </div>
   );
-  const lineOf = (modulator: ControlModulator, index: number) => {
-    const end = modulator.end ?? RangeEnd.END;
-    const base = end === RangeEnd.ORIGIN ? low : high;
-    const colorOf = modulatorColor(modulator.root, style);
-    const from = percent(base - (modulator.bipolar ? Math.abs(modulator.depth) : Math.max(0, -modulator.depth)));
-    const to = percent(base + (modulator.bipolar ? Math.abs(modulator.depth) : Math.max(0, modulator.depth)));
-    const y = HIT_PADDING + VALUE_THICKNESS + gap + line / 2 + index * (line + gap);
-    const live = modulator.sample === undefined ? undefined : percent(base + modulator.sample * modulator.depth);
-    const tipUp = modulator.depth >= 0 || modulator.bipolar;
-    const tips = modulator.bipolar ? [{at: from, up: false}, {at: to, up: true}] : [{at: tipUp ? to : from, up: !!tipUp}];
-    return (
-      <div key={`${modulator.source}${end}`} data-modulator={modulator.source} onPointerDown={event => event.stopPropagation()} onClick={() => onSelectSource?.(modulator.source)}
-        style={{position: 'absolute', left: 0, right: 0, bottom: y - LINE_HIT_HEIGHT / 2, height: LINE_HIT_HEIGHT, opacity: modulatorOpacity(modulator.source, selectedSource), transition: 'opacity .17s ease', pointerEvents: 'none'}}>
-        <div style={{position: 'absolute', left: `${from}%`, width: `${to - from}%`, top: '50%', height: line, transform: 'translateY(-50%)', borderRadius: line, background: colorOf, boxShadow: `0 0 ${LINE_GLOW}px ${colorOf}`, pointerEvents: 'auto', cursor: 'pointer'}}/>
-        {tips.map(tip => <Chevron key={String(tip.up)} at={tip.at} pointsUp={tip.up} color={colorOf} width={line}/>)}
-        {live !== undefined && <div style={{position: 'absolute', left: `${live}%`, top: '50%', width: line * LIVE_SCALE, height: line * LIVE_SCALE, transform: 'translate(-50%, -50%)', borderRadius: '50%', background: MODULATOR_LIVE_COLOR, boxShadow: `0 0 ${LINE_GLOW}px ${MODULATOR_LIVE_COLOR}`, pointerEvents: 'none'}}/>}
-        <span style={{position: 'absolute', left: `calc(${tips.at(-1)!.at}% + ${tips.at(-1)!.up ? NUMERAL_OFFSET : -NUMERAL_OFFSET}px)`, top: '50%', transform: 'translate(-50%, -50%)', fontSize: NUMERAL_SIZE, fontWeight: 700, lineHeight: 1, color: colorOf, pointerEvents: 'none'}}>{index + 1}</span>
-      </div>
-    );
-  };
   return (
-    <div ref={track} data-range-slider style={{position: 'relative', flex: 1, minWidth: 0, height: HIT_PADDING * 2 + VALUE_THICKNESS + topRoom, cursor: disabled ? 'not-allowed' : 'ew-resize', touchAction: 'none', userSelect: 'none'}}
+    <div ref={track} data-range-slider data-slider-appearance={visual} style={{position: 'relative', flex: 1, minWidth: 0, height: HIT_PADDING * 2 + thickness, cursor: disabled ? 'not-allowed' : 'ew-resize', touchAction: 'none', userSelect: 'none'}}
       onPointerEnter={() => setHovered(true)} onPointerLeave={() => setHovered(false)}
       onPointerDown={event => {
         if (disabled) return;
@@ -155,13 +126,15 @@ export function RangeSlider({low, high, min, max, onChange, step = 0, singleEnde
       onPointerMove={event => applyDrag(event.clientX)}
       onPointerUp={release}
       onPointerCancel={release}>
-      <div data-range-track style={{position: 'absolute', left: 0, right: 0, bottom: HIT_PADDING, height: VALUE_THICKNESS, borderRadius: VALUE_THICKNESS, background: hexToRgba(scheme.main, disabled ? O.ghost : O.faint)}}/>
-      <div data-range-bar data-range-quiet={quiet || undefined} style={{position: 'absolute', left: `${percent(singleEnded ? min : low)}%`, width: `${percent(high) - percent(singleEnded ? min : low)}%`, bottom: HIT_PADDING, height: VALUE_THICKNESS, borderRadius: VALUE_THICKNESS, boxSizing: 'border-box',
+      <div data-range-track style={{position: 'absolute', left: 0, right: 0, bottom: HIT_PADDING, height: thickness, borderRadius: thickness, background: hexToRgba(scheme.main, disabled ? O.ghost : O.faint)}}/>
+      <div data-range-bar data-range-quiet={quiet || undefined} style={{position: 'absolute', left: `${percent(singleEnded ? min : low)}%`, width: `${percent(high) - percent(singleEnded ? min : low)}%`, bottom: HIT_PADDING, height: thickness, borderRadius: thickness, boxSizing: 'border-box',
         background: disabled ? hexToRgba(scheme.main, O.low) : quiet ? 'transparent' : scheme.main, border: quiet && !disabled ? `${Borders.standard.width}px dashed ${scheme.main}` : 'none',
-        boxShadow: disabled || quiet ? 'none' : `0 0 ${lit ? BAR_GLOW * 2 : BAR_GLOW}px ${scheme.glow}`, transition: 'box-shadow .17s ease'}}/>
+        boxShadow: flat || disabled || quiet ? 'none' : `0 0 ${lit ? BAR_GLOW * 2 : BAR_GLOW}px ${scheme.glow}`, transition: 'box-shadow .17s ease'}}/>
       {!singleEnded && thumb(Grip.LOW, low, 'origin', min, high)}
       {thumb(Grip.HIGH, high, 'end', low, max)}
-      {!disabled && modulators.map(lineOf)}
+      {!disabled && <ModulationTracks modulators={modulators} modulationDisplay={modulationDisplay}
+        selectedSource={selectedSource} onSelectSource={onSelectSource} low={low} high={high} min={min} max={max}
+        thickness={thickness} bottom={HIT_PADDING}/>}
     </div>
   );
 }

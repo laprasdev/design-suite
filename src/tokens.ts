@@ -3,6 +3,7 @@
 // =====================================================
 
 import { LayoutDimensions } from './layout.ts';
+import { MODULE_TEXT_SIZE } from './moduleGridLayout.ts';
 
 // =====================================================
 // SHADOWS
@@ -51,14 +52,14 @@ export const Typography = {
     fontWeight: 600,
     letterSpacing: '0.02em'
   },
-  // A field's name and value on a page's module: never below 10px at zoom 1.
+  // A field's name and value on a page's module, at the module's text size.
   moduleLabel: {
-    fontSize: 12,
+    fontSize: MODULE_TEXT_SIZE,
     fontWeight: 600,
     letterSpacing: '0.05em'
   },
   moduleValue: {
-    fontSize: 12,
+    fontSize: MODULE_TEXT_SIZE,
     fontWeight: 500,
     letterSpacing: '0.02em'
   },

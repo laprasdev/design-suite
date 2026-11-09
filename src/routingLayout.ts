@@ -2,8 +2,10 @@
 // LayoutDimensions.routing is this, kept in its own file so layout.ts holds its size. Most sizes are Fibonacci
 // numbers, so neighbouring sizes stand in φ.
 
+const NODE_WIDTH = 144;
+
 export const RoutingDimensions = {
-  nodeWidth: 144,
+  nodeWidth: NODE_WIDTH,
   nodeHeader: 21,
   nodeRow: 26,
   nodePadding: 5,
@@ -32,7 +34,7 @@ export const RoutingDimensions = {
   // a card's label and each of its terminals, so an icon stands level with its card's label. All on φ.
   outputRow: 21,
   outputIcon: 13,
-  outputCardWidth: 89,
+  outputCardWidth: NODE_WIDTH / 2,
   outputPadding: 5,
   terminalSize: 8,
   menuWidth: 233,

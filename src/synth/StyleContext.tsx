@@ -1,97 +1,15 @@
+import {hexToRgba, hexToFloatRgba} from '../color.ts';
+import { useDocumentPalette } from '../react/useDocumentPalette.ts';
+import type { ComponentSkin } from '../skinAssignments.ts';
+import { skinForm } from '../skinForms.ts';
+import { ContainerForm, SkinKind } from '../skinKinds.ts';
 import React, { createContext, useContext, useMemo, useState, useEffect, type ReactNode } from 'react';
-import type { CasingOption } from './design/SharedTokens.ts';
 import { DEFAULT_SKIN, SKIN_FILES } from '../skins.ts';
-import type { HciDataComposable } from './design/Composable.ts';
 import { skinStyle } from './skinStyle.ts';
 
 export { skinStyle };
-
-export interface StyleTheme {
-  containers?: Record<string, HciDataComposable>;
-  name: string;
-  primaryColor: string;
-  secondaryColor: string;
-  tertiaryColor: string;
-  accentColor: string;
-  backgroundColor: string;
-  backgroundGradientStart: string;
-  backgroundGradientEnd: string;
-  textColor: string;
-  borderColor: string;
-  glowColor: string;
-  inactiveColor: string;
-  cutoutBackground: string;
-  cutoutBorder: string;
-  isFlat: boolean;
-  shadowStyle: string;
-  knobGradient: string[];
-}
-
-export type AccentColorMode = 'styled' | 'primary' | 'secondary' | 'custom';
-
-// Advanced settings for "Into the Rabbit Hole"
-export interface AdvancedSettings {
-  buttonCasing: CasingOption;
-  enumCasing?: CasingOption;
-  titleCasing?: CasingOption;
-  nodeTitleCasing?: CasingOption;
-  nodeChoiceCasing?: CasingOption;
-  buttonWidth: 'CONSISTENT' | 'FIX TO WIDTH';
-  enumStyle: 'DISTINCT' | 'SHARED BACK';
-  enumGlowMode: 'FILL' | 'GLOW'; // For SHARED BACK style
-  graphGridX: 'on' | 'off';
-  graphGridXDistance: '1/8' | '1/4' | '1/3' | '1/2';
-  graphGridY: 'on' | 'off';
-  graphGridYDistance: '1/8' | '1/4' | '1/3' | '1/2';
-  graphGridOpacity: number; // 0-1
-  numberPickerContrast: 'SUBTLE' | 'MEDIUM' | 'HIGH';
-  moduleDisplayMode: 'CUTOUT' | 'FLAT';
-  // X Axis opacity
-  xAxisOpacityMultiplier?: 'none' | '2x' | '3x';
-  xAxisOpacity?: number;
-  // Slop pulse animation
-  slopPulseDuration?: number;
-  // Section label settings
-  sectionLabelSize?: number;
-  sectionSubtextRatio?: number;
-  sectionArrowSize?: number;
-  // Loading Hole settings
-  loadingEnabled?: boolean;
-  loadingDuration?: number; // seconds
-  loadingText?: string;
-  loadingIterations?: number; // sine fade iterations before fade out
-  // Filming settings
-  minimalMode?: boolean; // Hide bottom rows (pickers, booleans, universals, konami)
-  autoHideSettings?: boolean; // Auto-hide settings button after delay
-  autoHideDelay?: number; // seconds before hiding
-  // Layout settings
-  layoutMode?: 'hd' | 'square'; // 'hd' = 16:9, 'square' = 1:1 with konami
-  // Sweep dot gap between cycles
-  sweepGapMs?: number;
-  // Strip title alignment
-  stripTitleAlign?: 'left' | 'right';
-  // Accent color
-  accentColorMode?: AccentColorMode;
-  accentColorOverride?: string;
-}
-
-export type { CasingOption };
-
-interface StyleContextType {
-  currentStyle: StyleTheme;
-  styleName: string;
-  setStyleName: (name: string) => void;
-  primaryColorOverride: string | null;
-  setPrimaryColorOverride: (color: string | null) => void;
-  secondaryColorOverride: string | null;
-  setSecondaryColorOverride: (color: string | null) => void;
-  backgroundOverride: string | null;
-  setBackgroundOverride: (color: string | null) => void;
-  advancedSettings: AdvancedSettings;
-  setAdvancedSettings: (settings: AdvancedSettings) => void;
-  revertToStyle: () => void;
-  getEffectiveStyle: () => StyleTheme;
-}
+export type { StyleTheme, AdvancedSettings, AccentColorMode, CasingOption } from './StyleTypes.ts';
+import type { StyleTheme, AdvancedSettings, StyleContextType } from './StyleTypes.ts';
 
 const StyleContext = createContext<StyleContextType | null>(null);
 
@@ -131,10 +49,17 @@ function loadPersistedState(): Partial<PersistedStyleState> {
   return {};
 }
 
-export function StyleProvider({ children, persist = true }: { children: ReactNode; persist?: boolean }) {
-  const persisted = loadPersistedState();
+export function StyleProvider({ children, persist = true, initialStyleName, palette, skin, documentStyles = true }: {
+  children: ReactNode; persist?: boolean; initialStyleName?: string; palette?: string;
+  skin?: ComponentSkin; documentStyles?: boolean;
+}) {
+  if (initialStyleName && !SKIN_FILES[initialStyleName]) throw new Error(`Unknown initial skin: ${initialStyleName}`);
+  const [persisted] = useState<Partial<PersistedStyleState>>(() => palette ? {} : initialStyleName
+    ? {styleName: initialStyleName} : loadPersistedState());
 
-  const [styleName, setStyleNameState] = useState(persisted.styleName && SKIN_FILES[persisted.styleName] ? persisted.styleName : DEFAULT_SKIN);
+  const [savedStyleName, setStyleNameState] = useState(persisted.styleName && SKIN_FILES[persisted.styleName] ? persisted.styleName : DEFAULT_SKIN);
+  const styleName = palette ?? savedStyleName;
+  if (!SKIN_FILES[styleName]) throw new Error(`Unknown palette: ${styleName}`);
   const [primaryColorOverride, setPrimaryColorOverrideState] = useState<string | null>(persisted.primaryColorOverride ?? null);
   const [secondaryColorOverride, setSecondaryColorOverrideState] = useState<string | null>(persisted.secondaryColorOverride ?? null);
   const [backgroundOverride, setBackgroundOverrideState] = useState<string | null>(persisted.backgroundOverride ?? null);
@@ -167,7 +92,7 @@ export function StyleProvider({ children, persist = true }: { children: ReactNod
   const setBackgroundOverride = (color: string | null) => setBackgroundOverrideState(color);
   const setAdvancedSettings = (settings: AdvancedSettings) => setAdvancedSettingsState(settings);
 
-  const currentStyle = useMemo(() => skinStyle(styleName), [styleName]);
+  const currentStyle = useMemo(() => skinStyle(styleName, !!skin), [styleName, !!skin]);
 
   const revertToStyle = () => {
     setPrimaryColorOverride(null);
@@ -180,10 +105,10 @@ export function StyleProvider({ children, persist = true }: { children: ReactNod
     if (primaryColorOverride) {
       style.primaryColor = primaryColorOverride;
       // Update glow color to match
-      const rgb = hexToRgb(primaryColorOverride);
+      const rgb = hexToFloatRgba(primaryColorOverride);
       if (rgb) {
-        style.glowColor = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.6)`;
-        style.inactiveColor = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.2)`;
+        style.glowColor = hexToRgba(primaryColorOverride, 0.6);
+        style.inactiveColor = hexToRgba(primaryColorOverride, 0.2);
       }
     }
     if (secondaryColorOverride) {
@@ -194,7 +119,9 @@ export function StyleProvider({ children, persist = true }: { children: ReactNod
       style.backgroundGradientStart = backgroundOverride;
       style.backgroundGradientEnd = backgroundOverride;
     }
-    if (advancedSettings.moduleDisplayMode === 'FLAT') {
+    const surface = skinForm(skin, SkinKind.CONTAINER);
+    const flat = surface === ContainerForm.FLAT;
+    if (flat || (!surface && advancedSettings.moduleDisplayMode === 'FLAT')) {
       style.cutoutBackground = style.backgroundColor;
       style.cutoutBorder = style.borderColor;
       style.isFlat = true;
@@ -208,49 +135,12 @@ export function StyleProvider({ children, persist = true }: { children: ReactNod
     return style;
   };
 
-  useEffect(() => {
-    const effectiveStyle = getEffectiveStyle();
-    document.documentElement.style.setProperty('--theme-primary', effectiveStyle.primaryColor);
-
-    let styleEl = document.getElementById('dynamic-scrollbar-style') as HTMLStyleElement;
-    if (!styleEl) {
-      styleEl = document.createElement('style');
-      styleEl.id = 'dynamic-scrollbar-style';
-      document.head.appendChild(styleEl);
-    }
-
-    const rgb = hexToRgb(effectiveStyle.primaryColor);
-    const scrollThumb = rgb ? `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.4)` : 'rgba(51, 169, 168, 0.4)';
-    const scrollThumbHover = rgb ? `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.7)` : 'rgba(51, 169, 168, 0.7)';
-    const scrollTrack = 'rgba(10, 14, 16, 0.5)';
-
-    styleEl.textContent = `
-      html ::-webkit-scrollbar, body ::-webkit-scrollbar, * ::-webkit-scrollbar {
-        width: 3px !important; height: 3px !important;
-      }
-      html ::-webkit-scrollbar-track, body ::-webkit-scrollbar-track, * ::-webkit-scrollbar-track {
-        background: ${scrollTrack} !important;
-      }
-      html ::-webkit-scrollbar-thumb, body ::-webkit-scrollbar-thumb, * ::-webkit-scrollbar-thumb {
-        background: ${scrollThumb} !important; border-radius: 0 !important;
-      }
-      html ::-webkit-scrollbar-thumb:hover, body ::-webkit-scrollbar-thumb:hover, * ::-webkit-scrollbar-thumb:hover {
-        background: ${scrollThumbHover} !important;
-      }
-      html ::-webkit-scrollbar-corner, body ::-webkit-scrollbar-corner, * ::-webkit-scrollbar-corner {
-        background: transparent !important;
-      }
-      html, body, * {
-        scrollbar-width: thin !important;
-        scrollbar-color: ${scrollThumb} ${scrollTrack} !important;
-      }
-    `;
-  }, [styleName, primaryColorOverride, secondaryColorOverride, backgroundOverride, advancedSettings]);
+  useDocumentPalette(getEffectiveStyle().primaryColor, documentStyles);
 
   return (
     <StyleContext.Provider
       value={{
-        currentStyle,
+        currentStyle, skin,
         styleName,
         setStyleName,
         primaryColorOverride,
@@ -278,12 +168,3 @@ export function useStyle() {
   return context;
 }
 
-// Helper function to convert hex to RGB
-function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
-  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-  return result ? {
-    r: parseInt(result[1], 16),
-    g: parseInt(result[2], 16),
-    b: parseInt(result[3], 16)
-  } : null;
-}

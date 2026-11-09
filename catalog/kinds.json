@@ -29,7 +29,7 @@
     "GameViewTabs",
     "PageNavigation"
    ],
-   "note": "Inside an ActionBar it takes the text form by itself; a control's own props still win. Vertical, joined, tabs, fit and scroll make a rail of kinds: rows share its height, the chosen row's indicator slides, and an option's own style draws a line at its edge. ModuleGroups is the text form for a tab's groups, and inline it sits on a row of its own controls, such as a band's tag."
+   "note": "Inside an ActionBar it takes the text form by itself; a control's own props still win. Vertical, joined, tabs, fit and scroll make a rail of kinds: rows share its height, the chosen row's indicator slides, and an option's own style draws a line at its edge. ModuleGroups is the text form for a tab's groups, and inline it sits on a row of its own controls, such as a band's tag. Closed, a vertical joined rail floating in its space draws a rule above its first row and below its last. Cell makes every option a square of the given size with no padding, for an icon strip such as an event's triggers; it doesn't combine with fit. Wrap is the grid form, taking cell, columns and frame as one typed prop and writing the CSS variables its rules read itself; glyphShare and onPoint are top-level props, shared with the icons form. Glyph-wide columns spread edge to edge across the frame, so the first and last glyphs sit on its edges, and rows share its height. A glyph takes its glyphShare of the cell its columns and rows give it, each press area is that whole cell, and the frame is never shorter than its rows of the smallest cell. The consumer measures the columns against that cell from the frame, which wrap hands over, and the gap is the one the CSS lays and sizes by. onPoint reports the option hovered or focused; a control that reports keeps its options pointable when it can't be changed, and presses nothing then. The choice kind's icons form is a cluster of a few options each drawn by an icon, such as a relationship's type: every option a square of ICON_CLUSTER_BOX (φ above the grid's iconChoiceBox, the size a grid's icons reach in the smallest tile), its icon in the slot glyphShare gives it (the options' own icons fill that slot, and the hint names each one), the cells together at that size with the frame ending where they do, so the field takes only the room its cells need and the next field takes the rest of the row. The choice kind's grid form is that, in the icons look with iconChoiceBox as the smallest cell and iconChoiceGlyph as its glyph: many options each drawn by an icon, such as an element's affinity or nature, each naming itself in the page hint."
   },
   "Cycle": {
    "data": "enum, one option visible",
@@ -73,7 +73,7 @@
    "kit": [
     "Knob"
    ],
-   "note": "Forms: knob, and a range as DualTickRangeKnob, which a hold toggles."
+   "note": "Forms: classic, thin outline, cut-out indicator; range as DualTickRangeKnob."
   },
   "Slider": {
    "data": "bounded number or range",
@@ -94,7 +94,7 @@
    "kit": [
     "Slider"
    ],
-   "note": "Forms: cell, setting, range. A range row on a page is ModuleFieldRows, its low and high values beside the track, and a hold toggles it."
+   "note": "Forms: cell, thin line, setting, range, progress. Modulation displays: blended, the default (one thin line a direction under the track, a circle at each source's end), and lines (a line a source above the track with a numeral). The thin form shares cell drag and value behavior. Progress is a readonly weighted distribution on the rounded Synth track; consumers own segment labels, colors and activity."
   },
   "IntegerIncrementer": {
    "data": "integer",
@@ -137,7 +137,11 @@
    "web": [
     "RuntimePreview"
    ],
-   "kitGap": true
+   "kit": [
+    "createModelStage",
+    "ModelPreview"
+   ],
+   "note": "Browser GLB presentation uses /preview3d and the complete view uses /preview3d/react; state evaluation and native camera adapters stay with their owners."
   },
   "NodeGraph": {
    "data": "node network",
@@ -150,6 +154,9 @@
    ],
    "kit": [
     "NodeGraph",
+    "GraphWires",
+    "graphRoutes",
+    "graphDots",
     "Node",
     "bezierPath",
     "edgePoint"
@@ -163,8 +170,11 @@
    "web": [
     "NumericConnections"
    ],
+   "kit": [
+    "ModulationSocket"
+   ],
    "webFirst": "baseball AdvantageTrace",
-   "note": "The gutter threads and the baseball advantage borders are the same idea."
+   "note": "The gutter threads and the baseball advantage borders are the same idea. ModulationSocket is the one assignment target a control carries however many sources it holds, filled by their colours."
   },
   "Accent": {
    "data": "label, glyph, light box, divider",
@@ -201,14 +211,17 @@
    "kit": [
     "ViewStack",
     "Button",
-    "Modal"
+    "Modal",
+    "GooExpander",
+    "GraphDisplay"
    ],
    "core": [
     "MenuCard",
     "SettingsPanel",
     "AppHeader",
     "FooterTray"
-   ]
+   ],
+   "note": "A module's field is ModuleField, from the synth ModuleGrid: its form is the stack of control, reading and name, the control filling the cell's height, or one line as high as a yes/no line with the control, its name and its reading, for a tile too short to stack them."
   },
   "SelectField": {
    "data": "enum, long list",
@@ -223,7 +236,8 @@
    "data": "small count",
    "kit": [
     "PipRow"
-   ]
+   ],
+   "note": "Forms: meter, the default, spreads its pips across the row it fills; compact gives each pip a fixed width and the row only theirs, for a small count beside a title."
   },
   "MonthGrid": {
    "data": "dates",
@@ -234,7 +248,7 @@
   "ActionBar": {
    "data": "the current actors and their state",
    "webFirst": "baseball core ActionBar",
-   "note": "Web-first. Reaches C# once promoted in the language.",
+   "note": "Web-first. Optional notice shows feedback beneath the header with action-label typography and an optional recovery action. PageHeaderBar's centerRow puts the centre slot on its own row at phone width, its below slot holds content under the header (the notice, floating or not, sits beneath it), and floatingNotice floats the notice over the page under the header as the header-notices layer, so what is below never moves. PageFooter's compact drops its settings' labels at phone width; each setting keeps its label as the control's hover hint. Reaches C# once promoted in the language.",
    "core": [
     "ActionBar",
     "Bar",
@@ -244,7 +258,13 @@
    "kit": [
     "ActionBar",
     "Bar",
-    "BarParticipants"
+    "BarParticipants",
+    "PageHeaderBar",
+    "HeaderNavigation",
+    "HeaderBrand",
+    "HeaderBack",
+    "HeaderIconButton",
+    "PageFooter"
    ]
   },
   "CaretButton": {
@@ -261,21 +281,33 @@
   },
   "PhotoCompare": {
    "data": "labeled captures, compared",
+   "note": "PhotoCompareForm.INLINE fits an existing review row without outer margins. Public --photo-compare-max-height, --photo-compare-aspect, --photo-compare-background and --photo-compare-caption-size tokens control its contained image and caption; default comparisons and PhotoStrip remain unchanged. A capture's tile shows one square of a horizontal strip of equal tiles, such as a review sheet's single view; the suite crops it, never the consumer.",
    "kit": [
     "PhotoCompare"
    ]
   },
   "Crossfade": {
    "data": "one visible pane at a time",
+   "note": "Compact form fades peer panes. The page form retains a controlled keyed stack, state and scroll; push and Back slide between pages. Ordered peers use activeKey, retain visited mounts and animate their existing surfaces. Page chrome stays fixed while controls fade. Callers own routes, guards and deactivating effects on hidden pages. The card-flip motion helper turns retained module surfaces in place; consumers own navigation and visible layers.",
    "kit": [
-    "Crossfade"
+    "Crossfade",
+    "animateCardFlip"
    ]
   },
   "DataTable": {
    "data": "named counts and notes",
    "kit": [
-    "DataTable"
+    "DataTable",
+    "RecordTable"
    ]
+  },
+  "Text": {
+   "data": "text",
+   "kit": [
+    "TextInput",
+    "ModuleTextInput"
+   ],
+   "note": "Single-line, multiline and credential fields use the same text control. Native input attributes retain browser password-manager and validation behavior."
   }
  }
 }

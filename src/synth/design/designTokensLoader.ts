@@ -33,6 +33,10 @@ export interface PaletteComponent {
   cutoutBorder?: { rgba: number[] };
 }
 
+/** What a composition's `wrap` asks of a group: its cells flow onto rows, or stay on one line. */
+export const CompositionWrap = Object.freeze({ WRAP: 'wrap', LINEAR: 'linear' } as const);
+export type CompositionWrapValue = typeof CompositionWrap[keyof typeof CompositionWrap];
+
 export interface HciComposableStyle {
   visibility?: string;
   inherit?: string;
@@ -42,7 +46,7 @@ export interface HciComposableStyle {
   sizing?: { sizeX?: number; minX?: number; sizeY?: number; aspectRatio?: number; weightX?: number };
   glyph?: { resourcePath?: string; size?: number; kind?: string };
   flow?: string;
-  wrap?: string;
+  wrap?: CompositionWrapValue;
   minimumCellWidth?: number;
   maximumColumns?: number;
   showAllSubmodules?: boolean;

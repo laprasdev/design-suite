@@ -4,12 +4,13 @@
    ============================================================================ */
 
 /* ---- accents (AccentKind) ---- */
+.bd-label { font-family:var(--font-chrome,inherit); letter-spacing:normal; }
 .bd-label--name {
   font-size: var(--label-name-size, 9px); font-weight: 700; letter-spacing: 0.05em;
   text-transform: uppercase; color: var(--color-dim, #82828e);
 }
 .bd-label--value {
-  font-size: 11px; font-weight: 700; color: var(--color-text, #f0f0f3);
+  font-size: var(--label-value-size,var(--type-control,12px)); font-weight: 700; color: var(--color-text, #f0f0f3);
   font-variant-numeric: tabular-nums;
 }
 /* Button/label text — one source for action typography. Labels read in Title
@@ -115,6 +116,9 @@
   transition: background 0.15s, border-color 0.15s, opacity 0.15s;
 }
 .bd-pip[data-on="false"] { opacity: 0.5; }
+/* Compact: fixed pips, and the row only as wide as they are. */
+.bd-piprow[data-form="compact"] { width: auto; }
+.bd-piprow[data-form="compact"] > .bd-pip { flex: none; width: 8px; }
 
 /* ---- ViewStack (modal that pushes/pops views) ---- */
 .bd-vs-backdrop {
@@ -214,3 +218,11 @@
 .bd-edge-fade {
   mask-image:linear-gradient(90deg,transparent,#000 var(--bd-fade-start,0px),#000 calc(100% - var(--bd-fade-end,0px)),transparent);
 }
+
+/* An authored Cycle in a module header shows only its current value. */
+.bd-cycle[data-variant=text], .bd-cycle[data-variant=text]:hover {
+  padding:0; border:0; border-radius:0; background:transparent; box-shadow:none;
+  color:inherit; font:inherit; cursor:pointer;
+}
+.bd-cycle[data-variant=text] .bd-cycle-val {color:inherit; font:inherit; letter-spacing:inherit;}
+.bd-cycle[data-variant=text]:disabled {cursor:default; opacity:.6;}

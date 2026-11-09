@@ -28,6 +28,16 @@ export interface ModulationProps {
   onSelectSource?: (source: string) => void;
 }
 
+/** How a slider draws its modulators. LINES is one line per source with an arrow tip and a numeral, above the track.
+ *  BLENDED is one thin line per direction under the track, blending the colours of the sources that overlap, with a
+ *  circle at each source's end and no numeral; it needs no room above the track, and is what a slider draws when it
+ *  doesn't choose. */
+export const ModulationDisplay = Object.freeze({LINES: 'lines', BLENDED: 'blended'} as const);
+export type ModulationDisplayValue = typeof ModulationDisplay[keyof typeof ModulationDisplay];
+export interface SliderModulationProps extends ModulationProps {
+  modulationDisplay?: ModulationDisplayValue;
+}
+
 // The one table from registry root to skin role. Rerouting the colours is a change here and nowhere else.
 const ROOT_COLOR: Record<ModulationRootValue, (style: StyleTheme) => string> = {
   [ModulationRoot.SELF]: style => style.primaryColor,
@@ -38,6 +48,10 @@ const ROOT_COLOR: Record<ModulationRootValue, (style: StyleTheme) => string> = {
 export const modulatorColor = (root: ModulationRootValue, style: StyleTheme) => ROOT_COLOR[root](style);
 
 export const MODULATOR_LIVE_COLOR = '#ffffff';
+/** How far every modulation drawing (ring, line, blended track) glows around its colour, in pixels. */
+export const MODULATOR_GLOW = 3;
+/** The one transition every modulation drawing fades with when a source is selected or cleared. */
+export const MODULATOR_FADE = 'opacity .17s ease';
 export const modulatorOpacity = (source: string, selected?: string | null) => (selected && selected !== source ? Opacity.dim : Opacity.full);
 
 // The golden ladder: a modulator line is φ⁻¹ of the value's thickness, and φ of it clears the value and each line.

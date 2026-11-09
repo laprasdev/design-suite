@@ -203,4 +203,3 @@ export function hsvToRgb(h: number, s: number, v: number): [number, number, numb
   const rgb: [number, number, number][] = [[v, t, p], [q, v, p], [p, v, t], [p, q, v], [t, p, v], [v, p, q]];
   return rgb[i % 6];
 }
-

@@ -2,6 +2,8 @@
 // LayoutDimensions.moduleGrid is this, kept in its own file so layout.ts holds its size. Its fillColumnMax, which
 // needs φ, is added there.
 
+// A module's words: every field name, value and label on a page's module, and the owner's text floor.
+export const MODULE_TEXT_SIZE = 12;
 // The largest a knob on a page's module grows, which the grid's columns are measured against.
 export const MODULE_CONTROL_MAX = 88;
 
@@ -23,7 +25,7 @@ export const ModuleGridDimensions = {
     tabMinWidth: 18,
     tabMinHeight: 14,
     iconHeight: 14,
-    tabIconHeight: 20,
+    tabIconHeight: 12,
     fieldGap: 6,
     fieldTextRoom: 44,
     controlShare: 0.85,
@@ -42,12 +44,11 @@ export const ModuleGridDimensions = {
     rowGap: 16,
     // A range row's low or high value beside its track: wide enough for a number to two decimals.
     rowEndWidth: 40,
-    headerSwitchHeight: 14,
-    phaseGlyphHeight: 14,
+    phaseGlyphHeight: 12,
     nameIconHeight: 12,
     // A yes/no field as one line: its dot, drawn at the name's size, then the name. The line is as tall as a module
     // header's, which is what it gives to press.
-    yesNoDot: 12,
+    yesNoDot: MODULE_TEXT_SIZE,
     yesNoStroke: 1.5,
     yesNoDash: 2,
     yesNoLine: 29,

@@ -5,6 +5,7 @@
 // it reveals and keeps the title visible beside it.
 // =====================================================
 import React, { type ButtonHTMLAttributes } from "react";
+import { CARET_PATH, CARET_SIZE, CARET_STROKE, CARET_VIEW } from "./caretGlyph.ts";
 
 export interface CaretButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, "children"> {
   open: boolean;
@@ -20,8 +21,8 @@ export function CaretButton({ open, label, className = "", ...rest }: CaretButto
       aria-label={label}
       {...rest}
     >
-      <svg viewBox="0 0 10 10" width="7" height="7" aria-hidden="true">
-        <path d="M3 1.2 L7.2 5 L3 8.8" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+      <svg viewBox={`0 0 ${CARET_VIEW} ${CARET_VIEW}`} width={CARET_SIZE} height={CARET_SIZE} aria-hidden="true">
+        <path d={CARET_PATH} fill="none" stroke="currentColor" strokeWidth={CARET_STROKE} strokeLinecap="round" strokeLinejoin="round" />
       </svg>
     </button>
   );

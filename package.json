@@ -55,13 +55,53 @@
       "source": "./src/react/modalRoom.ts",
       "default": "./dist/react/modalRoom.js"
     },
-    "./synth/*": "./src/synth/*"
+    "./synth/*": "./src/synth/*",
+    "./preview3d": {
+      "types": "./src/react/preview3d/index.ts",
+      "source": "./src/react/preview3d/index.ts",
+      "default": "./dist/preview3d.js"
+    },
+    "./preview3d/model": {
+      "types": "./src/react/preview3d/model.ts",
+      "source": "./src/react/preview3d/model.ts",
+      "default": "./dist/preview3d/model.js"
+    },
+    "./preview3d/react": {
+      "types": "./src/react/preview3d/react.ts",
+      "source": "./src/react/preview3d/react.ts",
+      "default": "./dist/preview3d/react.js"
+    },
+    "./preview3d/styles.css": {
+      "source": "./src/react/preview3d/styles.css",
+      "default": "./dist/preview3d/styles.css"
+    },
+    "./skinAssignments": {
+      "types": "./src/skinAssignments.ts",
+      "source": "./src/skinAssignments.ts",
+      "default": "./dist/skinAssignments.js"
+    },
+    "./skinKinds": {
+      "types": "./src/skinKinds.ts",
+      "source": "./src/skinKinds.ts",
+      "default": "./dist/skinKinds.js"
+    },
+    "./skinForms": {
+      "types": "./src/skinForms.ts",
+      "source": "./src/skinForms.ts",
+      "default": "./dist/skinForms.js"
+    },
+    "./skinContainer": {
+      "types": "./src/skinContainer.ts",
+      "source": "./src/skinContainer.ts",
+      "default": "./dist/skinContainer.js"
+    }
   },
   "sideEffects": [
     "**/*.css"
   ],
   "peerDependencies": {
-    "react": ">=18"
+    "react": ">=18",
+    "three": "0.180.0"
   },
   "license": "UNLICENSED",
   "files": [
@@ -76,15 +116,25 @@
     "build": "node scripts/build.mjs",
     "prepare": "npm run build",
     "check": "tsc -p . && node scripts/size-gate.mjs",
-    "test": "node --test tests/*.test.ts"
+    "test": "node --test tests/*.test.ts",
+    "check:graph": "tsc -p tsconfig.graph-tests.json",
+    "check:forms": "tsc -p tsconfig.form-tests.json && node --test tests/photos.test.ts tests/pipRowForm.test.ts"
   },
   "devDependencies": {
     "@types/react": "^18.3.31",
     "@types/react-dom": "^18.3.7",
     "esbuild": "0.28.2",
-    "typescript": "^7.0.2"
+    "three": "0.180.0",
+    "typescript": "^7.0.2",
+    "@types/node": "25.9.9"
   },
   "dependencies": {
-    "lucide-react": "^0.487.0"
+    "lucide-react": "^0.487.0",
+    "@types/three": "0.180.0"
+  },
+  "peerDependenciesMeta": {
+    "three": {
+      "optional": true
+    }
   }
 }

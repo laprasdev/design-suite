@@ -1,7 +1,8 @@
 import React from 'react';
 import {useStyle} from '../../StyleContext.tsx';
 import {LayoutDimensions} from '../../../layout.ts';
-import {MODULATOR_LIVE_COLOR, modulationLadder, modulatorColor, modulatorOpacity, type ModulationProps} from './modulation.ts';
+import {ModulationPart} from '../../../react/inputs/modulationParts.ts';
+import {MODULATOR_GLOW, MODULATOR_LIVE_COLOR, RangeEnd, modulationLadder, modulatorColor, modulatorOpacity, MODULATOR_FADE, type ModulationProps} from './modulation.ts';
 
 const SWEEP_DEGREES = 270;
 const SWEEP_START = -135;
@@ -11,7 +12,6 @@ const NUMERAL_OFFSET = 7;
 const NUMERAL_SIZE = LayoutDimensions.moduleGrid.ringNumeralSize;
 const LIVE_RADIUS_FACTOR = 0.8;
 const HIT_WIDTH = 7;
-const RING_GLOW = 3;
 const degrees = (radians: number) => radians * 180 / Math.PI;
 
 function point(center: number, radius: number, angle: number) {
@@ -30,19 +30,20 @@ export interface ModulationRingsProps extends ModulationProps {
   thickness: number;
   /** The base value, 0 to 1 along the knob's sweep. */
   fraction: number;
+  originFraction?: number;
   span: number;
 }
 
 // Rings grow from where the value's arc ends, each on its own radius, one numeral per source at its far end.
-export function ModulationRings({modulators = [], selectedSource, onSelectSource, size, radius, thickness, fraction, span}: ModulationRingsProps) {
+export function ModulationRings({modulators = [], selectedSource, onSelectSource, size, radius, thickness, fraction, originFraction, span}: ModulationRingsProps) {
   const style = useStyle().getEffectiveStyle();
   const center = size / 2, {line, gap} = modulationLadder(thickness);
-  const valueAngle = SWEEP_START + SWEEP_DEGREES * fraction;
-  const valueEdge = valueAngle + degrees(thickness / 2 / radius);
   const outer = radius + thickness / 2 + modulators.length * (gap + line);
   return (
     <svg width={size} height={size} style={{position: 'absolute', top: 0, left: 0, overflow: 'visible', pointerEvents: 'none'}}>
       {modulators.map((modulator, index) => {
+        const value = modulator.end === RangeEnd.ORIGIN ? originFraction ?? fraction : fraction;
+        const valueEdge = SWEEP_START + SWEEP_DEGREES * value + degrees(thickness / 2 / radius);
         const ringRadius = radius + thickness / 2 + gap + line / 2 + index * (line + gap);
         const cap = degrees(line / 2 / ringRadius);
         const reach = Math.abs(modulator.depth) / span * SWEEP_DEGREES;
@@ -57,11 +58,11 @@ export function ModulationRings({modulators = [], selectedSource, onSelectSource
         const [numeralX, numeralY] = point(center, outer + NUMERAL_OFFSET, farAngle ?? valueEdge);
         const live = modulator.sample === undefined ? undefined : point(center, ringRadius, clampAngle(valueEdge + modulator.sample * modulator.depth / span * SWEEP_DEGREES));
         return (
-          <g key={`${modulator.source}${index}`} data-modulator={modulator.source} opacity={modulatorOpacity(modulator.source, selectedSource)} style={{transition: 'opacity .17s ease'}}>
-            {drawn.map(([from, to], part) => <path key={part} d={arc(center, ringRadius, from, to)} fill="none" stroke={color} strokeWidth={line} strokeLinecap="round" style={{filter: `drop-shadow(0 0 ${RING_GLOW}px ${color})`}}/>)}
+          <g key={`${modulator.source}${index}`} {...{[ModulationPart.SOURCE]: modulator.source}} opacity={modulatorOpacity(modulator.source, selectedSource)} style={{transition: MODULATOR_FADE}}>
+            {drawn.map(([from, to], part) => <path key={part} d={arc(center, ringRadius, from, to)} fill="none" stroke={color} strokeWidth={line} strokeLinecap="round" style={{filter: `drop-shadow(0 0 ${MODULATOR_GLOW}px ${color})`}}/>)}
             {drawn.map(([from, to], part) => <path key={part} d={arc(center, ringRadius, from, to)} fill="none" stroke="transparent" strokeWidth={HIT_WIDTH} strokeLinecap="round"
-              style={{pointerEvents: 'stroke', cursor: 'pointer'}} onMouseDown={event => event.stopPropagation()} onClick={select}/>)}
-            {live && <circle cx={live[0]} cy={live[1]} r={line * LIVE_RADIUS_FACTOR} fill={MODULATOR_LIVE_COLOR} style={{filter: `drop-shadow(0 0 ${RING_GLOW}px ${MODULATOR_LIVE_COLOR})`}}/>}
+              style={{pointerEvents: 'stroke', cursor: 'pointer'}} onMouseDown={event => event.stopPropagation()} onPointerDown={event => event.stopPropagation()} onClick={select}/>)}
+            {live && <circle cx={live[0]} cy={live[1]} r={line * LIVE_RADIUS_FACTOR} fill={MODULATOR_LIVE_COLOR} style={{filter: `drop-shadow(0 0 ${MODULATOR_GLOW}px ${MODULATOR_LIVE_COLOR})`}}/>}
             <text x={numeralX} y={numeralY} fill={color} fontSize={NUMERAL_SIZE} fontWeight={700} textAnchor="middle" dominantBaseline="middle">{index + 1}</text>
           </g>
         );

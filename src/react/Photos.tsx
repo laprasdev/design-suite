@@ -33,16 +33,32 @@ export interface CompareCapture {
   label: string;
   href?: string;
   title?: string;
+  // One square tile of a horizontal strip of `count` equal tiles, shown alone: a review sheet's single view.
+  tile?: { readonly index: number; readonly count: number };
 }
 
-export function PhotoCompare({ captures, className = "" }: { captures: readonly CompareCapture[]; className?: string }) {
+// Where a strip's tile sits for object-position: its share of the strip's travel.
+const tilePosition = ({ index, count }: NonNullable<CompareCapture["tile"]>) => {
+  if (!Number.isInteger(count) || count < 1 || !Number.isInteger(index) || index < 0 || index >= count) {
+    throw new Error(`PhotoCompare tile ${index} is outside a strip of ${count}`);
+  }
+  return `${count === 1 ? 50 : (index / (count - 1)) * 100}% 50%`;
+};
+
+export const PhotoCompareForm = Object.freeze({ INLINE: 'inline' } as const);
+
+export function PhotoCompare({ captures, className = "", form }: {
+  captures: readonly CompareCapture[]; className?: string; form?: typeof PhotoCompareForm.INLINE;
+}) {
   if (!captures.length) return null;
   return (
-    <div className={`bd-compare${className ? " " + className : ""}`}>
+    <div className={`bd-compare${className ? " " + className : ""}`} data-photo-form={form}>
       {captures.map(c => (
         <figure key={c.src}>
           <a href={c.href ?? c.src} target="_blank" rel="noreferrer" title={c.title ?? c.label}>
-            <img src={c.src} alt={c.title ?? c.label} loading="lazy" />
+            <img src={c.src} alt={c.title ?? c.label} loading="lazy"
+              data-tile={c.tile ? "true" : undefined}
+              style={c.tile ? { objectPosition: tilePosition(c.tile) } : undefined} />
           </a>
           <figcaption className="bd-label bd-label--name">{c.label}</figcaption>
         </figure>

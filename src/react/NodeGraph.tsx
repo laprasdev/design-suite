@@ -12,26 +12,29 @@
 // With `onMovesChange`, nodes can be moved (see useNodeMoving): drag one, or select several and drag them together.
 // `moves` are offsets from each node's laid-out place, which the consumer keeps.
 // An edge with `flow` carries a few lights along it, for work moving through.
+// `groups` draw collapsible member frames; drag their headings to move them with their members.
+// Group offsets share `moves` with nodes; the consumer owns folding and layout.
+// `onTiesChange` enables Shift-drag wire sweeps and twist ties; Alt-drag selects nodes.
+// `onGroupResize` enables gestures on every group edge; the consumer reflows its members.
+// Keep `ties` alongside moves. Edge ids must remain stable when nodes move.
+// `interactionSurface` can extend selection to a surrounding pan/zoom viewport.
 // =====================================================
-import React, { useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import React, { useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 import { Node } from "./Node.tsx";
-import { edgePoint, linkPath, type NodeBox, type NodeSide } from "./geometry.ts";
+import { GraphWires } from "./GraphWires.tsx";
+import { NodeGroups } from "./NodeGroups.tsx";
+import { groupFrames } from "./groupGeometry.ts";
+import type { GraphNode, GraphEdge, GraphGroup, GraphGroupResize, GroupOutlets, TwistTie } from "./nodeGraphTypes.ts";
+import { movedGraph } from "./nodeGraphTypes.ts";
+export { graphEdgeId, movedGraph } from "./nodeGraphTypes.ts";
+export type {
+  GraphNode, GraphEdge, GraphGroup, GraphGroupResize, GroupEdge, GroupResizePhase,
+  GroupOutlet, GroupOutlets, EdgeEnd, TwistTie,
+} from "./nodeGraphTypes.ts";
 import { useNodeMoving, type NodeMoves } from "./useNodeMoving.ts";
 
 export type { NodeMove, NodeMoves } from "./useNodeMoving.ts";
 
-// A node on the canvas: its id, box and accent, and the consumer's own fields.
-export interface GraphNode extends NodeBox {
-  id: string;
-  accent?: boolean;
-}
-// An edge end: a node, the side it leaves from, and where along that side.
-export type EdgeEnd = readonly [id: string, side: NodeSide, t?: number];
-export interface GraphEdge {
-  from: EdgeEnd;
-  to: EdgeEnd;
-  flow?: boolean;
-}
 export interface NodeGraphProps<N extends GraphNode> {
   width: number;
   height: number;
@@ -44,26 +47,19 @@ export interface NodeGraphProps<N extends GraphNode> {
   children?: ReactNode;
   moves?: NodeMoves;
   onMovesChange?(moves: NodeMoves): void;
+  groups?: readonly GraphGroup[];
+  /** Route a single terminal output along each expanded group boundary. */
+  groupOutputs?: boolean;
+  outlets?: GroupOutlets;
+  onOutletsChange?(outlets: GroupOutlets): void;
+  onGroupToggle?(id: string): void;
+  onGroupResize?: GraphGroupResize;
+  ties?: readonly TwistTie[];
+  onTiesChange?(ties: readonly TwistTie[]): void;
+  interactionSurface?: RefObject<HTMLElement | null>;
 }
 
-const FLOW_LIGHTS = 3, FLOW_SECONDS = 2.4;
 const NO_MOVES: NodeMoves = Object.freeze({});
-
-// A few lights travelling along an edge, evenly spaced.
-function FlowLights({ path }: { path: string }) {
-  return (
-    <g className="bd-flow">
-      {Array.from({ length: FLOW_LIGHTS }, (_, k) => (
-        <circle key={k} className="bd-flow-light" r="2.6">
-          <animateMotion
-            dur={`${FLOW_SECONDS}s`} begin={`${(-k * FLOW_SECONDS) / FLOW_LIGHTS}s`}
-            repeatCount="indefinite" path={path}
-          />
-        </circle>
-      ))}
-    </g>
-  );
-}
 
 function useFitScale(contentWidth: number, enabled: boolean) {
   const ref = useRef<HTMLDivElement>(null);
@@ -92,23 +88,21 @@ export function NodeGraph<N extends GraphNode>({
   className = "",
   children,
   moves = NO_MOVES,
-  onMovesChange,
+  onMovesChange, groups = [], groupOutputs = false, onGroupToggle, onGroupResize,
+  ties, onTiesChange, outlets, onOutletsChange, interactionSurface,
 }: NodeGraphProps<N>) {
   const { ref, scale } = useFitScale(width, fit);
-  const { surface, marquee, nodeProps, surfaceProps } = useNodeMoving(nodes, width, moves, onMovesChange);
-  const shown = nodes.map((n) => (moves[n.id] ? { ...n, x: n.x + moves[n.id].dx, y: n.y + moves[n.id].dy } : n));
-  const byId = Object.fromEntries(shown.map((n) => [n.id, n]));
-
-  const links = edges.map((e) => {
-    const a = edgePoint(byId[e.from[0]], e.from[1], e.from[2] ?? 0.5);
-    const b = edgePoint(byId[e.to[0]], e.to[1], e.to[2] ?? 0.5);
-    return { d: linkPath(a, b, e.from[1]), a, b, flow: e.flow };
-  });
+  const marqueeKey = onTiesChange ? "altKey" : "shiftKey";
+  const { surface, marquee, nodeProps, groupProps, surfaceProps } = useNodeMoving(
+    nodes, width, moves, onMovesChange, marqueeKey, groups);
+  const { nodes: shown, groups: moved } = movedGraph(nodes, groups, moves);
+  const frames = groupFrames(moved, shown);
 
   return (
     <div
       className={`bd-nodegraph-fit ${className}`}
       ref={ref}
+      data-organizing={!!(onMovesChange || onTiesChange || onGroupResize || onOutletsChange) || undefined}
       style={{ height: fit ? height * scale : height }}
     >
       <div
@@ -117,25 +111,12 @@ export function NodeGraph<N extends GraphNode>({
         style={{ width, height, transform: fit ? `scale(${scale})` : undefined }}
         {...surfaceProps}
       >
-        <svg
-          className="bd-edges"
-          width={width}
-          height={height}
-          viewBox={`0 0 ${width} ${height}`}
-          aria-hidden="true"
-        >
-          {links.map((l, i) => (
-            <path key={i} className={`bd-edge${l.flow ? " bd-edge--flow" : ""}`} d={l.d} />
-          ))}
-          {links.map((l, i) => l.flow && <FlowLights key={`f${i}`} path={l.d} />)}
-          {showPorts &&
-            links.map((l, i) => (
-              <g key={`p${i}`}>
-                <circle className="bd-port" cx={l.a.x} cy={l.a.y} r="3.1" />
-                <circle className="bd-port" cx={l.b.x} cy={l.b.y} r="3.1" />
-              </g>
-            ))}
-        </svg>
+        <NodeGroups groups={frames} nodes={shown} onToggle={onGroupToggle} onResize={onGroupResize}
+          groupProps={groupProps} />
+        <GraphWires surface={surface} width={width} height={height} nodes={shown} edges={edges}
+          groups={groupOutputs ? frames : undefined} showPorts={showPorts} ties={ties}
+          onTiesChange={onTiesChange} interactionSurface={interactionSurface}
+          outlets={outlets} onOutletsChange={onOutletsChange} />
 
         {children}
 

@@ -58,7 +58,11 @@ export function resolveSkin(name: string): SkinJson {
 }
 
 /** Tokens plus the resolved skin: every design value a surface can read. */
-export const resolveDesignSystem = (name: string): SkinJson => deepMerge(designTokens, resolveSkin(name));
+export function resolveDesignSystem(name: string, paletteOnly = false): SkinJson {
+  // Component skins own shape. Palette-only use keeps the canonical base geometry and overlays colors only.
+  const skin = paletteOnly ? deepMerge(baseSkin, {forms: {base: {palette: skinPalette(name)}}}) : resolveSkin(name);
+  return deepMerge(designTokens, skin);
+}
 
 const byPriority = (a: string, b: string) => (metaOf(SKIN_FILES[b]).priority ?? 0) - (metaOf(SKIN_FILES[a]).priority ?? 0);
 
@@ -80,3 +84,12 @@ export function flattenSkin(skin: SkinJson, prefix = ''): Map<string, unknown> {
 }
 
 export {baseSkin, designTokens};
+
+/** Effective base colors; null entries inherit the default skin on every consumer. */
+export function skinPalette(name: string): Record<string, unknown> {
+  const paletteOf = (skin: string) => {
+    const base = (resolveSkin(skin).forms as SkinJson).base as SkinJson;
+    return Object.fromEntries(Object.entries(base.palette as SkinJson).filter(([, value]) => value !== null));
+  };
+  return {...paletteOf(DEFAULT_SKIN), ...paletteOf(name)};
+}

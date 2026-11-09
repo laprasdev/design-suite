@@ -20,3 +20,18 @@
  .action-bar>.bar-center>.header-notices[data-inline]>.header-notice { background:var(--surface-chrome);min-height:var(--action-bar-height); }
  .action-bar:has(.header-notices[data-inline]>*) { --bar-columns:minmax(0,1fr) 0 minmax(0,max-content); }
 }
+
+/* The notice is part of the header's layout, so a full-height pane still ends at the viewport bottom. */
+.action-bar-notice {
+ --bar-columns:minmax(0,1fr) 0 max-content;
+ flex-shrink:0;min-height:var(--header-control-compact);padding:0 var(--page-gutter,var(--inset));
+ background:var(--surface-chrome);border-bottom:var(--line-width) solid var(--line);
+}
+.action-bar-notice>.bar-left { min-width:0;gap:var(--field-gap); }
+.action-bar-notice .bd-label { white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+.action-bar-notice[data-tone="error"]>.bar-left>svg { color:var(--scarlet);flex-shrink:0; }
+.action-bar-notice[data-tone="info"]>.bar-left>svg { color:var(--dim);flex-shrink:0; }
+@media (prefers-reduced-motion:no-preference) {
+ .action-bar-notice { animation:action-notice-in .16s ease-out; }
+ @keyframes action-notice-in { from { opacity:0;transform:translateY(-30%); } to { opacity:1;transform:translateY(0); } }
+}

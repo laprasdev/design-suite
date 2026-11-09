@@ -6,11 +6,17 @@
 // =====================================================
 import React, { type HTMLAttributes } from "react";
 
+/** The meter spreads its pips across the row it fills. Compact gives each pip a fixed width and the row only the width
+ * of its pips, for a small count beside a title. */
+export const PipRowForm = Object.freeze({ METER: "meter", COMPACT: "compact" } as const);
+export type PipRowFormValue = typeof PipRowForm[keyof typeof PipRowForm];
+
 export interface PipRowProps extends HTMLAttributes<HTMLSpanElement> {
   value: number | null | undefined;
   max?: number;
   segments?: number;
   color?: string;
+  form?: PipRowFormValue;
 }
 
 export function PipRow({
@@ -18,6 +24,7 @@ export function PipRow({
   max = 100,
   segments = 10,
   color,
+  form = PipRowForm.METER,
   className = "",
   ...rest
 }: PipRowProps) {
@@ -33,6 +40,7 @@ export function PipRow({
       aria-valuemin={0}
       aria-valuemax={max}
       {...rest}
+      data-form={form === PipRowForm.METER ? undefined : form}
     >
       {Array.from({ length: segments }, (_, i) => {
         const on = i < filled;

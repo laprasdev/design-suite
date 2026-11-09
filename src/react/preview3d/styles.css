@@ -1,0 +1,3 @@
+/* Complete styles for the optional ModelPreview; ordinary /react styles stay independent. */
+@import '../styles.css';
+@import './preview.css';

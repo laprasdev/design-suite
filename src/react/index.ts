@@ -1,8 +1,11 @@
+/// <reference path="./react-css.d.ts" />
 // @looms/bloom-design/react — generic React primitives.
 // Import styles once: `import "@looms/bloom-design/react/styles.css"`.
 export { Node, type NodeProps } from "./Node.tsx";
 export {
   NodeGraph, type GraphNode, type GraphEdge, type EdgeEnd, type NodeGraphProps, type NodeMove, type NodeMoves,
+  type GraphGroup, type GraphGroupResize, type GroupOutlet, type GroupOutlets,
+  type GroupEdge, type GroupResizePhase, type TwistTie, graphEdgeId, movedGraph,
 } from "./NodeGraph.tsx";
 export { isPanKeyHeld } from "./panKey.ts";
 export { bezierPath, edgePoint, linkPath, verticalBezierPath, type NodeBox, type NodeSide } from "./geometry.ts";
@@ -10,7 +13,7 @@ export { Label, Glyph, Divider, LightBox, type LabelKind } from "./accents.tsx";
 export { MonthGrid, type DayCell, type MonthGridProps } from "./Calendar.tsx";
 export { Cycle, type CycleOption, type CycleProps } from "./Cycle.tsx";
 export { ViewStack, type StackView, type ViewStackProps } from "./ViewStack.tsx";
-export { PipRow, type PipRowProps } from "./PipRow.tsx";
+export { PipRow, PipRowForm, type PipRowFormValue, type PipRowProps } from "./PipRow.tsx";
 export { Button, type ButtonProps, type ButtonVariant } from "./Button.tsx";
 export { Modal, type ModalProps } from './Modal.tsx';
 export { PlayerIcon, PlayerStatusRings, type PlayerIconProps, type PhotoRing, type StatusRing, type RingSegment, type Hand, type ActiveHand } from './PlayerIcon.tsx';
@@ -20,7 +23,7 @@ export { element, type ElementContract } from './elementContract.ts';
 export { ApplicationElement, APPLICATION_HOME_ATTRIBUTE } from './applicationElements.ts';
 export { Bar, BarContents, type BarProps, type BarSlots } from './Bar.tsx';
 export { BarElement, BarSlotElement, barSlotsWithin } from './barElements.ts';
-export { ActionBar } from './ActionBar.tsx';
+export { ActionBar, type ActionBarProps, type ActionBarNotice } from './ActionBar.tsx';
 export { ActionBarElement, ActionBarSlotElement, BarParticipantElement } from './actionBarElements.ts';
 export { HoverDetail } from './HoverDetail.tsx';
 export { SegmentedControl, TEXT_SEGMENT_VARIANT, JOINED_SEGMENT_VARIANT, ICON_SEGMENT_VARIANT, SEGMENT_GROUP_START_ATTRIBUTE, type SegmentValue, type SegmentOption, type SingleSegmentProps } from './SegmentedControl.tsx';
@@ -42,13 +45,51 @@ export { ListboxElement } from './listboxSelectElements.ts';
 export { SettingElement, METER_VALUE_ATTRIBUTE, METER_FIXED_ATTRIBUTE } from './settingElements.ts';
 export { Boolean, BooleanForm } from '../synth/components/synth/Boolean.tsx';
 export { Slider, SliderForm } from '../synth/components/synth/Slider.tsx';
+export type {SliderProgressProps, SliderProgressSegment} from './inputs/SliderProgress.tsx';
 export { PhaseGlyph, type PhaseGlyphValue } from '../synth/components/synth/PhaseGlyph.tsx';
-export { ModulationRoot, RangeEnd, type ControlModulator } from '../synth/components/synth/modulation.ts';
-export { IntegerIncrementer, IncrementerForm } from '../synth/components/synth/40-IntegerIncrementer.tsx';
-export { Knob } from '../synth/components/synth/Knob.tsx';
+export {ModulationDisplay, ModulationRoot, RangeEnd, type ControlModulator}
+  from '../synth/components/synth/modulation.ts';
+export { IntegerIncrementer } from '../synth/components/synth/40-IntegerIncrementer.tsx';
+export { IncrementerForm } from '../synth/components/synth/incrementerForm.ts';
+export {Knob, KnobForm, KnobPreset, type KnobConfig} from '../synth/components/synth/Knob.tsx';
 export { Graph } from '../synth/components/synth/Graph.tsx';
 export { StyleProvider, useStyle } from '../synth/StyleContext.tsx';
 export { CaretButton, type CaretButtonProps } from './CaretButton.tsx';
-export { PhotoStrip, PhotoCompare, type StripPhoto, type CompareCapture } from './Photos.tsx';
+export { PhotoStrip, PhotoCompare, PhotoCompareForm, type StripPhoto, type CompareCapture } from './Photos.tsx';
 export { Crossfade, type CrossfadeProps } from './Crossfade.tsx';
+export {
+  CrossfadePageElement,PAGE_STACK_MOVING,PAGE_STACK_DIRECTION,type CrossfadePageProps,
+} from './CrossfadePage.tsx';
+export {
+  pageFrames,capturePage,capturePageScroll,restorePageScroll,placePageCopy,removePageCopy,animatePage,
+  PAGE_FADE,PAGE_FADE_IN,PAGE_FADE_OUT,PageMotionElement,
+  type PageDirection,type PageTiming,type PageAnimation,type PageScroll,type PageCopy,type PageRegions,type PageMotion,
+} from './pageMotion.ts';
+export {PAGE_MOTION} from './motion.ts';
 export { DataTable, type DataTableProps } from './DataTable.tsx';
+
+export {GraphWires} from "./GraphWires.tsx";
+export { graphRoutes } from "./graphRoutes.ts";
+export {useThemeSource} from './useThemeSource.ts';
+
+export {ElementsGallery, type ElementsGalleryProps} from './gallery/ElementsGallery.tsx';
+
+export {CodeIcon, ServerIcon, LibraryIcon} from './HeaderIconButton.tsx';
+export {PageHeaderBar, HeaderNavigation, HeaderBrand, HeaderBack,
+  PageFooter, PageFooterContents, pageFooterSlots,
+  type PageHeaderBarProps, type PageFooterProps, type FooterAction} from './PageBar.tsx';
+export {RecordTable, type RecordTableProps, type RecordRowsProps, type RecordColumn,
+  type RecordIdentity, type TableRecord, type ColumnGroup, type RowState,
+  type RowWindow, type TableSort} from './table/RecordTable.tsx';
+export {windowedRange, type ListViewport} from './table/useTableWindow.ts';
+
+export {GooExpander, type GooExpanderProps} from './GooExpander.tsx';
+export {useDoubleTap} from './useDoubleTap.ts';
+export {graphDots, graphEdgeFade, nodeFrame} from './graphSurface.ts';
+export {GraphDisplay, GraphFill} from './GraphDisplay.tsx';
+export {animateCardFlip} from './cardFlip.ts';
+
+export {ControllerShoulder, ControllerDpad} from './controllerShapes.tsx';
+
+export { ModuleTextInput, TextInput, type TextInputProps } from './inputs/ModuleTextInput.tsx';
+export { ModulationSocket } from './inputs/ModulationSocket.tsx';

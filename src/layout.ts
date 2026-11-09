@@ -1,16 +1,13 @@
-// =====================================================
-// LAYOUT DIMENSIONS - All numeric constants
-// =====================================================
 import { RoutingDimensions } from './routingLayout.ts';
-import { MODULE_CONTROL_MAX, ModuleGridDimensions } from './moduleGridLayout.ts';
+import { MODULE_CONTROL_MAX, MODULE_TEXT_SIZE, ModuleGridDimensions } from './moduleGridLayout.ts';
 
-// Golden ratio constants
 export const PHI = 1.618033988749895;
 export const PHI_INVERSE = 0.618033988749895; // 1 / PHI
 export const PHI_SQUARED = 2.618033988749895; // PHI * PHI
 export const PHI_CUBED = PHI_SQUARED * PHI;
 
-// // Golden ratio percentages for layouts
+const ICON_CHOICE_BOX = Math.ceil(MODULE_TEXT_SIZE * PHI), ICON_CHOICE_GLYPH = ICON_CHOICE_BOX / PHI;
+
 export const Relativity = {
   PhiInverse: 0.618, // ~61.8% - larger portion
   OneMinusPhiInverse: 0.382,
@@ -246,20 +243,23 @@ export const LayoutDimensions = {
     ...ModuleGridDimensions,
     // On a page a column grows with its tile only to φ of the largest knob, so a few fields stay together rather than spreading across a wide tile.
     fillColumnMax: Math.round(MODULE_CONTROL_MAX * PHI),
+    iconChoiceBox: ICON_CHOICE_BOX, // φ of its glyph, so the glyph is never under a module's words
+    iconChoiceGlyph: ICON_CHOICE_GLYPH,
   },
 
-  // The Envelope module on a page: four phase cells over the graph, the graph taking φ of what's left.
+  // The classic strip takes 1/φ³ of its module; its sockets take 1/φ of a curve picker.
   envelope: {
     cellGap: 6,
     cellPadding: 8,
     cellRowGap: 6,
-    pickerSize: 26,
-    pickerGlyph: 18,
+    pickerGlyph: ICON_CHOICE_BOX,
+    stripShare: 1 / PHI_CUBED,
+    modulationSocketSize: ICON_CHOICE_GLYPH,
     enableLine: 2,
     // What a phase's on and off line gives to press: its foot of the cell, kept clear of what's above.
     enableHit: 13,
-    boostIcon: 16,
-    boostCell: 19,
+    boostIcon: ICON_CHOICE_GLYPH,
+    boostCell: ICON_CHOICE_BOX,
     cellFloor: 0.05,
     plotBand: 34,
     frameLabelWidth: 48,
@@ -272,8 +272,6 @@ export const LayoutDimensions = {
     labelLine: 1.3,
     modulationPopoverWidth: 280,
     modulationPopoverGap: 4,
-    modulationDepthReach: 10,
-    modulationDragPx: 180,
   },
 
   // The Routing module on a page, in its own file.

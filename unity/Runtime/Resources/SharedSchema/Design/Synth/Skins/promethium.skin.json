@@ -7,42 +7,60 @@
   "forms": {
     "base": {
       "palette": {
-        "primary": "#33cccc",
-        "secondary": "#4de88d",
-        "background": "#0a1216",
-        "backgroundGradient": "#0e181e",
-        "cutoutBackground": "#0c1820",
-        "cutoutBorder": "#1a3545",
-        "glow": "rgba(51,204,204,0.6)",
+        "primary": "#64cee3",
+        "secondary": "#81d674",
+        "background": "#071e28",
+        "backgroundGradient": "#0a2d39",
+        "cutoutBackground": "#082b37",
+        "cutoutBorder": "#1c4a59",
+        "glow": "rgba(100,206,227,0.6)",
         "knobGradient": [
-          "#1a3040",
-          "#1a3545"
-        ]
+          "#154755",
+          "#154755"
+        ],
+        "tertiary": "#d9609d",
+        "border": "#1c4a59",
+        "text": "#addce8"
       },
       "shadow": {
         "cutout": {
           "inset": [
             [
               0,
-              2,
-              8,
-              0.7
+              1,
+              1,
+              0.35
             ]
           ],
           "highlight": [
             0,
             1,
             0,
-            0.08
+            0.06
           ],
-          "highlightColor": "#33cccc"
+          "highlightColor": "#64cee3"
         }
       }
     },
     "components": {
       "cycle": {
         "palette": {
-          "border": "#33cccc"
+          "border": "#64cee3"
+        }
+      },
+      "knob": {
+        "inner": {
+          "inherit": "forms.containers.cutout",
+          "palette": {
+            "cutoutBackground": "#154755",
+            "border": "#246075"
+          },
+          "border": {
+            "width": 1
+          },
+          "shadow": {
+            "opacity": 0
+          }
         }
       }
     }

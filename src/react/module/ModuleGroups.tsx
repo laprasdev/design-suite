@@ -22,10 +22,10 @@ const LABEL: React.CSSProperties = { ...T.moduleLabel, textTransform: 'uppercase
  * The groups inside a tab, when it holds more than one grid can: the second level, as the SegmentedControl's text
  * form, so the open one slides as the first level's does. A group with nothing set inside it reads dim.
  */
-export function ModuleGroups<Id extends string>({ groups, value, onChange, ariaLabel, inline }: {
+export function ModuleGroups<Id extends string>({ groups, value, onChange, ariaLabel, inline, disabled }: {
   groups: { id: Id; label: string; set: boolean }[]; value: Id; onChange: (id: Id) => void; ariaLabel: string;
   /** On a row of its own controls, such as a band's tag, rather than under a module's header. */
-  inline?: boolean;
+  inline?: boolean; disabled?: boolean;
 }) {
   const { primaryColor } = useStyle().getEffectiveStyle();
   const options = groups.map(group => ({
@@ -35,6 +35,6 @@ export function ModuleGroups<Id extends string>({ groups, value, onChange, ariaL
   }));
   return <div data-module-groups style={{ ...(inline ? INLINE_STRIP : STRIP), ...useStyleThemeVariables() }}>
     <SegmentedControl<Id> tabs variant={TEXT_SEGMENT_VARIANT} ariaLabel={ariaLabel} value={value}
-      onChange={onChange} style={CONTROL} options={options} />
+      onChange={onChange} disabled={disabled} style={CONTROL} options={options} />
   </div>;
 }

@@ -1,13 +1,7 @@
 import React, { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { isPanKeyHeld } from "./panKey.ts";
-
-// Where a node has been moved to, from where it was laid out, in canvas pixels.
-export interface NodeMove {
-  dx: number;
-  dy: number;
-}
-export type NodeMoves = Readonly<Record<string, NodeMove>>;
-interface MovableNode { id: string; x: number; y: number; w: number; h: number }
+import { movedGraph, type GraphNode, type GraphGroup, type NodeMoves } from "./nodeGraphTypes.ts";
+export type { NodeMove, NodeMoves } from "./nodeGraphTypes.ts";
 
 // A press that travels less than this many screen pixels is a press, not a drag.
 const STILL_PX = 4;
@@ -36,36 +30,50 @@ interface Gesture {
 // empty space or a plain click on a node clears the selection. A plain drag on empty space is left to whatever pans the
 // canvas, as in any node editor. Points are in canvas pixels, read through the surface's box on screen, so any zoom
 // around the graph is accounted for.
-export function useNodeMoving<N extends MovableNode>(
+export function useNodeMoving<N extends GraphNode>(
   nodes: readonly N[], width: number, moves: NodeMoves, onMovesChange?: (moves: NodeMoves) => void,
+  marqueeKey: "shiftKey" | "altKey" = "shiftKey",
+  groups: readonly GraphGroup[] = [],
 ) {
   const surface = useRef<HTMLDivElement>(null);
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
   const [marquee, setMarquee] = useState<Box | null>(null);
   const gesture = useRef<Gesture | null>(null);
   const suppressClick = useRef(false);
+  const cancel = (event?: ReactPointerEvent<HTMLElement>) => {
+    const g = gesture.current;
+    if (!g || (event && event.pointerId !== g.pointer)) return;
+    gesture.current = null;
+    if (g.kind === "drag" && g.moved) onMovesChange?.(g.from);
+    suppressClick.current = true;
+    setMarquee(null);
+  };
   useEffect(() => {
-    if (!selected.size) return;
-    const key = (e: KeyboardEvent) => { if (e.key === ESCAPE) setSelected(new Set()); };
+    const key = (e: KeyboardEvent) => {
+      if (e.key !== ESCAPE || (!gesture.current && !selected.size)) return;
+      cancel(); setSelected(new Set());
+    };
     window.addEventListener("keydown", key);
     return () => window.removeEventListener("keydown", key);
-  }, [selected]);
-  if (!onMovesChange) return { surface, marquee, nodeProps: (_id: string) => ({}), surfaceProps: {} };
+  }, [selected, onMovesChange]);
+  if (!onMovesChange) return {
+    surface, marquee, nodeProps: (_id: string) => ({}), groupProps: (_id: string) => ({}), surfaceProps: {},
+  };
 
   const point = (e: ReactPointerEvent): Point => {
     const box = surface.current!.getBoundingClientRect(), perPx = width / box.width;
     return { x: (e.clientX - box.left) * perPx, y: (e.clientY - box.top) * perPx };
   };
-  const placedBox = (n: N): Box => ({
-    x: n.x + (moves[n.id]?.dx ?? 0), y: n.y + (moves[n.id]?.dy ?? 0), w: n.w, h: n.h,
-  });
-  type Press = ReactPointerEvent<HTMLDivElement>;
+  const placed = movedGraph(nodes, groups, moves).nodes;
+  type Press = ReactPointerEvent<HTMLElement>;
   const begin = (e: Press, kind: Gesture["kind"], ids: readonly string[], keep: ReadonlySet<string>) => {
-    e.currentTarget.setPointerCapture(e.pointerId);
+    // Keep a button press targeted at the button; capturing its wrapper swallows the eventual click.
+    const target = (e.target as Element).closest("button,a,[role=button]") ?? e.currentTarget;
+    target.setPointerCapture(e.pointerId);
     const screen = { x: e.clientX, y: e.clientY };
     gesture.current = { kind, pointer: e.pointerId, screen, start: point(e), ids, from: moves, keep, moved: false };
   };
-  const move = (e: ReactPointerEvent<HTMLDivElement>) => {
+  const move = (e: Press) => {
     const g = gesture.current;
     if (!g || g.pointer !== e.pointerId) return;
     if (!g.moved && Math.hypot(e.clientX - g.screen.x, e.clientY - g.screen.y) < STILL_PX) return;
@@ -74,14 +82,14 @@ export function useNodeMoving<N extends MovableNode>(
     if (g.kind === "marquee") {
       const box = marqueeBox(g.start, at);
       setMarquee(box);
-      setSelected(new Set([...g.keep, ...nodes.filter((n) => overlaps(box, placedBox(n))).map((n) => n.id)]));
+      setSelected(new Set([...g.keep, ...placed.filter(n => overlaps(box, n)).map(n => n.id)]));
       return;
     }
     const dx = at.x - g.start.x, dy = at.y - g.start.y;
     const moved = g.ids.map((id) => [id, { dx: (g.from[id]?.dx ?? 0) + dx, dy: (g.from[id]?.dy ?? 0) + dy }]);
     onMovesChange({ ...g.from, ...Object.fromEntries(moved) });
   };
-  const end = (e: ReactPointerEvent<HTMLDivElement>) => {
+  const end = (e: Press) => {
     const g = gesture.current;
     if (!g || g.pointer !== e.pointerId) return;
     gesture.current = null;
@@ -89,10 +97,35 @@ export function useNodeMoving<N extends MovableNode>(
     if (g.kind === "drag" && g.moved) suppressClick.current = true;
     if (g.kind === "drag" && !g.moved && g.pressed) setSelected(new Set());
   };
-  const nodeProps = (id: string) => ({
-    "data-selected": selected.has(id) || undefined,
-    onPointerDown: (e: ReactPointerEvent<HTMLDivElement>) => {
+  const dragProps = {
+    onPointerMove: move,
+    onPointerUp: end,
+    onPointerCancel: cancel,
+    // A drag or a Shift-click isn't a press on what the node or group holds.
+    onClickCapture: (e: React.MouseEvent) => {
+      if (!suppressClick.current) return;
+      suppressClick.current = false;
+      if (e.detail === 0) return; // Only suppress the pointer gesture's click, never keyboard activation.
+      e.stopPropagation(); e.preventDefault();
+    },
+  };
+  const groupProps = (id: string) => ({
+    ...dragProps,
+    "data-moving": "",
+    onPointerDown: (e: Press) => {
       if (e.button !== 0) return;
+      suppressClick.current = false;
+      e.stopPropagation();
+      setSelected(new Set());
+      begin(e, "drag", [id], new Set());
+    },
+  });
+  const nodeProps = (id: string) => ({
+    ...dragProps,
+    "data-selected": selected.has(id) || undefined,
+    onPointerDown: (e: Press) => {
+      if (e.button !== 0) return;
+      suppressClick.current = false;
       e.stopPropagation();
       if (e.shiftKey) {
         const next = new Set(selected);
@@ -107,28 +140,18 @@ export function useNodeMoving<N extends MovableNode>(
       begin(e, "drag", group, selected);
       gesture.current!.pressed = id;
     },
-    onPointerMove: move,
-    onPointerUp: end,
-    onPointerCancel: end,
-    // A drag or a Shift-click isn't a press on what the node holds.
-    onClickCapture: (e: React.MouseEvent) => {
-      if (!suppressClick.current) return;
-      suppressClick.current = false;
-      e.stopPropagation();
-      e.preventDefault();
-    },
   });
   const surfaceProps = {
     "data-moving": "",
     onPointerDown: (e: ReactPointerEvent<HTMLDivElement>) => {
       if (e.button !== 0 || isPanKeyHeld()) return;
-      if (!e.shiftKey) { if (selected.size) setSelected(new Set()); return; }
+      if (!e[marqueeKey]) { if (selected.size) setSelected(new Set()); return; }
       e.stopPropagation();
       begin(e, "marquee", [], selected);
     },
     onPointerMove: move,
     onPointerUp: end,
-    onPointerCancel: end,
+    onPointerCancel: cancel,
   };
-  return { surface, marquee, nodeProps, surfaceProps };
+  return { surface, marquee, nodeProps, groupProps, surfaceProps };
 }

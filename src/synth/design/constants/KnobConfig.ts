@@ -1,13 +1,9 @@
-// =====================================================
 // KNOB CONFIGURATION - Config-based knob system
 // Eliminates magic variant strings in favor of composable config
-// =====================================================
 
 import { LayoutDimensions } from '../../../layout.ts';
 
-// =====================================================
 // KNOB SIZES - Numeric pixel values
-// =====================================================
 export const KnobSize = {
   /** Smallest knob (32px) - for compact controls like range min/max */
   MINI: LayoutDimensions.sizes.knobSmall,
@@ -25,9 +21,7 @@ export const KnobSize = {
 
 export type KnobSizeValue = typeof KnobSize[keyof typeof KnobSize];
 
-// =====================================================
 // KNOB STROKE WIDTHS - Arc line thickness
-// =====================================================
 export const KnobStroke = {
   /** Thin stroke - for mini/compact knobs */
   THIN: LayoutDimensions.knob.strokeNormal,
@@ -39,9 +33,7 @@ export const KnobStroke = {
 
 export type KnobStrokeValue = typeof KnobStroke[keyof typeof KnobStroke];
 
-// =====================================================
 // KNOB VALUE TYPES - How values are interpreted
-// =====================================================
 export const KnobValueType = {
   /** Float 0-1 range - normalized value */
   FLOAT: 'float',
@@ -53,9 +45,7 @@ export const KnobValueType = {
 
 export type KnobValueTypeValue = typeof KnobValueType[keyof typeof KnobValueType];
 
-// =====================================================
 // KNOB LAYOUT MODE - Label/value arrangement
-// =====================================================
 export const KnobLayout = {
   /** Vertical: knob on top, value below, label in cutout at bottom */
   VERTICAL: 'vertical',
@@ -67,9 +57,7 @@ export const KnobLayout = {
 
 export type KnobLayoutValue = typeof KnobLayout[keyof typeof KnobLayout];
 
-// =====================================================
 // KNOB LABEL STYLE - How the label is rendered
-// =====================================================
 export const KnobLabelStyle = {
   /** Plain text label */
   PLAIN: 'plain',
@@ -79,9 +67,7 @@ export const KnobLabelStyle = {
 
 export type KnobLabelStyleValue = typeof KnobLabelStyle[keyof typeof KnobLabelStyle];
 
-// =====================================================
 // KNOB FEATURE FLAGS - Optional visual features
-// =====================================================
 export const KnobFeature = {
   /** Show tick marks around the arc */
   TICKS: 'ticks',
@@ -95,10 +81,13 @@ export const KnobFeature = {
 
 export type KnobFeatureValue = typeof KnobFeature[keyof typeof KnobFeature];
 
-// =====================================================
 // KNOB CONFIG INTERFACE - The unified config type
-// =====================================================
+export const KnobForm = {CLASSIC: 'classic', THIN: 'thin', CUTOUT: 'cutout'} as const;
+export type KnobFormValue = typeof KnobForm[keyof typeof KnobForm];
+
 export interface KnobConfig {
+  /** Face treatment; omitted preserves the existing preset. */
+  form?: KnobFormValue;
   /** Size in pixels (use KnobSize constants) */
   size: number;
   /** Arc stroke width (use KnobStroke constants) */
@@ -113,10 +102,8 @@ export interface KnobConfig {
   features: Set<KnobFeatureValue>;
 }
 
-// =====================================================
 // PRESET CONFIGS - Common configurations
 // Consumers can use these or build custom configs
-// =====================================================
 export const KnobPreset = {
   /** Mini inline knob - compact, no ticks */
   mini: {
@@ -191,9 +178,7 @@ export const KnobPreset = {
 
 export type KnobPresetKey = keyof typeof KnobPreset;
 
-// =====================================================
 // HELPER FUNCTIONS
-// =====================================================
 
 /** Check if a feature is enabled in config */
 export function hasFeature(config: KnobConfig, feature: KnobFeatureValue): boolean {

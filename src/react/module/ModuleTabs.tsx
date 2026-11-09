@@ -1,38 +1,28 @@
 import React from 'react';
-import { useStyle } from '../../synth/StyleContext.tsx';
-import { D, O } from '../../synth/design/index.ts';
-import { EnabledCell, Strip } from '../../synth/components/synth/TabStrip.tsx';
+import {useStyle} from '../../synth/StyleContext.tsx';
+import {D, O, T} from '../../synth/design/index.ts';
+import {SegmentedControl, ICON_SEGMENT_VARIANT} from '../SegmentedControl.tsx';
+import {useStyleThemeVariables} from '../styleTheme.ts';
 
-export interface ModuleTab<Id extends string> { id: Id; label: string; content: React.ReactNode; authored: boolean }
+export interface ModuleTab<Id extends string> {id: Id; label: string; content: React.ReactNode; authored: boolean}
 
-const ROW: React.CSSProperties = { display: 'flex', alignItems: 'stretch', flex: 'none' };
-const CELL: React.CSSProperties = { justifyContent: 'center' };
-
-/**
- * Siblings share a module's room: one is open, and a dim tab has nothing set inside it. The open tab is never dim:
- * what it holds is in view.
- */
-export function ModuleTabs<Id extends string>({ tabs, value, onChange, ariaLabel }: {
-  tabs: ModuleTab<Id>[]; value: Id; onChange: (id: Id) => void; ariaLabel: string;
+/** Module tabs use the shared indicator and keyboard behavior. The active name belongs to its clickable tab. */
+export function ModuleTabs<Id extends string>({tabs, value, onChange, ariaLabel, labelActive = false}: {
+  tabs: ModuleTab<Id>[]; value: Id; onChange: (id: Id) => void; ariaLabel: string; labelActive?: boolean;
 }) {
-  const { primaryColor } = useStyle().getEffectiveStyle();
-  const tabStyle = (tab: ModuleTab<Id>): React.CSSProperties => ({
-    display: 'grid', placeItems: 'center', minWidth: D.moduleGrid.tabMinWidth, minHeight: D.moduleGrid.tabMinHeight,
-    outline: 'none', opacity: tab.authored || tab.id === value ? O.full : O.low,
-  });
-  const pressed = (id: Id) => (event: React.KeyboardEvent) => { if (event.key === 'Enter') onChange(id); };
-  return (
-    <div role="tablist" aria-label={ariaLabel} style={ROW}>
-      <Strip edge="inline" reachesEdge>
-        {tabs.map((tab, index) => (
-          <EnabledCell key={tab.id} enabled={tab.id === value} color={primaryColor} isLast={index === tabs.length - 1}
-            onClick={() => onChange(tab.id)} style={CELL}>
-            <span role="tab" tabIndex={0} aria-selected={tab.id === value} aria-label={tab.label} title={tab.label}
-              data-tab={tab.id} data-tab-set={tab.authored} onKeyDown={pressed(tab.id)}
-              style={tabStyle(tab)}>{tab.content}</span>
-          </EnabledCell>
-        ))}
-      </Strip>
-    </div>
-  );
+  const {primaryColor} = useStyle().getEffectiveStyle();
+  return <div style={{display: 'flex', alignItems: 'stretch', flex: 'none',
+    minWidth: 0, maxWidth: '100%', ...useStyleThemeVariables()}}>
+    <SegmentedControl<Id> tabs scroll variant={ICON_SEGMENT_VARIANT} density="compact" iconOnly={!labelActive}
+      ariaLabel={ariaLabel} value={value} onChange={onChange} options={tabs.map(tab => ({
+        value: tab.id, ariaLabel: tab.label, title: tab.label,
+        data: {'data-tab': tab.id, 'data-tab-set': tab.authored},
+        style: {minWidth: D.moduleGrid.tabMinWidth, minHeight: D.moduleGrid.tabMinHeight,
+          color: primaryColor, opacity: tab.authored || tab.id === value ? O.full : O.low},
+        label: <span style={{display: 'flex', alignItems: 'center', gap: D.moduleGrid.fieldGap}}>
+          {tab.content}{labelActive && tab.id === value &&
+            <span style={{...T.moduleLabel, textTransform: 'uppercase'}}>{tab.label}</span>}
+        </span>,
+      }))}/>
+  </div>;
 }

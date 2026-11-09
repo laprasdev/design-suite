@@ -1,0 +1,46 @@
+.element-gallery {height:100dvh;display:flex;flex-direction:column;color:var(--text);background:var(--bg);}
+.elements-index {
+ display:flex;flex-wrap:wrap;gap:var(--field-gap);
+ padding:var(--field-gap) var(--page-gutter);border-bottom:var(--line-width) solid var(--line);
+}
+/* Links wrap and grow to fill every row, so the last row is as full as the rest. */
+.elements-index a {flex:1 1 auto;text-align:center;color:var(--pink);font-size:var(--type-control);white-space:nowrap;}
+.elements-index>.listbox-select {flex:1;min-width:0;}
+.elements-list {flex:1;min-height:0;overflow:auto;padding:0 var(--page-gutter);}
+.element-row {padding-block:var(--section-gap);scroll-margin-top:var(--section-gap);}
+.element-kind {margin:0 0 var(--field-gap);color:var(--pink);font-family:var(--font-chrome);}
+.element-column-heading {
+ display:flex;align-items:center;justify-content:space-between;gap:var(--field-gap);
+ --header-control:var(--header-control-compact);
+}
+.element-option-name {min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left;}
+.element-actions {display:flex;flex:none;gap:var(--field-gap);}
+.element-candidate {position:relative;min-width:0;display:flex;flex-direction:column;height:100%;}
+/* Drawn over the tile's last child, and in the host's pink, not the sample palette's. It adds no height. */
+.element-candidate[data-active]::after {
+ content:'';position:absolute;inset:auto 0 0;height:var(--line-width);background:var(--pink);pointer-events:none;
+}
+.element-sample {
+ min-width:0;width:100%;box-sizing:border-box;margin:0;border:0;padding:var(--section-gap);
+ min-height:calc(220px / var(--element-ratio));background:var(--card);color:var(--text);flex:1;display:flex;
+}
+.element-sample[data-sample-state=unset],.element-sample[data-sample-state=inherited] {opacity:.6;}
+.element-sample:disabled {opacity:.5;pointer-events:none;}
+.element-feedback {display:flex;flex-direction:column;margin:0;padding:var(--field-gap);gap:var(--field-gap);}
+p.element-feedback {white-space:pre-wrap;overflow-wrap:anywhere;text-align:left;font-size:var(--type-control);}
+.element-feedback textarea {display:block;min-height:calc(var(--header-control) * 2);}
+.element-feedback-actions {display:flex;align-items:center;justify-content:space-between;gap:var(--field-gap);}
+.element-track {display:grid;grid-template-columns:24px minmax(0,1fr) 28px;gap:var(--field-gap);width:100%;align-items:center;}
+.element-track>span:last-child {text-align:right;}
+.element-vector {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--field-gap);width:100%;}
+.element-open {display:grid;justify-items:center;gap:var(--field-gap);}
+.element-module {box-sizing:border-box;width:100%;}
+.element-module-content {display:flex;align-items:center;gap:var(--section-gap);padding:var(--field-gap);}
+.element-sample-content {font-family:var(--font-chrome);display:flex;justify-content:center;align-items:center;width:100%;min-height:90px;}
+.element-sample-content>.range-control {width:100%;}
+
+/* The phone width is page-bar.css's 760px: Preview drops its text. */
+@media(max-width:760px) {
+ .element-preview-text {display:none;}
+ .element-gallery [data-comparison] .draft-full-stats {--draft-stat-min:min(var(--element-width),100cqw);}
+}
