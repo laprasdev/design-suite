@@ -1,6 +1,9 @@
 /* Page surfaces from core. Bars own geometry; a page supplies regions and settings only. */
 .page-surface {
- --header-gap:8px;--header-control:32px;--header-pad:12px;--header-score:37px;--page-inset:24px;
+ --header-gap:8px;--header-control:32px;--page-inset:24px;
+ /* A page may scale vertical chrome with its window; controls and inline gutters retain their own sizes. */
+ --header-pad:calc(12px * var(--page-bar-height-scale,1));
+ --header-score:calc(37px * var(--page-bar-height-scale,1));
  --page-gutter:calc(2 * var(--header-gap) + var(--header-control));
  --app-bar-height:calc(var(--header-score) + 2 * var(--header-pad) + var(--line-width));
  --label-action-size:var(--type-control);
@@ -8,6 +11,7 @@
 }
 .page-surface :is([data-page-bar=header],[data-page-bar=footer]) {font:var(--type-control)/1.4 var(--font-chrome);}
 [data-page-bar=header] {
+ position:relative;font:var(--type-control)/1.4 var(--font-chrome);
  --bar-columns:var(--app-header-side-width,auto) minmax(0,1fr) var(--app-header-side-width,auto);
  --bar-gap:var(--header-gap) var(--section-gap);
  box-sizing:border-box;min-height:var(--app-bar-height);padding:var(--header-pad) var(--page-gutter);
@@ -35,9 +39,24 @@
 }
 [data-page-bar=footer] .setup-footer-action>.bd-label {display:flex;align-items:center;gap:var(--header-gap);}
 [data-page-bar=footer] .setup-footer-action:focus-visible {outline-offset:calc(-1 * var(--line-width));}
+/* Icon navigation uses the page's shared control geometry. */
+.app-bar-navigation {display:flex;min-width:0;}
+.app-bar-navigation>.seg {--segment-padding-block:0;flex:none;gap:var(--header-gap);}
+.app-root .app-bar-navigation .seg button {width:var(--header-control);height:var(--header-control);padding:0;}
+.app-bar-navigation svg {width:var(--header-icon-size);height:var(--header-icon-size);}
+/* At either edge, the glyph meets the page gutter while its square hit area
+   reaches into the gutter. Navigation beside a brand or Back keeps its spacing. */
+[data-page-bar=header]>:is(.bar-left,.bar-right)>.app-bar-navigation:only-child {
+ margin-inline:calc((var(--header-icon-size) - var(--header-control)) / 2);
+}
 @media(max-width:760px) {
  .page-surface {--page-inset:12px;--page-gutter:var(--page-inset);}
- [data-page-bar=header] {--bar-columns:minmax(0,1fr) auto;grid-template-areas:"left right" "center center";}
+ [data-page-bar=header] {--bar-columns:minmax(0,max-content) minmax(0,1fr) minmax(0,max-content);
+  --header-control:var(--header-control-compact);--header-gap:var(--header-gap-compact);}
+ [data-page-bar=header]>.bar-center {overflow-x:auto;scrollbar-width:none;justify-content:flex-start;}
+ [data-page-bar=header][data-center-row] {grid-template-areas:"left right" "center center";--bar-columns:minmax(0,1fr) auto;}
+ [data-page-bar=header][data-center-row]>.bar-center {overflow:visible;justify-content:flex-start;}
+ [data-page-bar=header][data-center-row]>.bar-center>.listbox-select {flex:1;min-width:0;}
  [data-page-bar=header]>.bar-center:empty {display:none;}
  .page-footer-settings {gap:var(--header-gap) var(--section-gap);}
  .page-footer-settings>.page-footer-setting {flex:1 1 auto;}

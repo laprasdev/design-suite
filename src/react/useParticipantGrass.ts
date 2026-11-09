@@ -6,12 +6,14 @@ import {BarParticipantElement as E} from './actionBarElements.ts';
 // clock drives the participants. Layout reads are batched before writes, and
 // hidden/reduced-motion bars do no work.
 export function useParticipantGrass(root:RefObject<HTMLDivElement|null>) {
- const [field,setField]=useState<{width:number,blades:readonly GrassBlade[]}>({width:0,blades:[]});
+ const [field,setField]=useState<{width:number,height:number,blades:readonly GrassBlade[]}>({
+  width:0,height:0,blades:[],
+ });
  useEffect(()=>{
   const bar=root.current;if(!bar)return;
   const observer=new ResizeObserver(([entry])=>{
-   const {width}=entry.contentRect;
-   setField(({blades})=>({width,blades:growParticipantGrass(blades,width,Math.random)}));
+   const {width,height}=entry.contentRect;
+   setField(({blades})=>({width,height,blades:growParticipantGrass(blades,width,Math.random)}));
   });
   observer.observe(bar);return()=>observer.disconnect();
  },[root]);

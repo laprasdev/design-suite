@@ -19,7 +19,8 @@ export interface BarParticipant {
 export function BarParticipants({participants,center,onInteract}: {participants: readonly BarParticipant[],center?: ReactNode,onInteract?(id: string): void}) {
  const root=useRef<HTMLDivElement>(null),grass=useParticipantGrass(root);
  const middle=Math.ceil(participants.length/2),groups=[participants.slice(0,middle),participants.slice(middle)];
- return <div ref={root} className={BarParticipantElement.ROOT.className} data-center={!!center||undefined}>
+ return <div ref={root} className={BarParticipantElement.ROOT.className} data-center={!!center||undefined}
+  style={{'--participant-width':`${grass.width}px`,'--participant-height':`${grass.height}px`} as CSSProperties}>
   {groups.map((group,side)=><div key={side} className={BarParticipantElement.GROUP.className} style={{'--participant-count':group.length} as CSSProperties}>
    {group.map((participant,index)=><ParticipantActor key={participant.id} participant={participant} index={index+side*middle} position={group.length===1?.5:index/(group.length-1)} onInteract={onInteract}/>)}
   </div>)}

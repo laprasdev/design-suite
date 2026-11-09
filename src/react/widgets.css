@@ -115,6 +115,9 @@
   transition: background 0.15s, border-color 0.15s, opacity 0.15s;
 }
 .bd-pip[data-on="false"] { opacity: 0.5; }
+/* Compact: fixed pips, and the row only as wide as they are. */
+.bd-piprow[data-form="compact"] { width: auto; }
+.bd-piprow[data-form="compact"] > .bd-pip { flex: none; width: 8px; }
 
 /* ---- ViewStack (modal that pushes/pops views) ---- */
 .bd-vs-backdrop {

@@ -4,7 +4,9 @@ import {cssRect} from './cssZoom.ts';
 // Current released spring behavior, used by every application consumer.
 export const SPRING_MS=620;
 export const SEGMENT_MOTION=Object.freeze({bounded:true,duration:340});
-export const TEXT_SWEEP_MOTION=Object.freeze({duration:SPRING_MS,easing:'ease-in-out'});
+export const TEXT_SWEEP_MOTION=Object.freeze({duration:200,easing:'ease-in-out'});
+// Reference travel: one normal icon step (32px control + 8px gap), in logical CSS pixels.
+const TEXT_SWEEP_REFERENCE_PX=40;
 export const TextSweepElement=element('bd-text-selection');
 export const TEXT_SELECTION_MOVING_ATTRIBUTE='data-text-moving';
 export const TEXT_SELECTION_PROPERTIES=Object.freeze({LEFT:'--bd-text-selection-left',RIGHT:'--bd-text-selection-right',OFFSET:'--bd-text-selection-offset'});
@@ -17,7 +19,11 @@ export function sweepText(root: HTMLElement,labels: HTMLElement[],from: number,t
  labels.forEach((label,index)=>label.style.setProperty(TEXT_SELECTION_PROPERTIES.OFFSET,`${boxes[index].left}px`));
  root.setAttribute(TEXT_SELECTION_MOVING_ATTRIBUTE,'true');
  const frame=({left,right}: {left: number,right: number})=>({[TEXT_SELECTION_PROPERTIES.LEFT]:`${left}px`,[TEXT_SELECTION_PROPERTIES.RIGHT]:`${right}px`});
- const animation=root.animate([frame(boxes[from]),frame(boxes[to])],{...TEXT_SWEEP_MOTION,fill:'both'});
+ const distance=Math.max(
+  Math.abs(boxes[to].left-boxes[from].left),Math.abs(boxes[to].right-boxes[from].right));
+ // Longer travel takes longer; square-root scaling keeps wide controls responsive.
+ const duration=TEXT_SWEEP_MOTION.duration*Math.sqrt(distance/TEXT_SWEEP_REFERENCE_PX);
+ const animation=root.animate([frame(boxes[from]),frame(boxes[to])],{...TEXT_SWEEP_MOTION,duration,fill:'both'});
  const clear=()=>root.removeAttribute(TEXT_SELECTION_MOVING_ATTRIBUTE);
  animation.onfinish=()=>{clear();animation.cancel();};animation.oncancel=clear;
  return animation;
