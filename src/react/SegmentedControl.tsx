@@ -16,6 +16,7 @@ import {SegmentDefaultsContext} from './segmentContext.ts';
 import {HoverDetail} from './HoverDetail.tsx';
 import {PALETTE_CHANGE_EVENT} from '../theme.ts';
 import {cssRect} from './cssZoom.ts';
+import {pendingText,type SegmentPending} from './segmentPending.tsx';
 
 // An option: its value and label, hover help (`detail`) or a chosen description,
 // whether it is unavailable, and its own attributes.
@@ -60,8 +61,8 @@ interface SegmentedBase<V extends SegmentValue> {
 }
 // One choice, or (`multiple`) any set of them.
 // The options give the values; a change handler takes them (and never decides them).
-export type SingleSegmentProps<V extends SegmentValue>=SegmentedBase<V>&{multiple?: false,value?: V|null,onChange(value: NoInfer<V>): void};
-export type MultipleSegmentProps<V extends SegmentValue>=SegmentedBase<V>&{multiple: true,value: readonly V[],onChange(value: NoInfer<V>[]): void};
+export type SingleSegmentProps<V extends SegmentValue>=SegmentedBase<V>&{multiple?: false,value?: V|null,pending?: SegmentPending<NoInfer<V>>|null,onChange(value: NoInfer<V>): void};
+export type MultipleSegmentProps<V extends SegmentValue>=SegmentedBase<V>&{multiple: true,value: readonly V[],pending?: never,onChange(value: NoInfer<V>[]): void};
 export type SegmentedControlProps<V extends SegmentValue>=SingleSegmentProps<V>|MultipleSegmentProps<V>;
 // The indicator's last place, colour and value.
 interface IndicatorBox {
@@ -81,13 +82,14 @@ export function SegmentedControl<V extends SegmentValue>(props: SingleSegmentPro
 export function SegmentedControl<V extends SegmentValue>(props: MultipleSegmentProps<V>): ReactElement;
 export function SegmentedControl<V extends SegmentValue>(props: SegmentedControlProps<V>) {
   const surface=useContext(SegmentDefaultsContext);
-  const { options, value, ariaLabel, className='', style, variant=surface.variant, density=surface.density, tabs=surface.tabs??false, orientation='horizontal', iconOnly=false, multiple=false, fit=false, scroll=surface.scroll??false, disabled=false, children }=props;
+  const { options, value: given, ariaLabel, className='', style, variant=surface.variant, density=surface.density, tabs=surface.tabs??false, orientation='horizontal', iconOnly=false, multiple=false, fit=false, scroll=surface.scroll??false, disabled=false, children }=props,pending=props.multiple?undefined:props.pending??undefined,value=pending?pending.value:given;
   const swept=variant===TEXT_SEGMENT_VARIANT||variant===ICON_SEGMENT_VARIANT;
   const filled=!multiple&&!swept;
   const root=useRef<HTMLDivElement|null>(null),indicator=useRef<HTMLSpanElement|null>(null),previous=useRef<IndicatorBox|null>(null),animation=useRef<Animation|null>(null);
   const lastText=useRef({value,ariaLabel}),textAnimation=useRef<Animation|null>(null);
-  const chosen=(option: V)=>props.multiple?props.value.includes(option):props.value===option;
+  const chosen=(option: V)=>props.multiple?props.value.includes(option):value===option;
   const choose=(option: V,selected: boolean)=>{
+    if(pending)return;
     if(props.multiple)props.onChange(selected?props.value.filter(v=>v!==option):[...props.value,option]);
     else props.onChange(option);
   };
@@ -167,7 +169,7 @@ export function SegmentedControl<V extends SegmentValue>(props: SegmentedControl
   });
   const onKeyDown=(e: KeyboardEvent<HTMLDivElement>)=>{
     const previous=orientation==='vertical'?'ArrowUp':'ArrowLeft',next=orientation==='vertical'?'ArrowDown':'ArrowRight';
-    if(!tabs||disabled||![previous,next,'Home','End'].includes(e.key))return;
+    if(!tabs||disabled||pending||![previous,next,'Home','End'].includes(e.key))return;
     const enabled=options.filter(o=>!o.disabled);
     if(!enabled.length)return;
     e.preventDefault();
@@ -175,12 +177,12 @@ export function SegmentedControl<V extends SegmentValue>(props: SegmentedControl
     choose(enabled[index].value,chosen(enabled[index].value));e.currentTarget.querySelectorAll('button')[options.indexOf(enabled[index])]?.focus();
   };
   return (
-    <div ref={root} className={`seg${variant?` seg--${variant}`:''}${className?` ${className}`:''}`} data-fit={fit||undefined} data-scroll={scroll||undefined} data-density={density} style={fit?{'--segment-count':options.length,...style}:style} data-count={options.length} data-orientation={orientation} data-icon-only={iconOnly||undefined} data-multiple={multiple||undefined} role={tabs?'tablist':'group'} aria-orientation={tabs?orientation:undefined} aria-label={ariaLabel} onKeyDown={onKeyDown}>
+    <div ref={root} className={`seg${variant?` seg--${variant}`:''}${className?` ${className}`:''}`} data-fit={fit||undefined} data-scroll={scroll||undefined} data-density={density} style={fit?{'--segment-count':options.length,...style}:style} data-count={options.length} data-orientation={orientation} data-icon-only={iconOnly||undefined} data-multiple={multiple||undefined} data-pending={pending?true:undefined} aria-busy={pending?true:undefined} role={tabs?'tablist':'group'} aria-orientation={tabs?orientation:undefined} aria-label={ariaLabel} onKeyDown={onKeyDown}>
       {filled&&<span ref={indicator} className="seg-indicator" aria-hidden="true"/>}
       {options.map((o,index) => {
-        const selected=chosen(o.value);
-        const optionProps={...o.data,className:o.className,style:o.style,id:o.id,title:o.title,role:tabs?'tab':undefined,'aria-selected':tabs?selected:undefined,'aria-pressed':tabs?undefined:multiple&&o.mixed?'mixed' as const:selected,'aria-controls':o.controls,tabIndex:tabs?(selected?0:-1):undefined,'data-on':selected,'data-mixed':multiple&&o.mixed||undefined,'data-unavailable':o.disabled||undefined,[SEGMENT_GROUP_START_ATTRIBUTE]:index>0&&o.group!==options[index-1].group||undefined};
-        const label=<Label kind="action">{o.label}{swept&&<span className={TextSweepElement.className} aria-hidden="true">{o.label}</span>}</Label>,select=()=>choose(o.value,selected);
+        const selected=chosen(o.value),saving=pending?.value===o.value;
+        const optionProps={...o.data,className:o.className,style:o.style,id:o.id,title:o.title,role:tabs?'tab':undefined,'aria-selected':tabs?selected:undefined,'aria-pressed':tabs?undefined:multiple&&o.mixed?'mixed' as const:selected,'aria-controls':o.controls,tabIndex:tabs?(selected?0:-1):undefined,'data-on':selected,'data-mixed':multiple&&o.mixed||undefined,'data-unavailable':o.disabled||undefined,'data-pending':saving||undefined,[SEGMENT_GROUP_START_ATTRIBUTE]:index>0&&o.group!==options[index-1].group||undefined};
+        const label=<Label kind="action">{saving?<span className="seg-pending" role="status">{pendingText(o,pending)}</span>:o.label}{swept&&<span className={TextSweepElement.className} aria-hidden="true">{pendingText(o,pending)}</span>}</Label>,select=()=>choose(o.value,selected);
         // An option's `detail` is hover/focus help, shared with settings through HoverDetail.
         // An option unavailable on its own keeps its help: hovering or pressing it explains why.
         return o.detail

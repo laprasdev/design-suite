@@ -32,19 +32,31 @@
 }
 .loading-indicator { display:inline-flex;align-items:center;justify-content:center;gap:10px;vertical-align:middle;color:inherit; }
 .loading-indicator>span:last-child { min-width:0; }
-/* Reserve all three periods; only their visible clipping changes every half second. */
-.loading-dots { --loading-dots-cycle:2s;display:inline-block;clip-path:inset(0 66.6667% 0 0);animation:loading-dots var(--loading-dots-cycle) step-end infinite; }
-@keyframes loading-dots {
- 0%,100% { clip-path:inset(0 66.6667% 0 0); }
- 25% { clip-path:inset(0 33.3333% 0 0); }
- 50% { clip-path:inset(0 0 0 0); }
- 75% { clip-path:inset(0 100% 0 0); }
+/* Only the composed label opts into this presentation; older same-class hosts retain their layout. */
+.loading-indicator:has(>.loading-label) { --loading-cycle:4s;gap:calc(var(--field-gap,8px) * 1.5); }
+/* The composed ball and label share one clock; standalone artwork keeps its own default. */
+.loading-indicator:has(>.loading-label)>.loading-pokeball { --loading-cycle:inherit; }
+.loading-label {
+ --loading-label-light:255 255 255;--loading-label-rest-opacity:0;
+ --loading-label-near-glow:.4em;--loading-label-far-glow:.9em;
+ min-width:0;font-family:var(--font-chrome,inherit);font-size:max(12px,var(--type-control,13px));letter-spacing:normal;
+ color:rgb(var(--loading-label-light));animation:loading-label-breathe var(--loading-cycle) ease-in-out infinite;
+}
+.loading-label:empty { display:none; }
+@keyframes loading-label-breathe {
+ 0%,100% { opacity:var(--loading-label-rest-opacity);text-shadow:0 0 var(--loading-label-near-glow) rgb(var(--loading-label-light) / 0),0 0 var(--loading-label-far-glow) rgb(var(--loading-label-light) / 0); }
+ 50% { opacity:1;text-shadow:0 0 var(--loading-label-near-glow) rgb(var(--loading-label-light) / .4),0 0 var(--loading-label-far-glow) rgb(var(--loading-label-light) / .14); }
 }
 /* A whole page loading sits in the middle of the window, whatever else is laid out. */
 .loading-screen { position:fixed;inset:0;display:grid;place-items:center;color:var(--dim); }
 @media (prefers-reduced-motion:reduce) {
- .loading-dots { animation:none;clip-path:none; }
+ .loading-label { animation:none;opacity:1;text-shadow:none; }
  .glow-particles i { animation:none;opacity:.3; }
  .loading-pokeball>svg { animation:none; }
  .loading-pokeball>.loading-burst { display:none; }
 }
+
+/* Keep a stable accessible status while the page waits for its actual font faces. */
+.loading-indicator[data-text-ready=false]>.loading-label { animation:none;opacity:0;text-shadow:none; }
+.loading-indicator[data-text-ready=false]>.loading-pokeball>svg,
+.loading-indicator[data-text-ready=false]>.loading-pokeball>.loading-burst i { animation:none; }

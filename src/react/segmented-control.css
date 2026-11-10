@@ -28,6 +28,14 @@
   --icon-foreground:var(--selection-foreground);
   background:transparent;color:var(--selection-foreground);box-shadow:none;
 }
+/* A pending choice: its option shows the loading Poké Ball at its text's size beside the pending label, the others
+   fade, and nothing presses. A scrolling frame keeps the ball's burst from adding a vertical scroll. */
+.seg[data-pending] button { cursor:progress; }
+.seg[data-pending] button:not([data-pending]) { color:var(--faint); }
+.seg[data-pending][data-scroll] { overflow-y:hidden; }
+.seg-pending { display:inline-flex;align-items:center;gap:inherit; }
+.seg-pending>.loading-pokeball { --loading-size:var(--segment-spinner-size,1.2em); }
+.seg .bd-text-selection>.loading-pokeball { visibility:hidden; }
 .seg-indicator { position:absolute;z-index:-1;pointer-events:none;transform-origin:top left;background:var(--pink);box-shadow:inset 0 1px 0 var(--bevel); }
 /* The options of a group sit together, with a wider space before the next group. */
 .seg button[data-group-start] { margin-inline-start:var(--segment-group-gap,calc(var(--field-gap) * 2)); }

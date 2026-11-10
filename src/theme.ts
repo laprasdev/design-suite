@@ -10,9 +10,10 @@ import { LayoutDimensions, PHI } from "./layout.ts";
 import { hexToRgba } from "./color.ts";
 
 // A theme's overrides: its name, colors, radii, stroke and inset.
+export const DISPLAY_FONT_FAMILY = "Bloom SF Pro Display";
 export const THEME_TYPOGRAPHY = Object.freeze({
   reading: '-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,system-ui,sans-serif',
-  chrome: '"Bloom SF Pro Display",-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,system-ui,sans-serif',
+  chrome: `"${DISPLAY_FONT_FAMILY}",-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,system-ui,sans-serif`,
   code: 'ui-monospace,"SF Mono",Menlo,monospace',
   bodySize: 15, controlSize: 13, lineHeight: 1.6,
 });
