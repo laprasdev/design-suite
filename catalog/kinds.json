@@ -212,6 +212,7 @@
     "ViewStack",
     "Button",
     "Modal",
+    "ModalRow",
     "GooExpander",
     "GraphDisplay"
    ],
@@ -221,7 +222,7 @@
     "AppHeader",
     "FooterTray"
    ],
-   "note": "GooExpander offers tab and square fused shapes, and a crisp bordered panel form expanding from a rail edge without overshoot. A module's field is ModuleField, from the synth ModuleGrid: its form is the stack of control, reading and name sharing one centre, the control filling the cell's height, or one line as high as a yes/no line with the control, its name and its reading, for a tile too short to stack them."
+   "note": "Modal has a titled form: its title, ModalRow rows on two shared columns and an actions row that stays in view while the rows scroll. GooExpander offers tab and square fused shapes, and a crisp bordered panel form expanding from a rail edge without overshoot. A module's field is ModuleField, from the synth ModuleGrid: its form is the stack of control, reading and name sharing one centre, the control filling the cell's height, or one line as high as a yes/no line with the control, its name and its reading, for a tile too short to stack them."
   },
   "SelectField": {
    "data": "enum, long list",

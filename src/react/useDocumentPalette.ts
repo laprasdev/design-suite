@@ -43,4 +43,3 @@ export function useDocumentPalette(primaryColor: string, enabled: boolean) {
     `;
   }, [primaryColor, enabled]);
 }
-

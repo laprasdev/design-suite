@@ -90,4 +90,3 @@ export interface StyleContextType {
   revertToStyle: () => void;
   getEffectiveStyle: () => StyleTheme;
 }
-

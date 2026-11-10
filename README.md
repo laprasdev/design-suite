@@ -122,6 +122,14 @@ for cleanup; `.copy` and the placement result expose its element for animation.
 Use `Modal` for short confirmations and bounded pickers. `ViewStack` keeps its
 existing modal behavior; the page form does not add a backdrop or Escape handler.
 
+Give a `Modal` a `title` and it lays its children out on one grid: the title, which
+names the dialog, then each `ModalRow` (a label and its control on two shared columns,
+or one full-width row without a label), then an optional `actions` row that stays in
+view while the rows scroll. `actions` needs a `title`. Each child of a titled modal is
+a `ModalRow`; `ModalElement` names the parts for styling and browser checks. The titled
+form scrolls its rows; held growth after a disclosure opens is the plain form's. A modal
+without a title keeps its children as they are.
+
 ## 3D preview
 
 The browser renderer for the existing `RenderTextureView` kind lives in `/preview3d`.

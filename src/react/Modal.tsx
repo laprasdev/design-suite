@@ -10,13 +10,15 @@
                        the heading that names it
      · keepRoomFor   → a selector for content that opens inside the dialog; the
                        dialog keeps room for its height (useHeldTop)
-   Content (header, ✕, body) is passed as children; the shell owns only the
-   backdrop, placement (useHeldTop), and fade. Themed through host CSS custom
-   properties, so a consuming app's palette drives it. */
+   Content is passed as children; given a `title`, ModalLayout sets them out as
+   rows (ModalRow) under it, above an `actions` row. The shell owns only the backdrop,
+   placement (useHeldTop) and fade, themed through host CSS custom properties. */
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefObject, type SyntheticEvent, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import {focusableControls} from './focusable.ts';
 import {KEPT_ROOM_ATTRIBUTE,SCROLL_STEP_PX,keptRoom,modalGrowthLimit} from './modalRoom.ts';
 import { cssRect } from './cssZoom.ts';
+import { ModalLayout, type ModalTitleProps } from './ModalLayout.tsx';
+import { MODAL_TITLED_ATTRIBUTE } from './modalElements.ts';
 const FADE_MS = 200;
 
 /* Keep a node mounted through its fade-out, returning [mounted, visible].
@@ -186,7 +188,7 @@ function useHeldTop(mounted: boolean, keepRoomFor: string | undefined, backdrop:
   return {hold, opened};
 }
 
-export interface ModalProps {
+export type ModalProps = ModalTitleProps & {
   open: boolean;
   onClose?: () => void;
   dismissible?: boolean;
@@ -198,8 +200,8 @@ export interface ModalProps {
   keepRoomFor?: string;
   className?: string;
   children: ReactNode;
-}
-export function Modal({ open, onClose, dismissible = true, dismissOnContent = false, blocking = false, returnFocusRef, ariaLabel, labelledBy, keepRoomFor, className = "", children }: ModalProps) {
+};
+export function Modal({ open, onClose, dismissible = true, dismissOnContent = false, blocking = false, returnFocusRef, ariaLabel, labelledBy, keepRoomFor, className = "", title, actions, children }: ModalProps) {
   const [mounted, visible] = useFadeMount(open);
   const backdrop = useRef<HTMLDivElement>(null), dialog = useRef<HTMLDivElement>(null), {hold, opened} = useHeldTop(mounted, keepRoomFor, backdrop, dialog);
   const blocked = blocking && open && mounted;
@@ -237,10 +239,10 @@ export function Modal({ open, onClose, dismissible = true, dismissOnContent = fa
   if (!mounted) return null;
   return (
     <div ref={backdrop} className={`sd-modal-bg${visible ? " sd-in" : ""}`} onClick={interactive ? close : undefined}>
-      <div ref={dialog} className={`sd-modal${className ? " " + className : ""}`} role="dialog" aria-modal="true" data-dismissible={interactive}
-        aria-label={ariaLabel} aria-labelledby={labelledBy} tabIndex={blocking ? -1 : undefined} onClick={(e) => {e.stopPropagation();if(interactive&&dismissOnContent&&e.target instanceof Element&&!e.target.closest('button,a,input,textarea,select,label,summary,[role=button]'))close();}}
+      <div ref={dialog} className={`sd-modal${className ? " " + className : ""}`} role="dialog" aria-modal="true" data-dismissible={interactive} {...{[MODAL_TITLED_ATTRIBUTE]: title !== undefined}}
+        aria-label={ariaLabel ?? title} aria-labelledby={labelledBy} tabIndex={blocking ? -1 : undefined} onClick={(e) => {e.stopPropagation();if(interactive&&dismissOnContent&&e.target instanceof Element&&!e.target.closest('button,a,input,textarea,select,label,summary,[role=button]'))close();}}
         onPointerDownCapture={hold} onKeyDownCapture={hold} onClickCapture={opened} onKeyDown={containFocus}>
-        {children}
+        {title === undefined ? children : <ModalLayout title={title} actions={actions}>{children}</ModalLayout>}
       </div>
     </div>
   );

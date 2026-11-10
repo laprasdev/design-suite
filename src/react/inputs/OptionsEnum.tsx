@@ -48,4 +48,3 @@ function LegacyOptions<T>({options, value, onChange, disabled, scheme, style, cl
     </div>
   );
 }
-

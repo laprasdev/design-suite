@@ -46,7 +46,7 @@ function RecordHead<R extends TableRecord, V>({
     </th>)}
   </tr></thead>;
 }
-function RecordRow<R extends TableRecord, V>({record, identity, columns, values, rowState, rowActions, rowProps}: 
+function RecordRow<R extends TableRecord, V>({record, identity, columns, values, rowState, rowActions, rowProps}:
   RecordRowsViewProps<R, V> & {record: R}) {
   const state = rowState?.(record);
   return <tr {...rowProps?.(record)} data-record={record.id} data-selected={state?.selected} data-taken={state?.taken}>
