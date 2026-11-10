@@ -12,8 +12,7 @@ export const RoutingDimensions = {
   nodeRadius: 8,
   columnGap: 34,
   rowGap: 13,
-  // A chain wider than the canvas wraps into bands this far apart, room enough for a wire going back to the next
-  // band's start.
+  // Vertical spacing between independent chain summaries.
   bandGap: 55,
   // Between the canvas's edge and the outputs, so a wire cut off at the edge never reads as reaching an output.
   edgeGap: 13,
@@ -31,12 +30,11 @@ export const RoutingDimensions = {
   gridStep: 21,
   gridLine: 1,
   // The outputs: a rail of one icon a group, each opening the group's card beside it. A row is the rail's button,
-  // a card's label and each of its terminals, so an icon stands level with its card's label. All on φ.
+  // and each terminal. The middle terminal stands level with the icon.
   outputRow: 21,
   outputIcon: 13,
-  outputCardWidth: NODE_WIDTH / 2,
-  outputPadding: 5,
-  terminalSize: 8,
+  outputCardWidth: 34,
+  outputPadding: 3,
   menuWidth: 233,
   menuOffset: 8,
   panCueSize: 21,

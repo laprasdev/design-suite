@@ -18,6 +18,6 @@ export function ChoiceGrid({options, selected, onChoose, ariaLabel, disabled}: P
   const {cell, glyphShare, iconOnly} = GRID_CELL;
   const columns = useWrapColumns(frame, options.length, cell), point = usePointHint(options);
   return <SegmentedControl options={options} value={selected} onChange={onChoose} variant={ICON_SEGMENT_VARIANT}
-    wrap={{frame, cell, glyphShare, columns}} onPoint={point}
+    wrap={{frame, cell, columns}} glyphShare={glyphShare} onPoint={point}
     iconOnly={iconOnly} disabled={disabled} ariaLabel={ariaLabel} style={theme}/>;
 }

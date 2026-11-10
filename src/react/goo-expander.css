@@ -61,6 +61,19 @@
 .bd-goo[data-form=square][data-direction=left]>.bd-goo-content {
  left:calc(-1 * var(--goo-width) - var(--goo-trigger-size) / 2);
 }
+/* A crisp rail panel expands from its trigger edge, inside its final bounds. */
+.bd-goo[data-form=panel]>.bd-goo-content {
+ left:calc(var(--goo-trigger-size) / 2);top:var(--goo-top);width:0;height:var(--goo-height);
+ box-sizing:border-box;overflow:hidden;background:var(--goo-fill);
+ border:var(--line-width) solid var(--segment-divider,var(--line));border-inline-start:0;
+ border-radius:0 var(--goo-radius) var(--goo-radius) 0;box-shadow:var(--goo-shadow);
+ transition:width var(--goo-duration) var(--goo-easing),opacity var(--goo-duration) var(--goo-easing),visibility var(--goo-duration);
+}
+.bd-goo[data-form=panel][data-direction=left]>.bd-goo-content {
+ left:auto;right:calc(var(--goo-trigger-size) / 2);border-inline-start:var(--line-width) solid var(--segment-divider,var(--line));
+ border-inline-end:0;border-radius:var(--goo-radius) 0 0 var(--goo-radius);
+}
+.bd-goo[data-form=panel][data-open]>.bd-goo-content {width:var(--goo-width);}
 @media (prefers-reduced-motion:reduce) {
  .bd-goo-body,.bd-goo-nub,.bd-goo-nub::after,.bd-goo-content {transition:none!important;}
 }

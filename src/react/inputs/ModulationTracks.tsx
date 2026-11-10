@@ -25,6 +25,7 @@ export const modulationRoom = (display: ModulationDisplayValue = DEFAULT_MODULAT
 /** The same modulation on cell, setting and range sliders, in the form the slider chose. */
 export function ModulationTracks({modulationDisplay = DEFAULT_MODULATION_DISPLAY, ...props}:
   ModulationTrackProps & Pick<SliderModulationProps, 'modulationDisplay'>) {
+  if (!props.modulators?.length) return null;
   const {Tracks} = FORMS[modulationDisplay];
   return <Tracks {...props}/>;
 }

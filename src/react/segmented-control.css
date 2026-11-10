@@ -28,6 +28,14 @@
   --icon-foreground:var(--selection-foreground);
   background:transparent;color:var(--selection-foreground);box-shadow:none;
 }
+/* A pending choice: its option shows the loading Poké Ball at its text's size beside the pending label, the others
+   fade, and nothing presses. A scrolling frame keeps the ball's burst from adding a vertical scroll. */
+.seg[data-pending] button { cursor:progress; }
+.seg[data-pending] button:not([data-pending]) { color:var(--faint); }
+.seg[data-pending][data-scroll] { overflow-y:hidden; }
+.seg-pending { display:inline-flex;align-items:center;gap:inherit; }
+.seg-pending>.loading-pokeball { --loading-size:var(--segment-spinner-size,1.2em); }
+.seg .bd-text-selection>.loading-pokeball { visibility:hidden; }
 .seg-indicator { position:absolute;z-index:-1;pointer-events:none;transform-origin:top left;background:var(--pink);box-shadow:inset 0 1px 0 var(--bevel); }
 /* The options of a group sit together, with a wider space before the next group. */
 .seg button[data-group-start] { margin-inline-start:var(--segment-group-gap,calc(var(--field-gap) * 2)); }
@@ -74,10 +82,10 @@
 /* A cell form that gives its icon a share of the cell: the icon's slot, centred, which an icon sized to fill takes. A cluster: its cells sit together at the cell's size and the frame ends where they do, so the rest of the row goes to the next field. Its options are aria-disabled, as the grid's are, so a field that can't be changed still shows its hint, and SegmentedControl presses nothing then. */
 .seg[data-glyph] { pointer-events:auto; }
 .seg[data-glyph]>button[aria-disabled=true] { cursor:default; }
-.seg[data-glyph][data-icon-only=true]>button>.bd-label { width:calc(var(--segment-cell) * var(--segment-glyph-share));height:calc(var(--segment-cell) * var(--segment-glyph-share)); }
+.seg[data-glyph]:not([data-wrap])[data-icon-only=true]>button>.bd-label { width:calc(var(--segment-cell) * var(--segment-glyph-share));height:calc(var(--segment-cell) * var(--segment-glyph-share)); }
 .seg[data-orientation=vertical][data-scroll] { overflow-x:hidden;overflow-y:auto; }
 .seg--joined[data-orientation=vertical] button>.bd-label { flex:1;justify-content:center; }
-/* The wrapping form, as the choice kind's grid form. SegmentedControl writes --segment-columns, --segment-rows, --segment-glyph-share and --segment-cell (the smallest cell a column is measured against) from its `wrap` prop. Glyph-wide columns spread edge to edge across the frame, so the first and last glyphs sit on its edges, and rows share its height. The frame is the size container, so a glyph scales with it (cqw, cqh): it takes its glyph share of the cell its columns and rows give it. The frame is never shorter than its rows of the smallest cell. --segment-gap is the one gap, for the layout, the formula and the measurement of the columns. A field that cannot be changed turns its pointer events off, and the grid takes them back so its icons still show their hint; its options are aria-disabled rather than disabled, since a disabled button gets no hover or focus, and press nothing. The frame clips, so the press areas at its edges don't reach past it and widen the body. */
+/* The wrapping form, as the choice kind's grid form. SegmentedControl writes --segment-columns, --segment-rows and --segment-cell from wrap, and --segment-glyph-share from its top-level glyphShare. Glyph-wide columns spread edge to edge across the frame, so the first and last glyphs sit on its edges, and rows share its height. The frame is the size container, so a glyph scales with it (cqw, cqh): it takes its glyph share of the cell its columns and rows give it. The frame is never shorter than its rows of the smallest cell. --segment-gap is the one gap, for the layout, the formula and the measurement of the columns. A field that cannot be changed turns its pointer events off, and the grid takes them back so its icons still show their hint; its options are aria-disabled rather than disabled, since a disabled button gets no hover or focus, and press nothing. The frame clips, so the press areas at its edges don't reach past it and widen the body. */
 .seg[data-wrap] { overflow:clip;pointer-events:auto;--segment-gap:var(--field-gap);--segment-cell-width:calc((100cqw - (var(--segment-columns) - 1) * var(--segment-gap)) / var(--segment-columns));--segment-cell-height:calc((100cqh - (var(--segment-rows) - 1) * var(--segment-gap)) / var(--segment-rows));--segment-glyph:calc(min(var(--segment-cell-width),var(--segment-cell-height)) * var(--segment-glyph-share));container-type:size;display:grid;grid-template-columns:repeat(var(--segment-columns),max-content);justify-content:space-between;grid-auto-rows:1fr;align-items:center;gap:var(--segment-gap);width:100%;height:100%;min-height:calc(var(--segment-rows) * var(--segment-cell) + (var(--segment-rows) - 1) * var(--segment-gap)); }
 .seg[data-wrap]>button { position:relative;display:grid;place-items:center;width:var(--segment-glyph);height:var(--segment-glyph);min-width:0;min-height:0;padding:0; }
 /* The glyphs sit flush, and each press area reaches halfway to its neighbours: the whole cell its column and row give it. */

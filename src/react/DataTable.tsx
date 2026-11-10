@@ -5,14 +5,19 @@
 // =====================================================
 import React, { type TableHTMLAttributes } from "react";
 
+// FIT sizes the table to its content instead of the full width.
+export const DataTableForm = Object.freeze({ FIT: 'fit' } as const);
+export type DataTableForm = (typeof DataTableForm)[keyof typeof DataTableForm];
+
 export interface DataTableProps extends TableHTMLAttributes<HTMLTableElement> {
   head?: readonly string[];
   rows: readonly (readonly (string | number)[])[];
+  form?: DataTableForm;
 }
 
-export function DataTable({ head, rows, className = "", ...rest }: DataTableProps) {
+export function DataTable({ head, rows, className = "", form, ...rest }: DataTableProps) {
   return (
-    <table className={`bd-table${className ? " " + className : ""}`} {...rest}>
+    <table className={`bd-table${className ? " " + className : ""}`} data-table-form={form} {...rest}>
       {head && (
         <thead>
           <tr>{head.map((h, i) => <th key={i} scope="col">{h}</th>)}</tr>

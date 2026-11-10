@@ -1,5 +1,8 @@
 import type { NodeBox, NodeSide } from "./geometry.ts";
 
+export const GRAPH_WIRE_ATTRIBUTE = 'data-wire';
+export const GRAPH_NODE_ATTRIBUTE = 'data-graph-node';
+
 export interface GraphNode extends NodeBox { id: string; accent?: boolean }
 /** Offsets from the layout; member offsets are relative to their group's offset. */
 export interface NodeMove { dx: number; dy: number }

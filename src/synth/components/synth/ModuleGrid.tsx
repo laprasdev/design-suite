@@ -29,7 +29,7 @@ interface FieldProps {
   label: string; icon?: React.ReactNode; value?: React.ReactNode; emphasis: FieldEmphasisValue;
   onName?: () => void; nameLabel?: string; nameTitle?: string; children: React.ReactNode;
 }
-/** The control, its reading and its name, centred or on the column's line; `stretch` fills the cell's width. */
+/** The control, its reading and its name share a centre; `stretch` fills the cell's width. */
 interface StackFieldProps extends FieldProps { form?: typeof FieldForm.STACK; stretch?: boolean }
 /** As the stack, with the control taking the cell's whole height, for one that grows with it. */
 interface FillsFieldProps extends FieldProps { form: typeof FieldForm.FILLS; stretch?: boolean }
@@ -65,12 +65,15 @@ function LineField({ label, icon, value, emphasis, onName, nameLabel, nameTitle,
 
 function StackField(props: StackFieldProps | FillsFieldProps) {
   const { label, icon, value, emphasis, onName, nameLabel, nameTitle, stretch, children } = props;
-  const align = useFieldAlign(), fills = props.form === FieldForm.FILLS;
+  const placement = useFieldAlign(), fills = props.form === FieldForm.FILLS;
+  const align = FieldAlign.CENTER;
   const width = stretch ? '100%' : undefined;
-  const control = { display: 'grid', alignItems: fills ? 'stretch' : 'center', justifyItems: align, width };
+  const control = { display: 'grid', alignItems: fills ? 'stretch' : 'center',
+    justifyItems: stretch ? 'stretch' : align, width };
   return (
     <div data-module-field={label} data-field-emphasis={emphasis} aria-disabled={emphasis === FieldEmphasis.INERT}
-      style={{ display: 'grid', justifyItems: align, gap: G.fieldGap, width, ...(fills && FILLS_FIELD) }}>
+      style={{ display: 'grid', justifySelf: placement, justifyItems: align, gap: G.fieldGap,
+        width, ...(fills && FILLS_FIELD) }}>
       <div data-field-control style={fieldControl(emphasis, { ...control, ...(fills && FILLS_COLUMN) })}>{children}</div>
       {value !== undefined && <FieldReading value={value} emphasis={emphasis} align={align} />}
       <FieldName label={label} icon={icon} emphasis={emphasis} onName={onName} nameLabel={nameLabel}

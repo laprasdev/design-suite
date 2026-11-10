@@ -1,4 +1,6 @@
 /* Referenced-photo layouts: a strip of thumbnails, and labeled captures side by side. */
+/* The rows form's target height, registered as a length so any unit resolves to pixels for the layout. */
+@property --photo-compare-row-height { syntax: "<length>"; inherits: true; initial-value: 240px; }
 .bd-photos { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
 .bd-photos a {
   display: block; width: 220px; overflow: hidden; background: #000;
@@ -17,8 +19,14 @@
 }
 .bd-compare img { display: block; width: 100%; height: auto; }
 .bd-compare figcaption { margin-top: 4px; }
-/* A tile capture shows one square of a horizontal strip; the component places it with object-position. */
-.bd-compare figure img[data-tile] { aspect-ratio: 1; object-fit: cover; }
+/* StripTile: one tile of a horizontal strip. The box keeps the tile's aspect and the component places the strip inside
+   it, so no neighbour shows; --strip-tile-max-height, or a comparison's --photo-compare-max-height, caps the box through
+   its width. */
+.bd-strip-tile {
+  display: block; position: relative; overflow: hidden; width: 100%; margin-inline: auto;
+  aspect-ratio: var(--strip-tile-ratio, 1);
+  max-width: calc(var(--strip-tile-max-height, var(--photo-compare-max-height, 100000px)) * var(--strip-tile-ratio, 1));
+}
 
 /* Inline comparisons live inside a caller's row. Their sizing and surface are public tokens;
    default comparisons and photo strips keep their original layout and label styling. */
@@ -26,7 +34,6 @@
 .bd-compare[data-photo-form="inline"] a { cursor: zoom-in; }
 .bd-compare[data-photo-form="inline"] img {
   max-height: var(--photo-compare-max-height, none);
-  aspect-ratio: var(--photo-compare-aspect, auto);
   object-fit: contain;
   background: var(--photo-compare-background, transparent);
 }
@@ -34,3 +41,16 @@
   font-size: max(12px, var(--photo-compare-caption-size, var(--type-caption, 12px)));
 }
 .bd-compare[data-photo-form="inline"] figcaption:empty { display: none; }
+
+/* Rows: justified rows the component sizes from its width and each capture's aspect, aiming for
+   --photo-compare-row-height; each figure's width is set, so nothing is letterboxed. */
+.bd-compare[data-photo-form="rows"] { margin: 0; }
+/* The frame is drawn inside the picture, taking no width, so every picture in a row is exactly the row's height. */
+.bd-compare[data-photo-form="rows"] a {
+  cursor: zoom-in; background: var(--photo-compare-background, #000); border: 0;
+  outline: var(--line-width, 1.5px) solid var(--line, rgba(255, 255, 255, 0.11));
+  outline-offset: calc(-1 * var(--line-width, 1.5px));
+}
+.bd-compare[data-photo-form="rows"] figcaption {
+  font-size: max(12px, var(--photo-compare-caption-size, var(--type-caption, 12px)));
+}

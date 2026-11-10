@@ -10,7 +10,8 @@ export const LIVE_SCALE = 2.4;
  *  ASSIGNED marks one that holds any. */
 export const ModulationPart = Object.freeze({
   SOURCE: 'data-modulator', LINE: 'data-modulation-source-line', SEGMENT: 'data-modulation-segment',
-  END: 'data-modulation-end', LIVE: 'data-modulation-live', NUMERAL: 'data-modulator-numeral',
+  END: 'data-modulation-end', END_GROUP: 'data-modulation-end-group',
+  LIVE: 'data-modulation-live', NUMERAL: 'data-modulator-numeral',
   SOCKET: 'data-modulation-socket', ORDER: 'data-modulation-order', ASSIGNED: 'data-modulation-assigned',
 } as const);
 

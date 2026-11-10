@@ -2,19 +2,19 @@ import type { MutableRefObject } from 'react';
 
 /**
  * The wrapping grid form's inputs. `cell` is the smallest square a column is measured against, which also keeps the
- * frame no shorter than its rows of it; `glyphShare` is the share of the cell its columns and rows give that the glyph
- * takes; `columns` is how many the frame's width holds, measured by the consumer and undefined until it is. `frame`
+ * frame no shorter than its rows of it. `columns` is how many the frame's width holds, measured by the consumer
+ * and undefined until it is. `frame`
  * hands the control's own root to that consumer.
  */
 export interface WrapGrid {
-  cell: number; glyphShare: number; columns?: number;
+  cell: number; columns?: number;
   frame: MutableRefObject<HTMLDivElement | null>;
 }
 
 /** The CSS variables segmented-control.css's wrap rules read; this is their one writer. */
-export function wrapVariables({ cell, glyphShare, columns }: WrapGrid, count: number) {
+export function wrapVariables({ cell, columns }: WrapGrid, count: number) {
   return {
-    '--segment-cell': `${cell}px`, '--segment-glyph-share': glyphShare,
+    '--segment-cell': `${cell}px`,
     ...(columns && { '--segment-columns': columns, '--segment-rows': Math.ceil(count / columns) }),
   };
 }

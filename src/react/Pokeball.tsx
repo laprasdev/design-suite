@@ -43,20 +43,21 @@ export function PokeballSpinner({size,fit=false}: {size?: number,fit?: boolean})
 }
 
 // Loading where it happens: inside a widget or beside the thing that's coming.
-interface IndicatorProps {children?: ReactNode,className?: string,size?: number}
+interface IndicatorProps {children?: ReactNode,className?: string,size?: number,textReady?: boolean}
 export function LoadingIndicator({
- children=<>Loading<span className={LoadingElement.DOTS.className} aria-hidden="true">...</span></>,
- className='',size=28,
+ children='loading',
+ className='',size=28,textReady=true,
 }: IndicatorProps) {
- return <span className={`${LoadingElement.INDICATOR.className} ${className}`} role="status">
+ return <span className={`${LoadingElement.INDICATOR.className} ${className}`}
+  role="status" data-text-ready={textReady}>
   <PokeballSpinner size={size}/>
-  <span>{children}</span>
+  <span className={LoadingElement.LABEL.className}>{children}</span>
  </span>;
 }
 
 // Loading a whole page: the indicator centred in the window.
-export function LoadingScreen({children,size}: {children?: ReactNode,size?: number}) {
+export function LoadingScreen({children,size,textReady}: IndicatorProps) {
  return <div className={LoadingElement.SCREEN.className}>
-  <LoadingIndicator size={size}>{children}</LoadingIndicator>
+  <LoadingIndicator size={size} textReady={textReady}>{children}</LoadingIndicator>
  </div>;
 }

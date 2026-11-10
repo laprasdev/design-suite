@@ -1,4 +1,5 @@
 import React, {forwardRef} from 'react';
+import { Circle } from 'lucide-react';
 import {useStyle} from '../../synth/StyleContext.tsx';
 import {hexToRgba} from '../../color.ts';
 import {D, O} from '../../synth/design/index.ts';
@@ -27,5 +28,7 @@ export const ModulationSocket = forwardRef<HTMLButtonElement, SocketProps>(
       style={{display: 'block', flex: '0 0 auto', width: size, height: size, padding: 0, boxSizing: 'border-box',
         border: `${Borders.standard.width}px ${Borders.standard.style} `
           + hexToRgba(style.primaryColor, open ? O.full : O.medium),
-        borderRadius: D.radius.tiny, background, cursor: 'pointer', ...extra}}/>;
+        borderRadius: D.radius.tiny, background, color: style.textColor, cursor: 'pointer', ...extra}}>
+      <Circle width="100%" height="100%" aria-hidden />
+    </button>;
   });

@@ -1,4 +1,5 @@
-import React, { useMemo, type RefObject } from "react";
+import {GRAPH_WIRE_ATTRIBUTE} from './nodeGraphTypes.ts';
+import React, { useLayoutEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { Cable, X } from "lucide-react";
 import { Button } from "./Button.tsx";
 import {
@@ -8,17 +9,27 @@ import { nearestGroupOutlet, stepGroupOutlet } from "./groupOutlets.ts";
 import { useWireGestures } from "./useWireGestures.ts";
 import type { GraphEdge, GraphGroup, GraphNode, GraphPoint, GroupOutlets, TwistTie } from "./nodeGraphTypes.ts";
 
-const FLOW_LIGHTS = 3, FLOW_SECONDS = 2.4, TIE_STEP = 8;
+// Logical CSS pixels per second: route length changes trip time, never activity speed.
+const FLOW_PIXELS_PER_SECOND = 30, FLOW_LIGHTS = 3, TIE_STEP = 8;
 const NO_OUTLETS: GroupOutlets = Object.freeze({});
 const NO_TIES: readonly TwistTie[] = Object.freeze([]);
 
 function FlowLights({ path }: { path: string }) {
-  return <g className="bd-flow">{Array.from({ length: FLOW_LIGHTS }, (_, k) => (
-    <circle key={k} className="bd-flow-light" r="2.6">
-      <animateMotion dur={`${FLOW_SECONDS}s`} begin={`${(-k * FLOW_SECONDS) / FLOW_LIGHTS}s`}
-        repeatCount="indefinite" path={path} />
-    </circle>
-  ))}</g>;
+  const geometry = useRef<SVGPathElement>(null), [seconds, setSeconds] = useState(0);
+  useLayoutEffect(() => {
+    const length = geometry.current!.getTotalLength();
+    if (!Number.isFinite(length)) throw new Error("Wire flow requires a finite path length.");
+    setSeconds(length / FLOW_PIXELS_PER_SECOND);
+  }, [path]);
+  return <g className="bd-flow">
+    <defs><path ref={geometry} d={path} /></defs>
+    {seconds > 0 && Array.from({ length: FLOW_LIGHTS }, (_, k) => (
+      <circle key={k} className="bd-flow-light" r="2.6">
+        <animateMotion key={`${path}:${seconds}`} dur={`${seconds}s`} begin={`${(-k * seconds) / FLOW_LIGHTS}s`}
+          calcMode="paced" repeatCount="indefinite" path={path} />
+      </circle>
+    ))}
+  </g>;
 }
 
 export function GraphWires({
@@ -67,7 +78,7 @@ export function GraphWires({
         <circle className="bd-port" cx={link.b.x} cy={link.b.y} r="3.1" />
       </g>)}
       {onTiesChange && links.map(link => <path key={`hit:${link.id}`} className="bd-edge-hit" d={link.d}
-        data-wire={link.id} role="button" tabIndex={0} aria-label={`Select wire: ${link.label}`}
+        {...{[GRAPH_WIRE_ATTRIBUTE]: link.id}} role="button" tabIndex={0} aria-label={`Select wire: ${link.label}`}
         aria-pressed={wires.selected.includes(link.id)} onPointerDown={event => event.stopPropagation()}
         onClick={event => { event.stopPropagation(); wires.select(link.id, event.shiftKey); }}
         onKeyDown={event => {

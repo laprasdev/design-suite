@@ -9,6 +9,7 @@ import {LayoutDimensions} from '../../layout.ts';
 const G = LayoutDimensions.moduleGrid;
 import { cutoutBox, cutoutEdge, inputOpacity } from './inputStyle.ts';
 import { selectCaret } from './selectCaret.ts';
+const MODULE_ICON_CHOICE = 'data-icon-choice';
 
 interface SelectOption<Value> { value: Value; label: string; group?: string }
 interface SelectProps<Value> {
@@ -57,7 +58,8 @@ export function ModuleSelect<Value extends string | number>(
     {groups.map(group => <optgroup key={group} label={group}>{inGroup(group)}</optgroup>)}
   </select>;
   if (!icon) return select;
-  return <label data-icon-choice title={title} style={{...cutoutBox(style), padding: 0, position: 'relative',
+  return <label {...{ [MODULE_ICON_CHOICE]: true }} title={title}
+    style={{...cutoutBox(style), padding: 0, position: 'relative',
     flex: 'none', boxSizing: 'border-box', width: G.iconChoiceBox, height: G.iconChoiceBox, display: 'grid',
     placeItems: 'center',
     opacity: inputOpacity(disabled), cursor: disabled ? 'default' : 'pointer'}}>

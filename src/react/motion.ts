@@ -1,5 +1,6 @@
 export const LABEL_PEEK_MS=2000;
 import {element} from './elementContract.ts';
+export const SegmentIndicator = element('seg-indicator');
 import {cssRect} from './cssZoom.ts';
 // Current released spring behavior, used by every application consumer.
 export const SPRING_MS=620;

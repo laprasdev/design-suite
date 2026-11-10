@@ -74,7 +74,6 @@ export const ModuleGridDimensions = {
     swatchWidth: 44,
     ringNumeralSize: 12,
     crumbGap: 8,
-    relationshipTypeColumns: 2,
     statesRowGap: 8,
     gesturePhaseHeight: 20,
     gestureColumnWidth: 200,

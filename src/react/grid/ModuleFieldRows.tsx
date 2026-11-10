@@ -27,8 +27,7 @@ const ROWS_STYLE: React.CSSProperties = {
   gridTemplateColumns: RANGE_COLUMNS, gridAutoRows: '1fr', alignItems: 'center',
   columnGap: G.rowGap, rowGap: G.fillGap, padding: G.fillPadding, lineHeight: G.tightLine,
 };
-/** Rows at their pitch take only their own height, and give up what they would take, down to their controls' own
- *  height, when the room is less: nothing is clipped and nothing scrolls. */
+/** Lead rows keep their pressable pitch; their host decides how many rows fit. */
 const LEAD_ROWS_STYLE: React.CSSProperties = {
   ...ROWS_STYLE, flex: '0 1 auto', overflow: 'visible', gridTemplateColumns: LEAD_COLUMNS,
   gridAutoRows: `minmax(min-content, ${G.yesNoLine}px)`, rowGap: 0, padding: 0, alignContent: 'start',
@@ -57,14 +56,19 @@ const rowColumns = (ends: boolean, shared: RowsFormValue | null): React.CSSPrope
     : { display: 'grid', gridTemplateColumns: `${name} ${G.rowEndWidth}px minmax(0, 1fr) ${G.rowEndWidth}px` };
 };
 
-interface FieldRowProps {
+interface FieldRowBase {
   label: string; icon?: React.ReactNode; value?: React.ReactNode; ends?: RowEnds; emphasis: FieldEmphasisValue;
-  onName?: () => void; nameLabel?: string; nameTitle?: string; children: React.ReactNode;
-  /** In the lead form, the controls that take the name's place, and the tool beside the track. */
-  lead?: React.ReactNode; tool?: React.ReactNode;
+  onName?: () => void; nameLabel?: string; nameTitle?: string;
   /** Names the row as a group of controls, for the ones beside it that share its kind. */
   groupLabel?: string;
 }
+type FieldRowProps = FieldRowBase & (
+  | { form?: typeof RowsForm.ENDS; children: React.ReactNode; lead?: never; tool?: never }
+  | ({ form: typeof RowsForm.LEAD; lead: React.ReactNode } & (
+    | { children: React.ReactNode; tool?: React.ReactNode }
+    | { children?: never; tool?: never }
+  ))
+);
 
 /**
  * A field as a row across its cells: its name, the control, and what it reads. For a range, whose control wants the
@@ -76,6 +80,8 @@ export function ModuleFieldRow(props: FieldRowProps) {
   const group = groupLabel ? { role: 'group', 'aria-label': groupLabel } : {};
   const style = useStyle().getEffectiveStyle();
   const shared = useContext(RowsShared);
+  const leadForm = props.form === RowsForm.LEAD;
+  if (leadForm !== (shared === RowsForm.LEAD)) throw new Error('A field row must use its grid form.');
   const set = emphasis === FieldEmphasis.SET, inert = emphasis === FieldEmphasis.INERT;
   const valueStyle: React.CSSProperties = {
     ...T.moduleValue, fontVariantNumeric: 'tabular-nums', color: hexToRgba(style.textColor, set ? O.full : O.high),
@@ -84,14 +90,14 @@ export function ModuleFieldRow(props: FieldRowProps) {
     display: 'flex', minWidth: 0, opacity: CONTROL_OPACITY[emphasis], pointerEvents: inert ? 'none' : undefined,
     transition: TransitionKeys.fast, ...(ends && ends.low === undefined && { gridColumn: '2 / 4' }),
   };
-  if (shared === RowsForm.LEAD) return (
+  if (leadForm) return (
     <div {...group} data-module-field={label} data-field-emphasis={emphasis} aria-disabled={inert}
       style={{ ...SUBGRID, alignItems: 'center', columnGap: 'inherit', minWidth: 0 }}>
       <div data-field-lead style={{ display: 'grid', gridAutoFlow: 'column', gridAutoColumns: 'minmax(0, 1fr)',
-        columnGap: 'inherit', minWidth: 0 }}>{lead}</div>
-      <div data-field-control style={controlStyle}>{children}</div>
-      <div data-field-tool style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end',
-        columnGap: G.nameIconGap }}>{tool}</div>
+        columnGap: 'inherit', minWidth: 0, ...(!children && !tool && { gridColumn: '1 / -1' }) }}>{lead}</div>
+      {children && <div data-field-control style={controlStyle}>{children}</div>}
+      {tool && <div data-field-tool style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end',
+        columnGap: G.nameIconGap }}>{tool}</div>}
     </div>
   );
   return (

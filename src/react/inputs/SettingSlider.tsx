@@ -1,4 +1,5 @@
 import React, {useEffect} from 'react';
+import { SETTING_RANGE } from './settingSliderParts.ts';
 import {useStyle} from '../../synth/StyleContext.tsx';
 import {skinForm} from '../../skinForms.ts';
 import {SkinKind, SliderSkinForm} from '../../skinKinds.ts';
@@ -39,7 +40,8 @@ export function SettingSlider({label, detail, value, min, max, step, defaultValu
     : {onMouseDown: drag.handleMouseDown, onPointerDown: drag.handlePointerDown};
   // Where the track sits beside its value (compact) nothing may move it, so the lines get no room above it there.
   const topRoom = compact ? 0 : modulationRoom(modulationDisplay, modulators?.length ?? 0, SLIDER_TRACK_HEIGHT);
-  const input = <input type="range" data-setting-range style={inputStyle(value, min, max)} disabled={disabled}
+  const input = <input type="range" {...{ [SETTING_RANGE]: true }}
+    style={inputStyle(value, min, max)} disabled={disabled}
     onFocus={gesture.begin} onBlur={gesture.end} {...relative}
     min={min} max={max} step={step} value={value} aria-label={label} title={compact ? detail : undefined}
     onChange={event => onChange(Number(event.target.value))}/>;

@@ -9,7 +9,7 @@
     "src/react/BarParticipants.tsx": {"lines":49,"longLines":12,"importLines":6},
     "src/react/Button.tsx": {"lines":27,"longLines":1,"importLines":2},
     "src/react/CaretButton.tsx": {"lines":28,"longLines":1,"importLines":1},
-    "src/react/HeaderIconButton.tsx": {"lines":12,"longLines":4,"importLines":1},
+    "src/react/HeaderIconButton.tsx": {"lines":12,"longLines":3,"importLines":1},
     "src/react/HoverDetail.tsx": {"lines":57,"longLines":14,"importLines":4},
     "src/react/ListboxSelect.tsx": {"lines":90,"longLines":18,"importLines":8},
     "src/react/Modal.tsx": {"lines":247,"longLines":20,"importLines":3},
