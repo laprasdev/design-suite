@@ -31,6 +31,9 @@
 [data-page-bar=footer]>.bar-left,.page-footer-settings {display:flex;flex-wrap:wrap;align-items:center;gap:var(--section-gap);}
 .page-footer-settings>.page-footer-setting {display:grid;gap:var(--field-gap);}
 .page-footer-settings>.page-footer-setting>.bd-label {color:var(--dim);}
+/* A setting whose control is followed by an icon button of its own, such as a reset. */
+.page-footer-setting>.page-footer-control {display:flex;align-items:center;gap:var(--field-gap);min-width:0;}
+.page-footer-control>.listbox-select {flex:1;min-width:0;}
 [data-page-bar=footer] .setup-footer-action {
  align-self:stretch;flex:none;min-height:var(--header-control);
  min-width:calc(var(--header-control) * var(--phi) * var(--phi));
@@ -39,7 +42,12 @@
 }
 [data-page-bar=footer] .setup-footer-action>.bd-label {display:flex;align-items:center;gap:var(--header-gap);}
 [data-page-bar=footer] .setup-footer-action:focus-visible {outline-offset:calc(-1 * var(--line-width));}
-/* Icon navigation uses the page's shared control geometry. */
+/* Core's brand, back gutter and icon navigation share these same page controls. */
+.app-bar-leading {position:absolute;inset:0 auto auto 0;width:var(--page-gutter);height:var(--app-bar-height);
+ display:grid;place-items:center;}
+.app-root .app-bar-logo {display:flex;align-items:center;gap:9px;font-size:20px;font-weight:800;
+ letter-spacing:-.5px;text-transform:uppercase;color:var(--text);white-space:nowrap;}
+.app-bar-logo>img {width:32px;height:32px;object-fit:contain;}
 .app-bar-navigation {display:flex;min-width:0;}
 .app-bar-navigation>.seg {--segment-padding-block:0;flex:none;gap:var(--header-gap);}
 .app-root .app-bar-navigation .seg button {width:var(--header-control);height:var(--header-control);padding:0;}
@@ -53,10 +61,9 @@
  .page-surface {--page-inset:12px;--page-gutter:var(--page-inset);}
  [data-page-bar=header] {--bar-columns:minmax(0,max-content) minmax(0,1fr) minmax(0,max-content);
   --header-control:var(--header-control-compact);--header-gap:var(--header-gap-compact);}
+ .app-bar-leading {display:none;}
+ .app-root .app-bar-logo {font-size:16px;}
  [data-page-bar=header]>.bar-center {overflow-x:auto;scrollbar-width:none;justify-content:flex-start;}
- [data-page-bar=header][data-center-row] {grid-template-areas:"left right" "center center";--bar-columns:minmax(0,1fr) auto;}
- [data-page-bar=header][data-center-row]>.bar-center {overflow:visible;justify-content:flex-start;}
- [data-page-bar=header][data-center-row]>.bar-center>.listbox-select {flex:1;min-width:0;}
  [data-page-bar=header]>.bar-center:empty {display:none;}
  .page-footer-settings {gap:var(--header-gap) var(--section-gap);}
  .page-footer-settings>.page-footer-setting {flex:1 1 auto;}
@@ -67,3 +74,21 @@
  [data-page-bar=footer]>.bar-right>.setup-footer-action {flex:1;}
  [data-page-bar=footer][data-footer-action=true]>.bar-left {padding-inline-end:var(--page-gutter);}
 }
+/* The phone forms a page chooses by props: a header whose centre takes its own row, and a footer of label-less settings. */
+@media(max-width:760px) {
+ [data-page-bar=header][data-center-row] {grid-template-areas:"left right" "center center";--bar-columns:minmax(0,1fr) auto;}
+ [data-page-bar=header][data-center-row]>.bar-center {overflow:visible;justify-content:flex-start;}
+ [data-page-bar=header][data-center-row]>.bar-center>.listbox-select {flex:1;min-width:0;}
+ [data-page-bar=footer][data-footer-compact] {--bar-columns:minmax(0,1fr) auto;grid-template-areas:"left right";gap:var(--header-gap);}
+ [data-page-bar=footer][data-footer-compact]>.bar-left {min-width:0;}
+ [data-page-bar=footer][data-footer-compact]>.bar-center:empty {display:none;}
+ [data-page-bar=footer][data-footer-compact][data-footer-action=true]>.bar-left {padding-inline-end:0;}
+ [data-page-bar=footer][data-footer-compact] .page-footer-settings {flex:1;min-width:0;flex-wrap:wrap;gap:var(--header-gap);}
+ [data-page-bar=footer][data-footer-compact] .page-footer-settings>.page-footer-setting {flex:1 1 40%;min-width:0;}
+ [data-page-bar=footer][data-footer-compact] .page-footer-setting .listbox-select {width:100%;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+ [data-page-bar=footer][data-footer-compact] .page-footer-setting>.bd-label {display:none;}
+ [data-page-bar=footer][data-footer-compact] .page-footer-setting :is(.listbox-select,select,input) {margin-top:0;}
+ [data-page-bar=footer][data-footer-compact][data-footer-action=true]>.bar-left {padding-block:calc(var(--field-gap) * var(--page-bar-height-scale,1));}
+}
+.page-header-float {position:relative;flex:none;}
+.header-notices>.action-bar-notice {pointer-events:auto;}

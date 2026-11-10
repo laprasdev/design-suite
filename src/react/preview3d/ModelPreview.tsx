@@ -1,4 +1,4 @@
-import {useMemo, type CSSProperties} from 'react';
+import {useMemo, type CSSProperties, type ReactNode} from 'react';
 import {Button} from '../Button.tsx';
 import {ActionBar} from '../ActionBar.tsx';
 import {ListboxSelect} from '../ListboxSelect.tsx';
@@ -6,7 +6,7 @@ import {LoadingIndicator} from '../Pokeball.tsx';
 import {SegmentedControl} from '../SegmentedControl.tsx';
 import {createTheme, themeVariables} from '../../theme.ts';
 import {Typography} from '../../tokens.ts';
-import {MODEL_PREVIEW_REVIEW, MODEL_REST_POSE, ModelPreviewElement as element} from './model.ts';
+import {MODEL_READY_ATTRIBUTE, MODEL_PREVIEW_REVIEW, MODEL_REST_POSE, ModelPreviewElement as element} from './model.ts';
 import type {ModelPreviewAsset, ModelStageOptions, ModelStageTheme, ModelPreviewPresentation} from './model.ts';
 import type {ModelStageCamera, ModelEnvironment} from './model.ts';
 import {MODEL_PREVIEW_TEXT as copy, MODEL_PREVIEW_DISPLAY_OPTIONS} from './model.ts';
@@ -25,6 +25,8 @@ export interface ModelPreviewProps {
   environment?: ModelEnvironment | null;
   className?: string;
   chrome?: boolean;
+  /** Consumer controls anchored within the rendered stage. */
+  stageOverlay?: ReactNode;
 }
 function previewTheme(theme: ModelStageTheme): CSSProperties {
   const value = createTheme({colors: theme.colors});
@@ -36,7 +38,8 @@ function previewTheme(theme: ModelStageTheme): CSSProperties {
 }
 
 function PreviewContents({asset, assets, onSelectAsset, theme, reviewKey = MODEL_PREVIEW_REVIEW,
-  stageOptions, presentation, camera, environment, chrome = true}: ModelPreviewProps & {asset: ModelPreviewAsset}) {
+  stageOptions, presentation, camera, environment, chrome = true, stageOverlay}:
+  ModelPreviewProps & {asset: ModelPreviewAsset}) {
   const view = useModelPreview(asset, theme, reviewKey, stageOptions, presentation, {camera, environment});
   const animations = [{value: MODEL_REST_POSE, label: copy.rest},
     ...asset.animations.filter(clip => clip.name !== MODEL_REST_POSE)
@@ -75,7 +78,7 @@ function PreviewContents({asset, assets, onSelectAsset, theme, reviewKey = MODEL
     </div>}
     <div ref={view.host} className={element.STAGE.className} aria-label={copy.canvas(asset.name)}
       aria-busy={!view.loaded && !view.error}
-      data-model-ready={view.ready && (!view.external || view.poseStatus === 'ready')}/>
+      {...{[MODEL_READY_ATTRIBUTE]: view.ready && (!view.external || view.poseStatus === 'ready')}}>{stageOverlay}</div>
     {(chrome || !view.ready || view.sceneError || (view.external && view.poseStatus !== 'ready')) &&
       <div className="model-preview-status">
       {view.error ? <div role="alert">{copy.failed}{' '}

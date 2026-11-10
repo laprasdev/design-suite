@@ -80,6 +80,11 @@
       "source": "./src/skinAssignments.ts",
       "default": "./dist/skinAssignments.js"
     },
+    "./skinKinds": {
+      "types": "./src/skinKinds.ts",
+      "source": "./src/skinKinds.ts",
+      "default": "./dist/skinKinds.js"
+    },
     "./skinForms": {
       "types": "./src/skinForms.ts",
       "source": "./src/skinForms.ts",

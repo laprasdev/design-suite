@@ -12,6 +12,7 @@ export {modelPreviewPresentation, modelPoseForBinding, MODEL_PREVIEW_CAPABILITIE
   MODEL_PREVIEW_QUATERNION_TOLERANCE} from './presentation.ts';
 export type {ModelPreviewPresentation, ModelPresentationPose, ModelPoseBinding} from './presentation.ts';
 
+export const MODEL_READY_ATTRIBUTE = 'data-model-ready';
 export const MODEL_REST_POSE = 'rest-pose';
 export const MODEL_PREVIEW_REVIEW = 'modelPreviewReview';
 export const ModelPreviewElement = Object.freeze({

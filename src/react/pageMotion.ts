@@ -64,6 +64,11 @@ export function capturePage(page: HTMLElement,wrapper?: HTMLElement): PageCopy {
  const copy=wrapper??page.cloneNode(true);
  if(!(copy instanceof HTMLElement))throw new Error('A page copies as an element.');
  if(wrapper)for(const child of page.childNodes)copy.append(child.cloneNode(true));
+ // A DOM snapshot must never start another embedded application or autoplay media.
+ for(const frame of copy.querySelectorAll('iframe')) {
+  frame.removeAttribute('src');frame.removeAttribute('srcdoc');frame.setAttribute('sandbox','');
+ }
+ for(const media of copy.querySelectorAll('video,audio'))media.removeAttribute('autoplay');
  const sourceRoot=!wrapper,stylesheet=remapPageCopyIds(copy,page,sourceRoot);
  return {copy,height:cssRect(page).height,scrolled:capturePageScroll(page),stylesheet,sourceRoot};
 }

@@ -1,4 +1,6 @@
 import {SwitchBoolean} from '../../../react/inputs/SwitchBoolean.tsx';
+import {BooleanForm, type SwitchBooleanProps} from './booleanForm.ts';
+export {BooleanForm, type SwitchBooleanProps};
 import React, { useEffect, useState, useCallback } from 'react';
 import { useStyle } from '../../StyleContext.tsx';
 import { getColorScheme, getBooleanStyles, getInsetShadow, type ColorType } from '../../../color.ts';
@@ -37,8 +39,6 @@ function getSizeMap(): Record<BooleanSize, number> {
   return _sizeMap ??= { xs: D.sizes.booleanMicro, sm: D.sizes.booleanSmall, md: D.sizes.booleanMedium, lg: D.sizes.booleanLarge };
 }
 
-// One boolean, three forms: a lit cell for a module's grid, a labelled row for a settings list, or a small switch for a module's header.
-export const BooleanForm=Object.freeze({CELL:'cell',SETTING:'setting',SWITCH:'switch'} as const);
 export interface SettingBooleanProps {
   form: typeof BooleanForm.SETTING;
   value: boolean;
@@ -52,15 +52,6 @@ function SettingBoolean({value,onChange,label,detail,disabled=false,className=''
   const content=<><SelectionMark selected={value}/><strong>{label}</strong></>;
   const props={className:`setting-option ${className}`,disabled};
   return detail?<HoverDetail {...props} interactive panelRole="tooltip" triggerProps={{'aria-pressed':value}} label={label} content={detail} onActivate={()=>onChange(!value)}>{content}</HoverDetail>:<button type="button" {...props} aria-pressed={value} onClick={()=>onChange(!value)}>{content}</button>;
-}
-export interface SwitchBooleanProps {
-  form: typeof BooleanForm.SWITCH;
-  value: boolean;
-  onChange(value: boolean): void;
-  ariaLabel: string;
-  /** Its height. The width and thumb follow from it. */
-  height?: number;
-  disabled?: boolean;
 }
 export function Boolean(props: BooleanProps|SettingBooleanProps|SwitchBooleanProps) {
  if('form' in props&&props.form===BooleanForm.SWITCH) return <SwitchBoolean {...props}/>;

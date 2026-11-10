@@ -3,7 +3,9 @@ import { nearestGroupOutlet } from "./groupOutlets.ts";
 import { isPanKeyHeld } from "./panKey.ts";
 import { snapTie } from "./wireGeometry.ts";
 import { collectWires, sampleWires, type SweepWire } from "./wireSweep.ts";
-import type { GraphPoint, GraphGroup, GroupOutlet, GroupOutlets, TwistTie, WireLink } from "./nodeGraphTypes.ts";
+import {GRAPH_NODE_ATTRIBUTE, GRAPH_WIRE_ATTRIBUTE,
+  type GraphPoint, type GraphGroup, type GroupOutlet, type GroupOutlets,
+  type TwistTie, type WireLink} from "./nodeGraphTypes.ts";
 
 const STILL_PX = 4;
 type Gesture = { pointer: number; capture: HTMLElement; start: GraphPoint; before: readonly TwistTie[] } &
@@ -41,12 +43,13 @@ export function useWireGestures(
     const start = (event: PointerEvent) => {
       suppressClick.current = false;
       if (!onChange || !event.shiftKey || isPanKeyHeld() || event.button !== 0 ||
-        (event.target as Element).closest(".bd-node,[data-graph-node],button")) return;
+        (event.target as Element).closest(`.bd-node,[${GRAPH_NODE_ATTRIBUTE}],button`)) return;
       event.preventDefault(); event.stopImmediatePropagation();
       element.setPointerCapture(event.pointerId);
       const at = point(event);
       gesture.current = { kind: "collect", pointer: event.pointerId, capture: element, start: at, before: ties,
-        hit: (event.target as Element).closest<SVGElement>(".bd-edge-hit")?.dataset.wire,
+        hit: (event.target as Element).closest<SVGElement>(".bd-edge-hit")
+          ?.getAttribute(GRAPH_WIRE_ATTRIBUTE) ?? undefined,
         screen: { x: event.clientX, y: event.clientY }, moved: false, points: [at],
         wires: sampleWires(element), picked: new Set() };
     };

@@ -1,18 +1,17 @@
-/* Reusable segmented control. `options` is [{ value, label, detail?, disabled?, title? }];
-   an option disabled on its own is grayed out (its detail still opens), while a disabled control keeps its look. Composes the
-   `multiple` takes and returns an array, with each option toggled independently.
-   The kit Label (action kind) for its text, so it shares one typographic source with
-   Button and the rest — consistent font/size/spacing everywhere.
-   `fit` fills the available width: true uses equal segments; "content" gives
-   longer labels more room. Without it the control ends where its options do.
-   `scroll` keeps a wider row of options within the parent's width: they scroll inside
-   the control's own frame, and the selected one stays in view.
+/* Reusable segmented control. `options` is [{ value, label, detail?, disabled?, title? }]; an option disabled on its
+   own is grayed out (its detail still opens), while a disabled control keeps its look. Neither changes a value when
+   pressed, with or without `onPoint`, which keeps its options pointable. `multiple` takes and returns an array, each
+   option toggled independently. The kit Label (action kind) draws its text, one typographic source with Button and
+   the rest. `fit` fills the available width: true uses equal segments; "content" gives longer labels more room.
+   Without it the control ends where its options do. `scroll` keeps a wider row of options within the parent's
+   width: they scroll inside the control's own frame, and the selected one stays in view.
    `density="compact"` uses caption text and tighter spacing.
-   A multiple choice draws as joined cells, each filling its cell when chosen. */
+   A multiple choice draws as joined cells, each filling its cell when chosen. A single choice saving: `pending`. */
 import {useContext,useLayoutEffect,useRef,type CSSProperties,type KeyboardEvent,type ReactElement,type ReactNode} from 'react';
-import {springAnimate,SEGMENT_MOTION,sweepText,TextSweepElement,TEXT_SELECTION_MOVING_ATTRIBUTE} from './motion.ts';
+import {springAnimate,SegmentIndicator,SEGMENT_MOTION,sweepText,TextSweepElement,TEXT_SELECTION_MOVING_ATTRIBUTE} from './motion.ts';
 import {Label} from './accents.tsx';
 import {SegmentDefaultsContext} from './segmentContext.ts';
+import {wrapVariables,type WrapGrid,type Pictured} from './segmentWrap.ts';
 import {HoverDetail} from './HoverDetail.tsx';
 import {PALETTE_CHANGE_EVENT} from '../theme.ts';
 import {cssRect} from './cssZoom.ts';
@@ -37,6 +36,7 @@ export interface SegmentOption<V extends SegmentValue> {
   style?: CSSProperties;
   id?: string;
   controls?: string;
+  expanded?: boolean;
   ariaLabel?: string;
   mixed?: boolean;
   // Options sharing a group sit together, with a wider space before the next.
@@ -44,7 +44,7 @@ export interface SegmentOption<V extends SegmentValue> {
   // The option's own data attributes, for a consumer that reads its options back from the page.
   data?: Readonly<Record<`data-${string}`,string|number|boolean|undefined>>;
 }
-interface SegmentedBase<V extends SegmentValue> {
+interface SegmentedBase<V extends SegmentValue> extends Pictured<V> {
   options: readonly SegmentOption<V>[];
   ariaLabel?: string;
   className?: string;
@@ -53,6 +53,11 @@ interface SegmentedBase<V extends SegmentValue> {
   density?: string;
   tabs?: boolean;
   orientation?: 'horizontal'|'vertical';
+  /** A vertical rail floating in its space: a rule above its first row and below its last. */
+  closed?: boolean;
+  /** Square cells, sized in pixels or by a CSS token, with no padding. */
+  cell?: number | `var(--${string})`;
+  wrap?: WrapGrid;
   iconOnly?: boolean;
   fit?: boolean|'content';
   scroll?: boolean;
@@ -82,14 +87,14 @@ export function SegmentedControl<V extends SegmentValue>(props: SingleSegmentPro
 export function SegmentedControl<V extends SegmentValue>(props: MultipleSegmentProps<V>): ReactElement;
 export function SegmentedControl<V extends SegmentValue>(props: SegmentedControlProps<V>) {
   const surface=useContext(SegmentDefaultsContext);
-  const { options, value: given, ariaLabel, className='', style, variant=surface.variant, density=surface.density, tabs=surface.tabs??false, orientation='horizontal', iconOnly=false, multiple=false, fit=false, scroll=surface.scroll??false, disabled=false, children }=props,pending=props.multiple?undefined:props.pending??undefined,value=pending?pending.value:given;
+  const { options, value: given, ariaLabel, className='', style, variant=surface.variant, density=surface.density, tabs=surface.tabs??false, orientation='horizontal', closed=false, cell, glyphShare, wrap, onPoint, iconOnly=false, multiple=false, fit=false, scroll=surface.scroll??false, disabled=false, children }=props,pending=props.multiple?undefined:props.pending??undefined,value=pending?pending.value:given;
   const swept=variant===TEXT_SEGMENT_VARIANT||variant===ICON_SEGMENT_VARIANT;
   const filled=!multiple&&!swept;
-  const root=useRef<HTMLDivElement|null>(null),indicator=useRef<HTMLSpanElement|null>(null),previous=useRef<IndicatorBox|null>(null),animation=useRef<Animation|null>(null);
+  const own=useRef<HTMLDivElement|null>(null),root=wrap?.frame??own,indicator=useRef<HTMLSpanElement|null>(null),previous=useRef<IndicatorBox|null>(null),animation=useRef<Animation|null>(null);
   const lastText=useRef({value,ariaLabel}),textAnimation=useRef<Animation|null>(null);
   const chosen=(option: V)=>props.multiple?props.value.includes(option):value===option;
   const choose=(option: V,selected: boolean)=>{
-    if(pending)return;
+    if(pending||disabled||options.some(o=>o.value===option&&o.disabled))return;
     if(props.multiple)props.onChange(selected?props.value.filter(v=>v!==option):[...props.value,option]);
     else props.onChange(option);
   };
@@ -108,7 +113,7 @@ export function SegmentedControl<V extends SegmentValue>(props: SegmentedControl
       if(vertical)node.scrollTop+=delta;else node.scrollLeft+=delta;
     };
     const observer=new ResizeObserver(reveal);observer.observe(node);
-    node.querySelectorAll('button').forEach(option=>observer.observe(option,{box:'border-box'}));reveal();
+    node.querySelectorAll("button").forEach(option=>observer.observe(option,{box:'border-box'}));reveal();
     return()=>observer.disconnect();
   },[scroll,value,orientation]);
   useLayoutEffect(()=>{
@@ -163,13 +168,13 @@ export function SegmentedControl<V extends SegmentValue>(props: SegmentedControl
     };
     const frame=root.current;if(!frame)return;
     update();const observer=new ResizeObserver(update);observer.observe(frame);
-    frame.querySelectorAll('button').forEach(option=>observer.observe(option,{box:'border-box'}));
+    frame.querySelectorAll("button").forEach(option=>observer.observe(option,{box:'border-box'}));
     window.addEventListener(PALETTE_CHANGE_EVENT,update);
     return()=>{observer.disconnect();window.removeEventListener(PALETTE_CHANGE_EVENT,update);};
   });
   const onKeyDown=(e: KeyboardEvent<HTMLDivElement>)=>{
-    const previous=orientation==='vertical'?'ArrowUp':'ArrowLeft',next=orientation==='vertical'?'ArrowDown':'ArrowRight';
-    if(!tabs||disabled||pending||![previous,next,'Home','End'].includes(e.key))return;
+    const back=orientation==='vertical'?'ArrowUp':'ArrowLeft',next=orientation==='vertical'?'ArrowDown':'ArrowRight';
+    if(!tabs||disabled||pending||![back,next,'Home','End'].includes(e.key))return;
     const enabled=options.filter(o=>!o.disabled);
     if(!enabled.length)return;
     e.preventDefault();
@@ -177,17 +182,17 @@ export function SegmentedControl<V extends SegmentValue>(props: SegmentedControl
     choose(enabled[index].value,chosen(enabled[index].value));e.currentTarget.querySelectorAll('button')[options.indexOf(enabled[index])]?.focus();
   };
   return (
-    <div ref={root} className={`seg${variant?` seg--${variant}`:''}${className?` ${className}`:''}`} data-fit={fit||undefined} data-scroll={scroll||undefined} data-density={density} style={fit?{'--segment-count':options.length,...style}:style} data-count={options.length} data-orientation={orientation} data-icon-only={iconOnly||undefined} data-multiple={multiple||undefined} data-pending={pending?true:undefined} aria-busy={pending?true:undefined} role={tabs?'tablist':'group'} aria-orientation={tabs?orientation:undefined} aria-label={ariaLabel} onKeyDown={onKeyDown}>
-      {filled&&<span ref={indicator} className="seg-indicator" aria-hidden="true"/>}
+    <div ref={root} className={`seg${variant?` seg--${variant}`:''}${className?` ${className}`:''}`} data-fit={fit||undefined} data-scroll={scroll||undefined} data-density={density} style={{...(fit&&{'--segment-count':options.length}),...(cell!==undefined&&{'--segment-cell':typeof cell==='number'?`${cell}px`:cell}),...(glyphShare!==undefined&&{'--segment-glyph-share':glyphShare}),...(wrap&&wrapVariables(wrap,options.length)),...style}} data-cell={cell!==undefined||undefined} data-glyph={glyphShare!==undefined||undefined} data-wrap={wrap?true:undefined} data-count={options.length} data-orientation={orientation} data-closed={closed||undefined} data-icon-only={iconOnly||undefined} data-multiple={multiple||undefined} data-pending={pending?true:undefined} role={tabs?'tablist':'group'} aria-orientation={tabs?orientation:undefined} aria-label={ariaLabel} aria-busy={pending?true:undefined} onKeyDown={onKeyDown}>
+      {filled&&<span ref={indicator} className={SegmentIndicator.className} aria-hidden="true"/>}
       {options.map((o,index) => {
         const selected=chosen(o.value),saving=pending?.value===o.value;
-        const optionProps={...o.data,className:o.className,style:o.style,id:o.id,title:o.title,role:tabs?'tab':undefined,'aria-selected':tabs?selected:undefined,'aria-pressed':tabs?undefined:multiple&&o.mixed?'mixed' as const:selected,'aria-controls':o.controls,tabIndex:tabs?(selected?0:-1):undefined,'data-on':selected,'data-mixed':multiple&&o.mixed||undefined,'data-unavailable':o.disabled||undefined,'data-pending':saving||undefined,[SEGMENT_GROUP_START_ATTRIBUTE]:index>0&&o.group!==options[index-1].group||undefined};
+        const optionProps={...o.data,className:o.className,style:o.style,id:o.id,title:o.title,role:tabs?'tab':undefined,'aria-selected':tabs?selected:undefined,'aria-pressed':tabs?undefined:multiple&&o.mixed?'mixed' as const:selected,'aria-controls':o.controls,'aria-expanded':o.expanded,tabIndex:tabs?(selected?0:-1):undefined,onMouseEnter:()=>onPoint?.(o.value),onMouseLeave:()=>onPoint?.(null),onFocus:()=>onPoint?.(o.value),onBlur:()=>onPoint?.(null),'data-on':selected,'data-mixed':multiple&&o.mixed||undefined,'data-unavailable':o.disabled||undefined,'data-pending':saving||undefined,[SEGMENT_GROUP_START_ATTRIBUTE]:index>0&&o.group!==options[index-1].group||undefined};
         const label=<Label kind="action">{saving?<span className="seg-pending" role="status">{pendingText(o,pending)}</span>:o.label}{swept&&<span className={TextSweepElement.className} aria-hidden="true">{pendingText(o,pending)}</span>}</Label>,select=()=>choose(o.value,selected);
         // An option's `detail` is hover/focus help, shared with settings through HoverDetail.
         // An option unavailable on its own keeps its help: hovering or pressing it explains why.
         return o.detail
           ?<HoverDetail triggerRef={o.buttonRef} key={String(o.value)} interactive panelRole="tooltip" label={o.ariaLabel??(typeof o.label==='string'?o.label:undefined)} content={o.detail} disabled={disabled} triggerProps={{...optionProps,'aria-disabled':o.disabled||undefined}} onActivate={o.disabled?undefined:select}>{label}</HoverDetail>
-          :<button ref={o.buttonRef} type="button" key={String(o.value)} {...optionProps} aria-label={o.ariaLabel} disabled={disabled||o.disabled} onClick={select}>{label}</button>;
+          :<button ref={o.buttonRef} type="button" key={String(o.value)} {...optionProps} aria-label={o.ariaLabel} disabled={!onPoint&&(disabled||o.disabled)} aria-disabled={onPoint&&(disabled||o.disabled)||undefined} onClick={select}>{label}</button>;
       })}
       {children}
     </div>

@@ -1,8 +1,8 @@
 .bd-goo-defs {position:absolute;}
 .bd-goo {
  position:absolute;z-index:2;pointer-events:none;
- --goo-fill:color-mix(in srgb,var(--task-color) 28%,var(--card));
 }
+.bd-goo,.bd-goo-tone {--goo-fill:color-mix(in srgb,var(--task-color) 28%,var(--card));}
 .bd-goo-shapes {position:absolute;inset:0;}
 .bd-goo-shapes>span {position:absolute;display:block;background:var(--goo-fill);}
 .bd-goo[data-direction=left] .bd-goo-shapes {transform:scaleX(-1);}
@@ -39,6 +39,41 @@
 }
 .bd-goo[data-direction=left]>.bd-goo-content {left:calc(-1 * var(--goo-width) - 3px);}
 .bd-goo[data-stationary]>.bd-goo-content {top:var(--goo-top);}
+/* An inset trigger shares its square with the icon and only fills when expanded. */
+.bd-goo[data-form=square] .bd-goo-stub {
+ left:calc(var(--goo-trigger-size) / -2);top:calc(var(--goo-trigger-size) / -2);
+ width:var(--goo-trigger-size);height:var(--goo-trigger-size);border-radius:0;opacity:0;
+}
+.bd-goo[data-form=square][data-open] .bd-goo-stub {opacity:1;}
+.bd-goo[data-form=square][data-open] .bd-goo-body {border-radius:var(--goo-radius);}
+.bd-goo[data-form=square] .bd-goo-body {
+ left:calc(var(--goo-trigger-size) / 2);opacity:0;
+}
+.bd-goo[data-form=square][data-open] .bd-goo-body {opacity:1;}
+.bd-goo[data-form=square]>.bd-goo-nub {
+ left:calc(var(--goo-trigger-size) / -2);top:calc(var(--goo-trigger-size) / -2);
+ width:var(--goo-trigger-size);height:var(--goo-trigger-size);
+ border-radius:var(--r-sm,var(--goo-radius));box-sizing:border-box;
+}
+.bd-goo[data-form=square][data-open]>.bd-goo-nub {background:var(--goo-fill);}
+.bd-goo[data-form=square]>.bd-goo-nub>svg {display:block;margin:0;}
+.bd-goo[data-form=square]>.bd-goo-content {left:calc(var(--goo-trigger-size) / 2);}
+.bd-goo[data-form=square][data-direction=left]>.bd-goo-content {
+ left:calc(-1 * var(--goo-width) - var(--goo-trigger-size) / 2);
+}
+/* A crisp rail panel expands from its trigger edge, inside its final bounds. */
+.bd-goo[data-form=panel]>.bd-goo-content {
+ left:calc(var(--goo-trigger-size) / 2);top:var(--goo-top);width:0;height:var(--goo-height);
+ box-sizing:border-box;overflow:hidden;background:var(--goo-fill);
+ border:var(--line-width) solid var(--segment-divider,var(--line));border-inline-start:0;
+ border-radius:0 var(--goo-radius) var(--goo-radius) 0;box-shadow:var(--goo-shadow);
+ transition:width var(--goo-duration) var(--goo-easing),opacity var(--goo-duration) var(--goo-easing),visibility var(--goo-duration);
+}
+.bd-goo[data-form=panel][data-direction=left]>.bd-goo-content {
+ left:auto;right:calc(var(--goo-trigger-size) / 2);border-inline-start:var(--line-width) solid var(--segment-divider,var(--line));
+ border-inline-end:0;border-radius:var(--goo-radius) 0 0 var(--goo-radius);
+}
+.bd-goo[data-form=panel][data-open]>.bd-goo-content {width:var(--goo-width);}
 @media (prefers-reduced-motion:reduce) {
  .bd-goo-body,.bd-goo-nub,.bd-goo-nub::after,.bd-goo-content {transition:none!important;}
 }

@@ -1,6 +1,7 @@
 import React, {useEffect, useState} from 'react';
 import {useStyle} from '../../synth/StyleContext.tsx';
 import {skinForm} from '../../skinForms.ts';
+import {SkinKind, VectorSkinForm} from '../../skinKinds.ts';
 import {ModuleKnob, ModuleField} from '../../synth/components/synth/ModuleGrid.tsx';
 import {ModuleNumberInput} from './ModuleNumberInput.tsx';
 import {FieldEmphasis} from '../../fields.ts';
@@ -31,13 +32,13 @@ function AxisInput({label, value, onChange, disabled, bounds}: {
   </div>;
 }
 export function ModuleVectorInput({label, vector, onAxis, disabled, appearance, limits}: Props) {
-  const context = useStyle(), form = appearance ?? skinForm(context.skin, 'vector');
+  const context = useStyle(), form = appearance ?? skinForm(context.skin, SkinKind.VECTOR);
   return <div data-field-vector style={{display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
     gap: D.moduleGrid.fieldGap, width: '100%'}}>
     {AXES.map(axis => <div key={axis} data-vector-axis={axis} style={{minWidth: 0}}>
-      {form !== 'knobs' && <span style={T.moduleLabel}>{axis.toUpperCase()}</span>}
+      {form !== VectorSkinForm.KNOBS && <span style={T.moduleLabel}>{axis.toUpperCase()}</span>}
       <AxisInput label={`${label} ${axis}`} value={vector[axis]} disabled={disabled}
-        bounds={form === 'knobs' ? limits?.[axis] : undefined} onChange={value => onAxis(axis, value)}/>
+        bounds={form === VectorSkinForm.KNOBS ? limits?.[axis] : undefined} onChange={value => onAxis(axis, value)}/>
     </div>)}
   </div>;
 }

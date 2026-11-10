@@ -1,7 +1,8 @@
 import React from 'react';
 import {useStyle} from '../../StyleContext.tsx';
 import {LayoutDimensions} from '../../../layout.ts';
-import {MODULATOR_LIVE_COLOR, RangeEnd, modulationLadder, modulatorColor, modulatorOpacity, type ModulationProps} from './modulation.ts';
+import {ModulationPart} from '../../../react/inputs/modulationParts.ts';
+import {MODULATOR_GLOW, MODULATOR_LIVE_COLOR, RangeEnd, modulationLadder, modulatorColor, modulatorOpacity, MODULATOR_FADE, type ModulationProps} from './modulation.ts';
 
 const SWEEP_DEGREES = 270;
 const SWEEP_START = -135;
@@ -11,7 +12,6 @@ const NUMERAL_OFFSET = 7;
 const NUMERAL_SIZE = LayoutDimensions.moduleGrid.ringNumeralSize;
 const LIVE_RADIUS_FACTOR = 0.8;
 const HIT_WIDTH = 7;
-const RING_GLOW = 3;
 const degrees = (radians: number) => radians * 180 / Math.PI;
 
 function point(center: number, radius: number, angle: number) {
@@ -58,11 +58,11 @@ export function ModulationRings({modulators = [], selectedSource, onSelectSource
         const [numeralX, numeralY] = point(center, outer + NUMERAL_OFFSET, farAngle ?? valueEdge);
         const live = modulator.sample === undefined ? undefined : point(center, ringRadius, clampAngle(valueEdge + modulator.sample * modulator.depth / span * SWEEP_DEGREES));
         return (
-          <g key={`${modulator.source}${index}`} data-modulator={modulator.source} opacity={modulatorOpacity(modulator.source, selectedSource)} style={{transition: 'opacity .17s ease'}}>
-            {drawn.map(([from, to], part) => <path key={part} d={arc(center, ringRadius, from, to)} fill="none" stroke={color} strokeWidth={line} strokeLinecap="round" style={{filter: `drop-shadow(0 0 ${RING_GLOW}px ${color})`}}/>)}
+          <g key={`${modulator.source}${index}`} {...{[ModulationPart.SOURCE]: modulator.source}} opacity={modulatorOpacity(modulator.source, selectedSource)} style={{transition: MODULATOR_FADE}}>
+            {drawn.map(([from, to], part) => <path key={part} d={arc(center, ringRadius, from, to)} fill="none" stroke={color} strokeWidth={line} strokeLinecap="round" style={{filter: `drop-shadow(0 0 ${MODULATOR_GLOW}px ${color})`}}/>)}
             {drawn.map(([from, to], part) => <path key={part} d={arc(center, ringRadius, from, to)} fill="none" stroke="transparent" strokeWidth={HIT_WIDTH} strokeLinecap="round"
               style={{pointerEvents: 'stroke', cursor: 'pointer'}} onMouseDown={event => event.stopPropagation()} onPointerDown={event => event.stopPropagation()} onClick={select}/>)}
-            {live && <circle cx={live[0]} cy={live[1]} r={line * LIVE_RADIUS_FACTOR} fill={MODULATOR_LIVE_COLOR} style={{filter: `drop-shadow(0 0 ${RING_GLOW}px ${MODULATOR_LIVE_COLOR})`}}/>}
+            {live && <circle cx={live[0]} cy={live[1]} r={line * LIVE_RADIUS_FACTOR} fill={MODULATOR_LIVE_COLOR} style={{filter: `drop-shadow(0 0 ${MODULATOR_GLOW}px ${MODULATOR_LIVE_COLOR})`}}/>}
             <text x={numeralX} y={numeralY} fill={color} fontSize={NUMERAL_SIZE} fontWeight={700} textAnchor="middle" dominantBaseline="middle">{index + 1}</text>
           </g>
         );

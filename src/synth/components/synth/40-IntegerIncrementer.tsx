@@ -5,6 +5,8 @@ import {T} from '../../design/index.ts';
 import { useStyle } from '../../StyleContext.tsx';
 import { getColorScheme, getInsetShadow } from '../../../color.ts';
 import {METER_VALUE_ATTRIBUTE,METER_FIXED_ATTRIBUTE} from '../../../react/settingElements.ts';
+import {IncrementerForm, type StepperDirection} from './incrementerForm.ts';
+
 
 interface IntegerIncrementerProps {
   form?: typeof IncrementerForm.STEPPER;
@@ -13,7 +15,7 @@ interface IntegerIncrementerProps {
   min?: number;
   max?: number;
   step?: number;
-  variant?: 'vertical' | 'horizontal';
+  variant?: StepperDirection;
   className?: string;
   displayValue?: string;
   children?: React.ReactNode;
@@ -21,8 +23,6 @@ interface IntegerIncrementerProps {
   ariaLabel?: string;
 }
 
-// One integer control, two forms: chevrons that step it, or a row of pips to pick from.
-export const IncrementerForm=Object.freeze({STEPPER:'stepper',METER:'meter'} as const);
 export interface MeterIncrementerProps {
   form: typeof IncrementerForm.METER;
   label: string;
@@ -59,7 +59,7 @@ function StepperIncrementer({
   min = -Infinity,
   max = Infinity,
   step = 1,
-  variant = 'vertical',
+  variant = IncrementerForm.VERTICAL,
   className = '',
   displayValue, children, disabled = false, ariaLabel = 'Value'
 }: IntegerIncrementerProps) {
@@ -72,7 +72,7 @@ function StepperIncrementer({
   const increment = () => change(Math.min(value + step, max));
   const decrement = () => change(Math.max(value - step, min));
 
-  const isVertical = variant === 'vertical';
+  const isVertical = variant === IncrementerForm.VERTICAL;
   const UpIcon = isVertical ? ChevronUp : ChevronRight;
   const DownIcon = isVertical ? ChevronDown : ChevronLeft;
 

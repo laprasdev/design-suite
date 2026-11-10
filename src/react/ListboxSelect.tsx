@@ -1,4 +1,5 @@
 import {Button} from './Button.tsx';
+import {Label} from './accents.tsx';
 import {ApplicationElement} from './applicationElements.ts';
 import {useEffect,useId,useLayoutEffect,useRef,useState,type KeyboardEvent,type ReactNode} from 'react';
 import {createPortal} from 'react-dom';
@@ -51,6 +52,9 @@ export function ListboxSelect<V extends string|number>({options,value,onChange,l
  const position=useAnchoredPopover(open,trigger,panel,{above,scroll:false});
  const labels=shown.map(option=>option.label),chosen=shown.findIndex(option=>option.value===value),start=Math.max(0,chosen);
  const show=(index: number)=>{setActive(index);setOpen(true);};
+ const selectedContent=children??options.find(option=>option.value===value)?.label;
+ const triggerContent=typeof selectedContent==='string'||typeof selectedContent==='number'
+  ? <Label kind="action">{selectedContent}</Label> : selectedContent;
  const create=()=>{
   const name=query.trim();if(!name||!onCreate)return;
   setOpen(false);setQuery('');trigger.current?.focus();onCreate(name);
@@ -84,12 +88,12 @@ export function ListboxSelect<V extends string|number>({options,value,onChange,l
  return <>
   <button ref={trigger} type="button" role="combobox" className={`${ListboxElement.TRIGGER.className}${className?` ${className}`:''}`} data-shows-value={children===undefined||field||undefined}
    aria-label={label} title={title} aria-haspopup="listbox" aria-expanded={open} aria-controls={open?listId:undefined} aria-activedescendant={open&&!searchSubject&&shown.length?optionId(active):undefined}
-   disabled={disabled} onClick={()=>open?setOpen(false):show(start)} onKeyDown={open?openKey:closedKey}>{children??options.find(option=>option.value===value)?.label}</button>
+   disabled={disabled} onClick={()=>open?setOpen(false):show(start)} onKeyDown={open?openKey:closedKey}>{triggerContent}</button>
   {open&&createPortal(<div ref={panel} className={ListboxElement.POPOVER.className} data-icon-only={iconOnly||undefined} style={position}>
    {searchSubject&&<SearchField density="compact" size={searchSize} style={searchSize?{width:`calc(${searchSize}ch + 2 * var(--field-gap))`}:undefined} ref={input} subject={searchSubject} value={query} onChange={value=>{setQuery(value);setActive(0);}} role="combobox" aria-expanded="true" aria-controls={listId} aria-activedescendant={shown.length?optionId(active):undefined} onKeyDown={openKey}/>}
    <ul ref={list} id={listId} role="listbox" aria-label={label} className={ListboxElement.LIST.className}>
     {shown.map((option,index)=><li key={option.value} id={optionId(index)} role="option" aria-label={option.label} title={option.title??(iconOnly?option.label:undefined)} aria-selected={option.value===value} data-active={index===active||undefined} className={ListboxElement.OPTION.className}
-     onMouseDown={e=>e.preventDefault()} onMouseMove={()=>setActive(index)} onClick={()=>choose(index)}>{renderOption?renderOption(option):<span className={ListboxElement.CONTENT.className}>{option.leading}<span className={ListboxElement.LABEL.className}>{option.label}</span>{option.trailing&&<span className={ListboxElement.IMPACT.className}>{option.trailing}</span>}</span>}{index===active&&option.description&&<small className={ListboxElement.DETAIL.className}>{option.description}</small>}</li>)}
+     onMouseDown={e=>e.preventDefault()} onMouseMove={()=>setActive(index)} onClick={()=>choose(index)}>{renderOption?renderOption(option):<span className={ListboxElement.CONTENT.className}>{option.leading}<Label kind="action" className={ListboxElement.LABEL.className}>{option.label}</Label>{option.trailing&&<span className={ListboxElement.IMPACT.className}>{option.trailing}</span>}</span>}{index===active&&option.description&&<small className={ListboxElement.DETAIL.className}>{option.description}</small>}</li>)}
    </ul>
    {onCreate&&query.trim()&&!options.some(option=>option.label.toLocaleLowerCase()===query.trim().toLocaleLowerCase())&&
     <Button onClick={create}>Create {query.trim()}</Button>}

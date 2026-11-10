@@ -1,5 +1,6 @@
 import * as THREE from 'three';
-import type {ModelVector} from './model.ts';
+import type {ModelVector, ModelRotation} from './model.ts';
+import {modelPresentationRotation, modelPoseForBinding} from './presentation.ts';
 
 export const MODEL_ENVIRONMENT_GRID = Object.freeze({maximumLines: 1024, elevation: 0.001});
 export interface ModelEnvironmentBox {
@@ -7,6 +8,7 @@ export interface ModelEnvironmentBox {
   readonly position: ModelVector;
   readonly size: ModelVector;
   readonly color: ModelVector;
+  readonly rotationQuaternion?: ModelRotation;
 }
 export interface ModelEnvironment {
   readonly reflectZ: boolean;
@@ -56,13 +58,27 @@ export function modelEnvironment(value: unknown): ModelEnvironment {
     }
     ids.add(box.id);
     return Object.freeze({id: box.id, position: vector(box.position), color: tint(box.color),
-      size: Object.freeze(dimensions(box.size, 3)) as unknown as ModelVector});
+      size: Object.freeze(dimensions(box.size, 3)) as unknown as ModelVector,
+      ...(box.rotationQuaternion !== undefined && {
+        rotationQuaternion: modelPresentationRotation(box.rotationQuaternion),
+      })});
   });
   const size = value.plane === null ? null :
     Object.freeze(dimensions(value.plane.size, 2)) as readonly [number, number];
   const plane = value.plane === null ? null : Object.freeze({position: vector(value.plane.position),
     color: tint(value.plane.color), size: size!, grid: grid(value.plane.grid, size!)});
   return Object.freeze({reflectZ: value.reflectZ, plane, boxes: Object.freeze(boxes)});
+}
+
+function geometryKey(value: ModelEnvironment) {
+  return JSON.stringify({reflectZ: value.reflectZ, plane: value.plane,
+    boxes: value.boxes.map(({id, size, color}) => ({id, size, color}))});
+}
+function positionBox(mesh: THREE.Object3D, box: ModelEnvironmentBox, reflectZ: boolean) {
+  const pose = modelPoseForBinding({position: box.position, rotationQuaternion: box.rotationQuaternion ?? [0, 0, 0, 1],
+    scale: [1, 1, 1]}, {reflectZ, rotationQuaternion: [0, 0, 0, 1]});
+  mesh.position.fromArray(pose.position);
+  mesh.quaternion.fromArray(pose.rotationQuaternion);
 }
 
 function createGrid(plane: NonNullable<ModelEnvironment['plane']>) {
@@ -85,7 +101,8 @@ function createGrid(plane: NonNullable<ModelEnvironment['plane']>) {
 // Render supplied geometry only. World coordinates use basis reflection, never the avatar's local alignment.
 export function createModelEnvironment(value: unknown) {
   const environment = modelEnvironment(value);
-  const group = new THREE.Group();
+  const group = new THREE.Group(), boxes = new Map<string, THREE.Mesh>();
+  const key = geometryKey(environment);
   const resources: Array<{dispose(): void}> = [];
   let disposed = false;
   const dispose = () => {
@@ -120,7 +137,17 @@ export function createModelEnvironment(value: unknown) {
         group.add(lines);
       }
     }
-    for (const box of environment.boxes) add(new THREE.BoxGeometry(...box.size), box.position, box.color, box.id);
+    for (const box of environment.boxes) {
+      const mesh = add(new THREE.BoxGeometry(...box.size), box.position, box.color, box.id);
+      positionBox(mesh, box, environment.reflectZ);
+      boxes.set(box.id, mesh);
+    }
   } catch (error) {dispose(); throw error;}
-  return {group, dispose};
+  return {group, dispose, update(value: unknown) {
+    if (disposed) throw new Error('The preview environment has been disposed.');
+    const next = modelEnvironment(value);
+    if (geometryKey(next) !== key) return false;
+    for (const box of next.boxes) positionBox(boxes.get(box.id)!, box, next.reflectZ);
+    return true;
+  }};
 }

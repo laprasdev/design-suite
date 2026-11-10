@@ -1,6 +1,7 @@
 // The field vocabulary: whether a field is set, how much it says, which control draws it, what a yes/no reads, and
 // which lifecycle phases are active. No React here, so the web synth's models read it without importing a view, and
 // the suite's views read it too.
+import {ChoiceSkinForm} from './skinKinds.ts';
 
 /** Whether a field holds its own value here: set, not set, or inheriting through its mode. */
 export const FieldState = Object.freeze({ SET: 'set', UNSET: 'unset', INHERITED: 'inherited' } as const);
@@ -25,8 +26,10 @@ export const NUMBER_KINDS = Object.freeze([
 ] as const);
 export type NumberKind = typeof NUMBER_KINDS[number];
 
-/** A choice's forms, named as the manifest's widget names them where it does. */
-export const ChoiceForm = Object.freeze({ MULTI_CHOICE: 'multiChoice', SELECT: 'select' } as const);
+/** A choice's forms: the manifest's widget name for words in a row, and the skin's own value for every other. */
+export const ChoiceForm = Object.freeze({
+  MULTI_CHOICE: 'multiChoice', SELECT: ChoiceSkinForm.SELECT, ICONS: ChoiceSkinForm.ICONS, GRID: ChoiceSkinForm.GRID,
+} as const);
 export type ChoiceFormValue = typeof ChoiceForm[keyof typeof ChoiceForm];
 
 /** A yes/no field's four real states: on, off, not set, and inherit. */

@@ -3,15 +3,14 @@ import {Knob, KnobPreset, KnobLayout, KnobLabelStyle, KnobValueType}
   from '../../synth/components/synth/Knob.tsx';
 import {DualTickRangeKnob} from '../../synth/components/synth/lifecycle/DualTickRangeKnob.tsx';
 import {Slider, SliderForm} from '../../synth/components/synth/Slider.tsx';
-import {IntegerIncrementer, IncrementerForm} from '../../synth/components/synth/40-IntegerIncrementer.tsx';
 import {ModuleNumberInput} from '../inputs/ModuleNumberInput.tsx';
 import {ModuleField} from '../../synth/components/synth/ModuleGrid.tsx';
 import {FieldEmphasis, NO_VALUE} from '../../fields.ts';
-import {ModulationRoot, type ControlModulator} from '../../synth/components/synth/modulation.ts';
+import {ModulationDisplay, ModulationRoot, type ControlModulator} from '../../synth/components/synth/modulation.ts';
 import {knobSkinConfig, skinForm} from '../../skinForms.ts';
+import {NumberSkinForm, SkinKind, SliderSkinForm, RangeSkinForm} from '../../skinKinds.ts';
 import {useStyle} from '../../synth/StyleContext.tsx';
-import {SampleModulation} from './GalleryControls.tsx';
-import {SampleState, type ElementSampleProps} from './elementCatalog.ts';
+import {GalleryGroup, SampleModulation, SampleState, type ElementSampleProps} from './elementCatalog.ts';
 
 const CONFIG = {...KnobPreset.minimal, layout: KnobLayout.KNOB_ONLY,
   labelStyle: KnobLabelStyle.PLAIN, valueType: KnobValueType.INTEGER};
@@ -27,35 +26,41 @@ export function NumberSample({group, option, state, modulation = SampleModulatio
   const previewValue = state === SampleState.UNSET ? 0 : value;
   const emphasis = state === SampleState.SET ? FieldEmphasis.SET : FieldEmphasis.QUIET;
   const shown = state === SampleState.UNSET ? NO_VALUE : String(Math.round(value));
-  const mode = group === 'modulation' ? option : modulation;
-  const modulators = mode === SampleModulation.OFF ? [] : mode === SampleModulation.STACKED ? MODULATORS
-    : [{...MODULATORS[0], bipolar: mode === SampleModulation.BIPOLAR}];
-  const feedback = {modulators, selectedSource: source,
+  const mode = group === GalleryGroup.MODULATION ? option : modulation;
+  const modulators = mode === SampleModulation.OFF ? []
+    : mode === SampleModulation.STACKED || mode === SampleModulation.BLENDED ? MODULATORS
+      : [{...MODULATORS[0], bipolar: mode === SampleModulation.BIPOLAR}];
+  const modulationDisplay = mode === SampleModulation.BLENDED
+    ? ModulationDisplay.BLENDED : ModulationDisplay.LINES;
+  const feedback = {modulators, modulationDisplay, selectedSource: source,
     onSelectSource: (next: string) => setSource(current => current === next ? null : next)};
-  if (group === 'number') return <ModuleNumberInput ariaLabel="Amount" appearance={option} integer={option === 'meter'}
-    value={option === 'meter' ? Math.round(value / 10) : value} min={0} max={option === 'meter' ? 10 : 100}
-    onChange={next => setValue(option === 'meter' ? next * 10 : next)} disabled={disabled}/>;
-  if (group === 'slider' && option === 'setting') return <Slider form={SliderForm.SETTING} label="Amount"
+  const meter = option === NumberSkinForm.METER;
+  if (group === SkinKind.NUMBER) return <ModuleNumberInput ariaLabel="Amount" appearance={option} integer={meter}
+    value={meter ? Math.round(value / 10) : value} min={0} max={meter ? 10 : 100}
+    onChange={next => setValue(meter ? next * 10 : next)} disabled={disabled}/>;
+  if (group === SkinKind.SLIDER && option === SliderSkinForm.SETTING) return <Slider form={SliderForm.SETTING}
+    label="Amount"
     value={value} min={0} max={100} step={1} defaultValue={50} onChange={setValue}
     resetLabel="Reset amount" disabled={disabled} {...feedback}/>;
-  if (group === 'slider' || (group === 'range' && option === 'track')) return <div className="element-track">
-    <span>{group === 'range' ? low.toFixed(0) : '0'}</span>
+  const track = group === SkinKind.RANGE && option === RangeSkinForm.TRACK;
+  if (group === SkinKind.SLIDER || track) return <div className="element-track">
+    <span>{group === SkinKind.RANGE ? low.toFixed(0) : '0'}</span>
     <Slider form={SliderForm.RANGE} ariaLabel="Amount"
-      appearance={option === 'minimal' || option === 'line' ? option : 'track'}
-      low={group === 'slider' ? 0 : low} high={value} min={0} max={100}
-      step={1} singleEnded={group === 'slider'} disabled={disabled} {...feedback}
+      appearance={option === SliderSkinForm.MINIMAL || option === SliderSkinForm.LINE ? option : SliderSkinForm.TRACK}
+      low={group === SkinKind.SLIDER ? 0 : low} high={value} min={0} max={100}
+      step={1} singleEnded={group === SkinKind.SLIDER} disabled={disabled} {...feedback}
       onChange={(nextLow, nextHigh) => {setLow(nextLow); setValue(nextHigh);}}/>
     <span>{shown}</span>
   </div>;
-  if (group === 'range') return <ModuleField label="Range"
+  if (group === SkinKind.RANGE) return <ModuleField label="Range"
     value={state === SampleState.UNSET ? NO_VALUE : `${low}–${shown}`} emphasis={emphasis}>
-    <DualTickRangeKnob config={knobSkinConfig(CONFIG, skinForm(skin, 'knob'))}
+    <DualTickRangeKnob config={knobSkinConfig(CONFIG, skinForm(skin, SkinKind.KNOB))}
       minValue={state === SampleState.UNSET ? 0 : low}
       maxValue={previewValue} min={0} max={100} {...feedback}
       minimumGapFraction={0} onMinChange={setLow} onMaxChange={setValue}
       showLimits={false} disabled={disabled} color="primary"/>
   </ModuleField>;
-  const config = knobSkinConfig(CONFIG, group === 'modulation' ? skinForm(skin, 'knob') ?? 'cutout' : option);
+  const config = knobSkinConfig(CONFIG, group === GalleryGroup.MODULATION ? skinForm(skin, SkinKind.KNOB) : option);
   return <ModuleField label="Amount" value={shown} emphasis={emphasis}>
     <Knob config={config} value={previewValue} min={0} max={100} onChange={setValue} disabled={disabled}
       tooltip="Amount" color="primary" {...feedback}/>

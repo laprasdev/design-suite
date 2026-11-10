@@ -1,6 +1,7 @@
 import {RangeKnobArc} from '../../../../react/inputs/RangeKnobArc.tsx';
 import {KnobFace} from '../../../../react/KnobFace.tsx';
 import {skinForm, knobSkinConfig} from '../../../../skinForms.ts';
+import {SkinKind} from '../../../../skinKinds.ts';
 import {KnobForm} from '../../../design/constants/KnobConfig.ts';
 import {ModulationRings} from '../ModulationRings.tsx';
 import {type ModulationProps} from '../modulation.ts';
@@ -93,10 +94,9 @@ export function DualTickRangeKnob({
   React.useEffect(() => gesture.end, [gesture]);
   const style = getEffectiveStyle();
   const { setTooltip, descriptions } = useTooltipSafe();
-
   // Resolve config: explicit config > preset with overrides
   const baseConfig = knobSkinConfig(configProp ?? KnobPreset[preset],
-    configProp?.form ? undefined : skinForm(skin, 'knob'));
+    configProp?.form ? undefined : skinForm(skin, SkinKind.KNOB));
   const config: KnobConfig = {
     ...baseConfig,
     size: sizeOverride ?? baseConfig.size,

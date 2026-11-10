@@ -2,14 +2,10 @@ import React, { useRef, useEffect } from 'react';
 import { useStyle } from '../../StyleContext.tsx';
 import { getColorScheme, mapLegacyColor, hexToRgba, getGridSpacing, type GridDistance, type ColorType } from '../../../color.ts';
 import { D, F, C, O, Borders, T } from '../../design/index.ts';
-
-// =====================================================
-// UNIFIED GRAPH COMPONENT
-// Replaces: WaveformBackground, PositiveNegativeGraph, UnipolarGraph, WaveformEnum
-// =====================================================
+import {GraphForm, type GraphFormValue} from './graphForm.ts';
 
 export type GraphColor = 'primary' | 'secondary' | 'tertiary' | 'cyan' | 'pink' | 'green';
-export type GraphVariant = 'bipolar' | 'unipolar' | 'waveform';
+export type GraphVariant = GraphFormValue | 'waveform';
 
 export interface WaveformPoint {
   x: number; // 0-1
@@ -51,13 +47,13 @@ export interface WaveformBackgroundProps {
   className?: string;
   width?: number;
   height?: number;
-  range?: 'unipolar' | 'bipolar';
+  range?: GraphFormValue;
 }
 
 export function WaveformBackground({
   children,
   className = '',
-  range = 'unipolar',
+  range = GraphForm.UNIPOLAR,
   width = 300,
   height = 120
 }: WaveformBackgroundProps) {
@@ -138,9 +134,9 @@ export function WaveformBackground({
       >
         <line
           x1={0}
-          y1={range === 'bipolar' ? height / 2 : height - 4}
+          y1={range === GraphForm.BIPOLAR ? height / 2 : height - 4}
           x2={width}
-          y2={range === 'bipolar' ? height / 2 : height - 4}
+          y2={range === GraphForm.BIPOLAR ? height / 2 : height - 4}
           stroke={style.inactiveColor}
           strokeWidth={1.5}
           strokeOpacity={Math.min(gridOpacity * 2.5, 0.9)}
@@ -163,7 +159,7 @@ export function WaveformBackground({
           y=1
         </div>
 
-        {range === 'bipolar' && (
+        {range === GraphForm.BIPOLAR && (
           <div style={{
             position: 'absolute',
             left: D.spacing.microGap,
@@ -189,7 +185,7 @@ export function WaveformBackground({
           fontWeight: T.label.fontWeight,
           letterSpacing: T.label.letterSpacing
         }}>
-          {range === 'bipolar' ? 'y=-1' : 'y=0'}
+          {range === GraphForm.BIPOLAR ? 'y=-1' : 'y=0'}
         </div>
 
         <div style={{
@@ -531,7 +527,7 @@ export interface GraphProps {
   height?: number;
   color?: GraphColor;
   className?: string;
-  variant?: 'bipolar' | 'unipolar';
+  variant?: GraphFormValue;
   showNodes?: boolean;
   showGrid?: boolean;
   backgroundWaveform?: WaveformPoint[];
@@ -543,12 +539,12 @@ export function Graph({
   height = 120,
   color = 'cyan',
   className = '',
-  variant = 'unipolar',
+  variant = GraphForm.UNIPOLAR,
   showNodes = false,
   showGrid = true,
   backgroundWaveform
 }: GraphProps) {
-  const graphContent = variant === 'bipolar' ? (
+  const graphContent = variant === GraphForm.BIPOLAR ? (
     <BipolarGraph
       data={data}
       width={width}

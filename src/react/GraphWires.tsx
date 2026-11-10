@@ -1,3 +1,4 @@
+import {GRAPH_WIRE_ATTRIBUTE} from './nodeGraphTypes.ts';
 import React, { useLayoutEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { Cable, X } from "lucide-react";
 import { Button } from "./Button.tsx";
@@ -77,7 +78,7 @@ export function GraphWires({
         <circle className="bd-port" cx={link.b.x} cy={link.b.y} r="3.1" />
       </g>)}
       {onTiesChange && links.map(link => <path key={`hit:${link.id}`} className="bd-edge-hit" d={link.d}
-        data-wire={link.id} role="button" tabIndex={0} aria-label={`Select wire: ${link.label}`}
+        {...{[GRAPH_WIRE_ATTRIBUTE]: link.id}} role="button" tabIndex={0} aria-label={`Select wire: ${link.label}`}
         aria-pressed={wires.selected.includes(link.id)} onPointerDown={event => event.stopPropagation()}
         onClick={event => { event.stopPropagation(); wires.select(link.id, event.shiftKey); }}
         onKeyDown={event => {

@@ -4,13 +4,14 @@ import {getColorScheme, hexToRgba, resolveColorType} from '../../color.ts';
 import {D, F, C, O, T, TransitionKeys, applyCasing} from '../../synth/design/index.ts';
 import type {SingleSelectEnumProps, EnumOption} from '../../synth/components/synth/Enum.tsx';
 import {skinForm} from '../../skinForms.ts';
+import {SkinKind} from '../../skinKinds.ts';
 import {SkinChoice} from './SkinChoice.tsx';
 
 export function OptionsEnum<Value>(props: Omit<SingleSelectEnumProps<Value>, 'variant'> & {
   appearance?: string; ariaLabel?: string;
 }) {
   const context = useStyle(), style = context.getEffectiveStyle();
-  const form = props.appearance ?? skinForm(context.skin, props.litValues ? 'flags' : 'choice');
+  const form = props.appearance ?? skinForm(context.skin, props.litValues ? SkinKind.FLAGS : SkinKind.CHOICE);
   if (form) return <SkinChoice {...props} appearance={form}/>;
   return <LegacyOptions {...props} style={style} scheme={getColorScheme(resolveColorType(props.color), style)}/>;
 }

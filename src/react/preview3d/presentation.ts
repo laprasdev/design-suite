@@ -36,7 +36,7 @@ function vector(value: unknown, name: string): ModelVector {
   const copy = numbers(value, 3, name);
   return Object.freeze([copy[0], copy[1], copy[2]]);
 }
-function rotation(value: unknown): ModelRotation {
+export function modelPresentationRotation(value: unknown): ModelRotation {
   const copy = numbers(value, 4, 'rotationQuaternion');
   if (Math.abs(Math.hypot(...copy) - 1) > MODEL_PREVIEW_QUATERNION_TOLERANCE) {
     throw new Error('rotationQuaternion must have unit length.');
@@ -46,7 +46,7 @@ function rotation(value: unknown): ModelRotation {
 function pose(value: unknown): ModelPresentationPose {
   if (!object(value)) throw new Error('A full model pose is required.');
   return Object.freeze({position: vector(value.position, 'position'),
-    rotationQuaternion: rotation(value.rotationQuaternion), scale: vector(value.scale, 'scale')});
+    rotationQuaternion: modelPresentationRotation(value.rotationQuaternion), scale: vector(value.scale, 'scale')});
 }
 
 // Validate every channel before any pose is applied. Accepted values never retain caller-owned arrays.
@@ -77,7 +77,7 @@ export function modelPreviewCamera(value: unknown) {
 export function modelPoseForBinding(value: ModelPresentationPose, binding: ModelPoseBinding): ModelPresentationPose {
   const source = pose(value);
   if (!object(binding) || typeof binding.reflectZ !== 'boolean') throw new Error('A pose binding is required.');
-  const [bx, by, bz, bw] = rotation(binding.rotationQuaternion);
+  const [bx, by, bz, bw] = modelPresentationRotation(binding.rotationQuaternion);
   const [x, y, z, aw] = source.rotationQuaternion;
   const ax = binding.reflectZ ? -x : x, ay = binding.reflectZ ? -y : y, az = z;
   const result = [ax * bw + aw * bx + ay * bz - az * by, ay * bw + aw * by + az * bx - ax * bz,

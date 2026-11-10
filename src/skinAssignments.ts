@@ -1,3 +1,7 @@
+import {ChoiceSkinForm, ColorSkinForm, ContainerForm, CurveSkinForm, FlagsSkinForm, KnobSkinForm, LayersSkinForm,
+  NumberSkinForm, OpensSkinForm, PhasesSkinForm, RangeSkinForm, ReadoutSkinForm, ReferenceSkinForm, SkinId, SkinKind,
+  SliderSkinForm, TextSkinForm, VectorSkinForm, YesNoSkinForm} from './skinKinds.ts';
+
 /** Component shapes are skins. Palette identities are independent of these assignments. */
 export interface SkinCatalogGroup { id: string; options: readonly { id: string; assignable?: boolean }[] }
 export interface ComponentSkin {
@@ -11,24 +15,29 @@ export const ELEMENT_FEEDBACK_LIMIT = 2000;
 export interface SkinAssignments {
   version: 2; revision: number; skins: ComponentSkin[]; feedback: ElementFeedback;
 }
-export const FREEFORM_SKIN = 'freeform';
 export type SkinChange = { revision: number } & (
   | { action: 'create'; name: string; source: string }
   | { action: 'assign'; skin: string; group: string; option: string; selected: boolean }
   | { action: 'activate'; skin: string; group: string; option: string }
   | { action: 'feedback'; group: string; option: string; text: string });
 
-const FLAT = { knob: 'cutout', slider: 'minimal', range: 'track', number: 'input', 'yes-no': 'dot',
-  choice: 'text', flags: 'joined', vector: 'inputs', color: 'swatch', text: 'input', layers: 'bits',
-  reference: 'select', curve: 'line', phases: 'glyph', opens: 'chevron', readout: 'value', container: 'flat' };
-const CLASSIC = { ...FLAT, knob: 'line', slider: 'track', choice: 'joined', container: 'cutout' };
+const FLAT = {[SkinKind.KNOB]: KnobSkinForm.CUTOUT, [SkinKind.SLIDER]: SliderSkinForm.TRACK,
+  [SkinKind.RANGE]: RangeSkinForm.TRACK, [SkinKind.NUMBER]: NumberSkinForm.INPUT, [SkinKind.YES_NO]: YesNoSkinForm.DOT,
+  [SkinKind.CHOICE]: ChoiceSkinForm.TEXT, [SkinKind.FLAGS]: FlagsSkinForm.JOINED,
+  [SkinKind.VECTOR]: VectorSkinForm.INPUTS, [SkinKind.COLOR]: ColorSkinForm.SWATCH,
+  [SkinKind.TEXT]: TextSkinForm.INPUT, [SkinKind.LAYERS]: LayersSkinForm.BITS,
+  [SkinKind.REFERENCE]: ReferenceSkinForm.SELECT, [SkinKind.CURVE]: CurveSkinForm.LINE,
+  [SkinKind.PHASES]: PhasesSkinForm.GLYPH, [SkinKind.OPENS]: OpensSkinForm.CHEVRON,
+  [SkinKind.READOUT]: ReadoutSkinForm.VALUE, [SkinKind.CONTAINER]: ContainerForm.FLAT};
+const CLASSIC = {...FLAT, [SkinKind.KNOB]: KnobSkinForm.LINE, [SkinKind.SLIDER]: SliderSkinForm.TRACK,
+  [SkinKind.CHOICE]: ChoiceSkinForm.JOINED, [SkinKind.CONTAINER]: ContainerForm.CUTOUT};
 const definition = (id: string, name: string, active: Record<string, string>): ComponentSkin => ({
   id, name, active: { ...active },
   candidates: Object.fromEntries(Object.entries(active).map(([key, form]) => [key, [form]])),
 });
 export const emptySkinAssignments = (): SkinAssignments => ({ version: 2, revision: 0, feedback: {}, skins: [
-  definition(FREEFORM_SKIN, 'Freeform', {}), definition('flat', 'Flat', FLAT),
-  definition('classic', 'Classic', CLASSIC),
+  definition(SkinId.FREEFORM, 'Freeform', {}), definition(SkinId.FLAT, 'Flat', FLAT),
+  definition(SkinId.CLASSIC, 'Classic', CLASSIC),
 ] });
 const object = (value: unknown): Record<string, unknown> => {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('Expected a skin record.');
@@ -102,7 +111,7 @@ export function parseSkinAssignments(value: unknown, catalog: readonly SkinCatal
   }
   if (data.version !== 2 || !Array.isArray(data.skins)) throw new Error('Unsupported skin assignments.');
   const skins = data.skins.map(skin => parseComponentSkin(skin, catalog));
-  if (!skins.some(skin => skin.id === FREEFORM_SKIN)) throw new Error('Freeform choices are missing.');
+  if (!skins.some(skin => skin.id === SkinId.FREEFORM)) throw new Error('Freeform choices are missing.');
   if (new Set(skins.map(skin => skin.id)).size !== skins.length ||
     new Set(skins.map(skin => skin.name.toLocaleLowerCase())).size !== skins.length) throw new Error('Duplicate skin.');
   return { version: 2, revision: currentRevision, skins, feedback: feedbackOf(data.feedback, catalog) };

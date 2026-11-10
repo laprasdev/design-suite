@@ -2,6 +2,8 @@ import {createTheme, type Theme} from './theme.ts';
 
 export const THEME_PROTOCOL = 'looms.theme';
 export const THEME_VERSION = 1;
+/** How long a surface waits for a theme source to answer before it reports the source unavailable. */
+export const THEME_SOURCE_TIMEOUT_MS = 10000;
 const SUBSCRIBE = 'subscribe', UNSUBSCRIBE = 'unsubscribe', UPDATE = 'update';
 export interface ThemeData { skin: string; theme: Theme }
 const message = (type: string) => ({protocol: THEME_PROTOCOL, version: THEME_VERSION, type});

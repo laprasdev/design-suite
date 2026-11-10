@@ -7,7 +7,7 @@ import { D, F, C, O, P, T, TransitionKeys, Borders, SIZES, applyCasing } from '.
 import { useTooltipSafe } from './TooltipContext.tsx';
 import { useLongPress } from './base/index.ts';
 import { paddingCSS } from '../../design/Composable.ts';
-import type { HciComposableStyle } from '../../design/designTokensLoader.ts';
+import { CompositionWrap, type HciComposableStyle } from '../../design/designTokensLoader.ts';
 
 // =====================================================
 // UNIFIED ENUM COMPONENT
@@ -177,14 +177,14 @@ interface SingleRendererProps<T> extends RendererProps<T> {
 }
 
 function enumGridStyle(layout?: HciComposableStyle): React.CSSProperties {
-  if (layout?.wrap !== 'wrap' || !layout.minimumCellWidth) return {};
+  if (layout?.wrap !== CompositionWrap.WRAP || !layout.minimumCellWidth) return {};
   return { display: 'grid', width: '100%', gridTemplateColumns: `repeat(auto-fit, minmax(${layout.minimumCellWidth}px, 1fr))`,
     maxWidth: layout.maximumColumns ? layout.minimumCellWidth * layout.maximumColumns + (layout.spacing?.gap ?? D.spacing.microGap) * (layout.maximumColumns - 1) : undefined,
     gap: layout.spacing?.gap ?? D.spacing.microGap, padding: 0 };
 }
 
 function enumGridCellStyle(layout?: HciComposableStyle, option?: HciComposableStyle): React.CSSProperties {
-  if (layout?.wrap !== 'wrap' || !layout.minimumCellWidth) return {};
+  if (layout?.wrap !== CompositionWrap.WRAP || !layout.minimumCellWidth) return {};
   return { width: '100%', minWidth: 0, height: option?.sizing?.sizeY ?? layout.minimumCellWidth,
     minHeight: 0, padding: paddingCSS(option?.spacing?.padding) ?? 0, boxSizing: 'border-box' };
 }

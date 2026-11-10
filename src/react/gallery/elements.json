@@ -170,6 +170,11 @@
         "label": "Icons"
       },
       {
+        "id": "grid",
+        "label": "Grid",
+        "assignable": false
+      },
+      {
         "id": "cycle",
         "label": "Cycle"
       },

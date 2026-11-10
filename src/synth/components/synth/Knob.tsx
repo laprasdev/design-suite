@@ -1,4 +1,5 @@
 import { knobSkinConfig, skinForm } from '../../../skinForms.ts';
+import { SkinKind } from '../../../skinKinds.ts';
 import React, { useCallback, useEffect, useState, useRef } from 'react';
 import { useStyle } from '../../StyleContext.tsx';
 import { getColorScheme, getInsetShadow, resolveColorType, hexToRgba, type AnyColor } from '../../../color.ts';
@@ -274,9 +275,8 @@ export function Knob({
   const { getEffectiveStyle, skin } = useStyle();
   const style = getEffectiveStyle();
   const { setTooltip, descriptions } = useTooltipSafe();
-
   // Resolve config: explicit config > preset with overrides
-  const baseConfig = knobSkinConfig(configProp ?? KnobPreset[preset], configProp?.form ? undefined : skinForm(skin, 'knob'));
+  const baseConfig = knobSkinConfig(configProp ?? KnobPreset[preset], configProp?.form ? undefined : skinForm(skin, SkinKind.KNOB));
   const config: KnobConfig = {
     ...baseConfig,
     size: sizeOverride ?? baseConfig.size,

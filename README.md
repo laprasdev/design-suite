@@ -88,9 +88,16 @@ hidden and inert. Back restores the retained page's focused control. The optiona
 `focusRef` names a destination heading or control; otherwise the page takes focus.
 Reduced motion settles immediately, and a new navigation cancels the old motion.
 
+For ordered peer destinations, pass `activeKey` with the same entries. Visited pages stay mounted;
+direction follows their order, and their actual retained surfaces animate without cloning embedded apps.
+
+`PageHeaderBar` and `PageFooter` own the shared page chrome. `HeaderNavigation` takes the same typed
+segmented-control options as the sport selector: applications supply glyphs, labels, values and navigation.
+Brand, Back, settings and page controls fill the existing slots. Notices reuse `ActionBar`'s notice surface.
+
 Keep the fixed header and footer outside the moving page body. The exported page
-motion helpers also support stationary chrome within a composed page; applications
-name those regions. The consumer owns routes, push/Back controls, guards and the
+motion helpers also support stationary chrome within a composed page.
+`Crossfade` recognizes nested `[data-page-bar]` surfaces and fades their controls in place. The consumer owns routes, push/Back controls, guards and the
 retained entries' lifetime. Removing an entry unmounts it. The existing
 `<Crossfade view={key}>{content}</Crossfade>` keeps its compact fade behavior.
 For composed pages, `animateCardFlip(outgoing, incoming)` rotates each supplied surface in place, using the shared

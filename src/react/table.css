@@ -12,3 +12,9 @@
 }
 .bd-table td:first-child { font-weight: 600; white-space: nowrap; }
 .bd-table td:last-child { color: var(--color-dim, #82828e); }
+
+/* Fit: the table as wide as its content, even inside a stretching grid or flex parent, for a compact comparison beside
+   other content; its heads keep the 12px floor and every column reads in the text colour. */
+.bd-table[data-table-form="fit"] { width: auto; max-width: 100%; justify-self: start; align-self: start; }
+.bd-table[data-table-form="fit"] th { font-size: 12px; }
+.bd-table[data-table-form="fit"] td:last-child { color: var(--color-text, #f0f0f3); }

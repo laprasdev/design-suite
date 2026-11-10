@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import * as THREE from 'three';
+import {MODEL_PREVIEW_QUATERNION_TOLERANCE} from '../src/react/preview3d/presentation.ts';
 import {createModelEnvironment, modelEnvironment, MODEL_ENVIRONMENT_GRID}
   from '../src/react/preview3d/environment.ts';
 
@@ -63,4 +64,24 @@ test('opt-in world grid follows the supplied plane and preserves metre spacing',
   environment.dispose(); assert.equal(released, 2);
   assert.throws(() => modelEnvironment({...value, plane: {...floor, grid: {...floor.grid, spacing: 0}}}), /spacing/);
   assert.throws(() => modelEnvironment({...value, plane: {...floor, grid: {...floor.grid, spacing: .0001}}}), /lines/);
+});
+
+test('published box transforms update existing GPU objects with the world basis', () => {
+  const value = fixture(), environment = createModelEnvironment(value);
+  const mesh = environment.group.getObjectByName(value.boxes[0].id) as THREE.Mesh;
+  const geometry = mesh.geometry, material = mesh.material;
+  const moved = {...value, boxes: [{...value.boxes[0], position: [2, 3, -4],
+    rotationQuaternion: [0, Math.SQRT1_2, 0, Math.SQRT1_2]}]};
+  assert.equal(environment.update(moved), true);
+  assert.equal(mesh.geometry, geometry); assert.equal(mesh.material, material);
+  assert.deepEqual(mesh.position.toArray(), [2, 3, 4]);
+  const expected = [0, -Math.SQRT1_2, 0, Math.SQRT1_2];
+  mesh.quaternion.toArray().forEach((value, index) =>
+    assert.ok(Math.abs(value - expected[index]) < MODEL_PREVIEW_QUATERNION_TOLERANCE));
+  assert.throws(() => environment.update({...moved, boxes: [{...moved.boxes[0], rotationQuaternion: [0, 0, 0, 0]}]}));
+  assert.deepEqual(mesh.position.toArray(), [2, 3, 4]);
+  assert.equal(environment.update({...value, boxes: [{...value.boxes[0], size: [3, 3, 3]}]}), false);
+  assert.equal(mesh.geometry, geometry);
+  environment.dispose();
+  assert.throws(() => environment.update(value), /disposed/);
 });

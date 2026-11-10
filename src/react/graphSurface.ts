@@ -7,11 +7,13 @@ export function graphDots(color = 'var(--text)', zoom = 1): CSSProperties {
 }
 
 /** Shared graph edge treatment. Apply to the background layer to keep nodes and ports crisp. */
-export function graphEdgeFade(inset: number): CSSProperties {
-  const mask = `linear-gradient(to right,transparent,black ${inset}px,`
-    + `black calc(100% - ${inset}px),transparent),`
-    + `linear-gradient(to bottom,transparent,black ${inset}px,`
-    + `black calc(100% - ${inset}px),transparent)`;
+export type GraphEdge = 'left' | 'right' | 'top' | 'bottom';
+const ALL_EDGES: readonly GraphEdge[] = ['left', 'right', 'top', 'bottom'];
+export function graphEdgeFade(inset: number, edges: readonly GraphEdge[] = ALL_EDGES): CSSProperties {
+  const start = (edge: GraphEdge) => edges.includes(edge) ? `transparent,black ${inset}px` : 'black';
+  const end = (edge: GraphEdge) => edges.includes(edge) ? `black calc(100% - ${inset}px),transparent` : 'black';
+  const mask = `linear-gradient(to right,${start('left')},${end('right')}),`
+    + `linear-gradient(to bottom,${start('top')},${end('bottom')})`;
   return {maskImage: mask, WebkitMaskImage: mask, maskComposite: 'intersect', WebkitMaskComposite: 'source-in'};
 }
 

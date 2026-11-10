@@ -2,14 +2,15 @@ import React, {forwardRef, useId, type HTMLAttributes} from 'react';
 import {useStyle} from '../synth/StyleContext.tsx';
 import {designTokens} from '../skins.ts';
 import {O, SCALE} from '../synth/design/index.ts';
-import {graphEdgeFade} from './graphSurface.ts';
+import {graphEdgeFade, type GraphEdge} from './graphSurface.ts';
 
 /** The classic lifecycle graph's surface, also used by schema-driven plots. */
-export const GraphDisplay = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(
-  function GraphDisplay({style, ...props}, ref) {
+export const GraphDisplay = forwardRef<HTMLDivElement,
+  HTMLAttributes<HTMLDivElement> & {fadeEdges?: readonly GraphEdge[]}>(
+  function GraphDisplay({style, fadeEdges, ...props}, ref) {
     const colors = useStyle().getEffectiveStyle();
     return <div {...props} ref={ref} style={{position: 'relative', height: '100%',
-      background: colors.cutoutBackground, ...graphEdgeFade(designTokens.graphInset / SCALE), ...style}}/>;
+      background: colors.cutoutBackground, ...graphEdgeFade(designTokens.graphInset / SCALE, fadeEdges), ...style}}/>;
   });
 
 /** A sampled curve's fill. Calculation remains with its owning model. */

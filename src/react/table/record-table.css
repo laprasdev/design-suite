@@ -69,7 +69,7 @@
 [data-record-table] .draft-full-stats[data-identity=false] {--draft-identity-width:0px;}
 .draft-stats-panel[data-comparison] {--table-border:0px;flex:none;}
 .draft-stats-panel[data-comparison] .draft-full-stats {
- --draft-stat-min:var(--element-width,240px);--table-row-height:auto;font-family:var(--font-reading);font-size:var(--type-control);
+ --draft-stat-min:var(--element-width);--table-row-height:auto;font-family:var(--font-reading);font-size:var(--type-control);
 }
 .draft-stats-panel[data-comparison] .draft-full-stats th {
  position:static;text-align:left;font-family:var(--font-chrome);font-size:var(--type-control);

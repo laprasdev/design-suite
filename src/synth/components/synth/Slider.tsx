@@ -1,7 +1,8 @@
 import {SettingSlider, SkinRangeSlider} from '../../../react/inputs/SettingSlider.tsx';
-import {skinForm} from '../../../skinForms.ts';
-import {ModulationTracks, modulationTrackHeight} from '../../../react/inputs/ModulationTracks.tsx';
-import type {ModulationProps} from './modulation.ts';
+import {skinFormOrDefault} from '../../../skinForms.ts';
+import {SkinDefault, SliderSkinForm as SkinSliderForm} from '../../../skinKinds.ts';
+import {ModulationTracks} from '../../../react/inputs/ModulationTracks.tsx';
+import type {SliderModulationProps} from './modulation.ts';
 import React from 'react';
 import {SliderTrack, SLIDER_TRACK_HEIGHT as TRACK_HEIGHT} from '../../../react/inputs/SliderTrack.tsx';
 import {SliderProgress, type SliderProgressProps} from '../../../react/inputs/SliderProgress.tsx';
@@ -23,7 +24,7 @@ const FADER_WIDTH = 6;
 const FADER_HEIGHT = 12;
 const DEFAULT_WIDTH = 100;
 
-export interface SliderProps extends ModulationProps {
+export interface SliderProps extends SliderModulationProps {
   form?: typeof SliderForm.CELL | typeof SliderForm.THIN;
   value: number;
   onChange?: (v: number) => void;
@@ -87,7 +88,7 @@ function SliderFader({ fraction, scheme, style, active, thin }: {
 export const SliderForm=Object.freeze({
  CELL:'cell',THIN:'thin',SETTING:'setting',RANGE:'range',PROGRESS:'progress',
 } as const);
-export interface SettingSliderProps extends ModulationProps {
+export interface SettingSliderProps extends SliderModulationProps {
   form: typeof SliderForm.SETTING;
   label: string;
   detail?: string;
@@ -101,6 +102,9 @@ export interface SettingSliderProps extends ModulationProps {
   disabled?: boolean;
   format?: (value: number)=>React.ReactNode;
   compact?: boolean;
+  /** A drag moves the value this far a pixel from where it was pressed, like the cell form's, in place of the
+   *  track's absolute position; a range with more steps than the track has pixels can then still land on each. */
+  sensitivity?: number;
 }
 export function Slider(
  props: SliderProps|SettingSliderProps|SliderProgressProps|(RangeSliderProps&{form:typeof SliderForm.RANGE})
@@ -110,7 +114,7 @@ export function Slider(
   return 'form' in props&&props.form===SliderForm.SETTING?<SettingSlider {...props}/>:<CellSlider {...props as SliderProps}/>;
 }
 
-function CellSlider({ form, value, onChange, min: minProp = 0, max, label, color, disabled, tooltip, isInteger, width, fill, className, sensitivity, modulators = [], selectedSource, onSelectSource }: SliderProps) {
+function CellSlider({ form, value, onChange, min: minProp = 0, max, label, color, disabled, tooltip, isInteger, width, fill, className, sensitivity, modulators = [], modulationDisplay, selectedSource, onSelectSource }: SliderProps) {
   const { getEffectiveStyle, skin } = useStyle();
   const style = getEffectiveStyle();
   const { setTooltip } = useTooltipSafe();
@@ -127,14 +131,15 @@ function CellSlider({ form, value, onChange, min: minProp = 0, max, label, color
   );
 
   const active = isDragging || isHovered;
-  const thin = form === SliderForm.THIN || (!form && skinForm(skin, 'slider') === 'minimal');
-  const thickness = thin ? 1 : TRACK_HEIGHT, topRoom = modulationTrackHeight(modulators.length, thickness);
+  const skinThin = !form && skinFormOrDefault(skin, SkinDefault.SLIDER) === SkinSliderForm.MINIMAL;
+  const thin = form === SliderForm.THIN || skinThin;
+  const thickness = thin ? 1 : TRACK_HEIGHT;
 
   const fillStyle = fill ? { flex: 1, minWidth: 0 } as const : {};
   return (
     <div
       className={className} data-slider-form={form ?? SliderForm.CELL}
-      style={{ display: F.flex, alignItems: F.center, gap: D.spacing.microGap, cursor: disabled ? C.notAllowed : C.pointer, ...fillStyle, paddingTop: topRoom }}
+      style={{ display: F.flex, alignItems: F.center, gap: D.spacing.microGap, cursor: disabled ? C.notAllowed : C.pointer, ...fillStyle }}
       onMouseEnter={() => { setIsHovered(true); tooltip && setTooltip(tooltip); }}
       onMouseLeave={() => { setIsHovered(false); tooltip && setTooltip(null); }}
       onPointerDown={handlePointerDown}
@@ -144,7 +149,8 @@ function CellSlider({ form, value, onChange, min: minProp = 0, max, label, color
       <div style={{ position: P.relative as 'relative', height: FADER_HEIGHT + D.spacing.microGap, display: F.flex, alignItems: F.center, ...(fill ? { flex: 1 } : { width: trackWidth }) }}>
         {!disabled && <ModulationTracks low={minProp} high={value} min={minProp} max={max}
           thickness={thickness} bottom={(FADER_HEIGHT + D.spacing.microGap - thickness) / 2}
-          modulators={modulators} selectedSource={selectedSource} onSelectSource={onSelectSource}/>}
+          modulators={modulators} modulationDisplay={modulationDisplay} selectedSource={selectedSource}
+          onSelectSource={onSelectSource}/>}
         <SliderTrack background={hexToRgba(style.knobGradient.at(-1)!, O.high)}
           width={fill ? '100%' : trackWidth} thin={thin} />
         <SliderFill fraction={fraction} zeroFraction={zeroFraction} color={scheme.main} glow={scheme.glow} active={active} thin={thin} />

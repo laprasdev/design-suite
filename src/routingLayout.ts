@@ -2,16 +2,17 @@
 // LayoutDimensions.routing is this, kept in its own file so layout.ts holds its size. Most sizes are Fibonacci
 // numbers, so neighbouring sizes stand in φ.
 
+const NODE_WIDTH = 144;
+
 export const RoutingDimensions = {
-  nodeWidth: 144,
+  nodeWidth: NODE_WIDTH,
   nodeHeader: 21,
   nodeRow: 26,
   nodePadding: 5,
   nodeRadius: 8,
   columnGap: 34,
   rowGap: 13,
-  // A chain wider than the canvas wraps into bands this far apart, room enough for a wire going back to the next
-  // band's start.
+  // Vertical spacing between independent chain summaries.
   bandGap: 55,
   // Between the canvas's edge and the outputs, so a wire cut off at the edge never reads as reaching an output.
   edgeGap: 13,
@@ -29,12 +30,11 @@ export const RoutingDimensions = {
   gridStep: 21,
   gridLine: 1,
   // The outputs: a rail of one icon a group, each opening the group's card beside it. A row is the rail's button,
-  // a card's label and each of its terminals, so an icon stands level with its card's label. All on φ.
+  // and each terminal. The middle terminal stands level with the icon.
   outputRow: 21,
   outputIcon: 13,
-  outputCardWidth: 89,
-  outputPadding: 5,
-  terminalSize: 8,
+  outputCardWidth: 34,
+  outputPadding: 3,
   menuWidth: 233,
   menuOffset: 8,
   panCueSize: 21,

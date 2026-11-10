@@ -2,6 +2,7 @@ import {hexToRgba, hexToFloatRgba} from '../color.ts';
 import { useDocumentPalette } from '../react/useDocumentPalette.ts';
 import type { ComponentSkin } from '../skinAssignments.ts';
 import { skinForm } from '../skinForms.ts';
+import { ContainerForm, SkinKind } from '../skinKinds.ts';
 import React, { createContext, useContext, useMemo, useState, useEffect, type ReactNode } from 'react';
 import { DEFAULT_SKIN, SKIN_FILES } from '../skins.ts';
 import { skinStyle } from './skinStyle.ts';
@@ -118,8 +119,9 @@ export function StyleProvider({ children, persist = true, initialStyleName, pale
       style.backgroundGradientStart = backgroundOverride;
       style.backgroundGradientEnd = backgroundOverride;
     }
-    const surface = skinForm(skin, 'container');
-    if (surface === 'flat' || (!surface && advancedSettings.moduleDisplayMode === 'FLAT')) {
+    const surface = skinForm(skin, SkinKind.CONTAINER);
+    const flat = surface === ContainerForm.FLAT;
+    if (flat || (!surface && advancedSettings.moduleDisplayMode === 'FLAT')) {
       style.cutoutBackground = style.backgroundColor;
       style.cutoutBorder = style.borderColor;
       style.isFlat = true;

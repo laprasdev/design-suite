@@ -77,6 +77,7 @@ export function createModelStage(
     },
     setEnvironment(value) {
       if (disposed) throw new Error('The preview has been disposed.');
+      if (value !== null && environment?.update(value)) return;
       const next = value === null ? undefined : createModelEnvironment(value);
       environment?.dispose();
       environment = next;
