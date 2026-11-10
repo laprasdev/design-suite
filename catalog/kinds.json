@@ -29,7 +29,7 @@
     "GameViewTabs",
     "PageNavigation"
    ],
-   "note": "Inside an ActionBar it takes the text form by itself; a control's own props still win. Vertical, joined, tabs, fit and scroll make a rail of kinds: rows share its height, the chosen row's indicator slides, and an option's own style draws a line at its edge. ModuleGroups is the text form for a tab's groups, and inline it sits on a row of its own controls, such as a band's tag."
+   "note": "Inside an ActionBar it takes the text form by itself; a control's own props still win. Vertical, joined, tabs, fit and scroll make a rail of kinds: rows share its height, the chosen row's indicator slides, and an option's own style draws a line at its edge. ModuleGroups is the text form for a tab's groups, and inline it sits on a row of its own controls, such as a band's tag. Pending is the single choice's saving form: pending={value,label} shows that option chosen at once, its text the loading Poké Ball (PokeballSpinner, sized to the text) beside the label in a status; the control is busy, ignores every press and fades its other options. The consumer owns the save and its confirmed value; without pending nothing changes."
   },
   "Cycle": {
    "data": "enum, one option visible",
