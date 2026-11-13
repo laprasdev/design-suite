@@ -8,14 +8,16 @@ import {MODEL_STAGE_DRIVER} from './actorModel.ts';
 import type {ModelStageDescription, ModelStageDescriptionPart} from './descriptionModel.ts';
 import {modelStageCommit, type ModelStagePrepare} from './commit.ts';
 import {ModelStageRefusal} from './refusal.ts';
+import type {ModelShaderChange} from './shading.ts';
 
 export const MODEL_STAGE_PART_TEXT = Object.freeze({
   inspection: (id: string) => `Actor ${id} does not support material inspection.`,
 });
-// What the stage-wide parts apply to: the scene, its lighting and its camera framing.
+// What the stage-wide parts apply to: the scene, its lighting, the fog its scenery takes and its camera framing.
 export interface ModelStageSurface {
   readonly scene: THREE.Object3D;
   readonly lighting: {set(value: ModelStageLighting): void};
+  readonly fog: {readonly change: ModelShaderChange};
   frame(framing: ModelStageFraming, orbit: boolean): void;
 }
 
@@ -51,7 +53,7 @@ export function createModelStageParts(surface: ModelStageSurface) {
   };
   const scenery = (value: ModelStageDescription['environment']) => modelStageCommit(() => {
     if (value !== null && environment?.update(value)) return;
-    const created = value === null ? undefined : createModelEnvironment(value);
+    const created = value === null ? undefined : createModelEnvironment(value, surface.fog.change);
     environment?.dispose();
     environment = created;
     if (created) surface.scene.add(created.group);

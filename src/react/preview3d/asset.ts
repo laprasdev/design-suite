@@ -73,7 +73,7 @@ export function modelParts(asset: Pick<GLTF, 'scene'>, theme: ModelStageTheme): 
     const authored: unknown = node.userData.name;
     if (typeof authored !== 'string' || !authored.startsWith(MODEL_PART_PREFIX)) return;
     const geometry = new THREE.SphereGeometry(settings.markerRadius, settings.markerSegments, settings.markerSegments);
-    const material = new THREE.MeshBasicMaterial({color: theme.colors.accent, depthTest: false});
+    const material = new THREE.MeshBasicMaterial({color: theme.colors.accent, depthTest: false, fog: false});
     const marker = new THREE.Mesh(geometry, material);
     marker.renderOrder = 2;
     marker.visible = false;

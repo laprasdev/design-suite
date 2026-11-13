@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import * as THREE from 'three';
+import {createModelFog} from '../src/react/preview3d/fog.ts';
+const FOG = createModelFog(new THREE.Scene(), THREE.SRGBColorSpace).change;
 import type {GLTF} from 'three/addons/loaders/GLTFLoader.js';
 import {MODEL_RUNTIME_MATERIAL as channel, modelRuntimeMaterialProfile}
   from '../src/react/preview3d/runtimeMaterialModel.ts';
@@ -112,7 +114,7 @@ test('a display change after a frame leaves the engine\'s hidden renderer hidden
       [node, {nodes: 65, meshes: 0}], [mesh, {meshes: 0, primitives: 0}]]);
     const asset = {scene, animations: [], parser: {associations}} as unknown as GLTF;
     const model = createModelActor(asset, actor(), actorContext().context);
-    const parts = createModelStageParts({scene: new THREE.Scene(), lighting: {set: () => undefined},
+    const parts = createModelStageParts({scene: new THREE.Scene(), fog: {change: FOG}, lighting: {set: () => undefined},
       frame: () => undefined});
     const show = (display: string) => prepareWhole(parts.prepares(modelStageDescription(describing({display})),
       new Set(['display']), [model]))();

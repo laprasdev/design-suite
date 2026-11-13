@@ -47,14 +47,16 @@ export function createModelRig(asset: THREE.Object3D, theme: ModelStageTheme, pa
   root.visible = false;
   const lines = new THREE.LineSegments(new THREE.BufferGeometry().setAttribute('position',
     new THREE.BufferAttribute(new Float32Array(links.length * 6), 3)),
-  new THREE.LineBasicMaterial({color: theme.colors.teal, depthTest: false, depthWrite: false, toneMapped: false}));
+  new THREE.LineBasicMaterial({color: theme.colors.teal, depthTest: false, depthWrite: false, toneMapped: false,
+    fog: false}));
   lines.renderOrder = 1;
   lines.frustumCulled = false;
   const height = new THREE.Box3().setFromObject(asset).getSize(new THREE.Vector3()).y;
   const radius = height * settings.jointRadiusRatio;
   const joints = new THREE.InstancedMesh(
     new THREE.SphereGeometry(radius, settings.jointSegments, settings.jointSegments),
-    new THREE.MeshBasicMaterial({color: theme.colors.text, depthTest: false, depthWrite: false, toneMapped: false}),
+    new THREE.MeshBasicMaterial({color: theme.colors.text, depthTest: false, depthWrite: false, toneMapped: false,
+      fog: false}),
     bones.length,
   );
   joints.renderOrder = 2;

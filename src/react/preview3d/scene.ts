@@ -5,6 +5,7 @@ import type {ModelStagePolicy, ModelStageTheme} from './model.ts';
 import {createModelFraming} from './camera.ts';
 import {disposeModelObject} from './asset.ts';
 import {createModelLighting} from './lighting.ts';
+import {createModelFog} from './fog.ts';
 
 export function createModelScene(host: HTMLElement, theme: ModelStageTheme, policy: ModelStagePolicy) {
   const renderer = new THREE.WebGLRenderer({antialias: true, preserveDrawingBuffer: true});
@@ -18,10 +19,12 @@ export function createModelScene(host: HTMLElement, theme: ModelStageTheme, poli
   controls.minDistance = settings.cameraMinimum;
   controls.maxDistance = settings.cameraMaximum;
   controls.maxPolarAngle = Math.PI / 2;
-  const lighting = createModelLighting(renderer, theme);
+  const fog = createModelFog(scene, renderer.outputColorSpace);
+  const lighting = createModelLighting(renderer, theme, fog);
   scene.add(...lighting.lights);
+  // The stage's own aids (floor, grid, rig, markers) take no fog.
   if (policy.floor) {
-    const surface = new THREE.MeshStandardMaterial({roughness: 1});
+    const surface = new THREE.MeshStandardMaterial({roughness: 1, fog: false});
     const floor = new THREE.Mesh(new THREE.CircleGeometry(settings.floorRadius, settings.floorSegments), surface);
     lighting.floor(surface);
     floor.rotation.x = -Math.PI / 2;
@@ -31,6 +34,7 @@ export function createModelScene(host: HTMLElement, theme: ModelStageTheme, poli
   if (policy.grid) {
     const grid = new THREE.GridHelper(settings.gridSize, settings.gridDivisions,
       theme.colors.accentDeep, theme.colors.surfaceHi);
+    grid.material.fog = false;
     grid.position.y = settings.floorOffset / 2;
     scene.add(grid);
     lighting.attach([grid]);
@@ -48,7 +52,7 @@ export function createModelScene(host: HTMLElement, theme: ModelStageTheme, poli
   observer.observe(host);
   resize();
   return {
-    renderer, scene, camera, controls, lighting, ...framing,
+    renderer, scene, camera, controls, lighting, fog, ...framing,
     /** The frame's one draw: the scene through the camera, to the canvas. */
     draw() {renderer.render(scene, camera);},
     dispose() {

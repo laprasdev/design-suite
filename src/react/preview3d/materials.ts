@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import {MODEL_PREVIEW_MATERIAL_SETTINGS as settings, modelStageMaterialMode} from './materialModel.ts';
 import type {ModelStageMaterialMode} from './materialModel.ts';
 import {ModelStageRefusal} from './refusal.ts';
-import {extendModelMaterial, modelMaterialUnchanged, replaceModelShader} from './shading.ts';
+import {extendModelMaterial, modelMaterialOwned, replaceModelShader} from './shading.ts';
 
 const COLOR_FRAGMENT = '#include <color_fragment>';
 const OUTPUT_FRAGMENT = '#include <opaque_fragment>';
@@ -34,7 +34,7 @@ function inspectionMaterial(original: THREE.MeshStandardMaterial, mode: ModelSta
   }}]);
 }
 function supported(material: THREE.Material): material is THREE.MeshStandardMaterial {
-  return material instanceof THREE.MeshStandardMaterial && modelMaterialUnchanged(material);
+  return material instanceof THREE.MeshStandardMaterial && modelMaterialOwned(material);
 }
 
 // Overrides belong to this loaded model instance. Textures and geometry remain owned by its original materials/scene.

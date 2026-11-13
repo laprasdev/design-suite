@@ -3,6 +3,7 @@ import {modelPresentationRotation, modelPoseForBinding, type ModelRotation, type
   from './placementModel.ts';
 import {modelColor, type ModelColor} from './colorModel.ts';
 import {ModelStageRefusal} from './refusal.ts';
+import {extendModelMaterial, type ModelShaderChange} from './shading.ts';
 
 export const MODEL_ENVIRONMENT_GRID = Object.freeze({maximumLines: 1024, elevation: 0.001});
 export interface ModelEnvironmentBox {
@@ -81,7 +82,7 @@ function positionBox(mesh: THREE.Object3D, box: ModelEnvironmentBox, reflectZ: b
   mesh.quaternion.fromArray(pose.rotationQuaternion);
 }
 
-function createGrid(plane: NonNullable<ModelEnvironment['plane']>) {
+function createGrid(plane: NonNullable<ModelEnvironment['plane']>, fog: ModelShaderChange) {
   const {spacing, color} = plane.grid!, [width, depth] = plane.size, vertices: number[] = [];
   for (let i = 0; i <= Math.floor(width / spacing); i++) {
     const x = -width / 2 + i * spacing;
@@ -93,13 +94,14 @@ function createGrid(plane: NonNullable<ModelEnvironment['plane']>) {
   }
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
-  const material = new THREE.LineBasicMaterial();
+  const material = extendModelMaterial(new THREE.LineBasicMaterial(), [fog]);
   material.color.setRGB(color[0], color[1], color[2], THREE.SRGBColorSpace);
   return new THREE.LineSegments(geometry, material);
 }
 
-// Render supplied geometry only. World coordinates use basis reflection, never the avatar's local alignment.
-export function createModelEnvironment(value: unknown) {
+// Render supplied geometry only. World coordinates use basis reflection, never the avatar's local alignment. The
+// scenery takes the stage's fog.
+export function createModelEnvironment(value: unknown, fog: ModelShaderChange) {
   const environment = modelEnvironment(value);
   const group = new THREE.Group(), boxes = new Map<string, THREE.Mesh>();
   const key = geometryKey(environment);
@@ -114,7 +116,7 @@ export function createModelEnvironment(value: unknown) {
   };
   const add = (geometry: THREE.BufferGeometry, position: ModelVector, color: ModelColor, id: string) => {
     resources.push(geometry);
-    const material = new THREE.MeshStandardMaterial();
+    const material = extendModelMaterial(new THREE.MeshStandardMaterial(), [fog]);
     resources.push(material);
     material.color.setRGB(color[0], color[1], color[2], THREE.SRGBColorSpace);
     const mesh = new THREE.Mesh(geometry, material);
@@ -128,7 +130,7 @@ export function createModelEnvironment(value: unknown) {
       const {size, position, color} = environment.plane;
       add(new THREE.PlaneGeometry(...size), position, color, 'plane').rotation.x = -Math.PI / 2;
       if (environment.plane.grid) {
-        const lines = createGrid(environment.plane);
+        const lines = createGrid(environment.plane, fog);
         resources.push(lines.geometry, lines.material);
         lines.name = 'plane-grid';
         lines.position.set(position[0], position[1] + MODEL_ENVIRONMENT_GRID.elevation,

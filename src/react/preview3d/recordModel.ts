@@ -21,11 +21,12 @@ export function modelRecord(value: unknown, fields: readonly string[], where: st
   return record;
 }
 
-/** A finite number within the stated bounds, refused by its name otherwise; an unbounded top is Infinity. */
+/** A finite number within the stated bounds, refused by its name otherwise; an unbounded end is an infinity. */
 export function modelNumber(value: unknown, where: string, least: number, most: number): number {
   if (typeof value !== 'number' || !Number.isFinite(value) || value < least || value > most) {
-    const range = Number.isFinite(most) ? `from ${least} to ${most}` : `of at least ${least}`;
-    throw new ModelStageRefusal(`${where} must be a finite number ${range}.`);
+    const range = !Number.isFinite(least) ? '' : Number.isFinite(most) ? ` from ${least} to ${most}` :
+      ` of at least ${least}`;
+    throw new ModelStageRefusal(`${where} must be a finite number${range}.`);
   }
   return value;
 }

@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import {describe, it} from 'node:test';
 import * as THREE from 'three';
+import {createModelFog} from '../src/react/preview3d/fog.ts';
+const FOG = createModelFog(new THREE.Scene(), THREE.SRGBColorSpace).change;
 import {MODEL_STAGE_COMMIT_TEXT, prepareWhole} from '../src/react/preview3d/commit.ts';
 import {modelStageDescription, modelStageDescriptionChanges, modelStageRefit}
   from '../src/react/preview3d/descriptionModel.ts';
@@ -110,7 +112,8 @@ describe('the stage description', () => {
 describe('the stage-wide parts', () => {
   const surface = () => {
     const calls: string[] = [];
-    const parts = createModelStageParts({scene: new THREE.Scene(), lighting: {set: value => calls.push(value.time)},
+    const parts = createModelStageParts({scene: new THREE.Scene(), fog: {change: FOG},
+      lighting: {set: value => calls.push(value.time)},
       frame: (framing: ModelStageFraming, orbit: boolean) => calls.push(`${framing.kind} ${orbit}`)});
     return {calls, parts};
   };

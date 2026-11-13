@@ -3,6 +3,7 @@ import {readFileSync} from 'node:fs';
 import {describe, it} from 'node:test';
 import * as THREE from 'three';
 import {createModelLighting} from '../src/react/preview3d/lighting.ts';
+import {createModelFog} from '../src/react/preview3d/fog.ts';
 import {MODEL_STAGE_THEME_LIGHTING, MODEL_STAGE_TIME, modelStageBuiltInTimes, modelStageLighting,
   modelStageTimeOptions, type ModelStageTime} from '../src/react/preview3d/lightingModel.ts';
 import type {ModelStageTheme} from '../src/react/preview3d/model.ts';
@@ -12,7 +13,9 @@ const recorded = JSON.parse(readFileSync(new URL('./preview3dLighting.fixture.js
 const theme: ModelStageTheme = recorded.theme;
 function fixture() {
   let clear: THREE.ColorRepresentation = 0;
-  const lighting = createModelLighting({setClearColor: color => {clear = color;}}, theme);
+  const scene = new THREE.Scene();
+  const lighting = createModelLighting({setClearColor: color => {clear = color;}}, theme,
+    createModelFog(scene, THREE.SRGBColorSpace));
   const floor = new THREE.MeshStandardMaterial();
   lighting.floor(floor);
   const aid = new THREE.MeshBasicMaterial({color: '#ffffff'});
@@ -22,19 +25,20 @@ function fixture() {
   const read = () => ({backdrop: rgb(new THREE.Color(clear)), ambient: {sky: rgb(ambient.color),
     ground: rgb(ambient.groundColor), intensity: ambient.intensity}, key: {color: rgb(key.color),
     intensity: key.intensity, position: key.position.toArray()}, floor: rgb(floor.color), aid: rgb(aid.color)});
-  return {lighting, read};
+  return {lighting, read, scene};
 }
 const at = (time: string, times: readonly unknown[] = []) => ({time, times}) as never;
 const dusk: ModelStageTime = {id: 'dusk', label: 'Dusk', look: {backdrop: [0.2, 0.1, 0.3],
   key: {color: [1, 0.5, 0], strength: 1.5, direction: [-2, 1, 0]},
   ambient: {sky: [0.4, 0.2, 0.5], ground: [0.1, 0, 0.2], strength: 0.75}, shadow: [0.15, 0.1, 0.25], night: 0.5,
-  aids: {floor: [0.3, 0.2, 0.1], share: 0.5}}};
+  aids: {floor: [0.3, 0.2, 0.1], share: 0.5}, fog: null}};
 
 describe('stage lighting', () => {
-  it('draws Light and Dark with exactly the values they had before the look became data', () => {
-    const {lighting, read} = fixture();
+  it('draws Light and Dark with exactly the values they had before the look became data, and no fog', () => {
+    const {lighting, read, scene} = fixture();
     assert.equal(lighting.time, MODEL_STAGE_TIME.light);
     assert.deepEqual(read(), recorded.light);
+    assert.equal(scene.fog, null);
     lighting.set(at(MODEL_STAGE_TIME.dark));
     assert.deepEqual(read(), recorded.dark);
     lighting.set(MODEL_STAGE_THEME_LIGHTING);
@@ -54,6 +58,17 @@ describe('stage lighting', () => {
     assert.equal(lighting.time, 'dusk');
     lighting.set(at(MODEL_STAGE_TIME.light, [dusk]));
     assert.deepEqual(read(), recorded.light);
+  });
+
+  it('brings a time\'s fog with its look, and takes it away with the next look that has none', () => {
+    const {lighting, scene} = fixture();
+    const fog = {near: {distance: 4, color: [0.2, 0.1, 0.3]}, far: {distance: 20, color: [0.1, 0.1, 0.2]},
+      height: null};
+    lighting.set(at('dusk', [{...dusk, look: {...dusk.look, fog}}]));
+    assert.ok(scene.fog instanceof THREE.Fog);
+    assert.deepEqual([scene.fog.near, scene.fog.far], [4, 20]);
+    lighting.set(at(MODEL_STAGE_TIME.dark));
+    assert.equal(scene.fog, null);
   });
 
   it('states where each built-in time sits between day and night, and its shadow colour', () => {
@@ -86,7 +101,8 @@ describe('stage lighting', () => {
 
   it('reads the theme colours Light is made of as #rrggbb, and refuses any other form by name', () => {
     assert.throws(() => createModelLighting({setClearColor: () => undefined},
-      {colors: {...theme.colors, surface: 'rgb(1, 2, 3)'}}), /stage theme's surface must be a #rrggbb colour/);
+      {colors: {...theme.colors, surface: 'rgb(1, 2, 3)'}}, {set: () => undefined}),
+    /stage theme's surface must be a #rrggbb colour/);
   });
 
   it('offers the built-in times, then the description\'s own, each with its label', () => {

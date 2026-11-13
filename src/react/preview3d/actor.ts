@@ -13,13 +13,16 @@ import type {ModelStageActor, ModelStageActorSnapshot, ModelStageDriver} from '.
 import type {ModelPreviewEntity} from './presentation.ts';
 import {modelStageCommit, prepareWhole, type ModelStageCommit} from './commit.ts';
 import {ModelStageRefusal} from './refusal.ts';
+import {extendModelMaterials, type ModelShaderChange} from './shading.ts';
 
-// What every actor shares from its stage: the policy, the theme, the scene it joins and the lighting of its aids.
+// What every actor shares from its stage: the policy, the theme, the scene it joins, the lighting of its aids and the
+// fog its file's materials take.
 export interface ModelActorContext {
   readonly policy: ModelStagePolicy;
   readonly theme: ModelStageTheme;
   readonly scene: THREE.Object3D;
   readonly lighting: {attach(objects: readonly THREE.Object3D[]): () => void};
+  readonly fog: ModelShaderChange;
   readonly rendered: (mesh: THREE.Mesh) => void;
 }
 /** How an actor's model sits in its placement: the stage's size rule and origin. */
@@ -41,6 +44,7 @@ export function createModelActor(asset: GLTF, declaration: ModelStageActor, cont
     const points = modelParts(asset, context.theme);
     acquired.push(() => points.forEach(({marker}) => {marker.removeFromParent(); disposeModelObject(marker);}));
     asset.scene.traverse(node => {if (node instanceof THREE.Mesh) node.onAfterRender = () => context.rendered(node);});
+    extendModelMaterials(asset.scene, [context.fog]);
     const materials = createModelMaterialInspection(asset.scene);
     acquired.push(() => materials.dispose());
     const runtimeMaterials = profile ? bindModelRuntimeMaterials(asset, profile) : undefined;

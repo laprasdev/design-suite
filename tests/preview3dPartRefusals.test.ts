@@ -6,6 +6,7 @@ import {createModelEnvironment} from '../src/react/preview3d/environment.ts';
 import {createModelRuntimeMaterials} from '../src/react/preview3d/runtimeMaterials.ts';
 import {createModelMaterialInspection} from '../src/react/preview3d/materials.ts';
 import {createModelLighting} from '../src/react/preview3d/lighting.ts';
+import {createModelFog} from '../src/react/preview3d/fog.ts';
 import {ModelStageRefusal} from '../src/react/preview3d/refusal.ts';
 
 const refused = (run: () => unknown, pattern: RegExp) =>
@@ -16,7 +17,7 @@ const theme = {colors: {stage: '#000000', text: '#ffffff', surface: '#111111', s
 test('environment.ts: an invalid update is a refusal and moves no box', () => {
   const value = {reflectZ: false, plane: null, boxes: [{id: 'box', position: [1, 2, 3], size: [1, 1, 1],
     color: [.5, .5, .5]}]};
-  const environment = createModelEnvironment(value);
+  const environment = createModelEnvironment(value, createModelFog(new THREE.Scene(), THREE.SRGBColorSpace).change);
   const box = environment.group.getObjectByName('box')!;
   refused(() => environment.update({...value, boxes: [{...value.boxes[0], position: [9, 9, 9], color: [2, 0, 0]}]}),
     /sRGB in \[0, 1\]/);
@@ -53,7 +54,8 @@ test('materialModel.ts: an unknown inspection mode is a refusal and leaves the m
 });
 
 test('lightingModel.ts: an unknown time is a refusal and leaves the light', () => {
-  const lighting = createModelLighting({setClearColor: () => undefined}, theme);
+  const lighting = createModelLighting({setClearColor: () => undefined}, theme,
+    createModelFog(new THREE.Scene(), THREE.SRGBColorSpace));
   const before = lighting.lights[0].intensity;
   refused(() => lighting.set({time: 'dusk', times: []}), /The lighting names time dusk/);
   assert.deepEqual([lighting.time, lighting.lights[0].intensity], ['light', before]);

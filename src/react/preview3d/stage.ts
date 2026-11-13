@@ -31,7 +31,7 @@ export function createModelStage(
   const policy = modelStagePolicy(options);
   const stage = createModelScene(host, theme, policy);
   const renderedMeshes = new Set<string>();
-  const context = {policy, theme, scene: stage.scene, lighting: stage.lighting,
+  const context = {policy, theme, scene: stage.scene, lighting: stage.lighting, fog: stage.fog.change,
     rendered: (mesh: THREE.Mesh) => {renderedMeshes.add(mesh.uuid);}};
   const load = (declaration: ModelStageActor, signal: AbortSignal) =>
     loadModelStageAsset(declaration.asset.path, modelRuntimeAssetProfile(declaration), signal);

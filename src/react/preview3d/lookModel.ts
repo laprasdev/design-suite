@@ -17,17 +17,54 @@ export interface ModelStageLook {
   readonly night: number;
   /** The stage's own aids: the lit floor's colour, and the share of their authored colour the unlit aids keep. */
   readonly aids: {readonly floor: ModelColor; readonly share: number};
+  /** The time's fog, or null for none. How its fields combine is the stage's rule, stated once in fog.ts. */
+  readonly fog: ModelStageFog | null;
+}
+/** Fog by distance from the camera, from a near colour to a far one, and a height layer below a level, or null. */
+export interface ModelStageFog {
+  readonly near: {readonly distance: number; readonly color: ModelColor};
+  readonly far: {readonly distance: number; readonly color: ModelColor};
+  readonly height: {readonly base: number; readonly top: number; readonly strength: number} | null;
 }
 export const MODEL_STAGE_LOOK_FIELDS = Object.freeze({
-  look: ['backdrop', 'key', 'ambient', 'shadow', 'night', 'aids'],
+  look: ['backdrop', 'key', 'ambient', 'shadow', 'night', 'aids', 'fog'],
   key: ['color', 'strength', 'direction'], ambient: ['sky', 'ground', 'strength'], aids: ['floor', 'share'],
+  fog: ['near', 'far', 'height'], reach: ['distance', 'color'], height: ['base', 'top', 'strength'],
 } as const);
+export const MODEL_STAGE_FOG_REFUSAL = Object.freeze({
+  near: (where: string) => `${where}.near.distance must be greater than 0.`,
+  far: (where: string) => `${where}.far.distance must be greater than its near distance.`,
+  top: (where: string) => `${where}.top must be above its base.`,
+});
 const fields = MODEL_STAGE_LOOK_FIELDS, UNBOUNDED = Number.POSITIVE_INFINITY;
 
 function direction(value: unknown, where: string): ModelVector {
   const vector = modelPresentationVector(value, where);
   if (!(Math.hypot(...vector) > 0)) throw new ModelStageRefusal(`${where} must have a length.`);
   return vector;
+}
+
+function reach(value: unknown, where: string) {
+  const record = modelRecord(value, fields.reach, where);
+  return Object.freeze({distance: modelNumber(record.distance, `${where}.distance`, 0, UNBOUNDED),
+    color: modelColor(record.color, `${where}.color`)});
+}
+function height(value: unknown, where: string) {
+  const record = modelRecord(value, fields.height, where);
+  const base = modelNumber(record.base, `${where}.base`, -UNBOUNDED, UNBOUNDED);
+  const top = modelNumber(record.top, `${where}.top`, -UNBOUNDED, UNBOUNDED);
+  if (!(top > base)) throw new ModelStageRefusal(MODEL_STAGE_FOG_REFUSAL.top(where));
+  return Object.freeze({base, top, strength: modelNumber(record.strength, `${where}.strength`, 0, 1)});
+}
+// Null is the explicit "no fog" and "no height layer", as `environment: null` is; nothing missing is read as either.
+function fog(value: unknown, where: string): ModelStageFog | null {
+  if (value === null) return null;
+  const record = modelRecord(value, fields.fog, where);
+  const near = reach(record.near, `${where}.near`), far = reach(record.far, `${where}.far`);
+  if (!(near.distance > 0)) throw new ModelStageRefusal(MODEL_STAGE_FOG_REFUSAL.near(where));
+  if (!(far.distance > near.distance)) throw new ModelStageRefusal(MODEL_STAGE_FOG_REFUSAL.far(where));
+  return Object.freeze({near, far,
+    height: record.height === null ? null : height(record.height, `${where}.height`)});
 }
 
 /** One look, checked whole; `where` names it in every refusal, as `Time dusk: look`. */
@@ -48,5 +85,6 @@ export function modelStageLook(value: unknown, where: string): ModelStageLook {
     night: modelNumber(look.night, `${where}.night`, 0, 1),
     aids: Object.freeze({floor: modelColor(aids.floor, `${where}.aids.floor`),
       share: modelNumber(aids.share, `${where}.aids.share`, 0, 1)}),
+    fog: fog(look.fog, `${where}.fog`),
   });
 }

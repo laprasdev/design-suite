@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import type {ModelStageTheme} from './model.ts';
 import type {ModelColor} from './colorModel.ts';
 import type {ModelStageLook} from './lookModel.ts';
+import type {ModelFog} from './fog.ts';
 import {modelStageBuiltInTimes, modelStageLighting, modelStageTimeInForce, type ModelStageLighting,
   type ModelStageTime} from './lightingModel.ts';
 
@@ -26,9 +27,11 @@ function stageAids(objects: readonly THREE.Object3D[]) {
   };
 }
 
-// The stage's backdrop, floor, two lights and unlit aids, as the look of one time at a time. A look is written into the
-// same objects every time: changing a colour or a strength allocates nothing and compiles nothing.
-export function createModelLighting(renderer: Pick<THREE.WebGLRenderer, 'setClearColor'>, theme: ModelStageTheme) {
+// The stage's backdrop, floor, two lights, unlit aids and fog, as the look of one time at a time. A look is written
+// into the same objects every time: changing a colour or a strength allocates nothing and compiles nothing; only fog
+// arriving or leaving recompiles the programs that take it.
+export function createModelLighting(renderer: Pick<THREE.WebGLRenderer, 'setClearColor'>, theme: ModelStageTheme,
+  fog: Pick<ModelFog, 'set'>) {
   const builtIn = modelStageBuiltInTimes(theme.colors);
   const ambient = new THREE.HemisphereLight();
   const key = new THREE.DirectionalLight();
@@ -46,6 +49,7 @@ export function createModelLighting(renderer: Pick<THREE.WebGLRenderer, 'setClea
     key.position.fromArray(look.key.direction);
     for (const floor of floors) srgb(floor.color, look.aids.floor);
     for (const hold of aids) hold(look.aids.share);
+    fog.set(look.fog);
   };
   apply(time.look);
   return {
