@@ -4,7 +4,9 @@ import * as THREE from 'three';
 import {createModelActorSurfaces, MODEL_ACTOR_SURFACES_TEXT as TEXT} from '../src/react/preview3d/actorSurfaces.ts';
 import {modelSurfaceOutputs, modelSurfaceTakes} from '../src/react/preview3d/surfaceOutputModel.ts';
 import {ModelStageRefusal} from '../src/react/preview3d/refusal.ts';
-import {kindFile, kindMaterials, kinds, record, RENDERERS, sets} from './preview3dKindFixture.ts';
+import {kindFile, kindMaterials, kinds, MASK, record, RENDERERS, sets} from './preview3dKindFixture.ts';
+import {modelStageDescription, modelStageDescriptionChanges} from '../src/react/preview3d/descriptionModel.ts';
+import {declaration, describing} from './preview3dActorFixture.ts';
 
 const SET = Object.freeze({from: 'set', set: 'tinted'} as const), FILE = Object.freeze({from: 'file'} as const);
 const refused = (run: () => unknown, message: string) => assert.throws(run, (error: unknown) =>
@@ -54,6 +56,22 @@ describe('an actor drawn by surface kinds', () => {
     assert.equal(a.body.material, own, 'a refused program leaves the renderer as it was');
     a.body.geometry.deleteAttribute('uv');
     refused(() => a.surfaces.prepare(SET, sets()), TEXT.attribute(at(RENDERERS.body), 'uv'));
+  });
+
+  it('takes two records equal by value as one, whatever order their fields were written in', async () => {
+    const {materials} = await kindMaterials(), written = record();
+    const {path, sha256, wrap, scale, offset} = MASK;
+    const reordered = {values: Object.fromEntries(Object.entries(written.values).reverse().map(([name, value]) =>
+      [name, 'texture' in value ? {texture: {offset, scale, wrap, sha256, path}} : value])), kind: written.kind};
+    assert.equal(materials.material(reordered as never), materials.material(written as never), 'one material');
+    const a = await actorWith();
+    a.surfaces.prepare(SET, sets(written))();
+    const drawn = a.body.material;
+    a.surfaces.prepare(SET, sets(reordered))();
+    assert.deepEqual([a.body.material, a.compiled.length], [drawn, 1], 'kept, not compiled again');
+    const as = (value: unknown) => modelStageDescription(describing({surfaceSets: sets(value), actors: {focus: 'a',
+      actors: [declaration('a', 'otter', {surfaces: SET})]}}));
+    assert.equal(modelStageDescriptionChanges(as(written), as(reordered)).size, 0, 'and no part of the description');
   });
 
   it('applies a kept actor\'s change of surfaces: a new record is a new material, and no model reloads', async () => {

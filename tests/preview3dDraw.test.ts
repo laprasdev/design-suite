@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import {describe, it} from 'node:test';
 import * as THREE from 'three';
-import {createModelDraw, loadModelGlowPasses, MODEL_DRAW_TEXT} from '../src/react/preview3d/draw.ts';
+import {createModelDraw, MODEL_DRAW_TEXT} from '../src/react/preview3d/draw.ts';
+import {loadModelGlowPasses} from '../src/react/preview3d/glow.ts';
 import type {ModelStageGlow, ModelStageToneCurve} from '../src/react/preview3d/lookModel.ts';
 import {ModelStageRefusal} from '../src/react/preview3d/refusal.ts';
 import {MODEL_STAGE_LAYERS} from '../src/react/preview3d/layers.ts';
@@ -43,7 +44,9 @@ function fixture(halfFloat = true, loadPasses = loadModelGlowPasses) {
 }
 const WHERE = 'Time t: look.glow';
 const GLOW = {threshold: 1.5, strength: 0.8, radius: 0.4};
-const uniforms = (pass: Drawn) => (pass.material as THREE.ShaderMaterial).uniforms;
+// A pass's uniforms: a shader pass's own, none for the bloom pass's copy of its input (a basic material).
+const uniforms = (pass: Drawn): Record<string, THREE.IUniform> =>
+  pass.material instanceof THREE.ShaderMaterial ? pass.material.uniforms : {};
 const CANVAS = {what: 'scene', into: null, clears: true, layers: MODEL_STAGE_LAYERS.both};
 
 describe('the frame\'s draw', () => {
@@ -58,30 +61,35 @@ describe('the frame\'s draw', () => {
     assert.deepEqual(draw.load(null, WHERE), []);
   });
 
-  it('with glow, draws the scene once into a multisampled half-float target, adds the bloom there, then the aids',
+  it('with glow, draws the scene once into a multisampled half-float target, the bloom added at the output, then aids',
     async () => {
       const {draw, drawn, set} = fixture();
       await set('aces-filmic', GLOW);
       draw.draw();
-      const [linear, ...rest] = drawn, aids = rest.at(-1)!, output = rest.at(-2)!, added = rest.at(-3)!;
+      const [linear, ...rest] = drawn, aids = rest.at(-1)!, output = rest.at(-2)!;
       const target = linear.into;
       assert.ok(target?.depthTexture);
       assert.deepEqual([linear.what, linear.layers, target.width, target.height, target.samples, target.texture.type,
         target.depthTexture.image.width], ['scene', MODEL_STAGE_LAYERS.scene, 320, 200, 4, THREE.HalfFloatType, 320]);
-      assert.equal(uniforms(rest[0]).luminosityThreshold.value, GLOW.threshold);
+      assert.deepEqual(rest.filter(pass => pass.into === target), [], 'nothing drawn into the target after it');
+      const high = rest.find(pass => 'luminosityThreshold' in uniforms(pass));
+      assert.equal(high && uniforms(high).tDiffuse.value, target.texture, 'the bloom reads the resolved scene');
+      assert.equal(high && uniforms(high).luminosityThreshold.value, GLOW.threshold);
       // The bloom's own strength and spread reach the pass that composites its five levels.
-      const composite = rest.find(pass => pass.material && 'bloomStrength' in uniforms(pass));
+      const composite = rest.find(pass => 'bloomStrength' in uniforms(pass));
       assert.ok(composite?.into);
       assert.deepEqual([uniforms(composite).bloomStrength.value, uniforms(composite).bloomRadius.value],
         [GLOW.strength, GLOW.radius]);
-      // The composite is added into the scene's own target, linear, its colour as it is (not weighted by its alpha).
-      assert.deepEqual([added.into, uniforms(added).tDiffuse.value, added.material?.blending, added.material?.blendSrc,
-        added.material?.blendDst], [target, composite.into.texture, THREE.CustomBlending, THREE.OneFactor,
-        THREE.OneFactor]);
-      // One output pass writes the canvas, colour and depth, from the target; the aids are drawn last onto it.
-      assert.deepEqual([output.into, output.clears, uniforms(output).modelSceneColor.value,
-        uniforms(output).modelSceneDepth.value, output.material?.depthFunc], [null, true, target.texture,
-        target.depthTexture, THREE.AlwaysDepth]);
+      // The pass's own last blend draws nothing: the output pass adds the composite, its colour as it is.
+      assert.deepEqual(rest.filter(pass => pass.material?.visible === false).map(pass => pass.material?.blending),
+        [THREE.AdditiveBlending]);
+      // One output pass writes the canvas, colour and depth, from the target and the composite; the aids are drawn
+      // last onto it.
+      assert.deepEqual([output.into, uniforms(output).modelSceneColor.value, uniforms(output).modelSceneDepth.value,
+        uniforms(output).modelBloom.value, output.material?.depthFunc], [null, target.texture, target.depthTexture,
+        composite.into.texture, THREE.AlwaysDepth]);
+      assert.match((output.material as THREE.ShaderMaterial).fragmentShader,
+        /= texture2D\( modelSceneColor, vUv \);\n  gl_FragColor\.rgb \+= texture2D\( modelBloom, vUv \)\.rgb;/);
       assert.deepEqual([aids.what, aids.into, aids.clears, aids.layers],
         ['scene', null, false, MODEL_STAGE_LAYERS.aids]);
       assert.equal(drawn.filter(pass => pass.what === 'scene').length, 2, 'the scene once, the aids once');
@@ -109,10 +117,11 @@ describe('the frame\'s draw', () => {
     // Every frame alike, the second too (the first frame after a look follows its commit).
     drawn.length = 0;
     draw.draw();
-    const toCanvas = drawn.filter(pass => pass.into === null);
-    assert.deepEqual(toCanvas.map(({what, toneMapping}) => [what, toneMapping]),
-      [['pass', THREE.ACESFilmicToneMapping], ['scene', THREE.NoToneMapping]]);
-    const output = toCanvas[0].material as THREE.ShaderMaterial;
+    // The output pass is the canvas's last word on the scene (it overwrites whatever the bloom pass drew there first).
+    const at = drawn.findIndex(pass => 'modelBloom' in uniforms(pass));
+    assert.deepEqual(drawn.slice(at).map(({what, into, toneMapping}) => [what, into, toneMapping]),
+      [['pass', null, THREE.ACESFilmicToneMapping], ['scene', null, THREE.NoToneMapping]]);
+    const output = drawn[at].material as THREE.ShaderMaterial;
     assert.equal(output.toneMapped, true);
     assert.match(output.fragmentShader, /#include <tonemapping_fragment>\s+#include <colorspace_fragment>/);
   });
@@ -126,11 +135,12 @@ describe('the frame\'s draw', () => {
     drawn.length = 0;
     draw.draw();
     assert.equal(drawn[0].into, target, 'a changed value makes no new target');
-    assert.equal(uniforms(drawn[1]).luminosityThreshold.value, 2);
+    const high = drawn.find(pass => 'luminosityThreshold' in uniforms(pass))!;
+    assert.equal(uniforms(high).luminosityThreshold.value, 2);
     assert.ok(target?.depthTexture);
     canvas.set(640, 400);
     draw.resize();
-    const bright = drawn[1].into;
+    const bright = high.into;
     // Its depth texture follows when three next sets it up (WebGLTextures.js 1659): shown by a capture, not here.
     assert.deepEqual([target.width, target.height, bright?.width, bright?.height], [640, 400, 320, 200]);
     const targets = new Set(drawn.flatMap(({into}) => into ? [into] : []));

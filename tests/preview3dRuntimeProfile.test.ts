@@ -31,8 +31,9 @@ const actor = (runtimeMaterials: unknown = profile()) => ({id: 'otter', placemen
     attachments: {}, sha256: '1'.repeat(64), runtimeMaterials: runtimeMaterials as ReturnType<typeof profile>}});
 const createInbox = (runtimeMaterials?: unknown) => {
   const inbox = createModelFrameInbox(), actors = [actor(runtimeMaterials)];
+  inbox.describe(fileScene(actors), []);
   return {attach: inbox.attach, receive: (value: ReturnType<typeof frame>) =>
-    inbox.receive({simulationTimeSeconds: 0, entities: [value]}, fileScene(actors), [])};
+    inbox.receive({simulationTimeSeconds: 0, entities: [value]})};
 };
 const frame = () => ({entityId: 'otter', modelId: 'otter', pose: {position: [1, 2, 3], rotationQuaternion: [0, 0, 0, 1],
   scale: [1, 1, 1]}, materials: [material()], animationLayers: [], partPoses: []});

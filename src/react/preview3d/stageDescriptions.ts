@@ -64,12 +64,21 @@ export function createModelStageDescriptions(context: ModelStageDescriptionsCont
     /** What a frame is checked against: the description in force's actors and what their renderers take. */
     get scope() {return scope;},
     get framed() {return framed;},
-    /** A description, checked whole at once, then applied when what it needs has loaded (actorSet.ts). */
+    /**
+     * A description, checked whole at once, then applied when what it needs has loaded (actorSet.ts). One refused
+     * while it is prepared frees at once the kind materials it built (and the textures they took) that nothing in force
+     * draws with, before its staged load lets go of its files, so that their images are freed with them.
+     */
     set(value: unknown): Promise<void> {
       const next = modelStageDescription(value);
       return actors.replace(next.actors, parts.loads(next), staged => {
         const changed = modelStageDescriptionChanges(applied, next), refit = modelStageRefit(applied, next);
-        prepareWhole([staged.prepare, ...parts.prepares(next, changed, staged.actors)])();
+        try {
+          prepareWhole([staged.prepare, ...parts.prepares(next, changed, staged.actors)])();
+        } catch (error) {
+          materials.sweep();
+          throw error;
+        }
         applied = next;
         scope = modelFrameScope(next, policy.kinds);
         parts.keep(next);

@@ -74,8 +74,11 @@ export function useModelPreview(host: ModelStageDescription, theme: ModelStageTh
     latest.current = description;
     if (controller.current) requests.declare(controller.current, description);
   }, [described]);
+  // What a frame is checked against is built when the description or the kinds change, never per frame.
+  const kinds = JSON.stringify(options.kinds);
+  useLayoutEffect(() => inbox.describe(latest.current, options.kinds), [described, kinds]);
   useLayoutEffect(() => {
-    if (external) pose(inbox.receive(frame, latest.current, options.kinds));
+    if (external) pose(inbox.receive(frame));
   }, [external, inbox, frame]);
   useEffect(() => () => inbox.clear(), [inbox]);
   function failed() {
@@ -134,7 +137,7 @@ export function useModelPreview(host: ModelStageDescription, theme: ModelStageTh
       if (release.current === dispose) release.current = () => {};
     };
   // The kinds by value: a host that writes its options inline each render does not make a stage each render.
-  }, [reviewKey, attempt, external, options.floor, options.grid, JSON.stringify(options.kinds), theme.colors.stage,
+  }, [reviewKey, attempt, external, options.floor, options.grid, kinds, theme.colors.stage,
     theme.colors.text,
     theme.colors.surface, theme.colors.surfaceHi, theme.colors.accent, theme.colors.accentDeep, theme.colors.teal]);
   const retry = () => setAttempt(value => value + 1);

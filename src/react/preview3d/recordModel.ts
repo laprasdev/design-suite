@@ -95,6 +95,15 @@ export function modelOneOf<Name extends string>(value: unknown, names: readonly 
   return {name, content: modelRecord(value, [name], where)[name]};
 }
 
+/**
+ * A value's identity: its text with every record's fields in one order (sorted), so that two values equal by value
+ * are one, whatever order they were written in (a record's values, a texture's fields). Lists keep their order: in the
+ * description an order is data (the actors, a colour's channels).
+ */
+export const modelRecordIdentity = (value: unknown): string => JSON.stringify(value, (_, item: unknown) =>
+  modelIsRecord(item) ? Object.fromEntries(Object.entries(item).sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0)) :
+    item);
+
 /** Whether a value is a SHA-256 as the description states every file's: 64 lowercase hex digits. */
 export const modelIsDigest = (value: unknown): value is string => typeof value === 'string' && DIGEST.test(value);
 /** A SHA-256, refused by its name otherwise. */

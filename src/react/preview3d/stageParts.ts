@@ -35,7 +35,7 @@ export interface ModelStageSurface {
   /** The textures surface records name, read in the staged load. */
   readonly textures: Pick<ModelTextures, 'load' | 'keep'>;
   /** The kinds' materials: their programs read in the staged load, and those no actor draws with freed. */
-  readonly materials: Pick<ModelSurfaceMaterials, 'load' | 'keep' | 'sweep'>;
+  readonly materials: Pick<ModelSurfaceMaterials, 'load' | 'sweep'>;
   frame(framing: ModelStageFraming, orbit: boolean): void;
 }
 
@@ -111,10 +111,10 @@ export function createModelStageParts(surface: ModelStageSurface) {
       return {pending: [...surface.lighting.load(next.lighting), ...files.flatMap(({pending}) => pending)],
         release() {for (const file of files) file.release();}};
     },
-    /** A description is in force: the materials no actor draws with are freed, then every file it does not name. */
+    /** A description is in force: the materials no actor draws with are freed, then every texture file it does not
+     * name. (A kind's program, once read, is held for the stage's life: surfaceMaterials.ts.) */
     keep(next: ModelStageDescription) {
       surface.materials.sweep();
-      surface.materials.keep(modelSurfaceRecords(next.surfaceSets, next.actors.actors));
       surface.textures.keep(modelSurfaceFiles(next.surfaceSets, next.actors.actors));
     },
     prepares(next: ModelStageDescription, changed: ReadonlySet<ModelStageDescriptionPart>,

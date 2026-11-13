@@ -10,7 +10,7 @@ import {MODEL_SURFACE_OUTPUT_REFUSAL as OUTPUT, modelSurfaceOutputs, modelSurfac
 import {ModelStageRefusal} from '../src/react/preview3d/refusal.ts';
 import {kindMaterials, kinds, MASK, PULSE, PULSE_PROGRAM, record, RENDERERS, sets} from './preview3dKindFixture.ts';
 import {declaration, entity} from './preview3dActorFixture.ts';
-import {createModelFrameInbox} from '../src/react/preview3d/frameInbox.ts';
+import {createModelFrameInbox, MODEL_FRAME_INBOX_TEXT} from '../src/react/preview3d/frameInbox.ts';
 
 const refused = (run: () => unknown, pattern: RegExp | string) => assert.throws(run, (error: unknown) =>
   error instanceof ModelStageRefusal && (typeof pattern === 'string' ? error.message === pattern :
@@ -131,8 +131,16 @@ describe('the engine\'s values for an actor\'s renderers', () => {
       actors: [declaration('e', 'otter', {surfaces: {from: 'set', set: 'tinted'}})]}};
     const frame = (change: object) => ({simulationTimeSeconds: 0, entities: [{...entity('e'),
       materials: [output(change)]}]});
-    assert.equal(inbox.receive(frame({}), declared, [PULSE as never]), 'pending');
-    assert.equal(inbox.receive(frame({floats: {_Missing: 1}}), declared, [PULSE as never]), 'error');
+    assert.throws(() => inbox.receive(frame({})), new RegExp(MODEL_FRAME_INBOX_TEXT.undescribed));
+    inbox.describe(declared, [PULSE as never]);
+    assert.equal(inbox.receive(frame({})), 'pending');
+    assert.equal(inbox.receive(frame({floats: {_Missing: 1}})), 'error');
     assert.equal((inbox.failure as Error).message, OUTPUT.undeclared(where, '_Missing', 'float', 'test-pulse'));
+    // A description whose scope is refused (a kind the stage was not given) refuses every frame with that refusal.
+    inbox.describe(declared, []);
+    assert.equal(inbox.receive(frame({})), 'error');
+    assert.match((inbox.failure as Error).message, /names kind test-pulse; the stage was given no kinds/);
+    // Only the stage's refusal is held for the frames; any other error is a defect of the caller, and escapes.
+    assert.throws(() => inbox.describe(null as never, []), TypeError);
   });
 });

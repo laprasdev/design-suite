@@ -7,7 +7,8 @@ import {disposeModelObject} from './asset.ts';
 import {createModelLighting} from './lighting.ts';
 import {modelStageBuiltInTimes} from './lightingModel.ts';
 import {createModelFog} from './fog.ts';
-import {createModelDraw, loadModelGlowPasses} from './draw.ts';
+import {createModelDraw} from './draw.ts';
+import {loadModelGlowPasses} from './glow.ts';
 import {createModelStageSharedValues} from './sharedValues.ts';
 import {markModelStageAids, markModelStageLights} from './layers.ts';
 

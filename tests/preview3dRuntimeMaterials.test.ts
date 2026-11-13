@@ -36,7 +36,7 @@ test('runtime output owns a clone, decodes sRGB once and keeps HDR intensity', (
   // The copy compiles what the original does, the stage's fog first, and then tints its emission.
   assert.deepEqual(modelMaterialChanges(applied).map(({key}) => key), [MODEL_FOG_CHANGE, channel.profile]);
   assert.equal(applied.customProgramCacheKey(), `${MODEL_FOG_CHANGE} ${channel.profile}`);
-  assert.match(shader.fragmentShader, /modelStageFogFarColor/);
+  assert.match(shader.fragmentShader, /modelStageFogNear, modelStageFogFar/);
   materials.dispose();
 });
 test('empty maps, omission, reset and disposal restore exact references and do not dispose borrowed textures', () => {

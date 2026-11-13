@@ -3,8 +3,11 @@ import {describe, it} from 'node:test';
 import * as THREE from 'three';
 import {MODEL_STAGE_LAYER, MODEL_STAGE_LAYERS, markModelStageAids, markModelStageLights}
   from '../src/react/preview3d/layers.ts';
-import {createModelDraw, loadModelGlowPasses} from '../src/react/preview3d/draw.ts';
+import {createModelDraw} from '../src/react/preview3d/draw.ts';
+import {loadModelGlowPasses} from '../src/react/preview3d/glow.ts';
 import {makeActor} from './preview3dActorFixture.ts';
+import {createModelEnvironment} from '../src/react/preview3d/environment.ts';
+import {createModelFog} from '../src/react/preview3d/fog.ts';
 
 describe('the frame\'s layers', () => {
   it('puts the stage\'s aids, all of each, on their own layer, and lights on both', () => {
@@ -19,6 +22,17 @@ describe('the frame\'s layers', () => {
     assert.equal(actor.rig.root.layers.mask, MODEL_STAGE_LAYERS.aids, 'an actor\'s rig is an aid');
     assert.equal(actor.placement.layers.mask, 1 << MODEL_STAGE_LAYER.scene, 'its model is the scene');
     actor.dispose();
+  });
+
+  it('keeps the description\'s environment, its plane, grid and boxes, in the scene: never an aid', () => {
+    const environment = createModelEnvironment({reflectZ: false, boxes: [{id: 'rock', position: [0, 0, 0],
+      size: [1, 1, 1], color: [0.5, 0.5, 0.5]}], plane: {position: [0, 0, 0], size: [4, 4], color: [0.2, 0.2, 0.2],
+      grid: {spacing: 1, color: [1, 1, 1]}}}, createModelFog(new THREE.Scene()).change);
+    const masks = new Set<number>();
+    environment.group.traverse(node => masks.add(node.layers.mask));
+    assert.deepEqual([...masks], [MODEL_STAGE_LAYERS.scene]);
+    assert.equal(environment.group.children.length, 3, 'the plane, its grid and the box');
+    environment.dispose();
   });
 
   it('compiles a program as the scene pass draws it: into the glow\'s target while it glows, unless a mode inspects',

@@ -10,9 +10,11 @@ import type {ModelStageSharedValues} from './sharedValues.ts';
 import {extendModelMaterial} from './shading.ts';
 import type {ModelStageChanges} from './materials.ts';
 import {writeModelSurfaceColor} from './color.ts';
+import {modelRecordIdentity} from './recordModel.ts';
 
-// The stage's kind materials: one per record (a kind and its values), built the first time a renderer needs it and
-// shared by every renderer that declares the same record, whichever actor it belongs to; never cloned and never
+// The stage's kind materials: one per record (a kind and its values: one record whatever order its fields were written
+// in, recordModel.ts `modelRecordIdentity`), built the first time a renderer needs it and shared by every renderer
+// that declares the same record, whichever actor it belongs to; never cloned and never
 // disposed with an actor. A record's values are written once, when its material is built, into the values the program
 // reads; a renderer the engine gives values of its own draws them through its own copy (actorSurfaces.ts). Users are
 // counted by the actors that draw with a material, and `sweep`, after a description is applied, frees what none use.
@@ -53,9 +55,11 @@ function write(declared: Float32Array, slot: ModelSurfaceSlot, value: ModelSurfa
 }
 
 export function createModelSurfaceMaterials(context: ModelSurfaceMaterialsContext) {
-  // A kind's program text is read once; once composed into its kind's program it is not needed again.
+  // A kind's program text is read once for the stage's life and held (`used`): the kinds are fixed when the stage is
+  // made, so what is held is bounded by them, and a read is never asked again of a file the stage already read (one
+  // that could fail only to refuse a description that needs nothing new). A read that failed holds nothing.
   const programs = createModelFileCache<string>(context.read, {what: 'web program of a surface kind',
-    decode: async bytes => new TextDecoder().decode(bytes), free: () => undefined, used: () => false});
+    decode: async bytes => new TextDecoder().decode(bytes), free: () => undefined, used: () => true});
   const webPrograms = (records: readonly ModelSurfaceRecord[]) => [...new Set(records.flatMap(record =>
     context.kinds.get(record.kind) ?? []))].map(kind => kind.webProgram);
   const composed = new Map<string, ModelSurfaceProgram>();
@@ -109,11 +113,9 @@ export function createModelSurfaceMaterials(context: ModelSurfaceMaterialsContex
     /** A staged load of what drawing these records needs: the web program of each of their kinds, read once. The
      * records were checked against the kinds before (stageParts.ts), so each names a kind the stage was given. */
     load: (records: readonly ModelSurfaceRecord[]) => programs.load(webPrograms(records)),
-    /** The description in force draws these records: the programs of their kinds stay, any other is freed. */
-    keep: (records: readonly ModelSurfaceRecord[]) => programs.keep(webPrograms(records)),
     /** The material of a record, built the first time it is asked for; it counts no user until one draws with it. */
     material(record: ModelSurfaceRecord): ModelSurfaceMaterial {
-      const key = JSON.stringify(record);
+      const key = modelRecordIdentity(record);
       return (built.get(key) ?? build(key, record)).surface;
     },
     use(surface: ModelSurfaceMaterial) {counted.get(surface)!.users++;},

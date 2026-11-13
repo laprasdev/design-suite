@@ -4,6 +4,7 @@ import {createModelFileCache} from './fileCache.ts';
 import {MODEL_TEXTURE_CONSTANT, MODEL_TEXTURE_WRAP, type ModelSurfaceTexture}
   from './surfaceModel.ts';
 import {MODEL_COLOR_SPACE, type ModelColorSpace} from './surfaceKindModel.ts';
+import {modelRecordIdentity} from './recordModel.ts';
 
 // The stage's textures for surface records. A file is read once by its SHA-256 and decoded once (fileCache.ts),
 // as three's glTF loader decodes a file's own images: no premultiplied alpha, no colour-space conversion, glTF's
@@ -68,7 +69,7 @@ export function createModelTextures(read: ModelFileReader, decode: ModelImageDec
     load: sources.load,
     /** A texture of a record's value in its parameter's space, shared by every user of the same; counted. */
     acquire(value: ModelSurfaceTexture, space: ModelColorSpace): THREE.Texture {
-      const key = JSON.stringify([value, space]), held = textures.get(key);
+      const key = modelRecordIdentity([value, space]), held = textures.get(key);
       if (held) {
         held.users++;
         return held.texture;

@@ -39,7 +39,7 @@ describe('the stage\'s fog', () => {
     fog.set(FOG);
     const held = scene.fog;
     assert.ok(held instanceof THREE.Fog);
-    assert.deepEqual([held.near, held.far, held.color.getHex()], [8, 30, srgb(FOG.near.color).getHex()]);
+    assert.deepEqual([held.near, held.far], [8, 30]);
     fog.set(null);
     assert.equal(scene.fog, null);
     fog.set({...FOG, near: {...FOG.near, distance: 4}});
@@ -47,21 +47,24 @@ describe('the stage\'s fog', () => {
     assert.equal(held.near, 4);
   });
 
-  it('gives every program the shared far colour, linear, converted as the program converts its own output', () => {
+  it('mixes in linear light, both colours decoded once, before the look\'s curve and the display encoding', () => {
     const fog = createModelFog(new THREE.Scene()), shader = program('physical');
     compile(fog.change, shader);
     fog.set(FOG);
-    // Held linear whatever is drawn into: the program's own output conversion, which three compiles for the target
-    // bound (sRGB to the canvas, linear into a glow target), takes it to the space three gives its near colour.
-    const far = shader.uniforms.modelStageFogFar.value as THREE.Color;
-    assert.deepEqual(far.toArray(), srgb(FOG.far.color).toArray());
-    assert.ok(far.r < FOG.far.color[0], 'the far colour is held decoded from sRGB, not as stated');
-    assert.match(shader.fragmentShader,
-      /vec3 modelStageFogFarColor = linearToOutputTexel\( vec4\( modelStageFogFar, 1\.0 \) \)\.rgb;/);
-    assert.match(shader.fragmentShader, /mix\( fogColor, modelStageFogFarColor, modelStageFogDistance \)/);
+    // Held linear whatever is drawn into (the canvas or a glow target): three's curve and encoding follow the mix.
+    for (const [name, color] of [['modelStageFogNear', FOG.near.color], ['modelStageFogFar', FOG.far.color]] as const) {
+      const held = shader.uniforms[name].value as THREE.Color;
+      assert.deepEqual(held.toArray(), srgb(color).toArray(), name);
+      assert.ok(held.r < color[0], `${name} is held decoded from sRGB, not as stated`);
+    }
+    const source = shader.fragmentShader, mixed = source.indexOf('mix( modelStageFogNear, modelStageFogFar, ');
+    assert.ok(mixed > source.indexOf('#include <opaque_fragment>'));
+    assert.ok(mixed < source.indexOf('#include <tonemapping_fragment>'), 'before the curve');
+    assert.ok(source.indexOf('#include <tonemapping_fragment>') < source.indexOf('#include <colorspace_fragment>'));
+    assert.ok(!source.includes('#include <fog_fragment>') && !source.includes('fogColor,'), 'three\'s own fog is out');
     const other = program('basic');
     compile(fog.change, other);
-    assert.equal(other.uniforms.modelStageFogFar, shader.uniforms.modelStageFogFar);
+    assert.equal(other.uniforms.modelStageFogNear, shader.uniforms.modelStageFogNear);
   });
 
   it('writes the height layer, and no layer as a strength of 0', () => {
@@ -79,8 +82,8 @@ describe('the stage\'s fog', () => {
       compile(fog.change, shader);
       assert.notEqual(shader.fragmentShader, THREE.ShaderLib[name].fragmentShader, name);
       assert.equal(withoutFog(shader.vertexShader), withoutFog(THREE.ShaderLib[name].vertexShader), name);
-      assert.equal(withoutFog(shader.fragmentShader).replace('#include <fog_fragment>', ''),
-        withoutFog(THREE.ShaderLib[name].fragmentShader).replace('#include <fog_fragment>', ''), name);
+      const code = (source: string) => withoutFog(source).replace('#include <fog_fragment>', '').replace(/\s+/g, ' ');
+      assert.equal(code(shader.fragmentShader), code(THREE.ShaderLib[name].fragmentShader), name);
     }
   });
 

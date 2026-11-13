@@ -7,14 +7,17 @@ import {createModelFog} from '../src/react/preview3d/fog.ts';
 import {createModelStageSharedValues} from '../src/react/preview3d/sharedValues.ts';
 import {modelStagePolicy} from '../src/react/preview3d/model.ts';
 import {modelDrawnMeshCount} from '../src/react/preview3d/asset.ts';
+import {ModelStageRefusal} from '../src/react/preview3d/refusal.ts';
+import {MODEL_STAGE_THEME_LIGHTING} from '../src/react/preview3d/lightingModel.ts';
 import {declaration, describing, makeActor} from './preview3dActorFixture.ts';
 import {kindFile, MASK, PULSE, PULSE_PROGRAM, record, RENDERERS} from './preview3dKindFixture.ts';
 
 // A stage's descriptions with everything but WebGL real: its registries, actors and parts. The scene side is a plain
 // scene whose lighting load the test holds; files are read from memory, and every read and model load records its
 // signal, so what is let go of is seen.
-function stageWith(lightingLoad: () => readonly Promise<void>[] = () => []) {
-  const scene = new THREE.Scene(), signals: AbortSignal[] = [], closed: string[] = [];
+function stageWith(lightingLoad: () => readonly Promise<void>[] = () => [], refused: (time: string) => boolean = () =>
+  false) {
+  const scene = new THREE.Scene(), signals: AbortSignal[] = [], closed: string[] = [], reads: string[] = [];
   const files: Record<string, Uint8Array> = {[PULSE.webProgram.path]: new TextEncoder().encode(PULSE_PROGRAM),
     [MASK.path]: new Uint8Array([1, 2, 3])};
   const descriptions = createModelStageDescriptions({
@@ -22,15 +25,26 @@ function stageWith(lightingLoad: () => readonly Promise<void>[] = () => []) {
     theme: {colors: {stage: '#000000', text: '#ffffff', surface: '#111111', surfaceHi: '#222222', accent: '#ff0000',
       accentDeep: '#880000', teal: '#00ffff'}},
     stage: {scene, fog: createModelFog(scene), shared: createModelStageSharedValues(), compile: () => undefined,
-      lighting: {load: lightingLoad, prepare: () => () => undefined, attach: () => () => undefined},
+      lighting: {load: lightingLoad, attach: () => () => undefined, prepare: value => {
+        if (refused(value.time)) throw new ModelStageRefusal(`Time ${value.time}: refused`);
+        return () => undefined;
+      }},
       frame: () => undefined, requestFit: () => undefined},
     modes: createModelSurfaceModes(),
     load: async (path, sha256, signal) => {signals.push(signal); return kindFile().asset;},
-    read: async (path, sha256, signal) => {signals.push(signal); return files[path].slice().buffer;},
+    read: async (path, sha256, signal) => {
+      signals.push(signal);
+      reads.push(path);
+      return files[path].slice().buffer;
+    },
     decode: async () => ({image: {} as TexImageSource, close: () => {closed.push(MASK.path);}}),
   });
-  return {descriptions, signals, closed};
+  return {descriptions, signals, closed, reads};
 }
+// A look the stage's lighting check takes (a time the fake lighting above refuses by its id).
+const DUSK = {backdrop: [0, 0, 0], key: {color: [1, 1, 1], strength: 1, direction: [0, 1, 0]},
+  ambient: {sky: [1, 1, 1], ground: [0, 0, 0], strength: 1}, shadow: [0, 0, 0], night: 0,
+  aids: {floor: [0, 0, 0], share: 1}, fog: null, toneCurve: null, glow: null};
 const tinted = () => describing({surfaceSets: {tinted: {[RENDERERS.body]: record(), [RENDERERS.eyes]: {kind: 'file'},
   [RENDERERS.line]: {kind: 'file'}}}, actors: {focus: 'a', actors: [declaration('a', 'otter',
   {surfaces: {from: 'set', set: 'tinted'}})]}});
@@ -61,6 +75,19 @@ describe('the stage\'s descriptions, composed', () => {
     assert.deepEqual([freed, closed], [1, [MASK.path]], 'the kind\'s material and its texture\'s image');
     assert.equal(signals.at(-1)?.aborted, true, 'the later model\'s load is let go of');
     await later;
+  });
+});
+
+describe('a refused description', () => {
+  it('frees at its refusal what it built (a kind\'s material, its texture\'s image); its program stays read',
+    async () => {
+    const {descriptions, closed, reads} = stageWith(() => [], time => time === 'dusk');
+    await assert.rejects(descriptions.set({...tinted(), lighting: {time: 'dusk', times: [{id: 'dusk', label: 'Dusk',
+      look: DUSK}]}}), /Time dusk: refused/);
+    assert.deepEqual(closed, [MASK.path], 'freed at the refusal, not at the next description shown');
+    await descriptions.set(tinted());
+    assert.deepEqual(reads.filter(path => path === PULSE.webProgram.path).length, 1, 'a kind\'s program read once');
+    assert.deepEqual(descriptions.applied?.lighting, MODEL_STAGE_THEME_LIGHTING, 'the next description is shown');
   });
 });
 

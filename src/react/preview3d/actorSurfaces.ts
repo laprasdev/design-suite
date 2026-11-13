@@ -10,6 +10,7 @@ import {MODEL_SURFACE_GLSL} from './surfaceProgram.ts';
 import {writeModelSurfaceColor} from './color.ts';
 import {createModelMaterialInspection} from './materials.ts';
 import {ModelStageRefusal} from './refusal.ts';
+import {modelRecordIdentity} from './recordModel.ts';
 import type {ModelStageCommit} from './commit.ts';
 
 export interface ModelActorSurfacesContext {
@@ -76,7 +77,8 @@ export function createModelActorSurfaces(asset: GLTF, file: {readonly actor: str
     } finally {
       node.material = shown;
     }
-    return {record: JSON.stringify(record), surface, effective: Float32Array.from(surface.declared), changed: true};
+    return {record: modelRecordIdentity(record), surface, effective: Float32Array.from(surface.declared),
+      changed: true};
   };
   // What a mesh is drawn with by the actor's surfaces: a kind's material where a record draws it, else its file's own.
   const shown = (node: THREE.Mesh) => {
@@ -98,7 +100,7 @@ export function createModelActorSurfaces(asset: GLTF, file: {readonly actor: str
         for (const [id, entry] of Object.entries(set)) {
           if (!('values' in entry)) continue;
           const node = renderers().get(id)!, held = node instanceof THREE.Mesh ? drawn.get(node) : undefined;
-          const ready = held?.record === JSON.stringify(entry) ? held : prepareRecord(id, node, entry);
+          const ready = held?.record === modelRecordIdentity(entry) ? held : prepareRecord(id, node, entry);
           next.set(node as THREE.Mesh, ready);
         }
       }

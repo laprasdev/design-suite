@@ -14,8 +14,9 @@ const close = (actual: number, expected: number) => assert.ok(Math.abs(actual - 
 const ACTORS = [declaration('e')];
 const inboxOf = () => {
   const inbox = createModelFrameInbox();
+  inbox.describe(fileScene(ACTORS), []);
   return {inbox, receive: (value: unknown) => inbox.receive(value === null ? null :
-    {simulationTimeSeconds: 0, entities: [value]}, fileScene(ACTORS), [])};
+    {simulationTimeSeconds: 0, entities: [value]})};
 };
 const poseOf = (value: ModelPreviewFrame) => value.entities[0].pose;
 

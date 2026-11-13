@@ -66,6 +66,9 @@ describe('the stage\'s textures', () => {
     const first = textures.acquire(sampled('mask'), 'linear'), again = textures.acquire(sampled('mask'), 'linear');
     const clamped = textures.acquire(sampled('mask', ['clamp', 'repeat']), 'srgb');
     assert.equal(first, again);
+    const {path, sha256, wrap, scale, offset} = sampled('mask');
+    assert.equal(textures.acquire({offset, scale, wrap, sha256, path}, 'linear'), first, 'one sampling in any order');
+    textures.release(first);
     assert.equal(clamped.source, first.source, 'one decoded image under two samplings');
     assert.deepEqual([first.flipY, first.colorSpace, clamped.colorSpace, clamped.wrapS, first.wrapS],
       [false, THREE.NoColorSpace, THREE.SRGBColorSpace, THREE.ClampToEdgeWrapping, THREE.RepeatWrapping]);

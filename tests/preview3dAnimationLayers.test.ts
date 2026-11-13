@@ -85,9 +85,8 @@ describe('engine animation layers', () => {
     const input = (animationLayers: unknown) => ({simulationTimeSeconds: 0, entities: [{entityId: 'otter',
       modelId: 'otter', animationLayers, partPoses: [], materials: [],
       pose: {position: [0, 0, 0], rotationQuaternion: [0, 0, 0, 1], scale: [1, 1, 1]}}]});
-    const frameInbox = createModelFrameInbox(), actors = [declaration('otter')];
-    const inbox = {...frameInbox, receive: (value: unknown) => frameInbox.receive(value, fileScene(actors), []),
-      get failure() {return frameInbox.failure;}};
+    const inbox = createModelFrameInbox();
+    inbox.describe(fileScene([declaration('otter')]), []);
     const failure = () => inbox.failure;
     const message = () => {const value = failure(); return value instanceof Error ? value.message : value;};
     assert.equal(failure(), undefined);

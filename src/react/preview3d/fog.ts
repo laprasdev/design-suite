@@ -10,15 +10,15 @@ import {modelShaderChunk, modelShaderUniforms, type ModelShaderChange} from './s
 //   layer    = height.strength * (1 - smoothstep(height.base, height.top, y)) * smoothstep(0, near.distance, depth)
 //   amount   = distance + layer * (1 - distance), the same as 1 - (1 - distance) * (1 - layer)
 //   result   = mix(surface, colour, amount)
-// The fog is mixed where three mixes its own, last: after tone mapping and the output conversion, so in the space of
-// whatever the program draws into. three encodes its own fog colour (the near one) for that space at every render;
-// the far colour is held in the working space and converted by the program's own `linearToOutputTexel`, so the two
-// always agree, whatever target is bound. Every line the change adds sits inside USE_FOG, so with no fog in the look
-// a program compiles to three's own.
+// The fog is mixed in linear light, on the direct draw and under glow alike: just before the look's tone curve and the
+// display encoding (three's <tonemapping_fragment> and <colorspace_fragment>), which then apply to the fogged colour
+// as to any other, once. Both colours are held linear, decoded from the look's sRGB once when the look is written;
+// three's own fog (one colour, mixed after the encoding) is taken out. Every line the change adds sits inside USE_FOG,
+// so with no fog in the look a program compiles to three's own.
 const CHUNK = Object.freeze({parsVertex: 'fog_pars_vertex', vertex: 'fog_vertex', parsFragment: 'fog_pars_fragment',
-  fragment: 'fog_fragment'});
+  fragment: 'fog_fragment', toneMapping: 'tonemapping_fragment'});
 export const MODEL_FOG_CHANGE = 'model-stage-fog';
-const UNIFORM = Object.freeze({far: 'modelStageFogFar', height: 'modelStageFogHeight'});
+const UNIFORM = Object.freeze({near: 'modelStageFogNear', far: 'modelStageFogFar', height: 'modelStageFogHeight'});
 const HEIGHT_VARYING = 'vModelStageFogY';
 // A look with no height layer is drawn with a layer strength of 0, which makes the layer term exactly 0 and leaves the
 // distance term alone; its base and top are any range smoothstep accepts (GLSL leaves base >= top undefined, even
@@ -40,30 +40,34 @@ const FRAGMENT = `
   float modelStageFogDistance = smoothstep( fogNear, fogFar, vFogDepth );
   float modelStageFogLayer = ${UNIFORM.height}.z * ( 1.0 - smoothstep( ${UNIFORM.height}.x, ${UNIFORM.height}.y,
     ${HEIGHT_VARYING} ) ) * smoothstep( 0.0, fogNear, vFogDepth );
-  vec3 modelStageFogFarColor = linearToOutputTexel( vec4( ${UNIFORM.far}, 1.0 ) ).rgb;
-  gl_FragColor.rgb = mix( gl_FragColor.rgb, mix( fogColor, modelStageFogFarColor, modelStageFogDistance ),
+  gl_FragColor.rgb = mix( gl_FragColor.rgb, mix( ${UNIFORM.near}, ${UNIFORM.far}, modelStageFogDistance ),
     modelStageFogDistance + modelStageFogLayer * ( 1.0 - modelStageFogDistance ) );
-#endif`;
+#endif
+`;
 const inFog = (lines: string) => `\n#ifdef USE_FOG\n${lines}\n#endif`;
 
 /**
  * The scene's fog: one three.js Fog, which the scene holds while the look has fog (three checks it by identity, so it
- * is never replaced), carrying the near colour and both distances; and two shared uniforms, the far colour and the
- * height layer, read by every program the change was given to. A changed value, the height layer arriving or leaving
- * included, is written in place; only fog arriving or leaving recompiles the programs that take it, once.
+ * is never replaced), carrying both distances and switching USE_FOG on; and three shared uniforms, the near and far
+ * colours and the height layer, read by every program the change was given to. A changed value, the height layer
+ * arriving or leaving included, is written in place; only fog arriving or leaving recompiles the programs that take
+ * it, once.
  */
 export function createModelFog(scene: THREE.Scene) {
   // Its distances and colour are written by `set` before the scene ever holds it.
   const fog = new THREE.Fog(0);
-  const uniforms = {[UNIFORM.far]: {value: new THREE.Color()}, [UNIFORM.height]: {value: new THREE.Vector3()}};
+  const uniforms = {[UNIFORM.near]: {value: new THREE.Color()}, [UNIFORM.far]: {value: new THREE.Color()},
+    [UNIFORM.height]: {value: new THREE.Vector3()}};
   const varying = `varying float ${HEIGHT_VARYING};`;
-  const declared = modelShaderUniforms({[UNIFORM.far]: 'vec3', [UNIFORM.height]: 'vec3'});
+  const declared = modelShaderUniforms({[UNIFORM.near]: 'vec3', [UNIFORM.far]: 'vec3', [UNIFORM.height]: 'vec3'});
   const change: ModelShaderChange = {key: MODEL_FOG_CHANGE, apply: (shader, replace) => {
     Object.assign(shader.uniforms, uniforms);
     shader.vertexShader = replace(replace(shader.vertexShader, CHUNK.parsVertex,
       modelShaderChunk(CHUNK.parsVertex) + inFog(varying)), CHUNK.vertex, modelShaderChunk(CHUNK.vertex) + VERTEX);
-    shader.fragmentShader = replace(replace(shader.fragmentShader, CHUNK.parsFragment,
-      modelShaderChunk(CHUNK.parsFragment) + inFog(`${declared}\n${varying}`)), CHUNK.fragment, FRAGMENT);
+    const declaring = replace(shader.fragmentShader, CHUNK.parsFragment,
+      modelShaderChunk(CHUNK.parsFragment) + inFog(`${declared}\n${varying}`));
+    shader.fragmentShader = replace(replace(declaring, CHUNK.fragment, ''), CHUNK.toneMapping,
+      FRAGMENT + modelShaderChunk(CHUNK.toneMapping));
   }};
   return {
     /** The change every material that takes the stage's fog is extended with. */
@@ -71,9 +75,9 @@ export function createModelFog(scene: THREE.Scene) {
     set(value: ModelStageFog | null) {
       scene.fog = value === null ? null : fog;
       if (value === null) return;
-      writeModelColor(fog.color, value.near.color);
       fog.near = value.near.distance;
       fog.far = value.far.distance;
+      writeModelColor(uniforms[UNIFORM.near].value, value.near.color);
       writeModelColor(uniforms[UNIFORM.far].value, value.far.color);
       const height = value.height === null ? NO_LAYER : value.height;
       uniforms[UNIFORM.height].value.set(height.base, height.top, height.strength);

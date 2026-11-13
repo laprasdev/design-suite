@@ -5,7 +5,7 @@ import {modelEnvironment, type ModelEnvironment} from './environmentModel.ts';
 import {MODEL_STAGE_FRAMING, modelStageFraming, modelStageOrbit, type ModelStageFraming} from './framingModel.ts';
 import {modelStageLighting, type ModelStageLighting} from './lightingModel.ts';
 import {modelStageSurfaceMode, type ModelStageSurfaceMode} from './surfaceModeModel.ts';
-import {modelRecord, modelStates} from './recordModel.ts';
+import {modelRecord, modelRecordIdentity, modelStates} from './recordModel.ts';
 import {MODEL_ACTOR_SURFACES, MODEL_SURFACE_REFUSAL, modelSurfaceSets, type ModelSurfaceSet} from './surfaceModel.ts';
 import {ModelStageRefusal} from './refusal.ts';
 import {modelStageOrigin, modelStageSize, type ModelStageOrigin, type ModelStageSize} from './sizeModel.ts';
@@ -59,11 +59,12 @@ export function modelStageDescription(input: unknown): ModelStageDescription {
   });
 }
 
-/** The parts a description changes against the one applied; every part, when none is applied yet. */
+/** The parts a description changes against the one applied, each by value whatever the order of its records' fields;
+ * every part, when none is applied yet. */
 export function modelStageDescriptionChanges(applied: ModelStageDescription | undefined,
   next: ModelStageDescription): ReadonlySet<ModelStageDescriptionPart> {
   return new Set(MODEL_STAGE_DESCRIPTION_PARTS.filter(part =>
-    !applied || JSON.stringify(applied[part]) !== JSON.stringify(next[part])));
+    !applied || modelRecordIdentity(applied[part]) !== modelRecordIdentity(next[part])));
 }
 
 /** The actors the framing fits: the focused one, every declared one, or none for a held pose. */
