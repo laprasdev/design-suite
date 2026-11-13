@@ -19,6 +19,8 @@ type Pair = readonly [number, number];
 export type ModelSurfaceTexture = {readonly path: string; readonly sha256: string; readonly wrap: readonly [Wrap, Wrap];
   readonly scale: Pair; readonly offset: Pair} | {readonly constant: typeof MODEL_TEXTURE_CONSTANT[keyof typeof
   MODEL_TEXTURE_CONSTANT]};
+/** A file a record names, by path and SHA-256. */
+export type ModelSurfaceFile = {readonly path: string; readonly sha256: string};
 export type ModelSurfaceValue = {readonly color: readonly [number, number, number, number]}
   | {readonly vector: readonly number[]} | {readonly float: number} | {readonly keyword: boolean}
   | {readonly texture: ModelSurfaceTexture};
@@ -105,6 +107,23 @@ export function modelActorSurfaces(input: unknown, where: string): ModelActorSur
   const {shape: kind, record} = modelShape(input, 'kind', {file: ['kind'], set: ['kind', 'set']}, where);
   return kind === MODEL_ACTOR_SURFACES.file ? Object.freeze({kind}) :
     Object.freeze({kind, set: modelName(record.set, `${where}.set`)});
+}
+
+/** The texture files named by the sets these actors are drawn from, each file once. */
+export function modelSurfaceFiles(sets: Readonly<Record<string, ModelSurfaceSet>>,
+  actors: readonly {readonly surfaces: ModelActorSurfaces}[]): readonly ModelSurfaceFile[] {
+  const used = new Set(actors.flatMap(({surfaces}) =>
+    surfaces.kind === MODEL_ACTOR_SURFACES.set ? [surfaces.set] : []));
+  const files = new Map<string, ModelSurfaceFile>();
+  for (const name of used) for (const entry of Object.values(sets[name])) {
+    if (!('values' in entry)) continue;
+    for (const item of Object.values(entry.values)) {
+      if ('texture' in item && 'sha256' in item.texture) {
+        files.set(item.texture.sha256, Object.freeze({path: item.texture.path, sha256: item.texture.sha256}));
+      }
+    }
+  }
+  return Object.freeze([...files.values()]);
 }
 
 function fit(item: ModelSurfaceValue, parameter: ModelSurfaceParameter, at: string) {

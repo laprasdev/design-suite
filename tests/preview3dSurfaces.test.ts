@@ -117,7 +117,8 @@ describe('surface kinds, records and sets', () => {
     const associated = {...asset, parser: {associations: new Map([[body, {nodes: 0, meshes: 0, primitives: 0}]])}};
     const actor = createModelActor(associated as never, declaration('a', 'otter',
       {surfaces: {kind: 'set', set: 'own'}}), actorContext().context);
-    const parts = createModelStageParts({scene: new THREE.Scene(), kinds: kinds(), modes: createModelSurfaceModes(),
+    const parts = createModelStageParts({textures: {load: () => [], keep: () => undefined},
+      scene: new THREE.Scene(), kinds: kinds(), modes: createModelSurfaceModes(),
       frame: () => undefined,
       lighting: {load: () => [], prepare: () => () => undefined}, fog: createModelFog(new THREE.Scene())});
     const describedWith = (set: object) => modelStageDescription(describing({surfaceSets: {own: set},
@@ -136,7 +137,8 @@ describe('surface kinds, records and sets', () => {
       declaration('a', 'otter', {surfaces: {kind: 'set', set: 'tinted'}})]}})),
     /Actor a.surfaces.set names surface set tinted; the description's sets are none/);
     const next = modelStageDescription(describing({surfaceSets: {tinted: {[RENDERER]: RECORD}}}));
-    const parts = createModelStageParts({scene: new THREE.Scene(), kinds: kinds(), modes: createModelSurfaceModes(),
+    const parts = createModelStageParts({textures: {load: () => [], keep: () => undefined},
+      scene: new THREE.Scene(), kinds: kinds(), modes: createModelSurfaceModes(),
       frame: () => undefined,
       lighting: {load: () => [], prepare: () => () => undefined}, fog: createModelFog(new THREE.Scene())});
     refused(() => parts.prepares(next, modelStageDescriptionChanges(undefined, next), []).map(prepare => prepare()),

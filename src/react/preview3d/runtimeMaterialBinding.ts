@@ -4,17 +4,12 @@ import {createModelRuntimeMaterials} from './runtimeMaterials.ts';
 import {modelRuntimeMaterialProfile} from './runtimeMaterialModel.ts';
 import type {ModelRuntimeMaterialProfile} from './runtimeMaterialModel.ts';
 import {modelNodeIndex} from './renderers.ts';
+import {readModelFile} from './files.ts';
 
 export async function loadModelRuntimeAsset(path: string, profile: ModelRuntimeMaterialProfile,
   signal: AbortSignal): Promise<GLTF> {
   const accepted = modelRuntimeMaterialProfile(profile);
-  const response = await fetch(path, {signal});
-  if (!response.ok) throw new Error('The runtime model could not be loaded.');
-  const bytes = await response.arrayBuffer();
-  const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', bytes));
-  const actual = Array.from(digest, byte => byte.toString(16).padStart(2, '0')).join('');
-  if (actual !== accepted.asset.sha256) throw new Error('The runtime model does not match its verified SHA-256.');
-  signal.throwIfAborted();
+  const bytes = await readModelFile(path, accepted.asset.sha256, signal);
   const base = new URL('.', new URL(path, document.baseURI)).href;
   return new GLTFLoader().parseAsync(bytes, base);
 }

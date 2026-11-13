@@ -9,7 +9,8 @@ import type {ModelStageDescription, ModelStageDescriptionPart} from './descripti
 import {modelStageCommit, type ModelStageCommit, type ModelStagePrepare} from './commit.ts';
 import {ModelStageRefusal} from './refusal.ts';
 import type {ModelShaderChange} from './shading.ts';
-import {MODEL_ACTOR_SURFACES, modelSurfaceRecordsFit} from './surfaceModel.ts';
+import {MODEL_ACTOR_SURFACES, modelSurfaceFiles, modelSurfaceRecordsFit} from './surfaceModel.ts';
+import type {ModelTextures} from './textures.ts';
 import type {ModelSurfaceKind} from './surfaceKindModel.ts';
 import {modelSurfaceSetCovers} from './renderers.ts';
 import type {ModelSurfaceModes} from './materials.ts';
@@ -30,6 +31,8 @@ export interface ModelStageSurface {
   readonly kinds: ReadonlyMap<string, ModelSurfaceKind>;
   /** The stage's one Surface mode, which every actor shows. */
   readonly modes: Pick<ModelSurfaceModes, 'mode' | 'set'>;
+  /** The textures surface records name, read in the staged load. */
+  readonly textures: Pick<ModelTextures, 'load' | 'keep'>;
   frame(framing: ModelStageFraming, orbit: boolean): void;
 }
 
@@ -84,7 +87,7 @@ export function createModelStageParts(surface: ModelStageSurface) {
         modelSurfaceSetCovers(declared.id, declared.surfaces.set, next.surfaceSets[declared.surfaces.set],
           actors[index].renderers());
       });
-      return () => undefined;
+      return () => surface.textures.keep(modelSurfaceFiles(next.surfaceSets, next.actors.actors));
     }];
   };
   const scenery = (value: ModelStageDescription['environment']) => modelStageCommit(() => {
@@ -104,7 +107,8 @@ export function createModelStageParts(surface: ModelStageSurface) {
   };
   return {
     /** What a description needs loaded before its parts can be prepared, beside its actors' models. */
-    loads: (next: ModelStageDescription) => surface.lighting.load(next.lighting),
+    loads: (next: ModelStageDescription) => [...surface.lighting.load(next.lighting),
+      ...surface.textures.load(modelSurfaceFiles(next.surfaceSets, next.actors.actors))],
     prepares(next: ModelStageDescription, changed: ReadonlySet<ModelStageDescriptionPart>,
       actors: readonly ModelActor[]): ModelStagePrepare[] {
       const parts = (Object.keys(stageWide) as Array<keyof typeof stageWide>).filter(part => changed.has(part));

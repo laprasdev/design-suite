@@ -43,7 +43,8 @@ test('runtimeMaterials.ts: an unknown renderer is a refusal and installs no mate
 
 test('stageParts.ts: a Surface mode an actor cannot show is a refusal and leaves the mode', () => {
   const modes = createModelSurfaceModes();
-  const parts = createModelStageParts({scene: new THREE.Scene(), fog: createModelFog(new THREE.Scene()),
+  const parts = createModelStageParts({textures: {load: () => [], keep: () => undefined},
+      scene: new THREE.Scene(), fog: createModelFog(new THREE.Scene()),
     kinds: new Map(), modes, lighting: {load: () => [], prepare: () => () => undefined}, frame: () => undefined});
   const clay = modelStageDescription(describing({materialMode: 'clay'}));
   const actor = {id: 'plain', driver: 'host', rig: {display: clay.display}, sizing: {size: clay.size,

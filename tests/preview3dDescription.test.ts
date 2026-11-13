@@ -126,8 +126,8 @@ describe('the stage description', () => {
 describe('the stage-wide parts', () => {
   const surface = () => {
     const calls: string[] = [];
-    const parts = createModelStageParts({scene: new THREE.Scene(), fog: {change: FOG}, kinds: new Map(),
-      modes: MODES(),
+    const parts = createModelStageParts({textures: {load: () => [], keep: () => undefined},
+      scene: new THREE.Scene(), fog: {change: FOG}, kinds: new Map(), modes: MODES(),
       lighting: {load: () => [], prepare: value => () => {calls.push(value.time);}},
       frame: (framing: ModelStageFraming, orbit: boolean) => calls.push(`${framing.kind} ${orbit}`)});
     return {calls, parts};
@@ -144,8 +144,8 @@ describe('the stage-wide parts', () => {
 
   it('refuses a lighting while preparing, so a refused time leaves every other part unapplied', () => {
     const calls: string[] = [];
-    const parts = createModelStageParts({scene: new THREE.Scene(), fog: {change: FOG}, kinds: new Map(),
-      modes: MODES(),
+    const parts = createModelStageParts({textures: {load: () => [], keep: () => undefined},
+      scene: new THREE.Scene(), fog: {change: FOG}, kinds: new Map(), modes: MODES(),
       lighting: {load: () => [],
         prepare: () => {throw new ModelStageRefusal('Time t: look.glow: glow needs half-float render targets.');}},
     frame: (framing: ModelStageFraming) => calls.push(framing.kind)});

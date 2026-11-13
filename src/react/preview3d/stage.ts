@@ -13,6 +13,8 @@ import {modelStageDescription, modelStageDescriptionChanges, modelStageFramed, m
 import type {ModelStageDescription} from './descriptionModel.ts';
 import {createModelStageParts} from './stageParts.ts';
 import {createModelSurfaceModes} from './materials.ts';
+import {createModelTextures, decodeModelImage} from './textures.ts';
+import {readModelFile} from './files.ts';
 import {prepareWhole} from './commit.ts';
 import {ModelStageRefusal} from './refusal.ts';
 
@@ -35,14 +37,14 @@ export function createModelStage(
   const policy = modelStagePolicy(options);
   const stage = createModelScene(host, theme, policy);
   const renderedMeshes = new Set<string>();
-  const modes = createModelSurfaceModes();
+  const modes = createModelSurfaceModes(), textures = createModelTextures(readModelFile, decodeModelImage);
   const context = {policy, theme, scene: stage.scene, lighting: stage.lighting, fog: stage.fog.change,
     surfaceModes: modes,
     rendered: (mesh: THREE.Mesh) => {renderedMeshes.add(mesh.uuid);}};
   const load = (declaration: ModelStageActor, signal: AbortSignal) =>
     loadModelStageAsset(declaration.asset.path, modelRuntimeAssetProfile(declaration), signal);
   const actors = createModelActorSet(load, (asset, declaration) => createModelActor(asset, declaration, context));
-  const parts = createModelStageParts({...stage, kinds: policy.kinds, modes});
+  const parts = createModelStageParts({...stage, kinds: policy.kinds, modes, textures});
   let applied: ModelStageDescription | undefined;
   let disposed = false, frame = 0;
   // The stage's one presentation time. Under the external clock only setFrame moves it; under the local clock the
@@ -136,6 +138,7 @@ export function createModelStage(
     cancelAnimationFrame(frame);
     actors.dispose();
     parts.dispose();
+    textures.dispose();
     stage.dispose();
     if (Reflect.get(host, options.reviewKey) === api) {
       Reflect.deleteProperty(host, options.reviewKey);
