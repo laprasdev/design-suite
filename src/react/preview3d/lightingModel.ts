@@ -1,6 +1,4 @@
-import {modelColorOfHex} from './colorModel.ts';
-import {MODEL_STAGE_TONE_CURVE, modelStageLook, type ModelStageLook} from './lookModel.ts';
-import type {ModelVector} from './placementModel.ts';
+import {modelStageLook, type ModelStageLook} from './lookModel.ts';
 import {modelName, modelRecord} from './recordModel.ts';
 import {ModelStageRefusal} from './refusal.ts';
 
@@ -19,7 +17,7 @@ export interface ModelStageLighting {
 export interface ModelStageThemeColors {readonly stage: string; readonly text: string; readonly surface: string}
 export const MODEL_PREVIEW_LIGHTING_TEXT = Object.freeze({label: 'Lighting', light: 'Light', dark: 'Dark'});
 export const MODEL_STAGE_TIME = Object.freeze({light: 'light', dark: 'dark'} as const);
-type ModelStageBuiltInTime = typeof MODEL_STAGE_TIME[keyof typeof MODEL_STAGE_TIME];
+export type ModelStageBuiltInTime = typeof MODEL_STAGE_TIME[keyof typeof MODEL_STAGE_TIME];
 /** The built-in times, by id and label, in the order the view offers them before a description's own. */
 export const MODEL_STAGE_BUILT_IN_TIMES = Object.freeze([
   Object.freeze({id: MODEL_STAGE_TIME.light, label: MODEL_PREVIEW_LIGHTING_TEXT.light}),
@@ -36,35 +34,6 @@ export const MODEL_STAGE_LIGHTING_REFUSAL = Object.freeze({
     `The lighting.time names ${id}; the times are ${known.join(', ')}.`,
 });
 const refusal = MODEL_STAGE_LIGHTING_REFUSAL;
-
-// The stage as it has always been lit: one key light from this direction and one hemisphere ambient, at these
-// strengths. Dark is a night stage of its own: a deep backdrop, a floor that still reads under less light, both lights
-// cooled and held to one share of Light's strength, and the unlit aids held to another, so a model's emission carries
-// the picture. Exposure is untouched, or the glow would dim with the lights.
-const STAGE_LIGHT = Object.freeze({key: 3, ambient: 2, direction: Object.freeze([3, 5, 4]) as ModelVector});
-const DARK = Object.freeze({backdrop: '#05080f', floor: '#262a33', light: '#99bfff', lightShare: 0.3, aidShare: 0.3});
-
-/**
- * The built-in times as data. Light is the consumer's theme: its stage colour behind, its text colour in both lights,
- * its surface colour on the ground and the floor. Each built-in's shadow is its own stated value, the colour its
- * ambient gives the ground; that is what these two times state, not a rule that derives any time's shadow.
- */
-export function modelStageBuiltInTimes(colors: ModelStageThemeColors): readonly ModelStageTime[] {
-  const theme = (name: keyof ModelStageThemeColors) => modelColorOfHex(colors[name], `The stage theme's ${name}`);
-  const [stage, text, surface] = [theme('stage'), theme('text'), theme('surface')];
-  const [backdrop, floor, light] = [DARK.backdrop, DARK.floor, DARK.light].map(hex => modelColorOfHex(hex, 'Dark'));
-  const looks: Record<ModelStageBuiltInTime, ModelStageLook> = {
-    light: {backdrop: stage, key: {color: text, strength: STAGE_LIGHT.key, direction: STAGE_LIGHT.direction},
-      ambient: {sky: text, ground: surface, strength: STAGE_LIGHT.ambient}, shadow: surface, night: 0,
-      aids: {floor: surface, share: 1}, fog: null, toneCurve: MODEL_STAGE_TONE_CURVE.acesFilmic, glow: null},
-    dark: {backdrop, ambient: {sky: light, ground: backdrop, strength: STAGE_LIGHT.ambient * DARK.lightShare},
-      key: {color: light, strength: STAGE_LIGHT.key * DARK.lightShare, direction: STAGE_LIGHT.direction},
-      shadow: backdrop, night: 1, aids: {floor, share: DARK.aidShare}, fog: null,
-      toneCurve: MODEL_STAGE_TONE_CURVE.acesFilmic, glow: null},
-  };
-  return Object.freeze(MODEL_STAGE_BUILT_IN_TIMES.map(({id, label}) =>
-    Object.freeze({id, label, look: modelStageLook(looks[id], `Time ${id}: look`)})));
-}
 
 // Each time's id and label are its own: the Lighting control shows the labels side by side, so a label used twice
 // would be two segments no one can tell apart. Every name starts out held by the built-in time that has it.

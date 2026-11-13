@@ -8,7 +8,8 @@ import {createModelActorSurfaces, MODEL_ACTOR_SURFACES_TEXT as TEXT} from '../sr
 import {createModelSurfaceMaterials} from '../src/react/preview3d/surfaceMaterials.ts';
 import {createModelStageSharedValues} from '../src/react/preview3d/sharedValues.ts';
 import {modelSurfaceKinds} from '../src/react/preview3d/surfaceKindModel.ts';
-import {modelSurfaceSets} from '../src/react/preview3d/surfaceModel.ts';
+import {modelSurfaceRecordsFit, modelSurfaceSets} from '../src/react/preview3d/surfaceModel.ts';
+import {padModelBoundsByReach} from '../src/react/preview3d/reachBounds.ts';
 import {ModelStageRefusal} from '../src/react/preview3d/refusal.ts';
 import {kindFile, PULSE, RENDERERS} from './preview3dKindFixture.ts';
 
@@ -27,6 +28,8 @@ const UNLIT = kind({light: 'unlit'});
 const DEPTH = kind({attributes: ['uv', {name: '_depth', size: 1}]});
 const shared = createModelStageSharedValues().declarations;
 const program = (value: typeof SWAY) => createModelSurfaceProgram(value, SWAY_PROGRAM, shared);
+const refused = (run: () => unknown, pattern: RegExp) => assert.throws(run, (error: unknown) =>
+  error instanceof ModelStageRefusal && pattern.test(error.message), String(pattern));
 const at = (source: string, text: string) => {
   const index = source.indexOf(text);
   assert.ok(index >= 0, text);
@@ -90,19 +93,47 @@ describe('a kind\'s forms beyond a lit surface', () => {
       error instanceof ModelStageRefusal && error.message === TEXT.size(where, '_depth', 1, 2));
   });
 
-  it('draws a renderer whose kind moves vertices whatever the view, and gives three its culling back', async () => {
-    const {asset, body} = kindFile(), kinds = modelSurfaceKinds([SWAY]);
-    const materials = createModelSurfaceMaterials({kinds, shared: createModelStageSharedValues(), changes: () => [],
-      read: async () => new TextEncoder().encode(SWAY_PROGRAM).buffer, textures: {acquire: () => new THREE.Texture(),
-        release: () => undefined}});
-    const sets = modelSurfaceSets({s: {[RENDERERS.body]: {kind: 'test-form', values: {_Color: {color: [1, 1, 1, 1]},
-      _Reach: {float: 0.2}}}, [RENDERERS.eyes]: {kind: 'file'}, [RENDERERS.line]: {kind: 'file'}}});
-    await Promise.all(materials.load([sets.s[RENDERERS.body] as never]).pending);
-    const surfaces = createModelActorSurfaces(asset, {actor: 'a', path: 'a.glb'}, {materials, kinds,
-      compile: () => undefined});
-    surfaces.prepare({from: 'set', set: 's'}, sets)();
-    assert.equal(body.frustumCulled, false);
-    surfaces.prepare({from: 'file'}, sets)();
-    assert.equal(body.frustumCulled, true);
+  it('culls a renderer a kind moves by its bounds grown by the reach it shows, and gives three its own back',
+    async () => {
+      const {asset, body} = kindFile(), kinds = modelSurfaceKinds([SWAY]);
+      const materials = createModelSurfaceMaterials({kinds, shared: createModelStageSharedValues(), changes: () => [],
+        read: async () => new TextEncoder().encode(SWAY_PROGRAM).buffer, textures: {acquire: () => new THREE.Texture(),
+          release: () => undefined}});
+      const sets = (reach: number) => modelSurfaceSets({s: {[RENDERERS.body]: {kind: 'test-form', values: {_Color:
+        {color: [1, 1, 1, 1]}, _Reach: {float: reach}}}, [RENDERERS.eyes]: {kind: 'file'}, [RENDERERS.line]:
+        {kind: 'file'}}});
+      await Promise.all(materials.load([sets(0.5).s[RENDERERS.body] as never]).pending);
+      const surfaces = createModelActorSurfaces(asset, {actor: 'a', path: 'a.glb'}, {materials, kinds,
+        compile: () => undefined});
+      // A view whose near side is a plane `edge` metres left of the unit box's centre: the box's own sphere is 0.87.
+      const seen = (edge: number) => {
+        body.updateMatrixWorld(true);
+        const far = new THREE.Plane(new THREE.Vector3(1, 0, 0), 1e9);
+        return new THREE.Frustum(new THREE.Plane(new THREE.Vector3(-1, 0, 0), -edge), far, far, far, far, far)
+          .intersectsObject(body);
+      };
+      assert.equal(seen(1.2), false, 'drawn with its file\'s material, culled by its own bounds');
+      surfaces.prepare({from: 'set', set: 's'}, sets(0.5))();
+      assert.deepEqual([body.frustumCulled, seen(1.2), seen(1.4)], [true, true, false], 'grown by the reach, 0.5');
+      surfaces.prepareValues([{rendererId: RENDERERS.body, slot: 0, visible: true, colors: {},
+        floats: {_Reach: 0.2}}])();
+      assert.deepEqual([seen(1.0), seen(1.2)], [true, false], 'by the reach the frame gives this renderer');
+      body.scale.setScalar(0.5);
+      assert.deepEqual([seen(0.6), seen(0.7)], [true, false], 'in metres, whatever the renderer\'s scale');
+      body.scale.setScalar(1);
+      surfaces.prepare({from: 'file'}, sets(0.5))();
+      assert.deepEqual([seen(0.8), seen(1.0)], [true, false], 'its own bounds back');
+      assert.equal(Object.hasOwn(body, 'boundingSphere'), false);
+      refused(() => modelSurfaceRecordsFit(sets(-0.1), kinds), /_Reach is how far the kind moves a vertex/);
+    });
+
+  it('grows the sphere a mesh keeps of its own, as three would compute it, and gives that sphere back', () => {
+    const mesh = new THREE.InstancedMesh(new THREE.BoxGeometry(), new THREE.MeshBasicMaterial(), 1);
+    mesh.setMatrixAt(0, new THREE.Matrix4());
+    const release = padModelBoundsByReach(mesh, () => 1);
+    mesh.updateMatrixWorld(true);
+    assert.equal(mesh.boundingSphere!.radius, Math.sqrt(3) / 2 + 1);
+    release();
+    assert.equal(Object.getOwnPropertyDescriptor(mesh, 'boundingSphere')!.value.radius, Math.sqrt(3) / 2);
   });
 });

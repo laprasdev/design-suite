@@ -55,6 +55,7 @@ export const MODEL_SURFACE_REFUSAL = Object.freeze({
   negative: (where: string) => `${where} has a channel below 0.`,
   range: (where: string) => `${where} is not HDR: each channel is from 0 to 1.`,
   inert: (where: string, value: number) => `${where} is drawn only at ${value}.`,
+  reach: (where: string) => `${where} is how far the kind moves a vertex, in metres: 0 or more.`,
   format: (where: string, path: string) =>
     `${where} ${path} is not a format the stage decodes: ${MODEL_TEXTURE_FORMATS.join(', ')}.`,
   wrap: (where: string) => `${where} is a pair, [u, v], each one of ${Object.values(MODEL_TEXTURE_WRAP).join(', ')}.`,
@@ -147,7 +148,7 @@ export function modelSurfaceFiles(sets: Readonly<Record<string, ModelSurfaceSet>
 
 /**
  * A value against its kind's parameter, the one rule for a record's value and an engine's: of the parameter's type and
- * size, a colour that is not HDR within [0, 1], and an inert parameter at its one value.
+ * size, a colour that is not HDR within [0, 1], an inert parameter at its one value, and a reach not below 0.
  */
 export function modelSurfaceValueFits(item: ModelSurfaceValue, kind: ModelSurfaceKind, name: string, at: string) {
   const parameter = kind.parameters[name], [stated] = Object.keys(item);
@@ -160,6 +161,9 @@ export function modelSurfaceValueFits(item: ModelSurfaceValue, kind: ModelSurfac
   const inert = kind.inert[name];
   if (modelStates(kind.inert, name) && 'float' in item && item.float !== inert) {
     throw new ModelStageRefusal(refusal.inert(at, inert));
+  }
+  if (kind.displacement !== null && kind.displacement.reach === name && 'float' in item && !(item.float >= 0)) {
+    throw new ModelStageRefusal(refusal.reach(at));
   }
 }
 /** Every record against its kind: the kind was given, its parameters are exactly the record's, each value fits. */

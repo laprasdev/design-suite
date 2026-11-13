@@ -9,7 +9,7 @@ import {createModelStageParts} from '../src/react/preview3d/stageParts.ts';
 import {prepareWhole} from '../src/react/preview3d/commit.ts';
 import type {ModelActor} from '../src/react/preview3d/actor.ts';
 import {createModelLighting} from '../src/react/preview3d/lighting.ts';
-import {modelStageBuiltInTimes} from '../src/react/preview3d/lightingModel.ts';
+import {modelStageBuiltInTimes} from '../src/react/preview3d/builtInTimes.ts';
 import {createModelStage} from '../src/react/preview3d/stage.ts';
 import {NO_FILES, describing} from './preview3dActorFixture.ts';
 import {modelStageDescription} from '../src/react/preview3d/descriptionModel.ts';
@@ -58,7 +58,7 @@ test('stageParts.ts: a Surface mode an actor cannot show is a refusal and leaves
 });
 
 test('lightingModel.ts: an unknown time is a refusal and leaves the light', () => {
-  const lighting = createModelLighting({setClearColor: () => undefined}, modelStageBuiltInTimes(theme.colors),
+  const lighting = createModelLighting(modelStageBuiltInTimes(theme.colors),
     {fog: createModelFog(new THREE.Scene()), output: {load: () => [], prepare: () => () => undefined},
       shared: {setLook: () => undefined}});
   const before = lighting.lights[0].intensity;

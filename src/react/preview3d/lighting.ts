@@ -5,6 +5,7 @@ import type {ModelFog} from './fog.ts';
 import type {ModelDraw} from './draw.ts';
 import type {ModelStageSharedValues} from './sharedValues.ts';
 import type {ModelStageCommit} from './commit.ts';
+import {createModelBackdrop} from './backdrop.ts';
 import {modelDrawnMaterials} from './renderers.ts';
 import {MODEL_STAGE_THEME_LIGHTING, modelStageTimeInForce, type ModelStageLighting, type ModelStageTime}
   from './lightingModel.ts';
@@ -41,11 +42,10 @@ export interface ModelLookLayers {
 // recompiles every program the canvas pass draws; and glow arriving compiles, on its first frame, a second variant of
 // every program the scene draws, for the linear, curve-less target its source is drawn into (WebGLPrograms.js 165-171,
 // 202). Those variants stay in each material's programs after glow leaves, so a later return compiles nothing.
-export function createModelLighting(renderer: Pick<THREE.WebGLRenderer, 'setClearColor'>,
-  builtIn: readonly ModelStageTime[], layers: ModelLookLayers) {
+export function createModelLighting(builtIn: readonly ModelStageTime[], layers: ModelLookLayers) {
   const ambient = new THREE.HemisphereLight();
   const key = new THREE.DirectionalLight();
-  const backdrop = new THREE.Color();
+  const backdrop = createModelBackdrop();
   const aids = new Set<(share: number) => void>();
   const floors = new Set<THREE.MeshStandardMaterial>();
   const resolve = (value: ModelStageLighting) => modelStageTimeInForce(value.time, [...builtIn, ...value.times]);
@@ -60,7 +60,7 @@ export function createModelLighting(renderer: Pick<THREE.WebGLRenderer, 'setClea
     };
   };
   const apply = (look: ModelStageLook) => {
-    renderer.setClearColor(writeModelColor(backdrop, look.backdrop));
+    backdrop.set(look.backdrop);
     writeModelColor(ambient.color, look.ambient.sky);
     writeModelColor(ambient.groundColor, look.ambient.ground);
     ambient.intensity = look.ambient.strength;
@@ -77,6 +77,8 @@ export function createModelLighting(renderer: Pick<THREE.WebGLRenderer, 'setClea
   prepare(current)();
   return {
     lights: [ambient, key] as const,
+    /** The backdrop the look colours, drawn first in the scene (backdrop.ts). */
+    backdrop: backdrop.mesh,
     /** The id of the time in force. */
     get time() {return current.id;},
     /** What showing a described lighting needs loaded first: the glow's passes, when its time brings glow. */

@@ -5,7 +5,7 @@ import {ModelStageRefusal} from './refusal.ts';
 
 /** What one time of day gives the stage, every value stated; no renderer type, so any host can apply it. */
 export interface ModelStageLook {
-  /** The colour behind everything the stage draws. */
+  /** The colour behind everything the stage draws, passed through the look's tone curve as every colour it gives. */
   readonly backdrop: ModelColor;
   /** The key light: its colour, its strength, and the direction from the scene toward it, in stage space. */
   readonly key: {readonly color: ModelColor; readonly strength: number; readonly direction: ModelVector};

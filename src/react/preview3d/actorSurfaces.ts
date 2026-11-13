@@ -11,6 +11,7 @@ import {writeModelSurfaceColor} from './color.ts';
 import {createModelMaterialInspection} from './materials.ts';
 import {ModelStageRefusal} from './refusal.ts';
 import {modelRecordIdentity} from './recordModel.ts';
+import {padModelBoundsByReach} from './reachBounds.ts';
 import type {ModelStageCommit} from './commit.ts';
 
 export interface ModelActorSurfacesContext {
@@ -41,13 +42,13 @@ const NOTHING_BEFORE_RENDER = THREE.Object3D.prototype.onBeforeRender;
 export function createModelActorSurfaces(asset: GLTF, file: {readonly actor: string; readonly path: string},
   context: ModelActorSurfacesContext) {
   const {actor} = file;
-  // Each mesh's own material, as the file and the stage's changes made it at build, and whether three culls it.
-  const originals = new Map<THREE.Mesh, THREE.Material | THREE.Material[]>(), culled = new Map<THREE.Mesh, boolean>();
+  // Each mesh's own material, as the file and the stage's changes made it at build.
+  const originals = new Map<THREE.Mesh, THREE.Material | THREE.Material[]>();
   asset.scene.traverse(node => {
-    if (!(node instanceof THREE.Mesh)) return;
-    originals.set(node, node.material);
-    culled.set(node, node.frustumCulled);
+    if (node instanceof THREE.Mesh) originals.set(node, node.material);
   });
+  // The renderers a moving kind draws, each with what gives three its own culling bounds back.
+  const padded = new Map<THREE.Mesh, () => void>();
   // The renderers by id, read from the loader's associations the first time a set or a frame's values need them.
   let ids: ReadonlyMap<string, ModelRenderer> | undefined;
   const renderers = () => ids ??= modelFileRenderers(asset, actor, file.path);
@@ -55,9 +56,13 @@ export function createModelActorSurfaces(asset: GLTF, file: {readonly actor: str
   const draw = (node: THREE.Mesh, held: Drawn) => {
     const {material} = held.surface, uniform = material.uniforms[MODEL_SURFACE_GLSL.values];
     node.material = material;
-    // A kind that moves vertices draws beyond the mesh's own bounds, which three culls by: the renderer is drawn
-    // whatever the view (padding the bounds by the kind's reach is not built).
-    if (held.surface.kind.displacement !== null) node.frustumCulled = false;
+    // A kind that moves vertices draws up to its reach beyond the mesh's own bounds, which three culls by: the bounds
+    // grow by the reach this renderer shows (the record's, or the engine's for this tick).
+    const {kind, slots} = held.surface;
+    if (kind.displacement !== null) {
+      const at = slots.get(kind.displacement.reach)!.index * SLOT;
+      padded.set(node, padModelBoundsByReach(node, () => held.effective[at]));
+    }
     node.onBeforeRender = () => {
       if (uniform.value === held.effective && !held.changed) return;
       uniform.value = held.effective;
@@ -67,7 +72,9 @@ export function createModelActorSurfaces(asset: GLTF, file: {readonly actor: str
   };
   const restore = (node: THREE.Mesh) => {
     node.material = originals.get(node)!;
-    node.frustumCulled = culled.get(node)!;
+    // Only a renderer a moving kind drew has bounds to give back.
+    padded.get(node)?.();
+    padded.delete(node);
     node.onBeforeRender = NOTHING_BEFORE_RENDER;
   };
   const prepareRecord = (id: string, node: ModelRenderer, record: ModelSurfaceRecord): Drawn => {

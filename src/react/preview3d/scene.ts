@@ -5,7 +5,7 @@ import type {ModelStagePolicy, ModelStageTheme} from './model.ts';
 import {createModelFraming} from './camera.ts';
 import {disposeModelObject} from './asset.ts';
 import {createModelLighting} from './lighting.ts';
-import {modelStageBuiltInTimes} from './lightingModel.ts';
+import {modelStageBuiltInTimes} from './builtInTimes.ts';
 import {createModelFog} from './fog.ts';
 import {createModelDraw} from './draw.ts';
 import {loadModelGlowPasses} from './glow.ts';
@@ -54,11 +54,11 @@ export function createModelScene(host: HTMLElement, theme: ModelStageTheme, poli
   const fog = createModelFog(scene);
   const frame = createModelDraw(renderer, scene, camera, {loadPasses: loadModelGlowPasses, inspecting});
   const shared = createModelStageSharedValues();
-  const lighting = createModelLighting(renderer, builtIn, {fog, output: frame, shared});
+  const lighting = createModelLighting(builtIn, {fog, output: frame, shared});
   const aids = createModelStageAids(theme, policy, lighting);
   markModelStageAids(aids);
   markModelStageLights(lighting.lights);
-  scene.add(...lighting.lights, ...aids);
+  scene.add(lighting.backdrop, ...lighting.lights, ...aids);
   const framing = createModelFraming(camera, controls);
   const resize = () => {
     const {clientWidth: width, clientHeight: height} = host;

@@ -5,22 +5,24 @@ import * as THREE from 'three';
 import {createModelLighting} from '../src/react/preview3d/lighting.ts';
 import {createModelFog} from '../src/react/preview3d/fog.ts';
 import {createModelStageSharedValues, MODEL_STAGE_SHARED_UNIFORM} from '../src/react/preview3d/sharedValues.ts';
-import {MODEL_STAGE_THEME_LIGHTING, MODEL_STAGE_TIME, modelStageBuiltInTimes, modelStageLighting,
-  modelStageTimeOptions, type ModelStageTime} from '../src/react/preview3d/lightingModel.ts';
+import {MODEL_STAGE_THEME_LIGHTING, MODEL_STAGE_TIME, modelStageLighting, modelStageTimeOptions,
+  type ModelStageTime} from '../src/react/preview3d/lightingModel.ts';
+import {modelStageBuiltInTimes} from '../src/react/preview3d/builtInTimes.ts';
 import type {ModelStageTheme} from '../src/react/preview3d/model.ts';
+import {shownBytes} from './preview3dToneCurveOracle.ts';
 
-// What Light and Dark set at 62368ac, before the look became data, read from the Three objects themselves.
-const recorded = JSON.parse(readFileSync(new URL('./preview3dLighting.fixture.json', import.meta.url), 'utf8'));
-const theme: ModelStageTheme = recorded.theme;
+// What Light and Dark set at 62368ac, before the look became data, read from the Three objects themselves. Their
+// backdrop was then the canvas's clear colour, drawn under no curve: what the canvas showed is its bytes.
+const fixed = JSON.parse(readFileSync(new URL('./preview3dLighting.fixture.json', import.meta.url), 'utf8'));
+const recorded = Object.fromEntries(['light', 'dark'].map(id => [id, {...fixed[id],
+  backdrop: shownBytes(fixed[id].backdrop, null)}]));
+const theme: ModelStageTheme = fixed.theme;
 function fixture() {
-  // The renderer copies the clear colour it is given (WebGLBackground's clearColor.set): so does this record.
-  const clears: THREE.Color[] = [];
   const scene = new THREE.Scene();
-  const outputs: unknown[] = [];
+  const outputs: [string | null, unknown][] = [];
   const shared = createModelStageSharedValues();
-  const lighting = createModelLighting({setClearColor: color => {clears.push(new THREE.Color(color));}},
-    modelStageBuiltInTimes(theme.colors), {fog: createModelFog(scene), shared,
-      output: {load: () => [], prepare: (curve, glow) => () => {outputs.push([curve, glow]);}}});
+  const lighting = createModelLighting(modelStageBuiltInTimes(theme.colors), {fog: createModelFog(scene), shared,
+    output: {load: () => [], prepare: (curve, glow) => () => {outputs.push([curve, glow]);}}});
   // A described lighting as the stage applies it: checked with the description, then prepared and committed.
   const set = (value: unknown) => lighting.prepare(modelStageLighting(value))();
   const floor = new THREE.MeshStandardMaterial();
@@ -29,11 +31,9 @@ function fixture() {
   lighting.attach([new THREE.Mesh(new THREE.BoxGeometry(), aid)]);
   const [ambient, key] = lighting.lights;
   const rgb = (color: THREE.Color) => [color.r, color.g, color.b];
-  const backdrop = () => {
-    const color = clears.at(-1);
-    assert.ok(color, 'the backdrop was handed to the renderer');
-    return rgb(color);
-  };
+  // The backdrop is drawn under the curve in force, as everything the look colours: what the canvas shows of it.
+  const backdrop = () => shownBytes(rgb((lighting.backdrop.material as THREE.ShaderMaterial).uniforms
+    .modelStageBackdrop.value), outputs.at(-1)![0]);
   const read = () => ({backdrop: backdrop(), ambient: {sky: rgb(ambient.color),
     ground: rgb(ambient.groundColor), intensity: ambient.intensity}, key: {color: rgb(key.color),
     intensity: key.intensity, position: key.position.toArray()}, floor: rgb(floor.color), aid: rgb(aid.color)});
@@ -67,7 +67,8 @@ describe('stage lighting', () => {
     assert.deepEqual([shared.uniforms[MODEL_STAGE_SHARED_UNIFORM.numbers].value[1],
       shared.uniforms[MODEL_STAGE_SHARED_UNIFORM.shadow].value.toArray()], [Math.fround(look.night),
       linear(look.shadow)]);
-    assert.deepEqual(read(), {backdrop: linear(look.backdrop), ambient: {sky: linear(look.ambient.sky),
+    assert.deepEqual(read(), {backdrop: shownBytes(linear(look.backdrop), null),
+      ambient: {sky: linear(look.ambient.sky),
       ground: linear(look.ambient.ground), intensity: look.ambient.strength}, key: {color: linear(look.key.color),
       intensity: look.key.strength, position: [...look.key.direction]}, floor: linear(look.aids.floor),
       aid: [look.aids.share, look.aids.share, look.aids.share]});
