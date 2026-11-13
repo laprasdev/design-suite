@@ -9,9 +9,13 @@ import type {ModelStageDescription, ModelStageDescriptionPart} from './descripti
 import {modelStageCommit, type ModelStageCommit, type ModelStagePrepare} from './commit.ts';
 import {ModelStageRefusal} from './refusal.ts';
 import type {ModelShaderChange} from './shading.ts';
+import {MODEL_ACTOR_SURFACES, modelSurfaceRecordsFit} from './surfaceModel.ts';
+import type {ModelSurfaceKind} from './surfaceKindModel.ts';
+import {modelSurfaceSetCovers} from './renderers.ts';
 
 export const MODEL_STAGE_PART_TEXT = Object.freeze({
   inspection: (id: string) => `Actor ${id} does not support material inspection.`,
+  undrawn: (where: string, kind: string) => `${where}: the stage cannot draw kind ${kind} yet.`,
 });
 // What the stage-wide parts apply to: the scene, its lighting, the fog its scenery takes and its camera framing.
 export interface ModelStageSurface {
@@ -21,6 +25,8 @@ export interface ModelStageSurface {
     prepare(value: ModelStageLighting): ModelStageCommit;
   };
   readonly fog: {readonly change: ModelShaderChange};
+  /** The surface kinds the stage was given, by id. */
+  readonly kinds: ReadonlyMap<string, ModelSurfaceKind>;
   frame(framing: ModelStageFraming, orbit: boolean): void;
 }
 
@@ -54,6 +60,26 @@ export function createModelStageParts(surface: ModelStageSurface) {
       return () => {for (const actor of changing) actor.materials.setMode(next.materialMode);};
     }];
   };
+  // Every record fits its kind, and every actor drawn from a set has exactly its file's renderers in it. Until the
+  // stage builds kind materials (step 5d), a record of a supplied kind is refused by name.
+  const surfaces = (next: ModelStageDescription, changed: ReadonlySet<ModelStageDescriptionPart>,
+    actors: readonly ModelActor[]): ModelStagePrepare[] => {
+    if (!changed.has('surfaceSets') && !changed.has('actors')) return [];
+    return [() => {
+      modelSurfaceRecordsFit(next.surfaceSets, surface.kinds);
+      for (const [name, set] of Object.entries(next.surfaceSets)) for (const [id, entry] of Object.entries(set)) {
+        if ('values' in entry) {
+          throw new ModelStageRefusal(MODEL_STAGE_PART_TEXT.undrawn(`Surface set ${name}, renderer ${id}`, entry.kind));
+        }
+      }
+      next.actors.actors.forEach((declared, index) => {
+        if (declared.surfaces.kind !== MODEL_ACTOR_SURFACES.set) return;
+        modelSurfaceSetCovers(declared.id, declared.surfaces.set, next.surfaceSets[declared.surfaces.set],
+          actors[index].renderers());
+      });
+      return () => undefined;
+    }];
+  };
   const scenery = (value: ModelStageDescription['environment']) => modelStageCommit(() => {
     if (value !== null && environment?.update(value)) return;
     const created = value === null ? undefined : createModelEnvironment(value, surface.fog.change);
@@ -61,7 +87,8 @@ export function createModelStageParts(surface: ModelStageSurface) {
     environment = created;
     if (created) surface.scene.add(created.group);
   });
-  const stageWide: Record<Exclude<ModelStageDescriptionPart, 'actors' | 'display' | 'materialMode' | 'size' | 'origin'>,
+  const stageWide: Record<Exclude<ModelStageDescriptionPart,
+    'actors' | 'display' | 'materialMode' | 'size' | 'origin' | 'surfaceSets'>,
     (next: ModelStageDescription) => ModelStagePrepare> = {
     environment: next => scenery(next.environment),
     lighting: next => () => surface.lighting.prepare(next.lighting),
@@ -74,7 +101,8 @@ export function createModelStageParts(surface: ModelStageSurface) {
     prepares(next: ModelStageDescription, changed: ReadonlySet<ModelStageDescriptionPart>,
       actors: readonly ModelActor[]): ModelStagePrepare[] {
       const parts = (Object.keys(stageWide) as Array<keyof typeof stageWide>).filter(part => changed.has(part));
-      return [...display(next, actors), ...sizing(next, actors), ...materialMode(next, actors),
+      return [...surfaces(next, changed, actors), ...display(next, actors), ...sizing(next, actors),
+        ...materialMode(next, actors),
         ...parts.map(part => stageWide[part](next))];
     },
     // The person orbited the view: return it to the described framing, the held pose or a fresh fit.

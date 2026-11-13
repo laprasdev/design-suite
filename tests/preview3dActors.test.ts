@@ -4,7 +4,7 @@ import {applyModelFrame, modelRenderableVisible} from '../src/react/preview3d/ac
 import {MODEL_REST_POSE, MODEL_STAGE_DRIVER, MODEL_STAGE_ORIGIN, MODEL_STAGE_SIZE, modelStageActorSet}
   from '../src/react/preview3d/model.ts';
 import {actorContext, BIND, clipValue, declaration, entity, frame, held, layer, makeActor, playing, REST, sample,
-  STANDING, standingAt} from './preview3dActorFixture.ts';
+  STANDING, standingAt, FILE_SURFACES} from './preview3dActorFixture.ts';
 
 const CLIPS = [{name: 'run', duration: 2}, {name: 'walk', duration: 4}];
 const pair = () => {
@@ -131,9 +131,10 @@ describe('declared actor sets', () => {
   const set = (...actors: unknown[]) => ({focus: 'a', actors});
   it('validates the whole set: unique ids, a declared focus, whole placements and animations', () => {
     const placement = {...STANDING, scale: [1, 2, 3]};
-    const valid = modelStageActorSet(set({id: 'a', asset, placement, animation}));
+    const surfaces = FILE_SURFACES;
+    const valid = modelStageActorSet(set({id: 'a', asset, placement, animation, surfaces}));
     assert.deepEqual(valid.actors[0].placement, placement);
-    const a = {id: 'a', asset, placement: STANDING, animation};
+    const a = {id: 'a', asset, placement: STANDING, animation, surfaces};
     for (const shape of [REST, playing('run'), held('run', 0.5)]) {
       assert.deepEqual(modelStageActorSet(set({...a, animation: shape})).actors[0].animation, shape);
     }
@@ -154,8 +155,13 @@ describe('declared actor sets', () => {
       [set({...a, animation: {kind: 'held', name: 'run'}}), /Actor a.animation omits timeSeconds/],
       [set({...a, animation: held('run', -1)}), /Actor a.animation.timeSeconds must be a finite number of at least 0/],
       [set({...a, animation: held('run', Infinity)}), /Actor a.animation.timeSeconds must be a finite number/],
-      [set({id: 'a', asset: {id: 'x'}, placement: STANDING, animation}), /Actor a.asset omits path/],
-      [set({asset, placement: STANDING, animation}), /Actor 0 omits id/],
+      [set({...a, asset: {id: 'x'}}), /Actor a.asset omits path/],
+      [set({asset, placement: STANDING, animation, surfaces}), /Actor 0 omits id/],
+      [set({...a, surfaces: undefined}), /Actor a.surfaces states its kind, one of file, set/],
+      [set({...a, surfaces: {kind: 'set'}}), /Actor a.surfaces omits set/],
+      [set({...a, surfaces: {kind: 'own'}}), /Actor a.surfaces states its kind, one of file, set/],
+      [set({...a, surfaces: {kind: 'file', set: 'x'}}), /Actor a.surfaces does not state set; it states kind\./],
+      [set({...a, surfaces: {kind: 'set', set: ''}}), /Actor a.surfaces.set must be a non-empty string/],
       [set({...a, id: ''}), /Actor 0.id must be a non-empty string/],
       [{...set(a), extra: 1}, /The actors does not state extra/], [{}, /The actors omits focus/],
     ];

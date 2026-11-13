@@ -6,6 +6,7 @@ import type {ModelEnvironment} from './environment.ts';
 import type {ModelPreviewFrame, ModelStageActorSnapshot} from './actorModel.ts';
 import type {ModelStageDescription} from './descriptionModel.ts';
 import type {ModelRotation, ModelVector} from './placementModel.ts';
+import {modelSurfaceKinds, type ModelSurfaceKind} from './surfaceKindModel.ts';
 export {MODEL_RUNTIME_MATERIAL, modelRuntimeMaterialProfile} from './runtimeMaterialModel.ts';
 export type {ModelRuntimeMaterialProfile, ModelMaterialOutput, ModelRendererBinding} from './runtimeMaterialModel.ts';
 export type {ModelEnvironment, ModelEnvironmentBox} from './environment.ts';
@@ -17,6 +18,13 @@ export type {ModelStageLighting, ModelStageTime} from './lightingModel.ts';
 export {MODEL_STAGE_GLOW_WIDEST, MODEL_STAGE_TONE_CURVE} from './lookModel.ts';
 export type {ModelStageFog, ModelStageGlow, ModelStageLook, ModelStageToneCurve} from './lookModel.ts';
 export type {ModelColor} from './colorModel.ts';
+export {MODEL_SURFACE_PARAMETER, MODEL_COLOR_SPACE, MODEL_SURFACE_LIGHT, MODEL_SURFACE_COVERAGE, MODEL_SURFACE_SIDE,
+  MODEL_VECTOR_SIZE, MODEL_FILE_SURFACE, modelSurfaceKind} from './surfaceKindModel.ts';
+export type {ModelSurfaceKind, ModelSurfaceParameter} from './surfaceKindModel.ts';
+export {MODEL_ACTOR_SURFACES, MODEL_FILE_ENTRY, MODEL_TEXTURE_WRAP, MODEL_TEXTURE_CONSTANT, modelRendererId,
+  modelSurfaceRecordsFit, modelSurfaceSets} from './surfaceModel.ts';
+export type {ModelActorSurfaces, ModelSurfaceEntry, ModelSurfaceRecord, ModelSurfaceSet, ModelSurfaceTexture,
+  ModelSurfaceValue} from './surfaceModel.ts';
 export {modelPreviewEntity, MODEL_PREVIEW_CAPABILITIES} from './presentation.ts';
 export {modelPoseForBinding, MODEL_PREVIEW_QUATERNION_TOLERANCE} from './placementModel.ts';
 export type {ModelVector, ModelRotation, ModelPresentationPose, ModelPoseBinding} from './placementModel.ts';
@@ -109,13 +117,15 @@ export interface ModelStageTheme {
 }
 /**
  * What is fixed when a stage is created, all stated: its clock, which every actor's playback is built for; whether the
- * stage lays its own floor and grid; and the host property its review handle is published under.
+ * stage lays its own floor and grid; the surface kinds a description may use (none is a stated empty list); and the
+ * host property its review handle is published under.
  */
 export interface ModelStageOptions {
   readonly reviewKey: string;
   readonly clock: ModelStageClock;
   readonly floor: boolean;
   readonly grid: boolean;
+  readonly kinds: readonly ModelSurfaceKind[];
 }
 export interface ModelStageSnapshot {
   id: string;
@@ -172,6 +182,7 @@ export function modelStagePolicy(options: ModelStageOptions) {
   for (const aid of ['floor', 'grid'] as const) {
     if (typeof options[aid] !== 'boolean') throw new ModelStageRefusal(MODEL_STAGE_OPTIONS_REFUSAL.aid(aid));
   }
-  return Object.freeze({clock: options.clock, floor: options.floor, grid: options.grid});
+  return Object.freeze({clock: options.clock, floor: options.floor, grid: options.grid,
+    kinds: modelSurfaceKinds(options.kinds)});
 }
 export type ModelStagePolicy = ReturnType<typeof modelStagePolicy>;

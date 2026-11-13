@@ -14,6 +14,7 @@ import type {ModelPreviewEntity} from './presentation.ts';
 import {modelStageCommit, prepareWhole, type ModelStageCommit} from './commit.ts';
 import {ModelStageRefusal} from './refusal.ts';
 import {extendModelMaterials, type ModelShaderChange} from './shading.ts';
+import {modelFileRenderers} from './renderers.ts';
 
 // What every actor shares from its stage: the policy, the theme, the scene it joins, the lighting of its aids and the
 // fog its file's materials take.
@@ -82,6 +83,8 @@ export function createModelActor(asset: GLTF, declaration: ModelStageActor, cont
     context.scene.add(placement, rig.root, ...points.map(({marker}) => marker));
     return {
       id, asset, placement, points, rig, playback, materials, prepareHost,
+      /** The file's renderers by id, as a surface set must name them. */
+      renderers: () => modelFileRenderers(asset),
       get declaration() {return current;},
       get driver() {return driver;},
       setDisplay(value: ModelStageDisplay) {rig.setDisplay(value); showRenderables();},

@@ -120,7 +120,7 @@ describe('an actor\'s host animation', () => {
     });
 
   it('accepts only the declared clock owners, stated', () => {
-    const stated = {reviewKey: 'review', floor: true, grid: true};
+    const stated = {reviewKey: 'review', floor: true, grid: true, kinds: []};
     assert.equal(modelStagePolicy({...stated, clock: 'local'}).clock, 'local');
     assert.equal(modelStagePolicy({...stated, clock: 'external'}).clock, 'external');
     assert.throws(() => modelStagePolicy({...stated, clock: 'unknown' as ModelStageClock}), /local or external/);

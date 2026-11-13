@@ -141,7 +141,7 @@ The browser renderer for the existing `RenderTextureView` kind lives in `/previe
 import {MODEL_PREVIEW_REVIEW} from '@looms/bloom-design/preview3d/model';
 const {createModelStage} = await import('@looms/bloom-design/preview3d');
 const dispose = createModelStage(host, description, theme, onReady, onError,
-  {reviewKey: MODEL_PREVIEW_REVIEW, clock: 'local', floor: true, grid: true});
+  {reviewKey: MODEL_PREVIEW_REVIEW, clock: 'local', floor: true, grid: true, kinds: []});
 // dispose() removes the canvas and the review handle; calling it again does nothing.
 ```
 
@@ -161,7 +161,12 @@ exactly its fields: one it omits or one it does not have is refused by its path 
   `sha256` and `runtimeMaterials`; any other field is refused. `placement` is a whole pose: `position`,
   `rotationQuaternion` and `scale`. `animation` is `{kind: 'rest'}`, `{kind: 'playing', name}` (local clock only)
   or `{kind: 'held', name, timeSeconds}` within the clip; a field of another shape is refused, never dropped.
-  Actor ids are the host's; two actors may draw one asset.
+  Actor ids are the host's; two actors may draw one asset. `surfaces` is `{kind: 'file'}` (the file's own
+  materials throughout) or `{kind: 'set', set}`, naming one of `surfaceSets`.
+- `surfaceSets`: named sets, each keyed by every renderer of the file it is for (`gltf-node:<n>/primitive:<m>`,
+  each exactly once, checked against the loaded file), each entry `{kind: 'file'}` or a record `{kind, values}` of a
+  surface kind the stage was given (`kinds`, a creation option: each kind's declaration, `[]` for none). Until the
+  stage draws kinds, a record is refused by name.
 - `environment`: `{reflectZ, plane, boxes}` scenery, or `null`.
 - `framing`: `{kind: 'focus'}`, `{kind: 'all'}` (every actor) or `{kind: 'pose', position, target}`.
 - `orbit`: whether the person may orbit away from the framing.
@@ -222,14 +227,14 @@ Rig draws the joints a skinned vertex is weighted to, and the fit in Rig and Bot
 ### ModelPreview
 
 ```tsx
-<ModelPreview description={description} assets={assets} theme={theme} stageOptions={{floor: true, grid: true}}/>
+<ModelPreview description={description} assets={assets} theme={theme} stageOptions={{floor: true, grid: true, kinds: []}}/>
 ```
 
 `description` is the host's stage; its focused actor is the model the controls act on. `assets` are the catalog's
 `ModelPreviewAsset`s (`id`, `name`, `animations` as `{name, label}`) for the model picker, the name and the clip
 list, which starts with Rest Pose. `onSelectAsset` shows the model picker when there is more than one asset.
 `frame` is the engine's input: omit it for the local clock, pass `null` while waiting, then each
-`ModelPreviewFrame`. `stageOptions` (`floor`, `grid`), `reviewKey` (default `MODEL_PREVIEW_REVIEW`, on
+`ModelPreviewFrame`. `stageOptions` (`floor`, `grid`, `kinds`), `reviewKey` (default `MODEL_PREVIEW_REVIEW`, on
 `ModelPreviewElement.STAGE`), `className`, `chrome` and `stageOverlay` complete the props. The stage is created
 again when the focused asset, the clock, `stageOptions`, `reviewKey` or the theme's colours change. With a `frame`
 the view shows only the display choice and Reset Camera, and an engine-driven actor keeps Lit materials. A `null`

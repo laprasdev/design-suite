@@ -23,8 +23,8 @@ describe('shared model presentation', () => {
   it('fixes the stated clock, floor and grid at creation, and refuses an option left unstated', () => {
     assert.equal(MODEL_REST_POSE, 'rest-pose');
     assert.equal(MODEL_STAGE.normalizedHeight, 2);
-    const stated = {reviewKey: 'review', clock: 'local', floor: true, grid: false} as const;
-    assert.deepEqual(modelStagePolicy(stated), {clock: 'local', floor: true, grid: false});
+    const stated = {reviewKey: 'review', clock: 'local', floor: true, grid: false, kinds: []} as const;
+    assert.deepEqual(modelStagePolicy(stated), {clock: 'local', floor: true, grid: false, kinds: new Map()});
     for (const aid of ['floor', 'grid'] as const) {
       const {[aid]: _, ...unstated} = stated;
       assert.throws(() => modelStagePolicy(unstated as typeof stated), new RegExp(`stage's ${aid} is stated`));

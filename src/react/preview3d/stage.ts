@@ -39,7 +39,7 @@ export function createModelStage(
   const load = (declaration: ModelStageActor, signal: AbortSignal) =>
     loadModelStageAsset(declaration.asset.path, modelRuntimeAssetProfile(declaration), signal);
   const actors = createModelActorSet(load, (asset, declaration) => createModelActor(asset, declaration, context));
-  const parts = createModelStageParts(stage);
+  const parts = createModelStageParts({...stage, kinds: policy.kinds});
   let applied: ModelStageDescription | undefined;
   let disposed = false, frame = 0;
   // The stage's one presentation time. Under the external clock only setFrame moves it; under the local clock the

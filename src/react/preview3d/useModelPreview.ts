@@ -11,7 +11,7 @@ import {createModelDescriptionRequests, createModelPreviewChoices, modelPreviewD
 import {MODEL_STAGE_FAILURE, modelStageFailure, type ModelStageFailure} from './refusal.ts';
 
 /** What the view fixes when it creates its stage: the clock follows whether an engine frame is given. */
-export type ModelPreviewStageOptions = Pick<ModelStageOptions, 'floor' | 'grid'>;
+export type ModelPreviewStageOptions = Pick<ModelStageOptions, 'floor' | 'grid' | 'kinds'>;
 
 // The view model: the host's description, the person's choices held as edits of it, one failure reader.
 export function useModelPreview(host: ModelStageDescription, theme: ModelStageTheme, reviewKey: string,
@@ -132,7 +132,9 @@ export function useModelPreview(host: ModelStageDescription, theme: ModelStageTh
       dispose();
       if (release.current === dispose) release.current = () => {};
     };
-  }, [reviewKey, attempt, external, options.floor, options.grid, theme.colors.stage, theme.colors.text,
+  // The kinds by value: a host that writes its options inline each render does not make a stage each render.
+  }, [reviewKey, attempt, external, options.floor, options.grid, JSON.stringify(options.kinds), theme.colors.stage,
+    theme.colors.text,
     theme.colors.surface, theme.colors.surfaceHi, theme.colors.accent, theme.colors.accentDeep, theme.colors.teal]);
   const retry = () => setAttempt(value => value + 1);
   const shown = modelPreviewFailure(failure, frameFailure);

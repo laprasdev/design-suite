@@ -11,7 +11,12 @@ export const MODEL_RECORD_REFUSAL = Object.freeze({
   shape: (where: string, field: string, shapes: readonly string[]) =>
     `${where} states its ${field}, one of ${shapes.join(', ')}.`,
   named: (where: string) => `${where} must be a non-empty string.`,
+  oneOf: (where: string, names: readonly string[]) => `${where} states exactly one of ${names.join(', ')}.`,
+  digest: (where: string) => `${where} must be a SHA-256: 64 lowercase hex digits.`,
+  option: (where: string, options: readonly unknown[]) => `${where} is one of ${options.join(', ')}.`,
+  flag: (where: string) => `${where} is stated as true or false.`,
 });
+const DIGEST = /^[a-f0-9]{64}$/;
 
 /** Whether a value is a record at all: an object that is not an array. */
 export const modelIsRecord = (value: unknown): value is Record<string, unknown> =>
@@ -38,6 +43,41 @@ export function modelShape<Shape extends string>(value: unknown, field: string,
   const shape = modelIsRecord(value) ? names.find(name => name === value[field]) : undefined;
   if (shape === undefined) throw new ModelStageRefusal(MODEL_RECORD_REFUSAL.shape(where, field, names));
   return {shape, record: modelRecord(value, shapes[shape], where)};
+}
+
+/** A record whose names are the data's own (a kind's parameters, a description's sets): its entries. */
+export function modelEntries(value: unknown, where: string): [string, unknown][] {
+  if (!modelIsRecord(value)) throw new ModelStageRefusal(MODEL_RECORD_REFUSAL.record(where, ['its entries']));
+  return Object.entries(value);
+}
+
+/** A record of exactly one field, one of these names: which it states, and what that field holds. */
+export function modelOneOf<Name extends string>(value: unknown, names: readonly Name[], where: string) {
+  const stated = modelIsRecord(value) ? names.filter(name => name in value) : [];
+  if (stated.length !== 1) throw new ModelStageRefusal(MODEL_RECORD_REFUSAL.oneOf(where, names));
+  const [name] = stated;
+  return {name, content: modelRecord(value, [name], where)[name]};
+}
+
+/** Whether a value is a SHA-256 as the description states every file's: 64 lowercase hex digits. */
+export const modelIsDigest = (value: unknown): value is string => typeof value === 'string' && DIGEST.test(value);
+/** A SHA-256, refused by its name otherwise. */
+export function modelDigest(value: unknown, where: string): string {
+  if (!modelIsDigest(value)) throw new ModelStageRefusal(MODEL_RECORD_REFUSAL.digest(where));
+  return value;
+}
+
+/** One of a closed set of values, refused by its name otherwise, listing the set. */
+export function modelOption<Option>(value: unknown, options: Readonly<Record<string, Option>>, where: string): Option {
+  const all = Object.values(options), found = all.find(option => option === value);
+  if (found === undefined) throw new ModelStageRefusal(MODEL_RECORD_REFUSAL.option(where, all));
+  return found;
+}
+
+/** True or false, refused by its name otherwise. */
+export function modelFlag(value: unknown, where: string): boolean {
+  if (typeof value !== 'boolean') throw new ModelStageRefusal(MODEL_RECORD_REFUSAL.flag(where));
+  return value;
 }
 
 /** A non-empty string, refused by its name otherwise. */

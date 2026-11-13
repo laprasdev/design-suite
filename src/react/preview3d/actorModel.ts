@@ -6,6 +6,7 @@ import {modelRuntimeMaterialProfile} from './runtimeMaterialModel.ts';
 import {modelIsNamed as named, modelIsRecord as object, modelName, modelNumber, modelRecord, modelShape}
   from './recordModel.ts';
 import {ModelStageRefusal} from './refusal.ts';
+import {modelActorSurfaces, type ModelActorSurfaces} from './surfaceModel.ts';
 
 // Actor ids are the host's. A frame's entities are keyed by actor id and the host owns the mapping from an engine's
 // entity ids to them. Two actors may share one asset, so an actor's id is never taken from its asset.
@@ -27,6 +28,8 @@ export interface ModelStageActor {
   /** Where the host stands the actor, whole: position, rotation and scale are all stated. */
   readonly placement: ModelPresentationPose;
   readonly animation: ModelStageActorAnimation;
+  /** What draws the file's renderers: its own materials throughout, or a named set of the description's. */
+  readonly surfaces: ModelActorSurfaces;
 }
 /** Every actor on the stage, and the one the camera fits and the snapshot's top level reports. */
 export interface ModelStageActorSet {
@@ -49,7 +52,7 @@ export interface ModelStageActorSnapshot {
   readonly samples: readonly ModelAnimationSample[];
 }
 const ACTOR_SET_FIELDS = Object.freeze(['focus', 'actors']);
-const ACTOR_FIELDS = Object.freeze(['id', 'asset', 'placement', 'animation']);
+const ACTOR_FIELDS = Object.freeze(['id', 'asset', 'placement', 'animation', 'surfaces']);
 // What an asset states: its id and path always; its revision, digest and runtime profile only when it has them
 // (Workbench's catalogue knows no revision; the seam's later step makes the file's identity whole). A field outside
 // these is refused, never carried.
@@ -87,7 +90,8 @@ function actor(value: unknown, index: number): ModelStageActor {
   const id = modelName(record.id, `Actor ${index}.id`);
   return Object.freeze({id, asset: asset(record.asset, `Actor ${id}.asset`),
     placement: modelPresentationPose(record.placement, `Actor ${id} placement`),
-    animation: animation(record.animation, `Actor ${id}.animation`)});
+    animation: animation(record.animation, `Actor ${id}.animation`),
+    surfaces: modelActorSurfaces(record.surfaces, `Actor ${id}.surfaces`)});
 }
 
 /** The focused actor of a set; refused when the focus names none of them. */

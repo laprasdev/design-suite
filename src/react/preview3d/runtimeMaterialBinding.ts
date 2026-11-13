@@ -3,6 +3,7 @@ import {GLTFLoader, type GLTF} from 'three/addons/loaders/GLTFLoader.js';
 import {createModelRuntimeMaterials} from './runtimeMaterials.ts';
 import {modelRuntimeMaterialProfile} from './runtimeMaterialModel.ts';
 import type {ModelRuntimeMaterialProfile} from './runtimeMaterialModel.ts';
+import {modelNodeIndex} from './renderers.ts';
 
 export async function loadModelRuntimeAsset(path: string, profile: ModelRuntimeMaterialProfile,
   signal: AbortSignal): Promise<GLTF> {
@@ -23,19 +24,10 @@ export function bindModelRuntimeMaterials(asset: GLTF, profile: ModelRuntimeMate
   const accepted = modelRuntimeMaterialProfile(profile);
   const meshes: THREE.Mesh[] = [];
   asset.scene.traverse(node => {if (node instanceof THREE.Mesh) meshes.push(node);});
-  const nodeIndex = (mesh: THREE.Mesh) => {
-    let node: THREE.Object3D | null = mesh;
-    while (node && node !== asset.scene) {
-      const index = asset.parser.associations.get(node)?.nodes;
-      if (index !== undefined) return index;
-      node = node.parent;
-    }
-    return undefined;
-  };
   const bindings = accepted.renderers.map(binding => {
     const matches = meshes.filter(mesh => {
       const association = asset.parser.associations.get(mesh);
-      return nodeIndex(mesh) === binding.nodeIndex && association?.meshes === binding.meshIndex &&
+      return modelNodeIndex(asset, mesh) === binding.nodeIndex && association?.meshes === binding.meshIndex &&
         association !== undefined && 'primitives' in association && association.primitives === binding.primitiveIndex;
     });
     if (matches.length !== 1) throw new Error(`Runtime renderer does not resolve uniquely: ${binding.rendererId}`);

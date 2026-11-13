@@ -1,5 +1,5 @@
 import {ModelStageRefusal} from './refusal.ts';
-import {modelIsRecord as object} from './recordModel.ts';
+import {modelIsDigest, modelIsRecord as object} from './recordModel.ts';
 export const MODEL_RUNTIME_MATERIAL = Object.freeze({
   color: '_Color', emissionColor: '_EmissionColor', emissionStrength: '_EmissionStrength',
   profile: 'base-color-tinted-emission', colorSpace: 'srgb', emissionMask: 'white', noiseBlend: 0, nightBoost: 1,
@@ -39,7 +39,7 @@ export function modelRuntimeMaterialProfile(value: unknown): ModelRuntimeMateria
   }
   if (!object(value.asset) || typeof value.asset.id !== 'string' || !value.asset.id ||
     typeof value.asset.revision !== 'string' || !value.asset.revision ||
-    typeof value.asset.sha256 !== 'string' || !/^[a-f0-9]{64}$/.test(value.asset.sha256)) {
+    !modelIsDigest(value.asset.sha256)) {
     throw new ModelStageRefusal('Runtime materials require an exact asset identity, revision and SHA-256.');
   }
   const asset = Object.freeze({id: value.asset.id, revision: value.asset.revision, sha256: value.asset.sha256});

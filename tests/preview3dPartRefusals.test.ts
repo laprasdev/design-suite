@@ -68,7 +68,7 @@ test('lightingModel.ts: an unknown time is a refusal and leaves the light', () =
 test('stage.ts: a theme the stage refuses is refused before any renderer, canvas or control exists', () => {
   // In node there is no WebGL: anything that reached the renderer would fail with another error than this refusal.
   const host = {append: () => assert.fail('nothing is added to the host')} as unknown as HTMLElement;
-  const options = {reviewKey: 'review', clock: 'local', floor: true, grid: true} as const;
+  const options = {reviewKey: 'review', clock: 'local', floor: true, grid: true, kinds: []} as const;
   const short = {colors: {...theme.colors, surface: '#fff'}};
   refused(() => createModelStage(host, modelStageDescription(describing()), short, () => undefined, () => undefined,
     options), /The stage theme's surface must be a #rrggbb colour; it is #fff/);

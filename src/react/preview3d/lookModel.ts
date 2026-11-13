@@ -1,6 +1,6 @@
 import {modelColor, type ModelColor} from './colorModel.ts';
 import {modelPresentationVector, type ModelVector} from './placementModel.ts';
-import {modelNumber, modelRecord} from './recordModel.ts';
+import {modelNumber, modelOption, modelRecord} from './recordModel.ts';
 import {ModelStageRefusal} from './refusal.ts';
 
 /** What one time of day gives the stage, every value stated; no renderer type, so any host can apply it. */
@@ -53,8 +53,6 @@ export const MODEL_STAGE_FOG_REFUSAL = Object.freeze({
   top: (where: string) => `${where}.top must be above its base.`,
 });
 export const MODEL_STAGE_LOOK_REFUSAL = Object.freeze({
-  curve: (where: string) =>
-    `${where}.toneCurve is one of ${Object.values(MODEL_STAGE_TONE_CURVE).join(', ')}, or null.`,
   curvedGlow: (where: string) => `${where}: a time with a tone curve and glow: not built.`,
 });
 const fields = MODEL_STAGE_LOOK_FIELDS, UNBOUNDED = Number.POSITIVE_INFINITY;
@@ -99,12 +97,8 @@ function glow(value: unknown, where: string): ModelStageGlow | null {
     radius: modelNumber(record.radius, `${where}.radius`, 0, MODEL_STAGE_GLOW_WIDEST)});
 }
 
-function toneCurve(value: unknown, where: string): ModelStageToneCurve | null {
-  if (value === null) return null;
-  const curve = Object.values(MODEL_STAGE_TONE_CURVE).find(candidate => candidate === value);
-  if (!curve) throw new ModelStageRefusal(MODEL_STAGE_LOOK_REFUSAL.curve(where));
-  return curve;
-}
+const toneCurve = (value: unknown, where: string): ModelStageToneCurve | null =>
+  value === null ? null : modelOption(value, MODEL_STAGE_TONE_CURVE, `${where}.toneCurve`);
 
 /** One look, checked whole; `where` names it in every refusal, as `Time dusk: look`. */
 export function modelStageLook(value: unknown, where: string): ModelStageLook {

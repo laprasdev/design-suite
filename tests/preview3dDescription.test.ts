@@ -85,7 +85,7 @@ describe('the stage description', () => {
 
   it('names only the parts that change, and none for an equal description', () => {
     const applied = modelStageDescription(describing());
-    assert.deepEqual([...modelStageDescriptionChanges(undefined, applied)].length, 9);
+    assert.deepEqual([...modelStageDescriptionChanges(undefined, applied)].length, 10);
     assert.deepEqual([...modelStageDescriptionChanges(applied, modelStageDescription(describing()))], []);
     const relit = modelStageDescription(describing({lighting: {time: 'dark', times: []}}));
     assert.deepEqual([...modelStageDescriptionChanges(applied, relit)], ['lighting']);
@@ -124,7 +124,7 @@ describe('the stage description', () => {
 describe('the stage-wide parts', () => {
   const surface = () => {
     const calls: string[] = [];
-    const parts = createModelStageParts({scene: new THREE.Scene(), fog: {change: FOG},
+    const parts = createModelStageParts({scene: new THREE.Scene(), fog: {change: FOG}, kinds: new Map(),
       lighting: {load: () => [], prepare: value => () => {calls.push(value.time);}},
       frame: (framing: ModelStageFraming, orbit: boolean) => calls.push(`${framing.kind} ${orbit}`)});
     return {calls, parts};
@@ -141,8 +141,9 @@ describe('the stage-wide parts', () => {
 
   it('refuses a lighting while preparing, so a refused time leaves every other part unapplied', () => {
     const calls: string[] = [];
-    const parts = createModelStageParts({scene: new THREE.Scene(), fog: {change: FOG}, lighting: {load: () => [],
-      prepare: () => {throw new ModelStageRefusal('Time t: look.glow: glow needs half-float render targets.');}},
+    const parts = createModelStageParts({scene: new THREE.Scene(), fog: {change: FOG}, kinds: new Map(),
+      lighting: {load: () => [],
+        prepare: () => {throw new ModelStageRefusal('Time t: look.glow: glow needs half-float render targets.');}},
     frame: (framing: ModelStageFraming) => calls.push(framing.kind)});
     const applied = modelStageDescription(describing());
     const next = modelStageDescription(describing({lighting: {time: 'dark', times: []}, framing: {kind: 'all'}}));

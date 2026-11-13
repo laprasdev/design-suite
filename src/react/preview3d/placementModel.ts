@@ -22,7 +22,8 @@ export interface ModelPoseBinding {
   readonly rotationQuaternion: ModelRotation;
 }
 const MODEL_POSE_BINDING_OWNER = 'The pose to bind';
-function numbers(value: unknown, count: number, name: string): number[] {
+/** Exactly `count` finite numbers, refused by their name otherwise. */
+export function modelNumbers(value: unknown, count: number, name: string): number[] {
   const copy = Array.isArray(value) ? Array.from(value) : [];
   if (copy.length !== count || !copy.every(Number.isFinite)) {
     throw new ModelStageRefusal(`${name} must contain ${count} finite numbers.`);
@@ -30,11 +31,11 @@ function numbers(value: unknown, count: number, name: string): number[] {
   return copy;
 }
 export function modelPresentationVector(value: unknown, name: string): ModelVector {
-  const copy = numbers(value, 3, name);
+  const copy = modelNumbers(value, 3, name);
   return Object.freeze([copy[0], copy[1], copy[2]]);
 }
 export function modelPresentationRotation(value: unknown): ModelRotation {
-  const copy = numbers(value, 4, 'rotationQuaternion');
+  const copy = modelNumbers(value, 4, 'rotationQuaternion');
   if (Math.abs(Math.hypot(...copy) - 1) > MODEL_PREVIEW_QUATERNION_TOLERANCE) {
     throw new ModelStageRefusal('rotationQuaternion must have unit length.');
   }

@@ -94,7 +94,7 @@ describe('stage lighting', () => {
     assert.throws(() => modelStageLighting(at('dusk', [{...dusk, look}])),
       /Time dusk: look: a time with a tone curve and glow: not built/);
     assert.throws(() => modelStageLighting(at('dusk', [{...dusk, look: {...dusk.look, toneCurve: 'reinhard'}}])),
-      /Time dusk: look.toneCurve is one of aces-filmic, or null/);
+      /Time dusk: look.toneCurve is one of aces-filmic\./);
   });
 
   it('states where each built-in time sits between day and night, and its shadow colour', () => {
