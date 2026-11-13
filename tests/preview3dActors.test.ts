@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {describe, it} from 'node:test';
 import {applyModelFrame, modelRenderableVisible} from '../src/react/preview3d/actor.ts';
-import {MODEL_REST_POSE, MODEL_STAGE_DRIVER, modelStageActorSet, modelStagePolicy}
+import {MODEL_REST_POSE, MODEL_STAGE_DRIVER, MODEL_STAGE_ORIGIN, MODEL_STAGE_SIZE, modelStageActorSet}
   from '../src/react/preview3d/model.ts';
 import {actorContext, BIND, clipValue, declaration, entity, frame, held, layer, makeActor, playing, REST, sample,
   STANDING, standingAt} from './preview3dActorFixture.ts';
@@ -47,8 +47,10 @@ describe('declared actors under one frame', () => {
       }
     }
     const {a} = pair(), {context} = actorContext();
-    // Built at its file's size, an actor stands on the floor when the policy asks, before any description sizes it.
-    const centred = makeActor('c', CLIPS, {}, {...context, policy: modelStagePolicy({clock: 'external'})});
+    // Built at its file's own size and origin; a description's origin centres it over its placement.
+    const centred = makeActor('c', CLIPS, {}, context);
+    assert.equal(centred.actor.asset.scene.position.y, 0);
+    centred.actor.setSizing({size: {rule: MODEL_STAGE_SIZE.real}, origin: MODEL_STAGE_ORIGIN.centred});
     assert.equal(centred.actor.asset.scene.position.y, 0.5);
     a.actor.setDisplay('rig');
     assert.equal(a.body.visible, false);

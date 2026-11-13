@@ -1,41 +1,20 @@
 import type {ActionBarNotice} from '../ActionBar.tsx';
-import {MODEL_PREVIEW_TEXT, MODEL_REST_POSE, MODEL_STAGE} from './model.ts';
-import type {ModelPreviewAsset, ModelStageCamera, ModelStageController, ModelStageDisplay} from './model.ts';
-import {MODEL_ACTOR_ANIMATION, type ModelStageActor, type ModelStageActorAnimation} from './actorModel.ts';
-import type {ModelPresentationPose} from './placementModel.ts';
+import {MODEL_PREVIEW_TEXT, MODEL_REST_POSE} from './model.ts';
+import type {ModelStageController, ModelStageDisplay} from './model.ts';
+import {MODEL_ACTOR_ANIMATION, modelStageFocus, type ModelStageActorAnimation} from './actorModel.ts';
 import type {ModelStageDescription} from './descriptionModel.ts';
-import {MODEL_STAGE_SIZE, type ModelStageSize} from './sizeModel.ts';
-import type {ModelEnvironment} from './environment.ts';
-import {MODEL_STAGE_THEME_LIGHTING, type ModelStageLighting} from './lightingModel.ts';
+import type {ModelStageLighting} from './lightingModel.ts';
 import type {ModelStageMaterialMode} from './materialModel.ts';
 import type {ModelFrameStatus} from './frameInbox.ts';
 import {MODEL_STAGE_FAILURE, ModelStageRefusal, type ModelStageFailure} from './refusal.ts';
 
-/** The person's choices in the view. */
+/** The person's choices in the view: edits of the host's description, which the view holds. */
 export interface ModelPreviewSelection {
   readonly animation: ModelStageActorAnimation;
   readonly display: ModelStageDisplay;
   readonly materialMode: ModelStageMaterialMode;
   readonly lighting: ModelStageLighting;
 }
-/** What the consumer supplies around the selected model; an omitted camera fits it and an omitted scenery is none. */
-export interface ModelPreviewInputs {
-  readonly asset: ModelPreviewAsset;
-  readonly actors: readonly ModelStageActor[];
-  readonly camera?: ModelStageCamera | null;
-  readonly environment?: ModelEnvironment | null;
-  /** The engine drives the stage: the host's clip, playback and inspection choices do not apply. */
-  readonly external: boolean;
-}
-
-const AUTHORED_SURFACE: ModelStageMaterialMode = 'lit';
-// The local view shows each model at the catalog's one height; the engine's stage keeps the file's real sizes.
-const CATALOG_SIZE: ModelStageSize = Object.freeze({rule: MODEL_STAGE_SIZE.normalized,
-  height: MODEL_STAGE.normalizedHeight});
-const REAL_SIZE: ModelStageSize = Object.freeze({rule: MODEL_STAGE_SIZE.real});
-// The selected model stands at the stage's origin, upright and at its own scale: stated whole, like every placement.
-const FOCUSED_PLACEMENT: ModelPresentationPose = Object.freeze({position: [0, 0, 0], rotationQuaternion: [0, 0, 0, 1],
-  scale: [1, 1, 1]} as const);
 
 const REST: ModelStageActorAnimation = Object.freeze({kind: MODEL_ACTOR_ANIMATION.rest});
 export const MODEL_PREVIEW_SELECTION_REFUSAL = Object.freeze({
@@ -43,13 +22,19 @@ export const MODEL_PREVIEW_SELECTION_REFUSAL = Object.freeze({
   untimed: 'Engine samples drive the pose: there is no clip time to hold.',
 });
 
-// The idle clip plays from the start; under reduced motion the stage's one time holds it, so the view holds nothing.
-export const modelPreviewInitialSelection = (asset: ModelPreviewAsset, external: boolean): ModelPreviewSelection =>
-  Object.freeze({
-    animation: external || asset.idleAnimation === MODEL_REST_POSE ? REST :
-      {kind: MODEL_ACTOR_ANIMATION.playing, name: asset.idleAnimation},
-    display: 'model', materialMode: AUTHORED_SURFACE, lighting: MODEL_STAGE_THEME_LIGHTING,
-  });
+/** The host's own values of what the person may change: the view starts from them, and a change of them resets it. */
+export const modelPreviewSelectionOf = (host: ModelStageDescription): ModelPreviewSelection => Object.freeze({
+  animation: modelStageFocus(host.actors).animation,
+  display: host.display, materialMode: host.materialMode, lighting: host.lighting,
+});
+
+/** The person's choices as the view holds them, beside the host's values they were made over. */
+export interface ModelPreviewChoices {readonly over: ModelPreviewSelection; readonly selection: ModelPreviewSelection}
+/** The choices that stand: the person's, until the host changes one of the values they edit; then the host's. */
+export function modelPreviewChoices(held: ModelPreviewChoices, host: ModelStageDescription): ModelPreviewChoices {
+  const over = modelPreviewSelectionOf(host);
+  return JSON.stringify(over) === JSON.stringify(held.over) ? held : Object.freeze({over, selection: over});
+}
 
 /** A change to the selection. */
 export const modelPreviewSelection = (previous: ModelPreviewSelection,
@@ -75,36 +60,49 @@ export function modelPreviewToggle(value: ModelStageActorAnimation, shownSeconds
   return {kind: MODEL_ACTOR_ANIMATION.held, name: value.name, timeSeconds: shownSeconds};
 }
 
-/** The one description the view sends: the selected model is the focused actor, beside the consumer's actors. */
-export function modelPreviewDescription(inputs: ModelPreviewInputs,
+/** The one description the view sends: the host's, with the person's choices applied to it and its focused actor. */
+export function modelPreviewDescription(host: ModelStageDescription,
   selection: ModelPreviewSelection): ModelStageDescription {
-  const {asset, external} = inputs;
-  const animation = external ? REST : selection.animation;
-  return {
-    actors: {focus: asset.id,
-      actors: [{id: asset.id, asset, placement: FOCUSED_PLACEMENT, animation}, ...inputs.actors]},
-    environment: inputs.environment ?? null, camera: inputs.camera ?? null,
-    lighting: external ? MODEL_STAGE_THEME_LIGHTING : selection.lighting, display: selection.display,
-    materialMode: external ? AUTHORED_SURFACE : selection.materialMode, size: external ? REAL_SIZE : CATALOG_SIZE,
-  };
+  const {animation, display, materialMode, lighting} = selection;
+  return {...host, display, materialMode, lighting, actors: {focus: host.actors.focus,
+    actors: host.actors.actors.map(actor => actor.id === host.actors.focus ? {...actor, animation} : actor)}};
 }
 
-// The view's side of setDescription. Only the latest call reports; its failure goes to the view's one reader.
+const descriptionKey = (value: ModelStageDescription) => JSON.stringify(value);
+/** Whether the stage already shows a declared description: it holds that one, and no load is about to replace it. */
+export const modelPreviewHeld = (declared: ModelStageDescription, held: ModelStageDescription | undefined,
+  loading: boolean) => !loading && held !== undefined && descriptionKey(declared) === descriptionKey(held);
+
+// The view's side of setDescription. It knows the description the stage holds: the first, once the stage is ready,
+// then each one applied, at once or when its loads arrive. Only the latest call reports; its failure goes to the
+// view's one reader, and every taken or already-held description clears a recorded refusal through `settled`.
 export function createModelDescriptionRequests(pending: (value: boolean) => void,
-  failure: (error: unknown) => void) {
-  let latest = 0;
+  failure: (error: unknown) => void, settled: () => void) {
+  let latest = 0, loading = false, held: ModelStageDescription | undefined;
+  const load = (value: boolean) => {loading = value; pending(value);};
+  /** Whether the stage took the description: applied at once, or loading. A refusal is handed on. */
+  const request = (api: Pick<ModelStageController, 'setDescription' | 'snapshot'>, value: ModelStageDescription) => {
+    let applied: Promise<void>;
+    try {applied = api.setDescription(value);}
+    catch (error) {failure(error); return false;}
+    // A refused call supersedes nothing; a taken one is the latest.
+    const call = ++latest, current = () => call === latest;
+    settled();
+    // A description that loads nothing has already been applied: readiness does not drop for it.
+    if (!api.snapshot().actorsPending) {held = value; load(false); return true;}
+    load(true);
+    applied.then(() => {if (current()) {held = value; load(false);}},
+      (error: unknown) => {if (!current()) return; load(false); failure(error);});
+    return true;
+  };
   return {
-    /** Whether the stage took the description: applied at once, or loading. A refusal is handed on. */
-    request(api: Pick<ModelStageController, 'setDescription' | 'snapshot'>, value: ModelStageDescription) {
-      let settled: Promise<void>;
-      try {settled = api.setDescription(value);}
-      catch (error) {failure(error); return false;}
-      // A refused call supersedes nothing; a taken one is the latest.
-      const call = ++latest, current = () => call === latest;
-      // A description that loads nothing has already been applied: readiness does not drop for it.
-      pending(api.snapshot().actorsPending);
-      settled.then(() => {if (current()) pending(false);},
-        (error: unknown) => {if (!current()) return; pending(false); failure(error);});
+    request,
+    /** The stage was created from this description and is now ready: it holds it. */
+    hold(value: ModelStageDescription) {held = value;},
+    /** A newly declared description: one the stage already shows only clears a recorded refusal; any other is sent. */
+    declare(api: Pick<ModelStageController, 'setDescription' | 'snapshot'>, value: ModelStageDescription) {
+      if (!modelPreviewHeld(value, held, loading)) return request(api, value);
+      settled();
       return true;
     },
   };

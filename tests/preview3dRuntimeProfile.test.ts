@@ -113,7 +113,7 @@ test('a display change after a frame leaves the engine\'s hidden renderer hidden
     const asset = {scene, animations: [], parser: {associations}} as unknown as GLTF;
     const model = createModelActor(asset, actor(), actorContext().context);
     const parts = createModelStageParts({scene: new THREE.Scene(), lighting: {set: () => undefined},
-      setCamera: () => undefined, resetCamera: () => undefined});
+      frame: () => undefined});
     const show = (display: string) => prepareWhole(parts.prepares(modelStageDescription(describing({display})),
       new Set(['display']), [model]))();
     const outputs = (visible: boolean) => ({simulationTimeSeconds: 0, entities: [{...frame(), materials: [

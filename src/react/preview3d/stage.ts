@@ -1,14 +1,15 @@
 import * as THREE from 'three';
 import {reducedMotion} from '../motion.ts';
 import {modelLocalAdvance, modelStagePolicy} from './model.ts';
-import type {ModelStageController, ModelStageOptions, ModelStageTheme} from './model.ts';
+import type {ModelStageController, ModelStageHold, ModelStageOptions, ModelStageTheme} from './model.ts';
 import {loadModelStageAsset} from './asset.ts';
 import {createModelScene} from './scene.ts';
 import {applyModelFrame, createModelActor} from './actor.ts';
 import {createModelActorSet} from './actorSet.ts';
 import {modelRuntimeAssetProfile} from './actorModel.ts';
 import type {ModelStageActor} from './actorModel.ts';
-import {modelStageDescription, modelStageDescriptionChanges, modelStageRefit} from './descriptionModel.ts';
+import {modelStageDescription, modelStageDescriptionChanges, modelStageFramed, modelStageRefit}
+  from './descriptionModel.ts';
 import type {ModelStageDescription} from './descriptionModel.ts';
 import {createModelStageParts} from './stageParts.ts';
 import {prepareWhole} from './commit.ts';
@@ -25,7 +26,7 @@ export const MODEL_STAGE_TEXT = Object.freeze({
 export function createModelStage(
   host: HTMLElement, description: ModelStageDescription, theme: ModelStageTheme,
   onReady: (controller: ModelStageController) => void, onError: (error: Error) => void,
-  options: ModelStageOptions = {},
+  options: ModelStageOptions,
 ): () => void {
   const policy = modelStagePolicy(options);
   const stage = createModelScene(host, theme, policy);
@@ -41,6 +42,9 @@ export function createModelStage(
   // The stage's one presentation time. Under the external clock only setFrame moves it; under the local clock the
   // elapsed time does, unless reduced motion or a hidden page holds it. Every clip on the local clock moves with it.
   let appliedFrameSeconds = 0, presentationSeconds = 0;
+  // The local clock over this much elapsed time, and why it holds, read from the page as it is now.
+  const local = (elapsedMilliseconds: number) =>
+    modelLocalAdvance(elapsedMilliseconds, {reducedMotion: reducedMotion(), hidden: document.hidden});
   const live = () => {if (disposed) throw new Error(MODEL_STAGE_TEXT.disposed);};
   const current = () => {
     const focused = actors.focused;
@@ -66,18 +70,19 @@ export function createModelStage(
     resetCamera: () => parts.resetCamera(current().applied),
     snapshot() {
       const {focused: model} = current();
-      const positions = model.markers.map(({key, bone}) => [key, bone.getWorldPosition(new THREE.Vector3()).toArray()]);
-      const projections = model.markers.map(({key, bone}) =>
-        [key, bone.getWorldPosition(new THREE.Vector3()).project(stage.camera).toArray()]);
+      const points = model.points.map(({name, node}) => Object.freeze({name,
+        position: node.getWorldPosition(new THREE.Vector3()).toArray(),
+        rotationQuaternion: node.getWorldQuaternion(new THREE.Quaternion()).toArray()}));
       const poses: Record<string, THREE.QuaternionTuple> = {};
       model.asset.scene.traverse(node => {
         if (node instanceof THREE.Bone) poses[node.name] = node.quaternion.toArray();
       });
       const {animation, time, playing} = model.playback.review();
+      const hold: ModelStageHold | null = policy.clock === 'external' ? null : local(0).hold;
       return {
-        id: model.id, animation, time, playing, ...model.rig.snapshot(), ...model.materials.snapshot(),
+        id: model.id, animation, time, playing, hold, ...model.rig.snapshot(), ...model.materials.snapshot(),
         lighting: stage.lighting.mode,
-        attachmentPositions: Object.fromEntries(positions), attachmentProjections: Object.fromEntries(projections),
+        parts: points,
         poses, triangles: stage.renderer.info.render.triangles, renderedModelMeshes: renderedMeshes.size,
         canvas: {width: stage.renderer.domElement.width, height: stage.renderer.domElement.height},
         actors: actors.actors.map(actor => actor.snapshot()), actorsPending: actors.pending,
@@ -86,17 +91,21 @@ export function createModelStage(
   };
   const animate = (now: number) => {
     const previous = presentationSeconds;
-    presentationSeconds = policy.clock === 'external' ? appliedFrameSeconds : presentationSeconds +
-      modelLocalAdvance(now - lastTime, {reducedMotion: reducedMotion(), hidden: document.hidden});
+    presentationSeconds = policy.clock === 'external' ? appliedFrameSeconds :
+      presentationSeconds + local(now - lastTime).seconds;
     lastTime = now;
     for (const actor of actors.actors) {
       actor.playback.update(presentationSeconds - previous);
       actor.placement.updateMatrixWorld(true);
       actor.rig.update();
     }
-    // Before the first description is shown there is nothing to frame.
-    const focused = actors.focused;
-    if (focused) stage.fit(focused.placement, focused.rig.display === 'model' ? undefined : focused.rig.bounds());
+    // Before the first description is shown there is nothing to frame; a held pose frames no actor.
+    // The drawn actors are the applied description's, swapped in by the same commit.
+    const ids = new Set(applied ? modelStageFramed(applied).map(({id}) => id) : []);
+    const framed = actors.actors.filter(actor => ids.has(actor.id));
+    if (framed.length) {
+      stage.fit(() => framed.reduce((bounds, actor) => bounds.union(actor.bounds()), new THREE.Box3()));
+    }
     if (stage.controls.enabled) stage.controls.update();
     stage.renderer.render(stage.scene, stage.camera);
     frame = requestAnimationFrame(animate);
@@ -108,7 +117,7 @@ export function createModelStage(
     actors.dispose();
     parts.dispose();
     stage.dispose();
-    if (options.reviewKey && Reflect.get(host, options.reviewKey) === api) {
+    if (Reflect.get(host, options.reviewKey) === api) {
       Reflect.deleteProperty(host, options.reviewKey);
     }
   };
@@ -117,7 +126,7 @@ export function createModelStage(
   try {first = setDescription(description);} catch (error) {dispose(); throw error;}
   first.then(() => {
     if (disposed) return;
-    if (options.reviewKey) Object.defineProperty(host, options.reviewKey, {value: api, configurable: true});
+    Object.defineProperty(host, options.reviewKey, {value: api, configurable: true});
     onReady(api);
   }, (error: unknown) => {if (!disposed) onError(asError(error));});
   frame = requestAnimationFrame(animate);

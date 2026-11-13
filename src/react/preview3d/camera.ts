@@ -1,45 +1,44 @@
 import * as THREE from 'three';
 import type {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {MODEL_STAGE as settings} from './model.ts';
-import type {ModelStageCamera} from './model.ts';
-import {modelPreviewCamera} from './presentation.ts';
+import {MODEL_STAGE_FRAMING, type ModelStageFraming} from './framingModel.ts';
 
 type CameraControls = Pick<OrbitControls, 'target' | 'enabled' | 'update'>
   & Partial<Pick<OrbitControls, 'maxDistance'>>;
 
-export function createModelFraming(camera: THREE.PerspectiveCamera, controls: CameraControls, orbit: boolean) {
+// The camera follows the described framing: a fit, taken again whenever one is requested, or a held pose that no fit
+// request moves. Whether the person may orbit is the description's, applied with the framing.
+export function createModelFraming(camera: THREE.PerspectiveCamera, controls: CameraControls) {
   const maximum = controls.maxDistance;
-  let fitRequested = true;
-  let autoFit = true;
-  const requestFit = () => {if (autoFit) fitRequested = true;};
+  let fitRequested = true, held = false;
+  // The orbit's reach never stops short of the framed distance, so the controls never pull the framing in.
+  const reach = (distance: number) => {if (maximum !== undefined) controls.maxDistance = Math.max(maximum, distance);};
   return {
-    requestFit,
-    resetCamera() {autoFit = true; controls.enabled = orbit; requestFit();},
-    setCamera(value: ModelStageCamera) {
-      const accepted = modelPreviewCamera(value);
-      autoFit = false;
-      fitRequested = false;
-      controls.enabled = false;
-      camera.position.fromArray(accepted.position);
-      controls.target.fromArray(accepted.target);
+    requestFit() {if (!held) fitRequested = true;},
+    frame(framing: ModelStageFraming, orbit: boolean) {
+      controls.enabled = orbit;
+      held = framing.kind === MODEL_STAGE_FRAMING.pose;
+      fitRequested = !held;
+      if (framing.kind !== MODEL_STAGE_FRAMING.pose) return;
+      camera.position.fromArray(framing.position);
+      controls.target.fromArray(framing.target);
+      reach(camera.position.distanceTo(controls.target));
       camera.lookAt(controls.target);
       camera.updateMatrixWorld(true);
     },
-    fit(object: THREE.Object3D, bounds?: THREE.Box3) {
+    /** Fits what is drawn, measured only when a fit is due. */
+    fit(measure: () => THREE.Box3) {
       if (!fitRequested) return;
-      if (maximum !== undefined) controls.maxDistance = bounds ? Infinity : maximum;
-      fitModelCamera(object, camera, controls, bounds);
+      reach(fitModelCamera(measure(), camera, controls));
+      if (controls.enabled) controls.update();
+      else camera.lookAt(controls.target);
+      camera.updateMatrixWorld(true);
       fitRequested = false;
     },
   };
 }
 
-function fitModelCamera(object: THREE.Object3D, camera: THREE.PerspectiveCamera,
-  controls: CameraControls, rigBounds?: THREE.Box3) {
-  object.traverse(node => {
-    if (node instanceof THREE.SkinnedMesh) {node.skeleton.update(); node.computeBoundingBox();}
-  });
-  const bounds = rigBounds ?? new THREE.Box3().setFromObject(object);
+function fitModelCamera(bounds: THREE.Box3, camera: THREE.PerspectiveCamera, controls: CameraControls) {
   const direction = new THREE.Vector3().fromArray(settings.cameraDirection).normalize();
   const right = new THREE.Vector3().crossVectors(camera.up, direction).normalize();
   const up = new THREE.Vector3().crossVectors(direction, right).normalize();
@@ -56,8 +55,7 @@ function fitModelCamera(object: THREE.Object3D, camera: THREE.PerspectiveCamera,
       }
     }
   }
-  camera.position.copy(direction.multiplyScalar(distance * settings.fitPadding).add(controls.target));
-  if (controls.enabled) controls.update();
-  else camera.lookAt(controls.target);
-  camera.updateMatrixWorld(true);
+  const fitted = distance * settings.fitPadding;
+  camera.position.copy(direction.multiplyScalar(fitted).add(controls.target));
+  return fitted;
 }

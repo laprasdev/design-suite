@@ -29,8 +29,10 @@ export {MODEL_ACTOR_ANIMATION, MODEL_ACTOR_REFUSAL, MODEL_STAGE_DRIVER, modelPre
 export type {ModelPreviewFrame, ModelStageActor, ModelStageActorAnimation, ModelStageActorSet,
   ModelStageActorSnapshot, ModelStageDriver} from './actorModel.ts';
 export type {ModelStageDescription, ModelStageDescriptionPart} from './descriptionModel.ts';
-export {MODEL_STAGE_SIZE} from './sizeModel.ts';
-export type {ModelStageSize} from './sizeModel.ts';
+export {MODEL_STAGE_SIZE, MODEL_STAGE_ORIGIN} from './sizeModel.ts';
+export type {ModelStageSize, ModelStageOrigin} from './sizeModel.ts';
+export {MODEL_STAGE_FRAMING} from './framingModel.ts';
+export type {ModelStageFraming} from './framingModel.ts';
 
 export const MODEL_READY_ATTRIBUTE = 'data-model-ready';
 export const MODEL_REST_POSE = 'rest-pose';
@@ -41,9 +43,14 @@ export const ModelPreviewElement = Object.freeze({
 });
 export type ModelStageDisplay = 'model' | 'rig' | 'both';
 export type ModelStageClock = 'local' | 'external';
+/** Why the local clock's time is held still: the person asks for reduced motion, or the page is hidden. */
+export const MODEL_STAGE_HOLD = Object.freeze({reducedMotion: 'reduced-motion', hidden: 'hidden'} as const);
+export type ModelStageHold = typeof MODEL_STAGE_HOLD[keyof typeof MODEL_STAGE_HOLD];
 export const MODEL_PREVIEW_TEXT = Object.freeze({
   model: 'Model', modelSearch: 'models', animation: 'Animation', display: 'Display',
-  play: 'Play', pause: 'Pause', rest: 'Rest Pose', reset: 'Reset Camera', rig: 'Rig', both: 'Both',
+  play: 'Play', pause: 'Pause', held: {[MODEL_STAGE_HOLD.reducedMotion]: 'Reduced motion',
+    [MODEL_STAGE_HOLD.hidden]: 'Hidden'} satisfies Record<ModelStageHold, string>,
+  rest: 'Rest Pose', reset: 'Reset Camera', rig: 'Rig', both: 'Both',
   loading: 'Loading model…', retry: 'Retry',
   unavailable: 'No model is available.', orbit: 'Drag to orbit. Scroll or pinch to zoom.',
   runtimeWaiting: 'Waiting for a runtime pose…', refused: 'Not applied', stopped: 'Preview stopped',
@@ -70,26 +77,28 @@ export const MODEL_STAGE = Object.freeze({
   millisecondsPerSecond: 1000, maxFrameDelta: 0.05,
 });
 /**
- * How far the local clock's one presentation time moves in a frame: the elapsed time, capped, or nothing while the
- * person asks for reduced motion or the page is hidden. Everything that moves with the local clock reads this time.
+ * How the local clock's one presentation time moves in a frame: by the elapsed time, capped, or not at all, held for
+ * a stated reason. Everything that moves with the local clock reads this time.
  */
 export function modelLocalAdvance(elapsedMilliseconds: number, held: {readonly reducedMotion: boolean;
-  readonly hidden: boolean}) {
-  if (held.reducedMotion || held.hidden) return 0;
-  return Math.min(elapsedMilliseconds / MODEL_STAGE.millisecondsPerSecond, MODEL_STAGE.maxFrameDelta);
+  readonly hidden: boolean}): {readonly seconds: number; readonly hold: ModelStageHold | null} {
+  if (held.reducedMotion) return {seconds: 0, hold: MODEL_STAGE_HOLD.reducedMotion};
+  if (held.hidden) return {seconds: 0, hold: MODEL_STAGE_HOLD.hidden};
+  return {seconds: Math.min(elapsedMilliseconds / MODEL_STAGE.millisecondsPerSecond, MODEL_STAGE.maxFrameDelta),
+    hold: null};
 }
 export interface ModelStageAsset {
   id: string;
   path: string;
   revision?: string;
   sha256?: string;
-  attachments: Readonly<Record<string, string>>;
   runtimeMaterials?: ModelRuntimeMaterialProfile;
 }
-export interface ModelPreviewAsset extends ModelStageAsset {
-  name: string;
-  idleAnimation: string;
-  animations: readonly {name: string; label: string}[];
+/** A model as the view's catalog names it: its asset id, its name, and the clips its picker offers. */
+export interface ModelPreviewAsset {
+  readonly id: string;
+  readonly name: string;
+  readonly animations: readonly {readonly name: string; readonly label: string}[];
 }
 export interface ModelStageTheme {
   colors: {
@@ -97,24 +106,25 @@ export interface ModelStageTheme {
     accent: string; accentDeep: string; teal: string;
   };
 }
+/**
+ * What is fixed when a stage is created, all stated: its clock, which every actor's playback is built for; whether the
+ * stage lays its own floor and grid; and the host property its review handle is published under.
+ */
 export interface ModelStageOptions {
-  reviewKey?: string;
-  clock?: ModelStageClock;
-  centerOnFloor?: boolean;
-  floor?: boolean;
-  grid?: boolean;
-  orbit?: boolean;
-}
-export interface ModelStageCamera {
-  position: ModelVector;
-  target: ModelVector;
+  readonly reviewKey: string;
+  readonly clock: ModelStageClock;
+  readonly floor: boolean;
+  readonly grid: boolean;
 }
 export interface ModelStageSnapshot {
   id: string;
   animation: string;
   /** null while engine samples play: `actors` holds what was applied. */
   time: number | null;
+  /** The focused clip plays on the local clock, as declared. */
   playing: boolean;
+  /** Why the local clock's time is held, so nothing playing moves; null while it runs, and under the engine's clock. */
+  hold: ModelStageHold | null;
   skeletonVisible: boolean;
   display: ModelStageDisplay;
   modelVisible: boolean;
@@ -126,8 +136,8 @@ export interface ModelStageSnapshot {
   materialInspectionAvailable: boolean;
   emissiveMaterialCount: number;
   lighting: ModelStageLighting;
-  attachmentPositions: Record<string, ModelVector>;
-  attachmentProjections: Record<string, ModelVector>;
+  /** The focused model's parts (its PART- nodes), each by its name with its world pose. */
+  parts: readonly {name: string; position: ModelVector; rotationQuaternion: ModelRotation}[];
   poses: Record<string, ModelRotation>;
   triangles: number;
   renderedModelMeshes: number;
@@ -145,18 +155,21 @@ export interface ModelStageController {
   setDescription(value: ModelStageDescription): Promise<void>;
   /** Applies one host-built frame to every actor it names, or refuses it whole before anything changes. */
   setFrame(value: ModelPreviewFrame): void;
-  /** An action, not state: returns a view the person orbited to the described camera, a held pose or a fresh fit. */
+  /** An action, not state: returns a view the person orbited to the described framing, a held pose or a fresh fit. */
   resetCamera(): void;
   snapshot(): ModelStageSnapshot;
 }
-export function modelStagePolicy(options: ModelStageOptions = {}) {
-  const clock = options.clock === undefined ? 'local' : options.clock;
-  if (clock !== 'local' && clock !== 'external') {
-    throw new ModelStageRefusal('Preview clock must be local or external.');
+export const MODEL_STAGE_OPTIONS_REFUSAL = Object.freeze({
+  clock: 'Preview clock must be local or external.',
+  aid: (name: string) => `The stage's ${name} is stated as true or false.`,
+});
+export function modelStagePolicy(options: ModelStageOptions) {
+  if (options.clock !== 'local' && options.clock !== 'external') {
+    throw new ModelStageRefusal(MODEL_STAGE_OPTIONS_REFUSAL.clock);
   }
-  return {
-    clock, centerOnFloor: options.centerOnFloor ?? true,
-    floor: options.floor ?? true, grid: options.grid ?? true, orbit: options.orbit ?? true,
-  };
+  for (const aid of ['floor', 'grid'] as const) {
+    if (typeof options[aid] !== 'boolean') throw new ModelStageRefusal(MODEL_STAGE_OPTIONS_REFUSAL.aid(aid));
+  }
+  return Object.freeze({clock: options.clock, floor: options.floor, grid: options.grid});
 }
 export type ModelStagePolicy = ReturnType<typeof modelStagePolicy>;

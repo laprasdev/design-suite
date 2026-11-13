@@ -3,25 +3,34 @@ import {describe, it} from 'node:test';
 import * as THREE from 'three';
 import {createModelRig} from '../src/react/preview3d/rig.ts';
 import {createModelFraming} from '../src/react/preview3d/camera.ts';
-import {disposeModelObject} from '../src/react/preview3d/asset.ts';
+import {disposeModelObject, MODEL_PART_PREFIX, modelObjectBounds, modelParts} from '../src/react/preview3d/asset.ts';
 import {MODEL_STAGE} from '../src/react/preview3d/model.ts';
 
 const theme = {colors: {stage: '#000', text: '#fff', surface: '#111', surfaceHi: '#222',
   accent: '#f8c', accentDeep: '#836', teal: '#6fd'}};
+// A box skinned to two joints, base and tip. The skin also lists an end joint far above them that it weights no
+// vertex to, as a file's end markers are.
 function fixture() {
   const asset = new THREE.Group();
-  const body = new THREE.Mesh(new THREE.BoxGeometry(1, 2, 1), new THREE.MeshBasicMaterial());
-  const hidden = body.clone();
+  const geometry = new THREE.BoxGeometry(1, 2, 1), count = geometry.getAttribute('position').count;
+  const vertices = Array.from({length: count}, (_, vertex) => vertex);
+  geometry.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(vertices.flatMap(v => [v % 2, 2, 0, 0]), 4));
+  geometry.setAttribute('skinWeight', new THREE.Float32BufferAttribute(vertices.flatMap(() => [1, 0, 0, 0]), 4));
+  const body = new THREE.SkinnedMesh(geometry, new THREE.MeshBasicMaterial());
+  const hidden = new THREE.Mesh(new THREE.BoxGeometry(1, 2, 1), new THREE.MeshBasicMaterial());
   hidden.visible = false;
-  const base = new THREE.Bone(), tip = new THREE.Bone();
+  const base = new THREE.Bone(), tip = new THREE.Bone(), end = new THREE.Bone();
   tip.name = 'Tip';
   tip.position.set(0, 8, 0);
+  end.position.set(0, 100, 0);
   base.add(tip);
+  tip.add(end);
   body.add(base);
   asset.add(body, hidden);
   asset.updateMatrixWorld(true);
+  body.bind(new THREE.Skeleton([base, tip, end]));
   const rig = createModelRig(asset, theme, []);
-  return {asset, body, hidden, base, tip, rig};
+  return {asset, body, hidden, base, tip, end, rig};
 }
 function cleanup(value: ReturnType<typeof fixture>) {
   disposeModelObject(value.rig.root);
@@ -43,6 +52,51 @@ describe('shared rig display', () => {
       model.rig.setDisplay(mode);
       assert.equal(model.rig.snapshot().rigVisible, mode === 'both');
     }
+    cleanup(model);
+  });
+
+  it('draws and fits the joints the skin weights, never an end joint it only lists', () => {
+    const model = fixture();
+    model.rig.setDisplay('rig');
+    model.rig.update();
+    assert.equal(model.rig.snapshot().boneCount, 2);
+    const lines = model.rig.root.children.find(node => node instanceof THREE.LineSegments);
+    assert.ok(lines instanceof THREE.LineSegments);
+    // One line, tip to base; nothing reaches the end joint.
+    assert.deepEqual(Array.from(lines.geometry.getAttribute('position').array), [0, 8, 0, 0, 0, 0]);
+    assert.ok(model.rig.bounds().max.y < 9);
+    model.rig.setDisplay('both');
+    assert.ok(model.rig.bounds().max.y < 9);
+    cleanup(model);
+  });
+
+  it('finds each part by its authored PART- name, follows it in the aid, and frames it with the joints', () => {
+    const model = fixture();
+    const named = (authored: string | undefined, parent: THREE.Object3D) => {
+      const node = new THREE.Object3D();
+      // A file's node keeps its authored name here; three's own name for it is sanitised.
+      if (authored !== undefined) node.userData = {name: authored, collider: {shape: 'sphere'}};
+      node.name = (authored ?? '').replace(/[^\w]/g, '_');
+      parent.add(node);
+      return node;
+    };
+    const tail = named(`${MODEL_PART_PREFIX}TailTip`, model.tip);
+    tail.position.set(0, 30, 0);
+    named('PARTY-Hat', model.tip);
+    named(undefined, model.tip);
+    const sanitisedOnly = new THREE.Object3D();
+    sanitisedOnly.name = `${MODEL_PART_PREFIX}Paw`;
+    model.base.add(sanitisedOnly);
+    model.asset.updateMatrixWorld(true);
+    const parts = modelParts({scene: model.asset}, theme);
+    assert.deepEqual(parts.map(({name, node}) => [name, node]), [['TailTip', tail]]);
+    assert.ok((parts[0].marker.material as THREE.MeshBasicMaterial).color.equals(new THREE.Color(theme.colors.accent)));
+    const rig = createModelRig(model.asset, theme, parts);
+    rig.setDisplay('rig');
+    rig.update();
+    assert.deepEqual([parts[0].marker.visible, parts[0].marker.position.y], [true, 38]);
+    assert.ok(rig.bounds().max.y >= 38);
+    disposeModelObject(rig.root);
     cleanup(model);
   });
 
@@ -78,17 +132,20 @@ describe('shared rig display', () => {
       camera.lookAt(this.target);
       return true;
     }};
-    const framing = createModelFraming(camera, controls, true);
+    const framing = createModelFraming(camera, controls);
+    framing.frame({kind: 'focus'}, true);
     model.rig.setDisplay('rig');
-    framing.fit(model.asset, model.rig.bounds());
-    assert.equal(controls.maxDistance, Infinity);
+    framing.fit(() => model.rig.bounds());
+    assert.ok(controls.maxDistance > 16 && camera.position.distanceTo(controls.target) <= controls.maxDistance);
     for (const bone of [model.base, model.tip]) {
       const projected = bone.getWorldPosition(new THREE.Vector3()).project(camera);
       assert.ok(Math.abs(projected.x) < 1 && Math.abs(projected.y) < 1);
     }
     model.rig.setDisplay('model');
+    model.tip.position.set(0, 8, 0);
+    model.asset.updateMatrixWorld(true);
     framing.requestFit();
-    framing.fit(model.asset);
+    framing.fit(() => modelObjectBounds(model.asset));
     assert.equal(controls.maxDistance, 16);
     cleanup(model);
   });
@@ -106,8 +163,9 @@ describe('shared rig display', () => {
       camera.lookAt(this.target);
       return true;
     }};
-    const framing = createModelFraming(camera, controls, true);
-    framing.fit(model.asset, bounds);
+    const framing = createModelFraming(camera, controls);
+    framing.frame({kind: 'focus'}, true);
+    framing.fit(() => bounds);
     for (const point of [new THREE.Vector3(-10, -1, 0), new THREE.Vector3(10, 1, 0),
       model.tip.getWorldPosition(new THREE.Vector3())]) {
       const projected = point.project(camera);
@@ -120,9 +178,9 @@ describe('shared rig display', () => {
 
   it('uses the supplied bright colors and releases joint instance, geometry and material resources', () => {
     const model = fixture();
-    const helper = model.rig.root.children.find(node => node instanceof THREE.SkeletonHelper);
+    const helper = model.rig.root.children.find(node => node instanceof THREE.LineSegments);
     const joints = model.rig.root.children.find(node => node instanceof THREE.InstancedMesh);
-    assert.ok(helper instanceof THREE.SkeletonHelper);
+    assert.ok(helper instanceof THREE.LineSegments);
     assert.ok(joints instanceof THREE.InstancedMesh);
     assert.ok(helper.material instanceof THREE.LineBasicMaterial);
     assert.ok(joints.material instanceof THREE.MeshBasicMaterial);

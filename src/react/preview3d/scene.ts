@@ -15,7 +15,6 @@ export function createModelScene(host: HTMLElement, theme: ModelStageTheme, poli
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(settings.fieldOfView, 1, settings.nearPlane, settings.farPlane);
   const controls = new OrbitControls(camera, renderer.domElement);
-  controls.enabled = policy.orbit;
   controls.minDistance = settings.cameraMinimum;
   controls.maxDistance = settings.cameraMaximum;
   controls.maxPolarAngle = Math.PI / 2;
@@ -36,7 +35,7 @@ export function createModelScene(host: HTMLElement, theme: ModelStageTheme, poli
     scene.add(grid);
     lighting.attach([grid]);
   }
-  const framing = createModelFraming(camera, controls, policy.orbit);
+  const framing = createModelFraming(camera, controls);
   const resize = () => {
     const {clientWidth: width, clientHeight: height} = host;
     if (!width || !height) return;

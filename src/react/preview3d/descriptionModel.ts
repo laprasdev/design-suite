@@ -1,27 +1,29 @@
 import {modelStageDisplay} from './model.ts';
-import type {ModelStageCamera, ModelStageDisplay} from './model.ts';
+import type {ModelStageDisplay} from './model.ts';
 import {MODEL_ACTOR_ANIMATION, modelStageActorSet, modelStageFocus, type ModelStageActorSet} from './actorModel.ts';
 import {modelEnvironment, type ModelEnvironment} from './environment.ts';
-import {modelPreviewCamera} from './presentation.ts';
+import {MODEL_STAGE_FRAMING, modelStageFraming, modelStageOrbit, type ModelStageFraming} from './framingModel.ts';
 import {modelStageLighting, type ModelStageLighting} from './lightingModel.ts';
 import {modelStageMaterialMode, type ModelStageMaterialMode} from './materialModel.ts';
 import {ModelStageRefusal} from './refusal.ts';
-import {modelStageSize, type ModelStageSize} from './sizeModel.ts';
+import {modelStageOrigin, modelStageSize, type ModelStageOrigin, type ModelStageSize} from './sizeModel.ts';
 
 /** The whole host-side state of a stage: one declared description, applied whole or refused. */
 export interface ModelStageDescription {
   readonly actors: ModelStageActorSet;
   /** The static scenery, or null for none. */
   readonly environment: ModelEnvironment | null;
-  /** A held camera pose, or null to fit the focused actor. */
-  readonly camera: ModelStageCamera | null;
+  readonly framing: ModelStageFraming;
+  /** Whether the person may orbit away from the framing; Reset returns to it. */
+  readonly orbit: boolean;
   readonly lighting: ModelStageLighting;
   readonly display: ModelStageDisplay;
   readonly materialMode: ModelStageMaterialMode;
   readonly size: ModelStageSize;
+  readonly origin: ModelStageOrigin;
 }
 export const MODEL_STAGE_DESCRIPTION_PARTS = Object.freeze(
-  ['actors', 'environment', 'camera', 'lighting', 'display', 'materialMode', 'size'] as const);
+  ['actors', 'environment', 'framing', 'orbit', 'lighting', 'display', 'materialMode', 'size', 'origin'] as const);
 export type ModelStageDescriptionPart = typeof MODEL_STAGE_DESCRIPTION_PARTS[number];
 export const MODEL_STAGE_DESCRIPTION_REFUSAL = Object.freeze({
   description: `A stage description requires ${MODEL_STAGE_DESCRIPTION_PARTS.join(', ')}.`,
@@ -29,7 +31,7 @@ export const MODEL_STAGE_DESCRIPTION_REFUSAL = Object.freeze({
 const object = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
 
-// Every part is checked before any is used; null is the explicit "none" of the environment and "fit" of the camera.
+// Every part is checked before any is used; null is the explicit "none" of the environment.
 export function modelStageDescription(value: unknown): ModelStageDescription {
   if (!object(value) || MODEL_STAGE_DESCRIPTION_PARTS.some(part => !(part in value))) {
     throw new ModelStageRefusal(MODEL_STAGE_DESCRIPTION_REFUSAL.description);
@@ -37,9 +39,10 @@ export function modelStageDescription(value: unknown): ModelStageDescription {
   return Object.freeze({
     actors: modelStageActorSet(value.actors),
     environment: value.environment === null ? null : modelEnvironment(value.environment),
-    camera: value.camera === null ? null : modelPreviewCamera(value.camera),
+    framing: modelStageFraming(value.framing), orbit: modelStageOrbit(value.orbit),
     lighting: modelStageLighting(value.lighting), display: modelStageDisplay(value.display),
     materialMode: modelStageMaterialMode(value.materialMode), size: modelStageSize(value.size),
+    origin: modelStageOrigin(value.origin),
   });
 }
 
@@ -50,14 +53,18 @@ export function modelStageDescriptionChanges(applied: ModelStageDescription | un
     !applied || JSON.stringify(applied[part]) !== JSON.stringify(next[part])));
 }
 
-/** Whether the camera's fit must be taken again: the first description, or a new focus, asset, clip, display or
- * size. */
+/** The actors the framing fits: the focused one, every declared one, or none for a held pose. */
+export function modelStageFramed(value: ModelStageDescription) {
+  if (value.framing.kind === MODEL_STAGE_FRAMING.pose) return [];
+  return value.framing.kind === MODEL_STAGE_FRAMING.all ? value.actors.actors : [modelStageFocus(value.actors)];
+}
+
+/** Whether the camera's fit must be taken again: the first description, or a change to what the fit measures: the
+ * framing, the fitted actors' assets, placements and clips, the display, the size or the origin. */
 export function modelStageRefit(applied: ModelStageDescription | undefined, next: ModelStageDescription) {
   if (!applied) return true;
-  const framed = (value: ModelStageDescription) => {
-    const {id, asset, animation} = modelStageFocus(value.actors);
-    const clip = animation.kind === MODEL_ACTOR_ANIMATION.rest ? null : animation.name;
-    return JSON.stringify([id, asset, clip, value.display, value.size]);
-  };
+  const framed = (value: ModelStageDescription) => JSON.stringify([value.framing, value.display, value.size,
+    value.origin, modelStageFramed(value).map(({id, asset, placement, animation}) =>
+      [id, asset, placement, animation.kind === MODEL_ACTOR_ANIMATION.rest ? null : animation.name])]);
   return framed(applied) !== framed(next);
 }

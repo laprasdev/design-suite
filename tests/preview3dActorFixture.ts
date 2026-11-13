@@ -3,7 +3,8 @@
 import * as THREE from 'three';
 import type {GLTF} from 'three/addons/loaders/GLTFLoader.js';
 import {createModelActor, type ModelActorContext} from '../src/react/preview3d/actor.ts';
-import {MODEL_ACTOR_ANIMATION, MODEL_ANIMATION_LAYER, MODEL_STAGE_SIZE, MODEL_STAGE_THEME_LIGHTING, modelStagePolicy,
+import {MODEL_ACTOR_ANIMATION, MODEL_ANIMATION_LAYER, MODEL_STAGE_FRAMING, MODEL_STAGE_ORIGIN, MODEL_STAGE_SIZE,
+  MODEL_STAGE_THEME_LIGHTING, modelStagePolicy,
   type ModelStageActor, type ModelStageClock}
   from '../src/react/preview3d/model.ts';
 
@@ -13,12 +14,21 @@ export const clipValue = (index: number, time: number) => (index + 1) * 10 + tim
 export interface ClipSpec {name: string; duration: number}
 
 export function actorAsset(clips: readonly ClipSpec[], skeleton = true) {
-  const scene = new THREE.Group(), body = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
+  // With a skeleton, the box is skinned whole to its one bone, so the bone is a joint the skin uses.
+  const geometry = new THREE.BoxGeometry(1, 1, 1), count = geometry.getAttribute('position').count;
+  geometry.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(new Array(count * 4).fill(0), 4));
+  geometry.setAttribute('skinWeight', new THREE.Float32BufferAttribute(
+    Array.from({length: count}, () => [1, 0, 0, 0]).flat(), 4));
+  const scene = new THREE.Group(), body = skeleton ? new THREE.SkinnedMesh(geometry) : new THREE.Mesh(geometry);
   scene.add(body);
   const bone = new THREE.Bone();
   bone.name = BONE;
   bone.position.fromArray(BIND);
-  if (skeleton) scene.add(bone);
+  if (body instanceof THREE.SkinnedMesh) {
+    scene.add(bone);
+    scene.updateMatrixWorld(true);
+    body.bind(new THREE.Skeleton([bone]));
+  }
   const animations = clips.map(({name, duration}, index) => new THREE.AnimationClip(name, duration, [
     new THREE.VectorKeyframeTrack(`${BONE}.position`, [0, duration],
       [clipValue(index, 0), 0, 0, clipValue(index, duration), 0, 0]),
@@ -29,7 +39,7 @@ export function actorAsset(clips: readonly ClipSpec[], skeleton = true) {
 export function actorContext(clock: ModelStageClock = 'external') {
   const scene = new THREE.Scene();
   const context: ModelActorContext = {
-    policy: modelStagePolicy({clock, centerOnFloor: false}), scene,
+    policy: modelStagePolicy({reviewKey: 'review', clock, floor: false, grid: false}), scene,
     theme: {colors: {stage: '#000', text: '#fff', surface: '#111', surfaceHi: '#222', accent: '#f00',
       accentDeep: '#800', teal: '#0ff'}},
     lighting: {attach: () => () => undefined}, rendered: () => undefined,
@@ -45,7 +55,7 @@ export const STANDING = Object.freeze({position: [0, 0, 0], rotationQuaternion: 
   scale: [1, 1, 1]} as const);
 export const standingAt = (position: readonly [number, number, number]) => ({...STANDING, position});
 export const declaration = (id: string, modelId = 'otter', extra: Partial<ModelStageActor> = {}): ModelStageActor =>
-  ({id, asset: {id: modelId, path: `${modelId}.glb`, attachments: {}}, placement: STANDING, animation: REST, ...extra});
+  ({id, asset: {id: modelId, path: `${modelId}.glb`}, placement: STANDING, animation: REST, ...extra});
 
 export function makeActor(id: string, clips: readonly ClipSpec[], extra: Partial<ModelStageActor> = {},
   context = actorContext().context) {
@@ -65,6 +75,7 @@ export const close = (actual: number, expected: number, tolerance = 1e-6) =>
   {if (Math.abs(actual - expected) > tolerance) throw new Error(`Expected ${expected}, read ${actual}.`);};
 // A whole stage description with one declared actor a; a test overrides the parts it is about.
 export const describing = (changes: Record<string, unknown> = {}) => ({
-  actors: {focus: 'a', actors: [declaration('a')]}, environment: null, camera: null,
-  lighting: MODEL_STAGE_THEME_LIGHTING, display: 'model', materialMode: 'lit', size: {rule: MODEL_STAGE_SIZE.real},
+  actors: {focus: 'a', actors: [declaration('a')]}, environment: null, framing: {kind: MODEL_STAGE_FRAMING.focus},
+  orbit: true, lighting: MODEL_STAGE_THEME_LIGHTING, display: 'model', materialMode: 'lit',
+  size: {rule: MODEL_STAGE_SIZE.real}, origin: MODEL_STAGE_ORIGIN.file,
   ...changes});

@@ -7,7 +7,7 @@ import {modelStageDescription, modelStageDescriptionChanges, modelStageRefit}
 import {createModelStageParts} from '../src/react/preview3d/stageParts.ts';
 import {applyModelFrame} from '../src/react/preview3d/actor.ts';
 import {ModelStageRefusal} from '../src/react/preview3d/model.ts';
-import type {ModelStageCamera, ModelStageController} from '../src/react/preview3d/model.ts';
+import type {ModelStageController, ModelStageFraming} from '../src/react/preview3d/model.ts';
 import {actorContext, close, declaration, describing, entity, frame, held, makeActor, playing, STANDING}
   from './preview3dActorFixture.ts';
 
@@ -36,10 +36,11 @@ describe('the stage description', () => {
     const two = modelStageDescription(describing({environment: {reflectZ: false, plane: null,
       boxes: [box('ramp'), box('goal')]}, actors: {focus: 'b', actors: [declaration('a'), declaration('b')]}}));
     assert.deepEqual([two.actors.actors.map(({id}) => id), two.environment?.boxes.length], [['a', 'b'], 2]);
-    for (const part of ['actors', 'environment', 'camera', 'lighting', 'display', 'materialMode', 'size'] as const) {
+    for (const part of ['actors', 'environment', 'framing', 'orbit', 'lighting', 'display', 'materialMode', 'size',
+      'origin'] as const) {
       const value: Record<string, unknown> = describing();
       delete value[part];
-      assert.throws(() => modelStageDescription(value), /requires actors, environment, camera/);
+      assert.throws(() => modelStageDescription(value), /requires actors, environment, framing, orbit/);
     }
     assert.throws(() => modelStageDescription(describing({display: 'xray'})), /Unknown stage display/);
     assert.deepEqual(modelStageDescription(describing({size: {rule: 'normalized', height: 2}})).size,
@@ -48,19 +49,35 @@ describe('the stage description', () => {
       {rule: 'real', height: 2}, {rule: 'normalized', height: 2, scale: 1}, {rule: 'actual'}, null, 2]) {
       assert.throws(() => modelStageDescription(describing({size})), /^ModelStageRefusal: A stage size is/);
     }
-    assert.throws(() => modelStageDescription(describing({camera: {position: [0, 0, 0], target: [0, 0, 0]}})),
-      /distinct/);
+    // An asset states what the stage reads and nothing else: a stray field, such as an old attachments map, is refused.
+    assert.throws(() => modelStageDescription(describing({actors: {focus: 'a', actors: [
+      {...declaration('a'), asset: {id: 'otter', path: 'otter.glb', attachments: {}}}]}})),
+    /Actor a: an asset states id, path, revision, sha256, runtimeMaterials; not attachments/);
+    const pose = (target: number[]) => ({framing: {kind: 'pose', position: [0, 0, 0], target}});
+    assert.throws(() => modelStageDescription(describing(pose([0, 0, 0]))), /distinct/);
+    assert.deepEqual(modelStageDescription(describing(pose([0, 0, 1]))).framing,
+      {kind: 'pose', position: [0, 0, 0], target: [0, 0, 1]});
+    for (const framing of [null, {kind: 'fit'}, {kind: 'focus', position: [0, 0, 0]},
+      {kind: 'pose', position: [0, 0, 0]}]) {
+      assert.throws(() => modelStageDescription(describing({framing})), /^ModelStageRefusal: A framing is/);
+    }
+    for (const orbit of [undefined, 1, 'yes']) {
+      assert.throws(() => modelStageDescription(describing({orbit})), /orbit is stated as true or false/);
+    }
+    for (const origin of [undefined, 'floor', true]) {
+      assert.throws(() => modelStageDescription(describing({origin})), /^ModelStageRefusal: A stage origin is one of/);
+    }
   });
 
   it('names only the parts that change, and none for an equal description', () => {
     const applied = modelStageDescription(describing());
-    assert.deepEqual([...modelStageDescriptionChanges(undefined, applied)].length, 7);
+    assert.deepEqual([...modelStageDescriptionChanges(undefined, applied)].length, 9);
     assert.deepEqual([...modelStageDescriptionChanges(applied, modelStageDescription(describing()))], []);
     assert.deepEqual([...modelStageDescriptionChanges(applied, modelStageDescription(describing({lighting: 'dark'})))],
       ['lighting']);
   });
 
-  it('refits for a new focus, asset, clip or display, and not for lighting, playing or placement', () => {
+  it('refits for what the fit measures, and not for lighting, playing, orbit or an unframed actor', () => {
     const applied = modelStageDescription(describing());
     const refit = (changes: Parameters<typeof describing>[0]) => modelStageRefit(applied,
       modelStageDescription(describing(changes)));
@@ -70,12 +87,23 @@ describe('the stage description', () => {
     assert.equal(refit({actors: {focus: 'a', actors: [declaration('a', 'otter', {animation: held('run', 0)})]}}), true);
     assert.equal(refit({actors: {focus: 'a', actors: [declaration('a', 'heron')]}}), true);
     assert.equal(refit({lighting: 'dark'}), false);
+    assert.equal(refit({orbit: false}), false);
+    assert.equal(refit({origin: 'centred'}), true);
+    assert.equal(refit({framing: {kind: 'all'}}), true);
+    // A placement of a fitted actor refits; an actor the framing does not fit changes nothing.
+    assert.equal(refit({actors: {focus: 'a', actors: [declaration('a', 'otter',
+      {placement: {...STANDING, position: [1, 0, 0]}})]}}), true);
+    const pair = {actors: {focus: 'a', actors: [declaration('a'), declaration('b')]}};
+    const both = modelStageDescription(describing(pair));
+    const elsewhere = {actors: {focus: 'a', actors: [declaration('a'),
+      declaration('b', 'otter', {placement: {...STANDING, position: [5, 0, 0]}})]}};
+    assert.equal(modelStageRefit(both, modelStageDescription(describing(elsewhere))), false);
+    assert.equal(modelStageRefit(modelStageDescription(describing({...pair, framing: {kind: 'all'}})),
+      modelStageDescription(describing({...elsewhere, framing: {kind: 'all'}}))), true);
     const running = (animation: unknown) => ({actors: {focus: 'a', actors: [declaration('a', 'otter',
       {animation} as object)]}});
     assert.equal(modelStageRefit(modelStageDescription(describing(running(playing('run')))),
       modelStageDescription(describing(running(held('run', 0.5))))), false);
-    const moved = declaration('a', 'otter', {placement: {...STANDING, position: [1, 0, 0]}});
-    assert.equal(refit({actors: {focus: 'a', actors: [moved]}}), false);
   });
 });
 
@@ -83,8 +111,7 @@ describe('the stage-wide parts', () => {
   const surface = () => {
     const calls: string[] = [];
     const parts = createModelStageParts({scene: new THREE.Scene(), lighting: {set: value => calls.push(value)},
-      setCamera: (value: ModelStageCamera) => calls.push(`hold ${value.position}`),
-      resetCamera: () => calls.push('fit')});
+      frame: (framing: ModelStageFraming, orbit: boolean) => calls.push(`${framing.kind} ${orbit}`)});
     return {calls, parts};
   };
   const CLIPS = [{name: 'run', duration: 1}];
@@ -97,11 +124,12 @@ describe('the stage-wide parts', () => {
     assert.deepEqual(calls, ['dark']);
   });
 
-  it('returns an orbited view to the described camera: a held pose, or a fresh fit', () => {
+  it('returns an orbited view to the described framing, with the described orbit', () => {
     const {calls, parts} = surface();
-    parts.resetCamera(modelStageDescription(describing({camera: {position: [0, 2, 4], target: [0, 0, 0]}})));
-    parts.resetCamera(modelStageDescription(describing()));
-    assert.deepEqual(calls, ['hold 0,2,4', 'fit']);
+    parts.resetCamera(modelStageDescription(describing({framing: {kind: 'pose', position: [0, 2, 4],
+      target: [0, 0, 0]}, orbit: true})));
+    parts.resetCamera(modelStageDescription(describing({orbit: false})));
+    assert.deepEqual(calls, ['pose true', 'focus false']);
     assert.equal(exact, true);
   });
 
@@ -123,7 +151,7 @@ describe('the stage-wide parts', () => {
     const matrix = new THREE.Matrix4();
     joints.getMatrixAt(0, matrix);
     close(new THREE.Vector3().setFromMatrixScale(matrix).x, 4);
-    assert.deepEqual([a.size, b.size], [sized(4).size, sized(4).size]);
+    assert.deepEqual([a.sizing.size, b.sizing.size], [sized(4).size, sized(4).size]);
     assert.deepEqual(parts.prepares(sized(4), modelStageDescriptionChanges(applied, sized(4)), [a, b]).length, 0);
   });
 

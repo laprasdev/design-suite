@@ -1,8 +1,9 @@
 import * as THREE from 'three';
 import type {GLTF} from 'three/addons/loaders/GLTFLoader.js';
 import type {ModelStageDisplay, ModelStagePolicy, ModelStageTheme} from './model.ts';
-import {MODEL_STAGE_SIZE, type ModelStageSize} from './sizeModel.ts';
-import {applyModelTransform, disposeModelObject, modelAttachments, prepareModelAsset} from './asset.ts';
+import {MODEL_STAGE_ORIGIN, MODEL_STAGE_SIZE, type ModelStageOrigin, type ModelStageSize} from './sizeModel.ts';
+import {applyModelTransform, disposeModelObject, modelObjectBounds, modelParts, prepareModelAsset}
+  from './asset.ts';
 import {createModelRig} from './rig.ts';
 import {createModelPlayback} from './playback.ts';
 import {createModelMaterialInspection} from './materials.ts';
@@ -21,6 +22,8 @@ export interface ModelActorContext {
   readonly lighting: {attach(objects: readonly THREE.Object3D[]): () => void};
   readonly rendered: (mesh: THREE.Mesh) => void;
 }
+/** How an actor's model sits in its placement: the stage's size rule and origin. */
+export interface ModelActorSizing {readonly size: ModelStageSize; readonly origin: ModelStageOrigin}
 export const MODEL_ACTOR_TEXT = Object.freeze({unlit: 'Runtime presentation requires lit materials.'});
 /** A renderable's one visible value: authored, not hidden by the Rig display, and not hidden by the engine. */
 export const modelRenderableVisible = (authored: boolean, display: ModelStageDisplay, engineHidden: boolean) =>
@@ -34,27 +37,29 @@ export function createModelActor(asset: GLTF, declaration: ModelStageActor, cont
   try {
     acquired.push(() => {asset.scene.parent?.removeFromParent(); disposeModelObject(asset.scene);});
     const profile = modelRuntimeAssetProfile(declaration);
-    const {placement, size: sized} = prepareModelAsset(asset, context.policy);
-    const markers = modelAttachments(asset, source, context.theme);
-    acquired.push(() => markers.forEach(({marker}) => {marker.removeFromParent(); disposeModelObject(marker);}));
+    const {placement, size: sized} = prepareModelAsset(asset);
+    const points = modelParts(asset, context.theme);
+    acquired.push(() => points.forEach(({marker}) => {marker.removeFromParent(); disposeModelObject(marker);}));
     asset.scene.traverse(node => {if (node instanceof THREE.Mesh) node.onAfterRender = () => context.rendered(node);});
     const materials = createModelMaterialInspection(asset.scene);
     acquired.push(() => materials.dispose());
     const runtimeMaterials = profile ? bindModelRuntimeMaterials(asset, profile) : undefined;
     if (runtimeMaterials) acquired.push(() => runtimeMaterials.dispose());
-    const rig = createModelRig(asset.scene, context.theme, markers);
+    const rig = createModelRig(asset.scene, context.theme, points);
     acquired.push(() => {rig.root.removeFromParent(); disposeModelObject(rig.root);});
-    acquired.push(context.lighting.attach([rig.root, ...markers.map(({marker}) => marker)]));
+    acquired.push(context.lighting.attach([rig.root, ...points.map(({marker}) => marker)]));
     const playback = createModelPlayback(asset.scene, asset.animations, context.policy.clock, id);
     acquired.push(() => playback.dispose());
     let current = declaration, driver: ModelStageDriver = MODEL_STAGE_DRIVER.host;
-    // Built at its file's own size; the description's size rule applies with the rest of its stage-wide parts.
-    let size: ModelStageSize = Object.freeze({rule: MODEL_STAGE_SIZE.real});
-    const setSize = (value: ModelStageSize) => {rig.setScale(sized(value)); size = value;};
-    setSize(size);
+    // Built at its file's own size and origin; the description's size and origin apply with its other stage-wide parts.
+    let sizing: ModelActorSizing = Object.freeze({size: {rule: MODEL_STAGE_SIZE.real},
+      origin: MODEL_STAGE_ORIGIN.file});
+    const setSizing = (value: ModelActorSizing) => {rig.setScale(sized(value.size, value.origin)); sizing = value;};
+    setSizing(sizing);
     // The engine's last record of the renderers it hides; before any frame it hides none.
     let engineHidden: ReadonlySet<THREE.Object3D> = new Set();
-    // The one writer of a renderable's visibility, from the person's display and the engine's record.
+    // The one writer of a renderable's visibility, from the person's display and the engine's record. Outputs say
+    // what to hide and never override what the file itself hides.
     const showRenderables = () => {
       for (const {node, visible} of rig.renderables) {
         node.visible = modelRenderableVisible(visible, rig.display, engineHidden.has(node));
@@ -70,14 +75,16 @@ export function createModelActor(asset: GLTF, declaration: ModelStageActor, cont
       };
     };
     prepareHost(declaration)();
-    context.scene.add(placement, rig.root, ...markers.map(({marker}) => marker));
+    context.scene.add(placement, rig.root, ...points.map(({marker}) => marker));
     return {
-      id, asset, placement, markers, rig, playback, materials, prepareHost,
+      id, asset, placement, points, rig, playback, materials, prepareHost,
       get declaration() {return current;},
       get driver() {return driver;},
       setDisplay(value: ModelStageDisplay) {rig.setDisplay(value); showRenderables();},
-      get size() {return size;},
-      setSize,
+      get sizing() {return sizing;},
+      setSizing,
+      /** What the actor draws in its display: the model, its rig, or both. */
+      bounds: () => rig.display === 'model' ? modelObjectBounds(placement) : rig.bounds(),
       // Everything that can refuse runs here; the returned commit only applies.
       prepare(entity: ModelPreviewEntity): ModelStageCommit {
         if (materials.snapshot().materialMode !== 'lit') throw new ModelStageRefusal(MODEL_ACTOR_TEXT.unlit);

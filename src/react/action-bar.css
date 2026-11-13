@@ -29,6 +29,10 @@
 }
 .action-bar-notice>.bar-left { min-width:0;gap:var(--field-gap); }
 .action-bar-notice .bd-label { white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+/* The message keeps its word or two; the detail shows its first few words and the bar's hint holds the rest. */
+.action-bar-notice { --notice-detail-measure:30ch; }
+.action-bar-notice>.bar-left>.bd-label:has(+.action-bar-notice-detail) { flex:none; }
+.action-bar-notice>.bar-left>.action-bar-notice-detail { flex:0 1 auto;min-width:0;max-inline-size:var(--notice-detail-measure);color:var(--dim); }
 .action-bar-notice[data-tone="error"]>.bar-left>svg { color:var(--scarlet);flex-shrink:0; }
 .action-bar-notice[data-tone="info"]>.bar-left>svg { color:var(--dim);flex-shrink:0; }
 @media (prefers-reduced-motion:no-preference) {

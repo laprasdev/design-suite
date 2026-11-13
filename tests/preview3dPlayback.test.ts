@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {describe, it} from 'node:test';
 import * as THREE from 'three';
 import {createModelPlayback} from '../src/react/preview3d/playback.ts';
-import {MODEL_REST_POSE, MODEL_STAGE, modelLocalAdvance, modelStagePolicy, type ModelStageClock}
+import {MODEL_REST_POSE, MODEL_STAGE, MODEL_STAGE_HOLD, modelLocalAdvance, modelStagePolicy, type ModelStageClock}
   from '../src/react/preview3d/model.ts';
 import type {ModelStageActorAnimation} from '../src/react/preview3d/model.ts';
 import {held as heldClip, playing, REST} from './preview3dActorFixture.ts';
@@ -110,16 +110,17 @@ describe('an actor\'s host animation', () => {
   it('moves the local clock\'s one time by the capped elapsed time, and holds it under reduced motion or a hidden page',
     () => {
       const moving = {reducedMotion: false, hidden: false};
-      assert.equal(modelLocalAdvance(16, moving), 0.016);
-      assert.equal(modelLocalAdvance(10_000, moving), MODEL_STAGE.maxFrameDelta);
-      for (const held of [{...moving, reducedMotion: true}, {...moving, hidden: true}]) {
-        assert.equal(modelLocalAdvance(16, held), 0);
-      }
+      assert.deepEqual(modelLocalAdvance(16, moving), {seconds: 0.016, hold: null});
+      assert.deepEqual(modelLocalAdvance(10_000, moving), {seconds: MODEL_STAGE.maxFrameDelta, hold: null});
+      assert.deepEqual(modelLocalAdvance(16, {...moving, reducedMotion: true}),
+        {seconds: 0, hold: MODEL_STAGE_HOLD.reducedMotion});
+      assert.deepEqual(modelLocalAdvance(16, {...moving, hidden: true}), {seconds: 0, hold: MODEL_STAGE_HOLD.hidden});
     });
 
-  it('defaults the stage policy to local and accepts only the declared clock owners', () => {
-    assert.equal(modelStagePolicy().clock, 'local');
-    assert.equal(modelStagePolicy({clock: 'external'}).clock, 'external');
-    assert.throws(() => modelStagePolicy({clock: 'unknown' as ModelStageClock}), /local or external/);
+  it('accepts only the declared clock owners, stated', () => {
+    const stated = {reviewKey: 'review', floor: true, grid: true};
+    assert.equal(modelStagePolicy({...stated, clock: 'local'}).clock, 'local');
+    assert.equal(modelStagePolicy({...stated, clock: 'external'}).clock, 'external');
+    assert.throws(() => modelStagePolicy({...stated, clock: 'unknown' as ModelStageClock}), /local or external/);
   });
 });

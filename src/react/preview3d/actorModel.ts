@@ -46,10 +46,13 @@ export interface ModelStageActorSnapshot {
   readonly animation: string;
   readonly samples: readonly ModelAnimationSample[];
 }
+// What an asset states; a field outside these is refused, never carried.
+const ASSET_FIELDS: readonly string[] = Object.freeze(['id', 'path', 'revision', 'sha256', 'runtimeMaterials']);
 export const MODEL_ACTOR_REFUSAL = Object.freeze({
   set: 'Declared actors require a focus and a non-empty actors array.',
-  actor: (index: number) => `Actor ${index} requires an id, an asset with an id, path and attachments, ` +
+  actor: (index: number) => `Actor ${index} requires an id, an asset with an id and a path, ` +
     'a placement and an animation.',
+  asset: (id: string, field: string) => `Actor ${id}: an asset states ${ASSET_FIELDS.join(', ')}; not ${field}.`,
   animation: (id: string) => `Actor ${id}: an animation is the rest pose, a clip playing, or a clip held at a time; ` +
     `its kind is one of ${Object.values(MODEL_ACTOR_ANIMATION).join(', ')}.`,
   field: (id: string, kind: string, field: string) => `Actor ${id}: a ${kind} animation does not state ${field}.`,
@@ -84,12 +87,14 @@ function animation(value: unknown, id: string): ModelStageActorAnimation {
 }
 function actor(value: unknown, index: number): ModelStageActor {
   if (!object(value) || !named(value.id) || !object(value.asset) || !named(value.asset.id) ||
-    !named(value.asset.path) || !object(value.asset.attachments) || !object(value.placement)) {
+    !named(value.asset.path) || !object(value.placement)) {
     throw new ModelStageRefusal(refusal.actor(index));
   }
+  const stray = Object.keys(value.asset).find(field => !ASSET_FIELDS.includes(field));
+  if (stray) throw new ModelStageRefusal(refusal.asset(value.id, stray));
   const asset = value.asset as unknown as ModelStageAsset;
   return Object.freeze({id: value.id, placement: modelPresentationPose(value.placement, `Actor ${value.id} placement`),
-    asset: Object.freeze({...asset, attachments: Object.freeze({...asset.attachments})}),
+    asset: Object.freeze({...asset}),
     animation: animation(value.animation, value.id)});
 }
 
@@ -119,8 +124,8 @@ export function modelStageActorSet(value: unknown): ModelStageActorSet {
 
 /** Whether two declarations draw the same loaded asset: a kept actor is not reloaded. Host state is not identity. */
 export function modelActorIdentity(value: ModelStageActor) {
-  const {id, path, revision, sha256, attachments, runtimeMaterials} = value.asset;
-  return JSON.stringify([value.id, id, path, revision, sha256, Object.entries(attachments).sort(), runtimeMaterials]);
+  const {id, path, revision, sha256, runtimeMaterials} = value.asset;
+  return JSON.stringify([value.id, id, path, revision, sha256, runtimeMaterials]);
 }
 /** Whether a kept actor's host state (placement or animation) changes. */
 export const modelActorHostChanged = (previous: ModelStageActor, next: ModelStageActor) =>
