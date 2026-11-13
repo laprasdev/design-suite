@@ -11,9 +11,10 @@ type Path = readonly (string | number)[];
 const escaped = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const at = (value: unknown, path: Path) => path.reduce<unknown>((node, step) =>
   (node as Record<string | number, unknown>)[step], value);
-// `shape` names the field a record of several shapes is told apart by (its own refusal is the shape's), or null.
+// `kept` names the fields whose omission is not this refusal: the field a record of several shapes is told apart by
+// (its own refusal is the shape's), and a field stated or left out (a box's rotation).
 function exact(check: (value: unknown) => unknown, whole: unknown, path: Path, where: string, fields: string[],
-  shape: string | null) {
+  kept: readonly string[] = []) {
   const record = at(whole, path) as Record<string, unknown>;
   assert.deepEqual(Object.keys(record).sort(), [...fields].sort(), where);
   const refused = (change: (copy: Record<string, unknown>) => void, pattern: RegExp) => {
@@ -23,8 +24,11 @@ function exact(check: (value: unknown) => unknown, whole: unknown, path: Path, w
       error instanceof ModelStageRefusal && pattern.test(error.message), `${where}: ${pattern}`);
   };
   refused(copy => {copy.stray = 1;}, new RegExp(`^${escaped(where)} does not state stray; it states`));
-  for (const field of fields.filter(name => name !== shape)) {
-    refused(copy => {delete copy[field];}, new RegExp(`^${escaped(where)} omits ${field}\\.$`));
+  for (const field of fields.filter(name => !kept.includes(name))) {
+    refused(copy => {delete copy[field];}, new RegExp(`^${escaped(where)} omits ${field}; it states \\w`));
+  }
+  for (const field of kept.filter(name => !SHAPES.includes(name))) {
+    refused(copy => {copy[field] = undefined;}, new RegExp(`^${escaped(where)}.${field} is stated with no value`));
   }
 }
 
@@ -37,6 +41,9 @@ const LIGHTING = {time: 'dusk', times: [{id: 'dusk', label: 'Dusk', look: LOOK}]
 const TIME = 'Time dusk: look';
 // The fields the description's records of several shapes are told apart by.
 const SHAPES = ['kind', 'rule'];
+const ENVIRONMENT = {reflectZ: false, plane: {position: [0, 0, 0], size: [8, 8], color: [0, 0, 0],
+  grid: {spacing: 1, color: [1, 1, 1]}}, boxes: [{id: 'rock', position: [1, 0, 1], size: [1, 1, 1], color: [0, 0, 0],
+  rotationQuaternion: [0, 0, 0, 1]}]};
 
 describe('every record of the description', () => {
   it('refuses, by its path, each field a time, its look or the lighting omits, and one it does not have', () => {
@@ -52,26 +59,35 @@ describe('every record of the description', () => {
       [['times', 0, 'look', 'fog', 'height'], `${TIME}.fog.height`, ['base', 'top', 'strength']],
       [['times', 0, 'look', 'glow'], `${TIME}.glow`, ['threshold', 'strength', 'radius']],
     ];
-    for (const [path, where, fields] of rows) exact(modelStageLighting, LIGHTING, path, where, fields, null);
+    for (const [path, where, fields] of rows) exact(modelStageLighting, LIGHTING, path, where, fields);
   });
 
   it('refuses, by its path, each field the description, its actors, an asset, a clip, framing or size omits', () => {
     const whole = describing({framing: {kind: 'pose', position: [0, 0, 4], target: [0, 0, 0]},
-      size: {rule: 'normalized', height: 2}});
+      size: {rule: 'normalized', height: 2}, environment: ENVIRONMENT});
     const actor = whole.actors.actors[0];
     const posed = {...whole, actors: {...whole.actors, actors: [{...actor, animation: held('run', 0.5)}]}};
-    const rows: Array<[Path, string, string[]]> = [
+    const rows: Array<[Path, string, string[], string[]?]> = [
       [[], 'The stage description', Object.keys(whole)], [['actors'], 'The actors', ['focus', 'actors']],
       [['actors', 'actors', 0], 'Actor 0', ['id', 'asset', 'placement', 'animation', 'surfaces']],
       [['actors', 'actors', 0, 'animation'], `Actor ${actor.id}.animation`, ['kind', 'name', 'timeSeconds']],
       [['framing'], 'The framing', ['kind', 'position', 'target']], [['size'], 'The stage size', ['rule', 'height']],
+      [['actors', 'actors', 0, 'placement'], `Actor ${actor.id} placement`,
+        ['position', 'rotationQuaternion', 'scale']],
+      [['environment'], 'The environment', ['reflectZ', 'plane', 'boxes']],
+      [['environment', 'plane'], 'The environment.plane', ['position', 'size', 'color', 'grid'], ['grid']],
+      [['environment', 'plane', 'grid'], 'The environment.plane.grid', ['spacing', 'color']],
+      [['environment', 'boxes', 0], 'The environment.boxes[0]', ['id', 'position', 'size', 'color',
+        'rotationQuaternion'], ['rotationQuaternion']],
     ];
-    for (const [path, where, fields] of rows) {
-      exact(modelStageDescription, posed, path, where, fields, fields.find(field => SHAPES.includes(field)) ?? null);
+    for (const [path, where, fields, statedOrLeftOut = []] of rows) {
+      exact(modelStageDescription, posed, path, where, fields, [...fields.filter(field => SHAPES.includes(field)),
+        ...statedOrLeftOut]);
     }
-    // An asset states its id and path, and its revision, digest and profile only when it has them.
-    const asset = {...whole, actors: {...whole.actors, actors: [{...actor, asset: {id: 'otter', path: '/otter.glb'}}]}};
-    exact(modelStageDescription, asset, ['actors', 'actors', 0, 'asset'], `Actor ${actor.id}.asset`, ['id', 'path'],
-      null);
+    // An asset states its id and path, and its revision, digest and profile each with a value or not at all.
+    const asset = {...whole, actors: {...whole.actors, actors: [{...actor, asset: {id: 'otter', path: '/otter.glb',
+      revision: 'r1', sha256: 'a'.repeat(64)}}]}};
+    exact(modelStageDescription, asset, ['actors', 'actors', 0, 'asset'], `Actor ${actor.id}.asset`,
+      ['id', 'path', 'revision', 'sha256'], ['revision', 'sha256']);
   });
 });

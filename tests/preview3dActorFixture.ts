@@ -2,11 +2,11 @@
 // clip k at time t reads clipValue(k, t), which makes every blended value predictable.
 import * as THREE from 'three';
 import {createModelFog} from '../src/react/preview3d/fog.ts';
-import {createModelSurfaceModes} from '../src/react/preview3d/materials.ts';
+import {createModelSurfaceModes, modelStageChanges} from '../src/react/preview3d/materials.ts';
 import type {GLTF} from 'three/addons/loaders/GLTFLoader.js';
 import {applyModelFrame, createModelActor, type ModelActor, type ModelActorContext}
   from '../src/react/preview3d/actor.ts';
-import {modelFrameScope} from '../src/react/preview3d/actorModel.ts';
+import {modelFrameScope} from '../src/react/preview3d/frameModel.ts';
 import {createModelSurfaceMaterials} from '../src/react/preview3d/surfaceMaterials.ts';
 import {createModelStageSharedValues} from '../src/react/preview3d/sharedValues.ts';
 import {MODEL_ACTOR_ANIMATION, MODEL_ANIMATION_LAYER, MODEL_STAGE_FRAMING, MODEL_STAGE_ORIGIN, MODEL_STAGE_SIZE,
@@ -43,16 +43,16 @@ export function actorAsset(clips: readonly ClipSpec[], skeleton = true) {
 }
 
 export function actorContext(clock: ModelStageClock = 'external') {
-  const scene = new THREE.Scene();
+  const scene = new THREE.Scene(), modes = createModelSurfaceModes();
   const context: ModelActorContext = {
     policy: modelStagePolicy({reviewKey: 'review', clock, floor: false, grid: false, kinds: []}), scene,
     theme: {colors: {stage: '#000', text: '#fff', surface: '#111', surfaceHi: '#222', accent: '#f00',
       accentDeep: '#800', teal: '#0ff'}},
-    lighting: {attach: () => () => undefined}, rendered: () => undefined,
-    fog: createModelFog(scene).change, surfaceModes: createModelSurfaceModes(),
+    lighting: {attach: () => () => undefined},
+    changes: modelStageChanges(createModelFog(scene).change, modes), surfaceModes: modes,
     surfaces: {materials: createModelSurfaceMaterials({kinds: new Map(), read: () => Promise.reject(new Error('none')),
       textures: {acquire: () => new THREE.Texture(), release: () => undefined},
-      shared: createModelStageSharedValues(), changes: []}), kinds: new Map(), compile: () => undefined},
+      shared: createModelStageSharedValues(), changes: () => []}), kinds: new Map(), compile: () => undefined},
   };
   return {context, scene};
 }
@@ -64,7 +64,7 @@ export const playing = (name: string) => ({kind: MODEL_ACTOR_ANIMATION.playing, 
 export const STANDING = Object.freeze({position: [0, 0, 0], rotationQuaternion: [0, 0, 0, 1],
   scale: [1, 1, 1]} as const);
 export const standingAt = (position: readonly [number, number, number]) => ({...STANDING, position});
-export const FILE_SURFACES = Object.freeze({kind: 'file'} as const);
+export const FILE_SURFACES = Object.freeze({from: 'file'} as const);
 export const declaration = (id: string, modelId = 'otter', extra: Partial<ModelStageActor> = {}): ModelStageActor =>
   ({id, asset: {id: modelId, path: `${modelId}.glb`}, placement: STANDING, animation: REST,
     surfaces: FILE_SURFACES, ...extra});
@@ -88,7 +88,7 @@ export const close = (actual: number, expected: number, tolerance = 1e-6) =>
 // A whole stage description with one declared actor a; a test overrides the parts it is about.
 export const describing = (changes: Record<string, unknown> = {}) => ({
   actors: {focus: 'a', actors: [declaration('a')]}, environment: null, framing: {kind: MODEL_STAGE_FRAMING.focus},
-  orbit: true, lighting: MODEL_STAGE_THEME_LIGHTING, surfaceSets: {}, display: 'model', materialMode: 'lit',
+  orbit: true, lighting: MODEL_STAGE_THEME_LIGHTING, surfaceSets: {}, display: 'model', surfaceMode: 'lit',
   size: {rule: MODEL_STAGE_SIZE.real}, origin: MODEL_STAGE_ORIGIN.file,
   ...changes});
 // Actors drawn with their files' own materials, as a frame is checked against them: no renderer takes a value.

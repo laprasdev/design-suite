@@ -88,7 +88,7 @@ describe('the stage\'s fog', () => {
     const root = new THREE.Group(), fog = createModelFog(new THREE.Scene());
     root.add(new THREE.Line(new THREE.BufferGeometry(), new THREE.LineBasicMaterial()),
       new THREE.Points(new THREE.BufferGeometry(), new THREE.PointsMaterial()));
-    extendModelMaterials(root, [fog.change]);
+    extendModelMaterials(root, () => [fog.change]);
     root.traverse(node => {
       if (node instanceof THREE.Line || node instanceof THREE.Points) {
         assert.deepEqual(modelMaterialChanges(node.material as THREE.Material).map(({key}) => key),
@@ -99,10 +99,10 @@ describe('the stage\'s fog', () => {
 
   it('reaches a file\'s own materials, and none of the stage\'s aids', () => {
     const {actor} = makeActor('a', [{name: 'run', duration: 1}]);
+    // The fixture's skinned box draws three's basic material, which the Surface modes do not cover: fog alone.
     actor.asset.scene.traverse(node => {
       if (node instanceof THREE.Mesh) for (const material of [node.material].flat()) {
-        assert.deepEqual(modelMaterialChanges(material).map(({key}) => key),
-          ['model-stage-fog', 'model-surface-mode:lit']);
+        assert.deepEqual(modelMaterialChanges(material).map(({key}) => key), ['model-stage-fog']);
       }
     });
     for (const aid of [actor.rig.root, ...actor.points.map(({marker}) => marker)]) aid.traverse(node => {

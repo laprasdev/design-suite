@@ -5,14 +5,9 @@ import {createModelFog, MODEL_FOG_CHANGE} from '../src/react/preview3d/fog.ts';
 import {createModelEnvironment} from '../src/react/preview3d/environment.ts';
 import {createModelStageAids} from '../src/react/preview3d/scene.ts';
 import {modelMaterialChanges} from '../src/react/preview3d/shading.ts';
+import {modelDrawnMaterials} from '../src/react/preview3d/renderers.ts';
 
-const materialsUnder = (root: THREE.Object3D) => {
-  const found: THREE.Material[] = [];
-  root.traverse(node => {
-    if (node instanceof THREE.Mesh || node instanceof THREE.Line) found.push(...[node.material].flat());
-  });
-  return found;
-};
+const materialsUnder = (root: THREE.Object3D) => [...modelDrawnMaterials(root).keys()];
 
 describe('what the stage\'s fog reaches', () => {
   it('reaches every piece of the scenery: its boxes, its plane and the plane\'s grid', () => {

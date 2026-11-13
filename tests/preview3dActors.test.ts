@@ -67,7 +67,7 @@ describe('declared actors under one frame', () => {
       const {[component]: omitted, ...partial} = STANDING;
       assert.ok(omitted);
       assert.throws(() => modelStageActorSet({focus: 'b', actors: [{...declaration('b'), placement: partial}]}),
-        new RegExp(`^ModelStageRefusal: Actor b placement: the pose omits ${component}`));
+        new RegExp(`^ModelStageRefusal: Actor b placement omits ${component}; it states position, rotationQuaternion`));
     }
   });
 
@@ -146,8 +146,8 @@ describe('declared actor sets', () => {
       [set({...a, placement: {...STANDING, scale: [2, 2]}}), /scale must contain 3/],
       [set({...a, placement: {...STANDING, rotationQuaternion: [0, 0, 0, 2]}}), /unit length/],
       // The three shapes are the only animations: no shape, a stray field of another shape, a missing clip or time.
-      [set({...a, animation: {name: 'run', playing: false}}), /Actor a.animation states its kind, one of rest/],
-      [set({...a, animation: {kind: 'paused', name: 'run'}}), /Actor a.animation states its kind, one of rest/],
+      [set({...a, animation: {name: 'run', playing: false}}), /Actor a.animation.kind is one of rest/],
+      [set({...a, animation: {kind: 'paused', name: 'run'}}), /Actor a.animation.kind is one of rest/],
       [set({...a, animation: {...playing('run'), timeSeconds: 1}}),
         /Actor a.animation does not state timeSeconds; it states kind, name\./],
       [set({...a, animation: {...REST, name: 'run'}}), /Actor a.animation does not state name; it states kind\./],
@@ -158,11 +158,12 @@ describe('declared actor sets', () => {
       [set({...a, animation: held('run', Infinity)}), /Actor a.animation.timeSeconds must be a finite number/],
       [set({...a, asset: {id: 'x'}}), /Actor a.asset omits path/],
       [set({asset, placement: STANDING, animation, surfaces}), /Actor 0 omits id/],
-      [set({...a, surfaces: undefined}), /Actor a.surfaces states its kind, one of file, set/],
-      [set({...a, surfaces: {kind: 'set'}}), /Actor a.surfaces omits set/],
-      [set({...a, surfaces: {kind: 'own'}}), /Actor a.surfaces states its kind, one of file, set/],
-      [set({...a, surfaces: {kind: 'file', set: 'x'}}), /Actor a.surfaces does not state set; it states kind\./],
-      [set({...a, surfaces: {kind: 'set', set: ''}}), /Actor a.surfaces.set must be a non-empty string/],
+      [set({...a, surfaces: undefined}), /Actor a.surfaces.from is one of file, set/],
+      [set({...a, surfaces: {from: 'set'}}), /Actor a.surfaces omits set; it states from, set\./],
+      [set({...a, surfaces: {from: 'own'}}), /Actor a.surfaces.from is one of file, set/],
+      [set({...a, surfaces: {kind: 'file'}}), /Actor a.surfaces.from is one of file, set/],
+      [set({...a, surfaces: {from: 'file', set: 'x'}}), /Actor a.surfaces does not state set; it states from\./],
+      [set({...a, surfaces: {from: 'set', set: ''}}), /Actor a.surfaces.set must be a non-empty string/],
       [set({...a, id: ''}), /Actor 0.id must be a non-empty string/],
       [{...set(a), extra: 1}, /The actors does not state extra/], [{}, /The actors omits focus/],
     ];

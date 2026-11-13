@@ -7,7 +7,7 @@ import {disposeModelObject} from './asset.ts';
 import {createModelLighting} from './lighting.ts';
 import {modelStageBuiltInTimes} from './lightingModel.ts';
 import {createModelFog} from './fog.ts';
-import {createModelDraw} from './draw.ts';
+import {createModelDraw, loadModelGlowPasses} from './draw.ts';
 import {createModelStageSharedValues} from './sharedValues.ts';
 import {markModelStageAids, markModelStageLights} from './layers.ts';
 
@@ -34,7 +34,10 @@ export function createModelStageAids(theme: ModelStageTheme, policy: ModelStageP
   return aids;
 }
 
-export function createModelScene(host: HTMLElement, theme: ModelStageTheme, policy: ModelStagePolicy) {
+/** The stage's three.js side: its renderer and canvas, scene, camera and controls, lighting, fog and draw. `inspecting`
+ * says whether a Surface mode other than Lit is in force, which the draw reads each frame (draw.ts). */
+export function createModelScene(host: HTMLElement, theme: ModelStageTheme, policy: ModelStagePolicy,
+  inspecting: () => boolean) {
   // The theme is read before anything is built, so a theme the stage refuses leaves no canvas or context behind.
   const builtIn = modelStageBuiltInTimes(theme.colors);
   const renderer = new THREE.WebGLRenderer({antialias: true, preserveDrawingBuffer: true});
@@ -48,7 +51,7 @@ export function createModelScene(host: HTMLElement, theme: ModelStageTheme, poli
   controls.maxDistance = settings.cameraMaximum;
   controls.maxPolarAngle = Math.PI / 2;
   const fog = createModelFog(scene);
-  const frame = createModelDraw(renderer, scene, camera);
+  const frame = createModelDraw(renderer, scene, camera, {loadPasses: loadModelGlowPasses, inspecting});
   const shared = createModelStageSharedValues();
   const lighting = createModelLighting(renderer, builtIn, {fog, output: frame, shared});
   const aids = createModelStageAids(theme, policy, lighting);

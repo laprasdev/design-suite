@@ -1,11 +1,11 @@
-import {modelStageDisplay} from './model.ts';
-import type {ModelStageDisplay} from './model.ts';
+import {modelStageDisplay} from './displayModel.ts';
+import type {ModelStageDisplay} from './displayModel.ts';
 import {MODEL_ACTOR_ANIMATION, modelStageActorSet, modelStageFocus, type ModelStageActorSet} from './actorModel.ts';
-import {modelEnvironment, type ModelEnvironment} from './environment.ts';
+import {modelEnvironment, type ModelEnvironment} from './environmentModel.ts';
 import {MODEL_STAGE_FRAMING, modelStageFraming, modelStageOrbit, type ModelStageFraming} from './framingModel.ts';
 import {modelStageLighting, type ModelStageLighting} from './lightingModel.ts';
-import {modelStageMaterialMode, type ModelStageMaterialMode} from './materialModel.ts';
-import {modelRecord} from './recordModel.ts';
+import {modelStageSurfaceMode, type ModelStageSurfaceMode} from './surfaceModeModel.ts';
+import {modelRecord, modelStates} from './recordModel.ts';
 import {MODEL_ACTOR_SURFACES, MODEL_SURFACE_REFUSAL, modelSurfaceSets, type ModelSurfaceSet} from './surfaceModel.ts';
 import {ModelStageRefusal} from './refusal.ts';
 import {modelStageOrigin, modelStageSize, type ModelStageOrigin, type ModelStageSize} from './sizeModel.ts';
@@ -22,32 +22,39 @@ export interface ModelStageDescription {
   /** The named sets an actor's surfaces may refer to, each keyed by the renderers of the file it is for. */
   readonly surfaceSets: Readonly<Record<string, ModelSurfaceSet>>;
   readonly display: ModelStageDisplay;
-  readonly materialMode: ModelStageMaterialMode;
+  readonly surfaceMode: ModelStageSurfaceMode;
   readonly size: ModelStageSize;
   readonly origin: ModelStageOrigin;
 }
 export const MODEL_STAGE_DESCRIPTION_PARTS = Object.freeze(
-  ['actors', 'environment', 'framing', 'orbit', 'lighting', 'surfaceSets', 'display', 'materialMode', 'size',
+  ['actors', 'environment', 'framing', 'orbit', 'lighting', 'surfaceSets', 'display', 'surfaceMode', 'size',
     'origin'] as const);
 export type ModelStageDescriptionPart = typeof MODEL_STAGE_DESCRIPTION_PARTS[number];
 
-// Every part is checked before any is used, and a part the description does not have is refused by name; null is the
-// explicit "none" of the environment.
-export function modelStageDescription(input: unknown): ModelStageDescription {
-  const value = modelRecord(input, MODEL_STAGE_DESCRIPTION_PARTS, 'The stage description');
-  const actors = modelStageActorSet(value.actors), surfaceSets = modelSurfaceSets(value.surfaceSets);
+/** Every actor drawn from a set names one of the description's sets; the one refused names the actor and the sets. */
+export function modelStageActorSets(actors: ModelStageActorSet,
+  surfaceSets: Readonly<Record<string, ModelSurfaceSet>>) {
   for (const {id, surfaces} of actors.actors) {
-    if (surfaces.kind === MODEL_ACTOR_SURFACES.set && !(surfaces.set in surfaceSets)) {
+    if (surfaces.from === MODEL_ACTOR_SURFACES.set && !modelStates(surfaceSets, surfaces.set)) {
       throw new ModelStageRefusal(MODEL_SURFACE_REFUSAL.unknownSet(`Actor ${id}.surfaces.set`, surfaces.set,
         Object.keys(surfaceSets)));
     }
   }
+}
+
+// Every part is checked before any is used, and a part the description does not have is refused by name; null is the
+// explicit "none" of the environment. Three-free: a host, a scene package or a kind's author checks a whole
+// description here, without a stage; whether each record fits its kind is `modelSurfaceRecordsFit`'s, against kinds.
+export function modelStageDescription(input: unknown): ModelStageDescription {
+  const value = modelRecord(input, MODEL_STAGE_DESCRIPTION_PARTS, 'The stage description');
+  const actors = modelStageActorSet(value.actors), surfaceSets = modelSurfaceSets(value.surfaceSets);
+  modelStageActorSets(actors, surfaceSets);
   return Object.freeze({
     actors, surfaceSets,
     environment: value.environment === null ? null : modelEnvironment(value.environment),
     framing: modelStageFraming(value.framing), orbit: modelStageOrbit(value.orbit),
     lighting: modelStageLighting(value.lighting), display: modelStageDisplay(value.display),
-    materialMode: modelStageMaterialMode(value.materialMode), size: modelStageSize(value.size),
+    surfaceMode: modelStageSurfaceMode(value.surfaceMode), size: modelStageSize(value.size),
     origin: modelStageOrigin(value.origin),
   });
 }

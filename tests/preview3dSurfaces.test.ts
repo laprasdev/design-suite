@@ -45,6 +45,10 @@ function file() {
   return {scene, parser: {associations}} as never;
 }
 
+// A whole runtime profile, so that what is refused beside a set is the two routes, not the profile.
+const PROFILE = {asset: {id: 'otter', revision: 'r1', sha256: '1'.repeat(64)}, profile: 'base-color-tinted-emission',
+  colorSpace: 'srgb', emissionMask: 'white', noiseBlend: 0, nightBoost: 1,
+  renderers: [{rendererId: 'body', nodeIndex: 2, meshIndex: 0, primitiveIndex: 0, slot: 0}]};
 describe('surface kinds, records and sets', () => {
   it('takes a kind\'s declaration as data and refuses one that is not whole, by its path', () => {
     assert.equal(modelSurfaceKind(PULSE, 'K').parameters._Color.type, 'color');
@@ -60,7 +64,7 @@ describe('surface kinds, records and sets', () => {
     kind({coverage: 'fuzzy'}, /K.coverage is one of opaque, cutout, blended/);
     kind({parameters: {_V: {type: 'vector', size: 5}}}, /K.parameters._V.size is one of 2, 3, 4/);
     kind({parameters: {_C: {type: 'color', space: 'srgb'}}}, /K.parameters._C omits hdr/);
-    kind({parameters: {_C: {type: 'hue'}}}, /K.parameters._C states its type, one of color, vector/);
+    kind({parameters: {_C: {type: 'hue'}}}, /K.parameters._C.type is one of color, vector/);
     kind({attributes: ['uv', 'uv']}, /K.attributes lists uv twice/);
     kind({fog: 'yes'}, /K.fog is stated as true or false/);
     kind({shade: 1}, /K does not state shade/);
@@ -69,7 +73,7 @@ describe('surface kinds, records and sets', () => {
     const options = {reviewKey: 'review', clock: 'local', floor: false, grid: false} as const;
     assert.equal(modelStagePolicy({...options, kinds: [PULSE as never]}).kinds.get('test-pulse')?.webProgram.path,
       '/pulse.glsl');
-    refused(() => modelStagePolicy({...options} as never), /The stage's surface kinds is a list/);
+    refused(() => modelStagePolicy({...options} as never), /The stage's option record omits kinds; it states/);
   });
 
   it('checks a set\'s renderer ids and value forms without its kind, by renderer and parameter', () => {
@@ -104,7 +108,7 @@ describe('surface kinds, records and sets', () => {
   });
 
   it('lists a file\'s renderers by id, and refuses a set that leaves one out or names one it lacks', () => {
-    const renderers = modelFileRenderers(file());
+    const renderers = modelFileRenderers(file(), 'a', 'a.glb');
     assert.deepEqual([...renderers.keys()],
       ['gltf-node:2/primitive:0', 'gltf-node:2/primitive:1', 'gltf-node:3/primitive:0']);
     const whole = Object.fromEntries([...renderers.keys()].map(id => [id, MODEL_FILE_ENTRY]));
@@ -120,7 +124,7 @@ describe('surface kinds, records and sets', () => {
     const {asset, body} = actorAsset([{name: 'run', duration: 1}]);
     const associated = {...asset, parser: {associations: new Map([[body, {nodes: 0, meshes: 0, primitives: 0}]])}};
     const actor = createModelActor(associated as never, declaration('a', 'otter',
-      {surfaces: {kind: 'set', set: 'own'}}), actorContext().context);
+      {surfaces: {from: 'set', set: 'own'}}), actorContext().context);
     const parts = createModelStageParts({...NO_FILES,
       scene: new THREE.Scene(), kinds: kinds(), modes: createModelSurfaceModes(),
       frame: () => undefined,
@@ -139,15 +143,15 @@ describe('surface kinds, records and sets', () => {
   it('refuses a set the description lacks or one beside a runtime profile, and draws a record through the parts',
     async () => {
       refused(() => modelStageDescription(describing({actors: {focus: 'a', actors: [
-        declaration('a', 'otter', {surfaces: {kind: 'set', set: 'tinted'}})]}})),
+        declaration('a', 'otter', {surfaces: {from: 'set', set: 'tinted'}})]}})),
       /Actor a.surfaces.set names surface set tinted; the description's sets are none/);
       refused(() => modelStageDescription(describing({surfaceSets: kindSets(), actors: {focus: 'a', actors: [
-        declaration('a', 'otter', {surfaces: {kind: 'set', set: 'tinted'},
-          asset: {id: 'otter', path: 'otter.glb', runtimeMaterials: {}} as never})]}})),
+        declaration('a', 'otter', {surfaces: {from: 'set', set: 'tinted'},
+          asset: {id: 'otter', path: 'otter.glb', runtimeMaterials: PROFILE} as never})]}})),
       new RegExp(MODEL_ACTOR_REFUSAL.routes('a').replace(/[.?]/g, '\\$&')));
       const {materials} = await kindMaterials(), {asset, body} = kindFile();
       const context = {...actorContext().context, surfaces: {materials, kinds: kindKinds(), compile: () => undefined}};
-      const actor = createModelActor(asset, declaration('a', 'otter', {surfaces: {kind: 'set', set: 'tinted'}}),
+      const actor = createModelActor(asset, declaration('a', 'otter', {surfaces: {from: 'set', set: 'tinted'}}),
         context);
       const parts = createModelStageParts({...NO_FILES, scene: new THREE.Scene(), kinds: kindKinds(),
         modes: createModelSurfaceModes(), frame: () => undefined, fog: createModelFog(new THREE.Scene()),

@@ -1,18 +1,9 @@
 import * as THREE from 'three';
-import {GLTFLoader, type GLTF} from 'three/addons/loaders/GLTFLoader.js';
+import type {GLTF} from 'three/addons/loaders/GLTFLoader.js';
 import {createModelRuntimeMaterials} from './runtimeMaterials.ts';
 import {modelRuntimeMaterialProfile} from './runtimeMaterialModel.ts';
 import type {ModelRuntimeMaterialProfile} from './runtimeMaterialModel.ts';
 import {modelNodeIndex} from './renderers.ts';
-import {readModelFile} from './files.ts';
-
-export async function loadModelRuntimeAsset(path: string, profile: ModelRuntimeMaterialProfile,
-  signal: AbortSignal): Promise<GLTF> {
-  const accepted = modelRuntimeMaterialProfile(profile);
-  const bytes = await readModelFile(path, accepted.asset.sha256, signal);
-  const base = new URL('.', new URL(path, document.baseURI)).href;
-  return new GLTFLoader().parseAsync(bytes, base);
-}
 
 // glTF node ownership comes from loader associations, not labels or traversal positions.
 export function bindModelRuntimeMaterials(asset: GLTF, profile: ModelRuntimeMaterialProfile) {

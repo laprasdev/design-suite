@@ -1,5 +1,5 @@
 import {modelDigest, modelEntries, modelFlag, modelIsNamed, modelName, modelNumber, modelOption, modelRecord,
-  modelShape} from './recordModel.ts';
+  modelShape, modelStates} from './recordModel.ts';
 import {ModelStageRefusal} from './refusal.ts';
 
 // A surface kind's declaration: what any host needs to know to check a record against the kind, with no renderer. It
@@ -51,6 +51,7 @@ export const MODEL_SURFACE_KIND_REFUSAL = Object.freeze({
   float: (where: string, name: string) => `${where} names ${name}, which is not a declared float parameter.`,
   twice: (where: string, name: string) => `${where} lists ${name} twice.`,
   list: (where: string) => `${where} is a list.`,
+  kinds: 'The stage\'s surface kinds is a list of kinds; state [] for none.',
   glsl: (where: string, name: string) => `${where} names ${name}, which is not a GLSL name: a letter or underscore, ` +
     'then letters, digits and underscores, never two underscores in a row.',
 });
@@ -91,18 +92,20 @@ export function modelSurfaceKind(value: unknown, where: string): ModelSurfaceKin
   const kind = modelRecord(value, fields.kind, where);
   const id = modelName(kind.id, `${where}.id`);
   if (id === MODEL_FILE_SURFACE) throw new ModelStageRefusal(refusal.reserved(`${where}.id`));
-  const parameters = Object.freeze(Object.fromEntries(modelEntries(kind.parameters, `${where}.parameters`)
-    .map(([name, entry]) => {
-      if (!glslName(name)) throw new ModelStageRefusal(refusal.glsl(`${where}.parameters`, name));
-      return [name, parameter(entry, `${where}.parameters.${name}`)];
-    })));
+  const parameters = Object.freeze(Object.fromEntries(modelEntries(kind.parameters, `${where}.parameters`,
+    'parameters by name').map(([name, entry]) => {
+    if (!glslName(name)) throw new ModelStageRefusal(refusal.glsl(`${where}.parameters`, name));
+    return [name, parameter(entry, `${where}.parameters.${name}`)];
+  })));
   const float = (name: unknown, at: string) => {
-    if (!modelIsNamed(name) || parameters[name]?.type !== MODEL_SURFACE_PARAMETER.float) {
+    if (!modelIsNamed(name) || !modelStates(parameters, name) ||
+      parameters[name].type !== MODEL_SURFACE_PARAMETER.float) {
       throw new ModelStageRefusal(refusal.float(at, String(name)));
     }
     return name;
   };
-  const inert = Object.freeze(Object.fromEntries(modelEntries(kind.inert, `${where}.inert`).map(([name, number]) =>
+  const inert = Object.freeze(Object.fromEntries(modelEntries(kind.inert, `${where}.inert`,
+    'inert values by float parameter name').map(([name, number]) =>
     [float(name, `${where}.inert`), modelNumber(number, `${where}.inert.${name}`, -Infinity, Infinity)])));
   const displacement = kind.displacement === null ? null : Object.freeze({reach: float(modelRecord(kind.displacement,
     fields.displacement, `${where}.displacement`).reach, `${where}.displacement.reach`)});
@@ -117,7 +120,7 @@ export function modelSurfaceKind(value: unknown, where: string): ModelSurfaceKin
 
 /** The kinds a stage is given, by id: each checked whole, ids distinct, none the file's. */
 export function modelSurfaceKinds(values: unknown): ReadonlyMap<string, ModelSurfaceKind> {
-  if (!Array.isArray(values)) throw new ModelStageRefusal(refusal.list('The stage\'s surface kinds'));
+  if (!Array.isArray(values)) throw new ModelStageRefusal(refusal.kinds);
   const kinds = new Map<string, ModelSurfaceKind>(), at = new Map<string, number>();
   values.forEach((value: unknown, index) => {
     const kind = modelSurfaceKind(value, `Surface kind ${index}`), earlier = at.get(kind.id);

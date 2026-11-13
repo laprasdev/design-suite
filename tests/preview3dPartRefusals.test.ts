@@ -27,7 +27,7 @@ test('environment.ts: an invalid update is a refusal and moves no box', () => {
   const environment = createModelEnvironment(value, createModelFog(new THREE.Scene()).change);
   const box = environment.group.getObjectByName('box')!;
   refused(() => environment.update({...value, boxes: [{...value.boxes[0], position: [9, 9, 9], color: [2, 0, 0]}]}),
-    /The environment box box.color must be three finite numbers, sRGB in \[0, 1\]/);
+    /The environment.boxes\[0\].color must be three finite numbers, sRGB in \[0, 1\]/);
   assert.deepEqual(box.position.toArray(), [1, 2, 3]);
   environment.dispose();
 });
@@ -46,14 +46,15 @@ test('stageParts.ts: a Surface mode an actor cannot show is a refusal and leaves
   const parts = createModelStageParts({...NO_FILES,
       scene: new THREE.Scene(), fog: createModelFog(new THREE.Scene()),
     kinds: new Map(), modes, lighting: {load: () => [], prepare: () => () => undefined}, frame: () => undefined});
-  const clay = modelStageDescription(describing({materialMode: 'clay'}));
+  const clay = modelStageDescription(describing({surfaceMode: 'clay'}));
   const actor = {id: 'plain', driver: 'host', rig: {display: clay.display}, sizing: {size: clay.size,
     origin: clay.origin}, materials: {available: false, emissiveMaterialCount: 0,
     refresh: () => assert.fail('nothing recompiles')}} as unknown as ModelActor;
-  refused(() => prepareWhole(parts.prepares(clay, new Set(['materialMode']), [actor])),
+  refused(() => prepareWhole(parts.prepares(clay, new Set(['surfaceMode']), [actor])),
     /Actor plain does not support material inspection/);
   assert.equal(modes.mode, 'lit');
-  refused(() => modelStageDescription(describing({materialMode: 'xray'})), /Unknown material inspection mode/);
+  refused(() => modelStageDescription(describing({surfaceMode: 'xray'})),
+    /The stage description.surfaceMode is one of lit, clay, color, emission/);
 });
 
 test('lightingModel.ts: an unknown time is a refusal and leaves the light', () => {

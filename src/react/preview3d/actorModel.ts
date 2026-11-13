@@ -1,16 +1,11 @@
 import type {ModelStageAsset} from './model.ts';
 import {modelPresentationPose, type ModelPresentationPose} from './placementModel.ts';
-import {MODEL_PREVIEW_ENTITY_REFUSAL, modelPreviewEntity, type ModelPreviewEntity} from './presentation.ts';
 import type {ModelAnimationSample} from './animationLayerModel.ts';
 import {modelRuntimeMaterialProfile} from './runtimeMaterialModel.ts';
-import {modelIsNamed as named, modelIsRecord as object, modelName, modelNumber, modelRecord, modelShape}
+import {modelDigest, modelName, modelNumber, modelRecord, modelRecordStating, modelShape, modelStates}
   from './recordModel.ts';
 import {ModelStageRefusal} from './refusal.ts';
-import {MODEL_ACTOR_SURFACES, modelActorSurfaces, type ModelActorSurfaces, type ModelSurfaceSet}
-  from './surfaceModel.ts';
-import {modelSurfaceTakes, type ModelSurfaceTakes} from './surfaceOutputModel.ts';
-import type {ModelSurfaceKind} from './surfaceKindModel.ts';
-import type {ModelRuntimeMaterialProfile} from './runtimeMaterialModel.ts';
+import {MODEL_ACTOR_SURFACES, modelActorSurfaces, type ModelActorSurfaces} from './surfaceModel.ts';
 
 // Actor ids are the host's. A frame's entities are keyed by actor id and the host owns the mapping from an engine's
 // entity ids to them. Two actors may share one asset, so an actor's id is never taken from its asset.
@@ -42,11 +37,6 @@ export interface ModelStageActorSet {
 }
 export const MODEL_STAGE_DRIVER = Object.freeze({host: 'host', engine: 'engine'} as const);
 export type ModelStageDriver = typeof MODEL_STAGE_DRIVER[keyof typeof MODEL_STAGE_DRIVER];
-// The stage's own frame, built by the host: every entity names a declared actor, so an unknown id is refused.
-export interface ModelPreviewFrame {
-  readonly simulationTimeSeconds: number;
-  readonly entities: readonly ModelPreviewEntity[];
-}
 export interface ModelStageActorSnapshot {
   readonly id: string;
   readonly modelId: string;
@@ -57,10 +47,10 @@ export interface ModelStageActorSnapshot {
 }
 const ACTOR_SET_FIELDS = Object.freeze(['focus', 'actors']);
 const ACTOR_FIELDS = Object.freeze(['id', 'asset', 'placement', 'animation', 'surfaces']);
-// What an asset states: its id and path always; its revision, digest and runtime profile only when it has them
-// (Workbench's catalogue knows no revision; the seam's later step makes the file's identity whole). A field outside
-// these is refused, never carried.
-const ASSET_FIELDS = Object.freeze({stated: ['id', 'path'], whenKnown: ['revision', 'sha256', 'runtimeMaterials']});
+// What an asset states: its id and path always; its revision, digest and runtime profile when it has them (Workbench's
+// catalogue knows no revision; whether every asset states its digest is the owner's question). One it names is stated
+// with a value and checked; a field outside these is refused, never carried.
+const ASSET_FIELDS = Object.freeze({stated: ['id', 'path'], whenStated: ['revision', 'sha256', 'runtimeMaterials']});
 export const MODEL_ACTOR_REFUSAL = Object.freeze({
   set: 'Declared actors require a focus and a non-empty actors array.',
   repeated: (id: string) => `Actor ${id} is declared twice.`,
@@ -85,18 +75,19 @@ function animation(value: unknown, where: string): ModelStageActorAnimation {
     timeSeconds: modelNumber(record.timeSeconds, `${where}.timeSeconds`, 0, Number.POSITIVE_INFINITY)});
 }
 function asset(value: unknown, where: string): ModelStageAsset {
-  const known = object(value) ? ASSET_FIELDS.whenKnown.filter(field => field in value) : [];
-  const record = modelRecord(value, [...ASSET_FIELDS.stated, ...known], where);
-  modelName(record.id, `${where}.id`);
-  modelName(record.path, `${where}.path`);
-  return Object.freeze({...record}) as unknown as ModelStageAsset;
+  const record = modelRecordStating(value, ASSET_FIELDS, where);
+  return Object.freeze({id: modelName(record.id, `${where}.id`), path: modelName(record.path, `${where}.path`),
+    ...(modelStates(record, 'revision') && {revision: modelName(record.revision, `${where}.revision`)}),
+    ...(modelStates(record, 'sha256') && {sha256: modelDigest(record.sha256, `${where}.sha256`)}),
+    ...(modelStates(record, 'runtimeMaterials') &&
+      {runtimeMaterials: modelRuntimeMaterialProfile(record.runtimeMaterials)})});
 }
 function actor(value: unknown, index: number): ModelStageActor {
   const record = modelRecord(value, ACTOR_FIELDS, `Actor ${index}`);
   const id = modelName(record.id, `Actor ${index}.id`);
   const declared = asset(record.asset, `Actor ${id}.asset`);
   const surfaces = modelActorSurfaces(record.surfaces, `Actor ${id}.surfaces`);
-  if (declared.runtimeMaterials && surfaces.kind === MODEL_ACTOR_SURFACES.set) {
+  if (declared.runtimeMaterials && surfaces.from === MODEL_ACTOR_SURFACES.set) {
     throw new ModelStageRefusal(refusal.routes(id));
   }
   return Object.freeze({id, asset: declared, placement: modelPresentationPose(record.placement,
@@ -150,41 +141,12 @@ export function modelRuntimeAssetProfile(value: ModelStageActor) {
   return profile;
 }
 
-/** What a frame is checked against: the declared actors and, by actor id, what each one's renderers take. */
-export interface ModelFrameScope {
-  readonly actors: readonly ModelStageActor[];
-  readonly takes: ReadonlyMap<string, ModelRuntimeMaterialProfile | ModelSurfaceTakes>;
-}
-/** A description's frame scope, made once when it is applied: an actor with a runtime profile takes through it (the
- * description refuses one with a set too), every other one through its surfaces. */
-export function modelFrameScope(value: {readonly actors: ModelStageActorSet;
-  readonly surfaceSets: Readonly<Record<string, ModelSurfaceSet>>},
-kinds: ReadonlyMap<string, ModelSurfaceKind>): ModelFrameScope {
-  const {actors} = value.actors;
-  return Object.freeze({actors, takes: new Map(actors.map(actor => [actor.id,
-    modelRuntimeAssetProfile(actor) ?? modelSurfaceTakes(actor.surfaces, value.surfaceSets, kinds)]))});
-}
-
-export function modelPreviewFrame(value: unknown, scope: ModelFrameScope): ModelPreviewFrame {
-  const {actors} = scope;
-  const time = object(value) ? value.simulationTimeSeconds : undefined;
-  if (!object(value) || typeof time !== 'number' || !Number.isFinite(time) || time < 0 ||
-    !Array.isArray(value.entities)) {
-    throw new ModelStageRefusal(refusal.frame);
-  }
-  if (value.removedEntities !== undefined &&
-    (!Array.isArray(value.removedEntities) || value.removedEntities.length)) {
-    throw new ModelStageRefusal(refusal.removed);
-  }
-  const declared = new Map(actors.map(entry => [entry.id, entry])), seen = new Set<string>();
-  const entities = Array.from(value.entities, (entity: unknown) => {
-    const id = object(entity) ? entity.entityId : undefined;
-    if (!named(id)) throw new ModelStageRefusal(MODEL_PREVIEW_ENTITY_REFUSAL.entity);
-    const actor = declared.get(id);
-    if (!actor) throw new ModelStageRefusal(refusal.undeclared(id));
-    if (seen.has(id)) throw new ModelStageRefusal(refusal.twice(id));
-    seen.add(id);
-    return modelPreviewEntity(entity, actor.asset.id, scope.takes.get(id));
-  });
-  return Object.freeze({simulationTimeSeconds: time, entities: Object.freeze(entities)});
+/**
+ * The digest an actor's file is read against (files.ts): its runtime profile's while it states one (until step 5e
+ * removes the profile; the asset's own, when stated, must equal it), else the asset's own; none stated, the file is
+ * read unverified.
+ */
+export function modelAssetDigest(value: ModelStageActor): string | undefined {
+  const profile = modelRuntimeAssetProfile(value);
+  return profile ? profile.asset.sha256 : value.asset.sha256;
 }

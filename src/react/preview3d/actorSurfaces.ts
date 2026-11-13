@@ -35,13 +35,15 @@ const NOTHING_BEFORE_RENDER = THREE.Object3D.prototype.onBeforeRender;
 // can refuse (the set's coverage, a kind's mesh and attributes, its program) is checked while preparing; a commit only
 // swaps. Engine values are per renderer: each drawn renderer has its own copy of its record's values, and just before
 // it is drawn hands that copy to the shared material when the material holds another's or the copy changed.
-export function createModelActorSurfaces(asset: GLTF, actor: string, context: ModelActorSurfacesContext) {
+export function createModelActorSurfaces(asset: GLTF, file: {readonly actor: string; readonly path: string},
+  context: ModelActorSurfacesContext) {
+  const {actor} = file;
   // Each mesh's own material, as the file and the stage's changes made it at build.
   const originals = new Map<THREE.Mesh, THREE.Material | THREE.Material[]>();
   asset.scene.traverse(node => {if (node instanceof THREE.Mesh) originals.set(node, node.material);});
   // The renderers by id, read from the loader's associations the first time a set or a frame's values need them.
   let ids: ReadonlyMap<string, ModelRenderer> | undefined;
-  const renderers = () => ids ??= modelFileRenderers(asset);
+  const renderers = () => ids ??= modelFileRenderers(asset, actor, file.path);
   let drawn = new Map<THREE.Mesh, Drawn>();
   const draw = (node: THREE.Mesh, held: Drawn) => {
     const {material} = held.surface, uniform = material.uniforms[MODEL_SURFACE_GLSL.values];
@@ -90,7 +92,7 @@ export function createModelActorSurfaces(asset: GLTF, actor: string, context: Mo
      * changed has its kind's material ready, compiled on the renderer; the commit swaps the changed ones only. */
     prepare(surfaces: ModelActorSurfaces, sets: Readonly<Record<string, ModelSurfaceSet>>): ModelStageCommit {
       const next = new Map<THREE.Mesh, Drawn>();
-      if (surfaces.kind === MODEL_ACTOR_SURFACES.set) {
+      if (surfaces.from === MODEL_ACTOR_SURFACES.set) {
         const set = sets[surfaces.set];
         modelSurfaceSetCovers(actor, surfaces.set, set, renderers());
         for (const [id, entry] of Object.entries(set)) {

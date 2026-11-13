@@ -1,30 +1,44 @@
 import {element} from '../elementContract.ts';
-import {ModelStageRefusal} from './refusal.ts';
-import type {ModelStageMaterialMode} from './materialModel.ts';
+import type {ModelStageSurfaceMode} from './surfaceModeModel.ts';
 import type {ModelRuntimeMaterialProfile} from './runtimeMaterialModel.ts';
-import type {ModelEnvironment} from './environment.ts';
-import type {ModelPreviewFrame, ModelStageActorSnapshot} from './actorModel.ts';
+import type {ModelStageActorSnapshot} from './actorModel.ts';
+import type {ModelPreviewFrame} from './frameModel.ts';
 import type {ModelStageDescription} from './descriptionModel.ts';
 import type {ModelRotation, ModelVector} from './placementModel.ts';
-import {modelSurfaceKinds, type ModelSurfaceKind} from './surfaceKindModel.ts';
+import {MODEL_STAGE_DISPLAY, type ModelStageDisplay} from './displayModel.ts';
 export {MODEL_RUNTIME_MATERIAL, modelRuntimeMaterialProfile} from './runtimeMaterialModel.ts';
 export type {ModelRuntimeMaterialProfile, ModelMaterialOutput, ModelRendererBinding} from './runtimeMaterialModel.ts';
-export type {ModelEnvironment, ModelEnvironmentBox} from './environment.ts';
-export {MODEL_PREVIEW_MATERIAL_TEXT, MODEL_PREVIEW_MATERIAL_OPTIONS} from './materialModel.ts';
-export type {ModelStageMaterialMode} from './materialModel.ts';
+export {MODEL_ENVIRONMENT_GRID, MODEL_ENVIRONMENT_REFUSAL, modelEnvironment} from './environmentModel.ts';
+export type {ModelEnvironment, ModelEnvironmentBox} from './environmentModel.ts';
+export {MODEL_PREVIEW_SURFACE_TEXT, MODEL_PREVIEW_SURFACE_OPTIONS, MODEL_STAGE_SURFACE_MODE, modelStageSurfaceMode}
+  from './surfaceModeModel.ts';
+export type {ModelStageSurfaceMode} from './surfaceModeModel.ts';
+export {MODEL_STAGE_DISPLAY, modelStageDisplay} from './displayModel.ts';
+export type {ModelStageDisplay} from './displayModel.ts';
+export {MODEL_STAGE_CLOCK, modelStagePolicy} from './stageOptionsModel.ts';
+export type {ModelStageClock, ModelStageOptions, ModelStagePolicy} from './stageOptionsModel.ts';
+export {MODEL_RECORD_REFUSAL} from './recordModel.ts';
 export {MODEL_PREVIEW_LIGHTING_TEXT, MODEL_STAGE_BUILT_IN_TIMES, MODEL_STAGE_THEME_LIGHTING, MODEL_STAGE_TIME,
   modelStageLighting, modelStageTimeOptions} from './lightingModel.ts';
 export type {ModelStageLighting, ModelStageTime} from './lightingModel.ts';
 export {MODEL_STAGE_GLOW_WIDEST, MODEL_STAGE_TONE_CURVE} from './lookModel.ts';
 export type {ModelStageFog, ModelStageGlow, ModelStageLook, ModelStageToneCurve} from './lookModel.ts';
 export type {ModelColor} from './colorModel.ts';
+// A surface kind's declaration, records and sets, and what a frame's renderers take: checked here with no renderer,
+// by a host, a scene package or a kind's author.
 export {MODEL_SURFACE_PARAMETER, MODEL_COLOR_SPACE, MODEL_SURFACE_LIGHT, MODEL_SURFACE_COVERAGE, MODEL_SURFACE_SIDE,
-  MODEL_VECTOR_SIZE, MODEL_FILE_SURFACE, modelSurfaceKind} from './surfaceKindModel.ts';
-export type {ModelSurfaceKind, ModelSurfaceParameter} from './surfaceKindModel.ts';
-export {MODEL_ACTOR_SURFACES, MODEL_FILE_ENTRY, MODEL_TEXTURE_WRAP, MODEL_TEXTURE_CONSTANT, modelRendererId,
-  modelSurfaceRecordsFit, modelSurfaceSets} from './surfaceModel.ts';
-export type {ModelActorSurfaces, ModelSurfaceEntry, ModelSurfaceRecord, ModelSurfaceSet, ModelSurfaceTexture,
-  ModelSurfaceValue} from './surfaceModel.ts';
+  MODEL_VECTOR_SIZE, MODEL_FILE_SURFACE, MODEL_SURFACE_KIND_REFUSAL, modelSurfaceKind, modelSurfaceKinds}
+  from './surfaceKindModel.ts';
+export type {ModelColorSpace, ModelSurfaceKind, ModelSurfaceParameter} from './surfaceKindModel.ts';
+export {MODEL_ACTOR_SURFACES, MODEL_FILE_ENTRY, MODEL_SURFACE_REFUSAL, MODEL_TEXTURE_FORMATS, MODEL_TEXTURE_WRAP,
+  MODEL_TEXTURE_CONSTANT, modelActorSurfaces, modelRendererId, modelSurfaceFiles, modelSurfaceRecordsFit,
+  modelSurfaceSets} from './surfaceModel.ts';
+export type {ModelActorSurfaces, ModelSurfaceEntry, ModelSurfaceFile, ModelSurfaceRecord, ModelSurfaceSet,
+  ModelSurfaceTexture, ModelSurfaceValue} from './surfaceModel.ts';
+export {MODEL_RENDERER_SLOT, MODEL_SURFACE_OUTPUT_REFUSAL, modelSurfaceTakes} from './surfaceOutputModel.ts';
+export type {ModelSurfaceTakes} from './surfaceOutputModel.ts';
+export {modelFrameScope, modelPreviewFrame} from './frameModel.ts';
+export type {ModelFrameScope, ModelPreviewFrame} from './frameModel.ts';
 export {modelPreviewEntity, MODEL_PREVIEW_CAPABILITIES} from './presentation.ts';
 export {modelPoseForBinding, MODEL_PREVIEW_QUATERNION_TOLERANCE} from './placementModel.ts';
 export type {ModelVector, ModelRotation, ModelPresentationPose, ModelPoseBinding} from './placementModel.ts';
@@ -34,10 +48,11 @@ export {ModelStageRefusal, MODEL_STAGE_FAILURE, modelStageFailure} from './refus
 export type {ModelStageFailure, ModelStageFailureKind} from './refusal.ts';
 export {MODEL_ANIMATION_LAYER, MODEL_ANIMATION_REFUSAL, modelAnimationLayers} from './animationLayerModel.ts';
 export type {ModelAnimationLayer, ModelAnimationSample} from './animationLayerModel.ts';
-export {MODEL_ACTOR_ANIMATION, MODEL_ACTOR_REFUSAL, MODEL_STAGE_DRIVER, modelPreviewFrame, modelStageActorSet}
-  from './actorModel.ts';
-export type {ModelPreviewFrame, ModelStageActor, ModelStageActorAnimation, ModelStageActorSet,
-  ModelStageActorSnapshot, ModelStageDriver} from './actorModel.ts';
+export {MODEL_ACTOR_ANIMATION, MODEL_ACTOR_REFUSAL, MODEL_STAGE_DRIVER, modelStageActorSet} from './actorModel.ts';
+export type {ModelStageActor, ModelStageActorAnimation, ModelStageActorSet, ModelStageActorSnapshot,
+  ModelStageDriver} from './actorModel.ts';
+// The whole description, checked with no renderer: every part, and every actor's set against the description's sets.
+export {MODEL_STAGE_DESCRIPTION_PARTS, modelStageActorSets, modelStageDescription} from './descriptionModel.ts';
 export type {ModelStageDescription, ModelStageDescriptionPart} from './descriptionModel.ts';
 export {MODEL_STAGE_SIZE, MODEL_STAGE_ORIGIN} from './sizeModel.ts';
 export type {ModelStageSize, ModelStageOrigin} from './sizeModel.ts';
@@ -51,8 +66,6 @@ export const MODEL_PREVIEW_REVIEW = 'modelPreviewReview';
 export const ModelPreviewElement = Object.freeze({
   ROOT: element('model-preview'), STAGE: element('model-preview-stage'), CONTROLS: element('model-preview-controls'),
 });
-export type ModelStageDisplay = 'model' | 'rig' | 'both';
-export type ModelStageClock = 'local' | 'external';
 /** Why the local clock's time is held still: the person asks for reduced motion, or the page is hidden. */
 export const MODEL_STAGE_HOLD = Object.freeze({reducedMotion: 'reduced-motion', hidden: 'hidden'} as const);
 export type ModelStageHold = typeof MODEL_STAGE_HOLD[keyof typeof MODEL_STAGE_HOLD];
@@ -68,15 +81,10 @@ export const MODEL_PREVIEW_TEXT = Object.freeze({
   ready: (name: string) => `${name} ready`, canvas: (name: string) => `${name} animation viewer`,
 });
 export const MODEL_PREVIEW_DISPLAY_OPTIONS = Object.freeze([
-  {value: 'model', label: MODEL_PREVIEW_TEXT.model},
-  {value: 'rig', label: MODEL_PREVIEW_TEXT.rig},
-  {value: 'both', label: MODEL_PREVIEW_TEXT.both},
+  {value: MODEL_STAGE_DISPLAY.model, label: MODEL_PREVIEW_TEXT.model},
+  {value: MODEL_STAGE_DISPLAY.rig, label: MODEL_PREVIEW_TEXT.rig},
+  {value: MODEL_STAGE_DISPLAY.both, label: MODEL_PREVIEW_TEXT.both},
 ] satisfies {value: ModelStageDisplay; label: string}[]);
-export function modelStageDisplay(value: unknown): ModelStageDisplay {
-  const option = MODEL_PREVIEW_DISPLAY_OPTIONS.find(item => item.value === value);
-  if (!option) throw new ModelStageRefusal('Unknown stage display.');
-  return option.value;
-}
 
 export const MODEL_STAGE = Object.freeze({
   pixelRatioLimit: 2, fieldOfView: 38, nearPlane: 0.01, farPlane: 100,
@@ -96,12 +104,15 @@ export function modelLocalHold(reducedMotion: boolean, hidden: boolean): ModelSt
  */
 export const modelLocalAdvance = (elapsedMilliseconds: number, hold: ModelStageHold | null) => hold === null ?
   Math.min(elapsedMilliseconds / MODEL_STAGE.millisecondsPerSecond, MODEL_STAGE.maxFrameDelta) : 0;
+/** A model file an actor draws. Its revision, digest and runtime profile are each stated or left out, never stated
+ * empty. A stated `sha256` is checked on every read of the file; with none stated the file is read unverified (whether
+ * every asset must state one is the owner's question). */
 export interface ModelStageAsset {
-  id: string;
-  path: string;
-  revision?: string;
-  sha256?: string;
-  runtimeMaterials?: ModelRuntimeMaterialProfile;
+  readonly id: string;
+  readonly path: string;
+  readonly revision?: string;
+  readonly sha256?: string;
+  readonly runtimeMaterials?: ModelRuntimeMaterialProfile;
 }
 /** A model as the view's catalog names it: its asset id, its name, and the clips its picker offers. */
 export interface ModelPreviewAsset {
@@ -114,18 +125,6 @@ export interface ModelStageTheme {
     stage: string; text: string; surface: string; surfaceHi: string;
     accent: string; accentDeep: string; teal: string;
   };
-}
-/**
- * What is fixed when a stage is created, all stated: its clock, which every actor's playback is built for; whether the
- * stage lays its own floor and grid; the surface kinds a description may use (none is a stated empty list); and the
- * host property its review handle is published under.
- */
-export interface ModelStageOptions {
-  readonly reviewKey: string;
-  readonly clock: ModelStageClock;
-  readonly floor: boolean;
-  readonly grid: boolean;
-  readonly kinds: readonly ModelSurfaceKind[];
 }
 export interface ModelStageSnapshot {
   id: string;
@@ -143,8 +142,8 @@ export interface ModelStageSnapshot {
   rigVisible: boolean;
   boneCount: number;
   visibleRigJoints: number;
-  materialMode: ModelStageMaterialMode;
-  materialInspectionAvailable: boolean;
+  surfaceMode: ModelStageSurfaceMode;
+  surfaceModesAvailable: boolean;
   emissiveMaterialCount: number;
   /** The id of the time of day in force. */
   lighting: string;
@@ -171,18 +170,3 @@ export interface ModelStageController {
   resetCamera(): void;
   snapshot(): ModelStageSnapshot;
 }
-export const MODEL_STAGE_OPTIONS_REFUSAL = Object.freeze({
-  clock: 'Preview clock must be local or external.',
-  aid: (name: string) => `The stage's ${name} is stated as true or false.`,
-});
-export function modelStagePolicy(options: ModelStageOptions) {
-  if (options.clock !== 'local' && options.clock !== 'external') {
-    throw new ModelStageRefusal(MODEL_STAGE_OPTIONS_REFUSAL.clock);
-  }
-  for (const aid of ['floor', 'grid'] as const) {
-    if (typeof options[aid] !== 'boolean') throw new ModelStageRefusal(MODEL_STAGE_OPTIONS_REFUSAL.aid(aid));
-  }
-  return Object.freeze({clock: options.clock, floor: options.floor, grid: options.grid,
-    kinds: modelSurfaceKinds(options.kinds)});
-}
-export type ModelStagePolicy = ReturnType<typeof modelStagePolicy>;

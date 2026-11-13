@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import {modelDrawnMaterials} from './renderers.ts';
 
 // The stage's one owner of changes to a material's program. Every change the stage makes to what a three.js material
 // compiles goes through `extendModelMaterial`, which composes the changes in order into one hook and one program key,
@@ -71,17 +72,14 @@ export function modelMaterialChanges(material: THREE.Material): readonly ModelSh
 }
 
 /**
- * Every material under an object, each once, extended with these changes; each must compile three's own program. A
- * model's lines and points are drawn too, so they are extended like its meshes.
+ * Every material the renderers under an object draw with (its meshes', lines' and points'), each once, extended with
+ * the changes `changes` gives it; each must compile three's own program.
  */
-export function extendModelMaterials(root: THREE.Object3D, changes: readonly ModelShaderChange[]) {
-  const materials = new Set<THREE.Material>();
-  root.traverse(node => {
-    if (!(node instanceof THREE.Mesh || node instanceof THREE.Line || node instanceof THREE.Points)) return;
-    for (const material of [node.material].flat()) materials.add(material);
-  });
+export function extendModelMaterials(root: THREE.Object3D,
+  changes: (material: THREE.Material) => readonly ModelShaderChange[]) {
+  const materials = [...modelDrawnMaterials(root).keys()];
   for (const material of materials) {
     if (modelMaterialChanges(material).length) throw new Error(MODEL_SHADING_TEXT.foreign(material.name));
   }
-  for (const material of materials) extendModelMaterial(material, changes);
+  for (const material of materials) extendModelMaterial(material, changes(material));
 }

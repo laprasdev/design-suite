@@ -20,15 +20,24 @@ const assetBox = () => {
 const boundsOf = (object: THREE.Object3D) => new THREE.Box3().setFromObject(object);
 
 describe('shared model presentation', () => {
-  it('fixes the stated clock, floor and grid at creation, and refuses an option left unstated', () => {
+  it('fixes the stated options at creation, exactly: one left out, one it lacks or one malformed is refused', () => {
     assert.equal(MODEL_REST_POSE, 'rest-pose');
     assert.equal(MODEL_STAGE.normalizedHeight, 2);
     const stated = {reviewKey: 'review', clock: 'local', floor: true, grid: false, kinds: []} as const;
     assert.deepEqual(modelStagePolicy(stated), {clock: 'local', floor: true, grid: false, kinds: new Map()});
-    for (const aid of ['floor', 'grid'] as const) {
-      const {[aid]: _, ...unstated} = stated;
-      assert.throws(() => modelStagePolicy(unstated as typeof stated), new RegExp(`stage's ${aid} is stated`));
+    const fields = 'it states reviewKey, clock, floor, grid, kinds';
+    for (const field of ['reviewKey', 'clock', 'floor', 'grid', 'kinds'] as const) {
+      const {[field]: _, ...unstated} = stated;
+      assert.throws(() => modelStagePolicy(unstated as typeof stated),
+        new RegExp(`^ModelStageRefusal: The stage's option record omits ${field}; ${fields}\\.$`));
     }
+    const refused: Array<[unknown, RegExp]> = [[{...stated, shadows: true}, /does not state shadows; it states/],
+      [{...stated, floor: 'yes'}, /The stage's option record.floor is stated as true or false/],
+      [{...stated, grid: undefined}, /The stage's option record.grid is stated as true or false/],
+      [{...stated, clock: 'wall'}, /The stage's option record.clock is one of local, external/],
+      [{...stated, reviewKey: ''}, /The stage's option record.reviewKey must be a non-empty string/],
+      [{...stated, kinds: null}, /The stage's surface kinds is a list of kinds; state \[\] for none/]];
+    for (const [options, pattern] of refused) assert.throws(() => modelStagePolicy(options as never), pattern);
   });
 
   it('preserves authored scale and position when both framing transformations are disabled', () => {

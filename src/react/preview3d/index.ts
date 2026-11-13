@@ -5,6 +5,6 @@ export type {
   ModelStageAsset, ModelStageTheme, ModelStageOptions, ModelPresentationPose, ModelStageFraming, ModelStageOrigin,
   ModelStageSize,
   ModelStageController, ModelStageSnapshot, ModelStageClock, ModelStageDisplay, ModelPreviewAsset,
-  ModelVector, ModelRotation, ModelStageMaterialMode, ModelStageLighting, ModelStageDescription, ModelStageActor,
+  ModelVector, ModelRotation, ModelStageSurfaceMode, ModelStageLighting, ModelStageDescription, ModelStageActor,
   ModelStageActorSet, ModelStageActorAnimation, ModelPreviewFrame,
 } from './model.ts';

@@ -145,11 +145,14 @@ const dispose = createModelStage(host, description, theme, onReady, onError,
 // dispose() removes the canvas and the review handle; calling it again does nothing.
 ```
 
-The last argument is fixed for the stage's life and every field is stated: `clock` (`'local'` or `'external'`),
-whether the stage lays its own `floor` and `grid`, and the host property `reviewKey` the controller is published
-under once the first description is shown, which is also when `onReady(controller)` is called; it does not signal
-a connected or running state machine. An actor's id and its asset's `id`, `path`, `revision`, `sha256` and
-`runtimeMaterials` identify a loaded instance: change `revision` when the same URL's contents change.
+The last argument is fixed for the stage's life, and states exactly these fields (one left out or one it does not
+have is refused by name): `clock` (`'local'` or `'external'`), whether the stage lays its own `floor` and `grid`,
+the surface `kinds` a description may use (each kind's declaration, `[]` for none), and the host property
+`reviewKey` the controller is published under once the first description is shown, which is also when
+`onReady(controller)` is called; it does not signal a connected or running state machine. An actor's id and its
+asset's `id`, `path`, `revision`, `sha256` and `runtimeMaterials` identify a loaded instance: change `revision` when
+the same URL's contents change. Every file the stage loads (a model, a texture, a kind's program) is read once,
+whole, through one read that can be abandoned and that checks the SHA-256 the description states for it.
 
 ### The description
 
@@ -157,18 +160,25 @@ One `ModelStageDescription` states everything the host decides, and every field 
 exactly its fields: one it omits or one it does not have is refused by its path (`Actor a.animation omits name`).
 
 - `actors`: `{focus, actors}`, a non-empty list and the id of the one the camera fits and the snapshot reports.
-  Each actor is `{id, asset, placement, animation}`. `asset` states `id` and `path`, and may state `revision`,
-  `sha256` and `runtimeMaterials`; any other field is refused. `placement` is a whole pose: `position`,
+  Each actor is `{id, asset, placement, animation, surfaces}`. `asset` states `id` and `path`, and each of
+  `revision`, `sha256` and `runtimeMaterials` with a value or not at all; any other field is refused. A stated
+  `sha256` is checked on every read of the file; with none the file is read unverified. `placement` is a whole pose:
+  `position`,
   `rotationQuaternion` and `scale`. `animation` is `{kind: 'rest'}`, `{kind: 'playing', name}` (local clock only)
   or `{kind: 'held', name, timeSeconds}` within the clip; a field of another shape is refused, never dropped.
-  Actor ids are the host's; two actors may draw one asset. `surfaces` is `{kind: 'file'}` (the file's own
-  materials throughout) or `{kind: 'set', set}`, naming one of `surfaceSets`.
+  Actor ids are the host's; two actors may draw one asset. `surfaces` is `{from: 'file'}` (the file's own
+  materials throughout) or `{from: 'set', set}`, naming one of `surfaceSets`.
 - `surfaceSets`: named sets, each keyed by every renderer of the file it is for (`gltf-node:<n>/primitive:<m>`,
   each exactly once, checked against the loaded file), each entry `{kind: 'file'}` or a record `{kind, values}` of a
   surface kind the stage was given (`kinds`, a creation option: each kind's declaration, `[]` for none). A record
   is drawn by its kind's web program (one shared material per record, compiled before the description is shown);
-  an engine frame's material values are taken only on a parameter the renderer's kind declares.
-- `environment`: `{reflectZ, plane, boxes}` scenery, or `null`.
+  an engine frame's material values are taken only on a parameter the renderer's kind declares. A record's
+  `values` give every parameter of its kind one of `{color: [r, g, b, a]}`, `{vector: [...]}`, `{float}`,
+  `{keyword}` or `{texture}`, a texture being `{path, sha256, wrap: [u, v], scale: [u, v], offset: [u, v]}` (a PNG,
+  JPEG or WebP) or `{constant: 'white' | 'black'}`: the types `ModelSurfaceValue` and `ModelSurfaceTexture`.
+- `environment`: `{reflectZ, plane, boxes}` scenery, or `null`: `plane` is `{position, size, color}` and a `grid`
+  `{spacing, color}` when stated, or `null`; each box is `{id, position, size, color}` and a `rotationQuaternion`
+  when stated. It is the scene's, fogged, bloomed and curved with the actors.
 - `framing`: `{kind: 'focus'}`, `{kind: 'all'}` (every actor) or `{kind: 'pose', position, target}`.
 - `orbit`: whether the person may orbit away from the framing.
 - `lighting`: `{time, times}`, the id of the time of day in force and the description's own times, each
@@ -178,26 +188,30 @@ exactly its fields: one it omits or one it does not have is refused by its path 
   `aids` `{floor, share}`, `fog` (`{near, far, height}` or `null`), `toneCurve` (`'aces-filmic'` or `null`) and
   `glow` (`{threshold, strength, radius}` with `radius` from 0 to 1, or `null`); colours are sRGB triples in [0, 1],
   and under glow the scene is drawn once in linear light, the bloom added, then the curve and the display encoding
-  applied once (the stage's floor, grid and rigs are drawn after, neither bloomed nor curved). The types and `modelStageLighting`, which checks a lighting
-  as the stage does, come from `/preview3d/model`. The theme's `stage`, `text` and `surface` must be `#rrggbb`.
-- `display` (`'model'`, `'rig'`, `'both'`) and `materialMode` (`'lit'`, `'clay'`, `'color'`, `'emission'`).
+  applied once (the stage's floor, grid and rigs are drawn after, neither bloomed nor curved). The types and
+  `modelStageLighting`, which checks a lighting as the stage does, come from `/preview3d/model`, with
+  `modelStageDescription`, which checks a whole description, and `modelFrameScope` and `modelPreviewFrame`, which
+  check a frame against it. The theme's `stage`, `text` and `surface` must be `#rrggbb`.
+- `display` (`'model'`, `'rig'`, `'both'`) and `surfaceMode` (`'lit'`, `'clay'`, `'color'`, `'emission'`).
 - `size`: `{rule: 'real'}` (each actor at its file's size) or `{rule: 'normalized', height}`; `origin`: `'file'`
   (the file's own origin, as an engine places it) or `'centred'` (centred over the placement, standing on it).
 
 ### The controller
 
 - `setDescription(value)` applies a whole description, keeping every unchanged part: an unchanged asset is not
-  reloaded. One that loads nothing applies or throws at once; one that loads (an asset, or the glow's passes the
-  first time a time brings glow) returns a promise that settles when they arrive, rejects with the previous
-  description still shown, and is superseded by a later call.
+  reloaded. One that loads nothing applies or throws at once; one that loads (an asset, a texture or a kind's
+  program a record names, or the glow's passes the first time a time brings glow) returns a promise that settles
+  when they arrive, rejects with the previous description still shown, and is superseded by a later call.
 - `setFrame(frame)` (external clock only) applies `{simulationTimeSeconds, entities}`. Each entity names a declared
   actor by `entityId` and carries `modelId`, a whole `pose`, `animationLayers`, `partPoses: []` and `materials`
-  (empty unless the asset states `runtimeMaterials`). The whole frame is refused before anything changes. A
+  (values only on a parameter its renderer's kind declares). The whole frame is refused before anything changes. A
   description may not change, replace or remove an actor a frame has driven.
 - `resetCamera()` returns a view the person orbited to the described framing.
 - `snapshot()` reports the focused actor at the top level (`animation`, `time`, `playing`, `hold`, `display`,
-  `boneCount`, `parts`, `poses`, the material and visibility counts) and every actor under `actors`, each with its
-  `driver` (`'host'` or `'engine'`), `pose` and applied `samples`.
+  `boneCount`, `parts`, `poses`, `surfaceMode`, `surfaceModesAvailable`, the emission and visibility counts) and
+  every actor under `actors`, each with its `driver` (`'host'` or `'engine'`), `pose` and applied `samples`.
+  `renderedModelMeshes` counts the meshes of the actors on the stage that the last frame drew (shown, and inside
+  the camera's view), read when asked.
 
 Under the local clock the stage keeps one presentation time that every playing clip follows; it holds while the
 person asks for reduced motion or the page is hidden, and `hold` says which. Under the external clock only frames
@@ -216,7 +230,8 @@ unchanged.
 ### Failures
 
 A `ModelStageRefusal` means the request was not applied and the stage is exactly as it was. Any other error, or a
-failure with no stage yet, means the stage is unusable. `ModelPreview` shows either only through the suite's
+failure with no stage yet, means the stage is unusable; so does a frame that fails to draw, which stops the stage and
+reaches `onError`. `ModelPreview` shows either only through the suite's
 `ActionBar` notice (`ActionNotice` when `chrome` is false), with the failure's message as its detail: "Not applied"
 for a refusal, and "Preview stopped" with Retry for an unusable stage.
 
@@ -246,7 +261,10 @@ recovers without reloading, and a loading model receives only the latest valid f
 
 The Surface choice is diagnostic: Lit keeps the loaded materials, Clay removes surface detail to show shape, Color
 shows the unlit base color and Emission the authored emissive channel; a model with none reports "No emission". A
-model whose materials the inspection does not support stays Lit with `materialInspectionAvailable` false.
+mode other than Lit shows its term as stated: no fog, and no glow (the frame is drawn straight to the canvas). It
+covers a mesh's standard or physical material and a kind built on the standard program; a model's lines and points
+are drawn as they are in every mode. A model whose meshes draw another material (an unlit one) stays Lit with
+`surfaceModesAvailable` false.
 
 The person's choices (the focused actor's clip, play or pause, the display, the surface and the lighting) are edits
 of the description held by the view; a host change of the same value replaces them. While a refusal stands, the

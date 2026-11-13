@@ -104,7 +104,7 @@ describe('the stage\'s kind materials', () => {
 });
 
 describe('the engine\'s values for an actor\'s renderers', () => {
-  const takes = () => modelSurfaceTakes({kind: 'set', set: 'tinted'}, sets(), kinds());
+  const takes = () => modelSurfaceTakes({from: 'set', set: 'tinted'}, sets(), kinds());
   const output = (change: object = {}) => ({rendererId: RENDERERS.body, slot: 0, visible: true,
     colors: {_Color: [0.5, 0.5, 0.5, 1]}, floats: {_Pulse: 3}, ...change});
   const where = `Entity e, renderer ${RENDERERS.body}`;
@@ -122,13 +122,13 @@ describe('the engine\'s values for an actor\'s renderers', () => {
       RENDERERS.body));
     assert.doesNotThrow(() => modelSurfaceOutputs([output({rendererId: RENDERERS.eyes, colors: {}, floats: {},
       visible: false})], takes(), 'Entity e'), 'a file-drawn renderer takes visibility');
-    refused(() => modelSurfaceOutputs([output()], modelSurfaceTakes({kind: 'file'}, sets(), kinds()), 'Entity e'),
+    refused(() => modelSurfaceOutputs([output()], modelSurfaceTakes({from: 'file'}, sets(), kinds()), 'Entity e'),
       /the actor's surfaces list no renderer/);
   });
 
   it('is checked the same way by the view\'s frame inbox, against the kinds the stage is given', () => {
     const inbox = createModelFrameInbox(), declared = {surfaceSets: sets(), actors: {focus: 'e',
-      actors: [declaration('e', 'otter', {surfaces: {kind: 'set', set: 'tinted'}})]}};
+      actors: [declaration('e', 'otter', {surfaces: {from: 'set', set: 'tinted'}})]}};
     const frame = (change: object) => ({simulationTimeSeconds: 0, entities: [{...entity('e'),
       materials: [output(change)]}]});
     assert.equal(inbox.receive(frame({}), declared, [PULSE as never]), 'pending');

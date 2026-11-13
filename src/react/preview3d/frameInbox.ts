@@ -1,4 +1,4 @@
-import {modelFrameScope, modelPreviewFrame, type ModelPreviewFrame} from './actorModel.ts';
+import {modelFrameScope, modelPreviewFrame, type ModelPreviewFrame} from './frameModel.ts';
 import type {ModelStageDescription} from './descriptionModel.ts';
 import {modelSurfaceKinds, type ModelSurfaceKind} from './surfaceKindModel.ts';
 

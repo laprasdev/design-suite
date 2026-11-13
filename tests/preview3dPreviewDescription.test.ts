@@ -18,12 +18,12 @@ describe('the view\'s description', () => {
     declaration('ball', 'ball')]}, size: {rule: MODEL_STAGE_SIZE.normalized, height: 3}}));
   it('applies the person\'s choices to the host\'s description and its focused actor, and changes nothing else', () => {
     const selection = modelPreviewSelectionOf(host);
-    assert.deepEqual(selection, {animation: playing('run'), display: 'model', materialMode: 'lit',
+    assert.deepEqual(selection, {animation: playing('run'), display: 'model', surfaceMode: 'lit',
       lighting: MODEL_STAGE_THEME_LIGHTING.time});
     assert.deepEqual(modelPreviewDescription(host, selection), host);
-    const chosen = modelPreviewDescription(host, {animation: held('run', 0.5), display: 'rig', materialMode: 'clay',
+    const chosen = modelPreviewDescription(host, {animation: held('run', 0.5), display: 'rig', surfaceMode: 'clay',
       lighting: 'dark'});
-    assert.deepEqual(chosen, {...host, display: 'rig', materialMode: 'clay', lighting: {time: 'dark', times: []},
+    assert.deepEqual(chosen, {...host, display: 'rig', surfaceMode: 'clay', lighting: {time: 'dark', times: []},
       actors: {focus: 'otter', actors: [{...host.actors.actors[0], animation: held('run', 0.5)},
         host.actors.actors[1]]}});
     // The host's placement and size reach the stage as stated: the view fixes neither.

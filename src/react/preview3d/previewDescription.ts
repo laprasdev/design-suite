@@ -3,7 +3,7 @@ import {MODEL_PREVIEW_TEXT, MODEL_REST_POSE} from './model.ts';
 import type {ModelStageController, ModelStageDisplay} from './model.ts';
 import {MODEL_ACTOR_ANIMATION, modelStageFocus, type ModelStageActorAnimation} from './actorModel.ts';
 import type {ModelStageDescription} from './descriptionModel.ts';
-import type {ModelStageMaterialMode} from './materialModel.ts';
+import type {ModelStageSurfaceMode} from './surfaceModeModel.ts';
 import {modelStageLighting, modelStageTimeOptions} from './lightingModel.ts';
 import type {ModelFrameStatus} from './frameInbox.ts';
 import {MODEL_STAGE_FAILURE, ModelStageRefusal, type ModelStageFailure} from './refusal.ts';
@@ -12,7 +12,7 @@ import {MODEL_STAGE_FAILURE, ModelStageRefusal, type ModelStageFailure} from './
 export interface ModelPreviewSelection {
   readonly animation: ModelStageActorAnimation;
   readonly display: ModelStageDisplay;
-  readonly materialMode: ModelStageMaterialMode;
+  readonly surfaceMode: ModelStageSurfaceMode;
   /** The id of the time of day in force; the times themselves are the host's. */
   readonly lighting: string;
 }
@@ -26,7 +26,7 @@ export const MODEL_PREVIEW_SELECTION_REFUSAL = Object.freeze({
 /** The host's own values of what the person may change: the view starts from them, and a change of them resets it. */
 export const modelPreviewSelectionOf = (host: ModelStageDescription): ModelPreviewSelection => Object.freeze({
   animation: modelStageFocus(host.actors).animation,
-  display: host.display, materialMode: host.materialMode, lighting: host.lighting.time,
+  display: host.display, surfaceMode: host.surfaceMode, lighting: host.lighting.time,
 });
 
 /** The person's choices as the view holds them, beside the host's values they were made over. */
@@ -105,8 +105,8 @@ export function modelPreviewTimes(host: unknown, held: ModelStageDescription | u
 /** The one description the view sends: the host's, with the person's choices applied to it and its focused actor. */
 export function modelPreviewDescription(host: ModelStageDescription,
   selection: ModelPreviewSelection): ModelStageDescription {
-  const {animation, display, materialMode, lighting} = selection;
-  return {...host, display, materialMode, lighting: {...host.lighting, time: lighting},
+  const {animation, display, surfaceMode, lighting} = selection;
+  return {...host, display, surfaceMode, lighting: {...host.lighting, time: lighting},
     actors: {focus: host.actors.focus, actors: host.actors.actors.map(actor =>
       actor.id === host.actors.focus ? {...actor, animation} : actor)}};
 }

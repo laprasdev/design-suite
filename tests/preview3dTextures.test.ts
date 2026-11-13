@@ -69,6 +69,15 @@ describe('the stage\'s textures', () => {
     assert.equal(clamped.source, first.source, 'one decoded image under two samplings');
     assert.deepEqual([first.flipY, first.colorSpace, clamped.colorSpace, clamped.wrapS, first.wrapS],
       [false, THREE.NoColorSpace, THREE.SRGBColorSpace, THREE.ClampToEdgeWrapping, THREE.RepeatWrapping]);
+    // The record's sampling, each axis its own: wrap, scale and offset, none of them three's defaults.
+    const stated = textures.acquire({...sampled('ramp', ['repeat', 'clamp']), wrap: ['mirror', 'repeat'],
+      scale: [2, 3], offset: [0.25, 0.5]}, 'linear');
+    assert.deepEqual([stated.wrapS, stated.wrapT, stated.repeat.toArray(), stated.offset.toArray()],
+      [THREE.MirroredRepeatWrapping, THREE.RepeatWrapping, [2, 3], [0.25, 0.5]]);
+    // An empty slot's constant: one texel, in the parameter's space.
+    const black = textures.acquire({constant: 'black'}, 'srgb') as THREE.DataTexture;
+    assert.deepEqual([[...black.image.data as Uint8Array], black.image.width, black.colorSpace],
+      [[0, 0, 0, 255], 1, THREE.SRGBColorSpace]);
     let disposed = 0;
     first.addEventListener('dispose', () => disposed++);
     textures.release(first);
@@ -161,7 +170,7 @@ describe('the stage\'s textures', () => {
     const MASK = {texture: {...sampled('mask'), wrap: ['repeat', 'clamp']}};
     const sets = modelSurfaceSets({used: {'gltf-node:0/primitive:0': {kind: 'test-mask', values: {_Mask: MASK}}},
       unused: {'gltf-node:0/primitive:0': {kind: 'test-mask', values: {_Mask: {texture: sampled('ramp')}}}}});
-    const actors = [declaration('a', 'otter', {surfaces: {kind: 'set', set: 'used'}})];
+    const actors = [declaration('a', 'otter', {surfaces: {from: 'set', set: 'used'}})];
     assert.deepEqual(modelSurfaceFiles(sets, actors), [file('mask')]);
     assert.deepEqual(modelSurfaceFiles(sets, [declaration('a')]), []);
     const asked: unknown[] = [];

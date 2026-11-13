@@ -1,5 +1,5 @@
 import {ModelStageRefusal} from './refusal.ts';
-import {modelNumber, modelShape} from './recordModel.ts';
+import {modelNumber, modelOption, modelShape} from './recordModel.ts';
 
 export const MODEL_STAGE_SIZE = Object.freeze({real: 'real', normalized: 'normalized'} as const);
 /**
@@ -29,9 +29,6 @@ export const MODEL_STAGE_ORIGIN = Object.freeze({file: 'file', centred: 'centred
  * placement with its lowest point on it, as a catalog shows a model.
  */
 export type ModelStageOrigin = typeof MODEL_STAGE_ORIGIN[keyof typeof MODEL_STAGE_ORIGIN];
-export const MODEL_STAGE_ORIGIN_REFUSAL = `A stage origin is one of ${Object.values(MODEL_STAGE_ORIGIN).join(', ')}.`;
-export function modelStageOrigin(value: unknown): ModelStageOrigin {
-  const origin = Object.values(MODEL_STAGE_ORIGIN).find(candidate => candidate === value);
-  if (!origin) throw new ModelStageRefusal(MODEL_STAGE_ORIGIN_REFUSAL);
-  return origin;
-}
+/** A description's origin, refused by its name otherwise, listing the origins. */
+export const modelStageOrigin = (value: unknown): ModelStageOrigin =>
+  modelOption(value, MODEL_STAGE_ORIGIN, 'The stage description.origin');

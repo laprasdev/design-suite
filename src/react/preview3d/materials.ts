@@ -1,15 +1,22 @@
 import * as THREE from 'three';
-import {MODEL_PREVIEW_MATERIAL_OPTIONS, MODEL_PREVIEW_MATERIAL_SETTINGS as settings, type ModelStageMaterialMode}
-  from './materialModel.ts';
+import {MODEL_PREVIEW_SURFACE_SETTINGS as settings, MODEL_STAGE_SURFACE_MODE as MODE, type ModelStageSurfaceMode}
+  from './surfaceModeModel.ts';
 import {modelMaterialOwned, modelShaderChunk, modelShaderUniforms, type ModelShader, type ModelShaderChange,
   type ModelShaderReplace} from './shading.ts';
 
-// The Surface modes, as one change to the program of every model material the stage draws: the same material in
-// every mode, never a copy, so whatever draws a renderer (the file's material, a kind's) shows the same modes. The mode
-// is part of the program's key, so each mode compiles once per material and a mode change recompiles nothing it
-// compiled before. Lit changes nothing. The other three show one term of the material without fog: Clay its shape in
-// a neutral colour and finish (no texture but the base colour's alpha, no emission, none of the physical extras),
-// Color its base colour untoned, Emission its emission.
+// The Surface modes, as one change to the program of every model surface the stage draws: the same material in every
+// mode, never a copy, so whatever draws a renderer (the file's material, a kind's) shows the same modes. The mode is
+// part of the program's key, so each mode compiles once per material and a mode change recompiles nothing it compiled
+// before. Lit changes nothing. The other three inspect one term of the surface, as stated: no fog, no glow (the frame
+// is drawn straight to the canvas while one is in force, draw.ts), Clay its shape in a neutral colour and finish (no
+// texture but the base colour's alpha, no emission, none of the physical extras), Color its base colour untoned,
+// Emission its emission.
+//
+// The change covers the programs three compiles as STANDARD (its standard and physical programs, and a kind built on
+// the standard one), which hold every chunk a mode writes at. A material of any other program (a line's, points', an
+// unlit surface's) is never given the change: it is drawn as it states in every mode, so no mode can fail to compile
+// or throw inside a frame. A line or points is no surface and does not count toward whether the modes are available;
+// an unlit mesh does, and refuses them (stageParts.ts).
 const CHUNK = Object.freeze({colorDeclarations: 'color_pars_fragment',
   roughness: 'roughnessmap_fragment', metalness: 'metalnessmap_fragment', emission: 'emissivemap_fragment',
   physical: 'lights_physical_fragment', output: 'opaque_fragment', toneMapping: 'tonemapping_fragment'});
@@ -50,21 +57,25 @@ function clay(shader: ModelShader, replace: ModelShaderReplace, color: {value: T
 const shown = (replace: ModelShaderReplace, source: string, term: string) =>
   replace(source, CHUNK.output, `outgoingLight = ${term};\n${modelShaderChunk(CHUNK.output)}`);
 
-/** The stage's one Surface mode, for every model material: the change each is extended with, and the mode in force. */
 // Each mode's name in the program key, made once.
-const KEYS = Object.freeze(Object.fromEntries(MODEL_PREVIEW_MATERIAL_OPTIONS.map(({value}) =>
-  [value, `model-surface-mode:${value}`])) as Record<ModelStageMaterialMode, string>);
+const KEYS = Object.freeze(Object.fromEntries(Object.values(MODE).map(value =>
+  [value, `model-surface-mode:${value}`])) as Record<ModelStageSurfaceMode, string>);
+/** Whether the Surface modes change a material's program: three's standard and physical programs, by their own
+ * STANDARD switch, which a kind built on the standard program carries too. */
+export const modelSurfaceModesCover = (material: THREE.Material) => material instanceof THREE.MeshStandardMaterial ||
+  (material instanceof THREE.ShaderMaterial && Object.hasOwn(material.defines, 'STANDARD'));
 
+/** The stage's one Surface mode: the change every surface it covers is extended with, and the mode in force. */
 export function createModelSurfaceModes() {
-  let mode: ModelStageMaterialMode = 'lit';
+  let mode: ModelStageSurfaceMode = MODE.lit;
   const clayColor = {value: new THREE.Color().setHex(settings.clayColor)};
   const change: ModelShaderChange = {
     get key() {return KEYS[mode];},
     apply(shader, replace) {
-      if (mode === 'lit') return;
+      if (mode === MODE.lit) return;
       shader.fog = false;
-      if (mode === 'clay') return clay(shader, replace, clayColor);
-      if (mode === 'emission') {
+      if (mode === MODE.clay) return clay(shader, replace, clayColor);
+      if (mode === MODE.emission) {
         shader.fragmentShader = shown(replace, shader.fragmentShader, 'totalEmissiveRadiance');
         return;
       }
@@ -72,16 +83,28 @@ export function createModelSurfaceModes() {
       shader.fragmentShader = replace(shown(replace, shader.fragmentShader, 'diffuseColor.rgb'), CHUNK.toneMapping, '');
     },
   };
-  return {change, get mode() {return mode;}, set(value: ModelStageMaterialMode) {mode = value;}};
+  return {change, covers: modelSurfaceModesCover, get mode() {return mode;},
+    /** Whether a mode other than Lit is in force: the frame then shows a term of each surface, not the look. */
+    get inspecting() {return mode !== MODE.lit;},
+    set(value: ModelStageSurfaceMode) {mode = value;}};
 }
 export type ModelSurfaceModes = ReturnType<typeof createModelSurfaceModes>;
 
+/** The stage's changes a model material takes: its fog, and its Surface mode where the mode covers the material's
+ * program. Each list is made once, so asking makes nothing. */
+export function modelStageChanges(fog: ModelShaderChange, modes: Pick<ModelSurfaceModes, 'change'>) {
+  const surface = Object.freeze([fog, modes.change]), other = Object.freeze([fog]);
+  return (material: THREE.Material): readonly ModelShaderChange[] =>
+    modelSurfaceModesCover(material) ? surface : other;
+}
+export type ModelStageChanges = ReturnType<typeof modelStageChanges>;
+
 /**
- * What the materials an actor draws with allow, read each time it is asked, since its surfaces can change: whether
- * every one can show the modes (a standard material whose program only the stage changed, or a kind's material, which
- * the stage builds on three's standard program), how many emit, and the one way to have them compile the mode in
- * force. A kind's emission is its program's to compute, which the stage cannot read ahead, so a kind's material counts
- * as one that emits: the view never says "No emission" over a kind that glows.
+ * What the materials an actor's meshes draw with allow, read each time it is asked, since its surfaces can change:
+ * whether every one can show the modes (its program one the modes cover, and changed only by the stage), how many
+ * emit, and the one way to have them compile the mode in force. A kind's emission is its program's to compute, which
+ * the stage cannot read ahead, so a kind's material counts as one that emits: the view never says "No emission" over
+ * a kind that glows.
  */
 export function createModelMaterialInspection(shown: () => Iterable<THREE.Material>,
   kind: (material: THREE.Material) => boolean) {
@@ -93,7 +116,8 @@ export function createModelMaterialInspection(shown: () => Iterable<THREE.Materi
   return {
     get available() {
       const materials = distinct();
-      return materials.length > 0 && materials.every(material => kind(material) || standard(material));
+      return materials.length > 0 &&
+        materials.every(material => modelSurfaceModesCover(material) && modelMaterialOwned(material));
     },
     get emissiveMaterialCount() {return distinct().filter(emits).length;},
     /** The mode changed: every material the actor draws with takes its program for it on its next draw. */

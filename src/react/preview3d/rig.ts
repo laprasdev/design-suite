@@ -1,12 +1,12 @@
 import * as THREE from 'three';
 import {MODEL_STAGE as settings} from './model.ts';
-import type {ModelStageDisplay, ModelStageTheme} from './model.ts';
+import type {ModelStageTheme} from './model.ts';
+import {MODEL_STAGE_DISPLAY, type ModelStageDisplay} from './displayModel.ts';
 import {modelObjectBounds, type ModelPart} from './asset.ts';
+import {modelIsRenderer} from './renderers.ts';
 
 // A link is drawn as one line: two ends of three coordinates each.
 const LINK_FLOATS = 6;
-const renderable = (node: THREE.Object3D) =>
-  node instanceof THREE.Mesh || node instanceof THREE.Line || node instanceof THREE.Points;
 const visibleInTree = (node: THREE.Object3D): boolean => node.visible && (!node.parent || visibleInTree(node.parent));
 
 /**
@@ -44,7 +44,7 @@ function jointLinks(joints: readonly THREE.Bone[]) {
 export function createModelRig(asset: THREE.Object3D, theme: ModelStageTheme, parts: readonly ModelPart[]) {
   const bones = modelSkinJoints(asset), links = jointLinks(bones);
   const renderables: {node: THREE.Object3D; visible: boolean}[] = [];
-  asset.traverse(node => {if (renderable(node)) renderables.push({node, visible: node.visible});});
+  asset.traverse(node => {if (modelIsRenderer(node)) renderables.push({node, visible: node.visible});});
   const root = new THREE.Group();
   root.visible = false;
   const lines = new THREE.LineSegments(new THREE.BufferGeometry().setAttribute('position',
@@ -64,7 +64,7 @@ export function createModelRig(asset: THREE.Object3D, theme: ModelStageTheme, pa
   joints.renderOrder = 2;
   joints.frustumCulled = false;
   root.add(lines, joints);
-  let display: ModelStageDisplay = 'model', factor = 1;
+  let display: ModelStageDisplay = MODEL_STAGE_DISPLAY.model, factor = 1;
   const unit = new THREE.Quaternion(), scale = new THREE.Vector3(1, 1, 1);
   const position = new THREE.Vector3(), other = new THREE.Vector3();
   const matrix = new THREE.Matrix4();
@@ -78,12 +78,14 @@ export function createModelRig(asset: THREE.Object3D, theme: ModelStageTheme, pa
     setScale(value: number) {factor = value; scale.setScalar(value);},
     setDisplay(value: ModelStageDisplay) {
       display = value;
-      root.visible = value !== 'model';
+      root.visible = value !== MODEL_STAGE_DISPLAY.model;
       for (const {marker} of parts) marker.visible = root.visible;
     },
     // Runs every frame, so it writes into what the rig already holds and makes no object, array or closure. The line
-    // ends are written straight into their typed array: handing coordinates to a call can box each one.
+    // ends are written straight into their typed array: handing coordinates to a call can box each one. A hidden rig
+    // (the Model display) draws nothing, so nothing is moved: the frame a display shows it, it is moved first.
     update() {
+      if (!root.visible) return;
       for (let index = 0; index < bones.length; index++) {
         joints.setMatrixAt(index, matrix.compose(bones[index].getWorldPosition(position), unit, scale));
       }
@@ -107,7 +109,8 @@ export function createModelRig(asset: THREE.Object3D, theme: ModelStageTheme, pa
     },
     /** What the aid draws, with the model in Both: the drawn joints and parts; the model alone when it has none. */
     bounds() {
-      const bounds = display === 'both' || !bones.length ? modelObjectBounds(asset) : new THREE.Box3();
+      const bounds = display === MODEL_STAGE_DISPLAY.both || !bones.length ? modelObjectBounds(asset) :
+        new THREE.Box3();
       for (const node of [...bones, ...parts.map(part => part.node)]) {
         bounds.expandByPoint(node.getWorldPosition(position));
       }

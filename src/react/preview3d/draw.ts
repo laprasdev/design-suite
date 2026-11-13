@@ -34,15 +34,24 @@ interface Compiled {
     readonly programLog: string; readonly vertexShader: {readonly log: string};
     readonly fragmentShader: {readonly log: string}}};
 }
-interface GlowPasses {readonly Bloom: typeof UnrealBloomPass; readonly Quad: typeof FullScreenQuad}
+/** The glow's passes: three's bloom and its full-screen draw. */
+export interface ModelGlowPasses {readonly Bloom: typeof UnrealBloomPass; readonly Quad: typeof FullScreenQuad}
 type Glow = {target: THREE.WebGLRenderTarget; depth: THREE.DepthTexture; bloom: UnrealBloomPass;
   output: FullScreenQuad; material: THREE.ShaderMaterial};
-// The glow's passes are three's own, fetched the first time a look brings glow, so a page that never glows never
-// downloads them.
-async function loadGlowPasses(): Promise<GlowPasses> {
+/** The glow's passes, three's own, fetched the first time a look brings glow, so a page that never glows never
+ * downloads them. */
+export async function loadModelGlowPasses(): Promise<ModelGlowPasses> {
   const [bloom, pass] = await Promise.all([import('three/addons/postprocessing/UnrealBloomPass.js'),
     import('three/addons/postprocessing/Pass.js')]);
   return {Bloom: bloom.UnrealBloomPass, Quad: pass.FullScreenQuad};
+}
+/** What the frame's draw is given beside three's renderer, scene and camera. */
+export interface ModelDrawContext {
+  /** Fetches the glow's passes (`loadModelGlowPasses`); asked once, again only after a fetch that failed. */
+  readonly loadPasses: () => Promise<ModelGlowPasses>;
+  /** Whether a Surface mode other than Lit is in force: the frame then shows a term of each surface, as stated, so it
+   * is drawn straight to the canvas without the look's glow (materials.ts). */
+  readonly inspecting: () => boolean;
 }
 
 /**
@@ -53,9 +62,10 @@ async function loadGlowPasses(): Promise<GlowPasses> {
  * writes the canvas through the look's tone curve and the display encoding, and the target's depth; the stage's aids
  * are drawn last, untoned, behind the scene where it is in front of them. No material changes program between frames.
  */
-export function createModelDraw(renderer: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.Camera) {
+export function createModelDraw(renderer: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.Camera,
+  context: ModelDrawContext) {
   const size = new THREE.Vector2();
-  let passes: GlowPasses | undefined, loading: Promise<void> | undefined;
+  let passes: ModelGlowPasses | undefined, loading: Promise<void> | undefined;
   let glow: Glow | undefined, curve = THREE.NoToneMapping as THREE.ToneMapping;
   let triangles = 0;
   const release = () => {
@@ -69,7 +79,7 @@ export function createModelDraw(renderer: THREE.WebGLRenderer, scene: THREE.Scen
     glow.material.dispose();
     glow = undefined;
   };
-  const create = ({Bloom, Quad}: GlowPasses): Glow => {
+  const create = ({Bloom, Quad}: ModelGlowPasses): Glow => {
     renderer.getDrawingBufferSize(size);
     const depth = new THREE.DepthTexture(size.x, size.y);
     const target = new THREE.WebGLRenderTarget(size.x, size.y, {type: THREE.HalfFloatType, samples: SAMPLES,
@@ -88,11 +98,12 @@ export function createModelDraw(renderer: THREE.WebGLRenderer, scene: THREE.Scen
     renderer.render(scene, camera);
     triangles += renderer.info.render.triangles;
   };
+  // The canvas is drawn under the look's curve (set as the frame starts): the direct draw's materials, or the output
+  // pass under glow; three applies no curve inside a target, and the aids after the output pass are drawn uncurved.
   const glowing = (value: Glow) => {
     pass(MODEL_STAGE_LAYERS.scene, value.target);
     value.bloom.render(renderer, value.target, value.target, 0, false);
     renderer.setRenderTarget(null);
-    renderer.toneMapping = curve;
     value.output.render(renderer);
     renderer.toneMapping = THREE.NoToneMapping;
     const clears = renderer.autoClear;
@@ -100,7 +111,7 @@ export function createModelDraw(renderer: THREE.WebGLRenderer, scene: THREE.Scen
     pass(MODEL_STAGE_LAYERS.aids, null);
     renderer.autoClear = clears;
   };
-  const bloom = (value: ModelStageGlow, loaded: GlowPasses) => {
+  const bloom = (value: ModelStageGlow, loaded: ModelGlowPasses) => {
     glow ??= create(loaded);
     glow.bloom.threshold = value.threshold;
     glow.bloom.strength = value.strength;
@@ -116,7 +127,7 @@ export function createModelDraw(renderer: THREE.WebGLRenderer, scene: THREE.Scen
      * `where` names the glow in a refusal. */
     load(value: ModelStageGlow | null, where: string): readonly Promise<void>[] {
       if (value === null || passes) return [];
-      loading ??= loadGlowPasses().then(loaded => {passes = loaded;}, (error: unknown) => {
+      loading ??= context.loadPasses().then(loaded => {passes = loaded;}, (error: unknown) => {
         loading = undefined;
         throw new ModelStageRefusal(MODEL_DRAW_TEXT.passes(where, error instanceof Error ? error.message :
           String(error)), {cause: error});
@@ -151,8 +162,8 @@ export function createModelDraw(renderer: THREE.WebGLRenderer, scene: THREE.Scen
       // A link failure is read from the program's own diagnostics below; three's console report is not needed.
       renderer.debug.onShaderError = () => undefined;
       let failure: string | undefined;
-      // The variant the scene pass draws: into the glow's target while the look in force has glow.
-      renderer.setRenderTarget(glow ? glow.target : null);
+      // The variant the scene pass draws: into the glow's target while the look in force glows and nothing inspects.
+      renderer.setRenderTarget(glow && !context.inspecting() ? glow.target : null);
       try {
         for (const material of renderer.compile(object, camera, scene)) {
           const program = (renderer.properties.get(material) as Compiled).currentProgram;
@@ -171,7 +182,8 @@ export function createModelDraw(renderer: THREE.WebGLRenderer, scene: THREE.Scen
     },
     draw() {
       triangles = 0;
-      if (glow) glowing(glow);
+      renderer.toneMapping = curve;
+      if (glow && !context.inspecting()) glowing(glow);
       else pass(MODEL_STAGE_LAYERS.both, null);
     },
     /** The triangles the last frame drew of the scene and the aids, as the direct draw counts them; the glow's own

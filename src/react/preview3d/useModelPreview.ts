@@ -2,7 +2,7 @@ import {useEffect, useLayoutEffect, useReducer, useRef, useState} from 'react';
 import {createModelStage} from './stage.ts';
 import type {ModelStageController, ModelStageHold, ModelStageOptions, ModelStageTheme} from './model.ts';
 import {REDUCED_MOTION_QUERY} from '../motion.ts';
-import type {ModelPreviewFrame} from './actorModel.ts';
+import type {ModelPreviewFrame} from './frameModel.ts';
 import type {ModelStageDescription} from './descriptionModel.ts';
 import {createModelFrameInbox, type ModelFrameStatus} from './frameInbox.ts';
 import {createModelDescriptionRequests, createModelPreviewChoices, modelPreviewDescription, modelPreviewFailure,
@@ -28,7 +28,8 @@ export function useModelPreview(host: ModelStageDescription, theme: ModelStageTh
   const [, taken] = useReducer((count: number) => count + 1, 0);
   const declared = choices.declared(host);
   const [boneCount, setBoneCount] = useState(0);
-  const [materialAvailable, setMaterialAvailable] = useState(false), [emissiveCount, setEmissiveCount] = useState(0);
+  const [surfaceModesAvailable, setSurfaceModesAvailable] = useState(false);
+  const [emissiveCount, setEmissiveCount] = useState(0);
   // A refused request and the frame's own failure are kept apart: accepting one never clears the other.
   const [failure, setFailure] = useState<ModelStageFailure | null>(null);
   const [frameFailure, setFrameFailure] = useState<ModelStageFailure | null>(null);
@@ -117,7 +118,7 @@ export function useModelPreview(host: ModelStageDescription, theme: ModelStageTh
         requests.declare(api, latest.current);
         const snapshot = api.snapshot();
         setBoneCount(snapshot.boneCount);
-        setMaterialAvailable(snapshot.materialInspectionAvailable);
+        setSurfaceModesAvailable(snapshot.surfaceModesAvailable);
         setEmissiveCount(snapshot.emissiveMaterialCount);
         setHold(snapshot.hold);
         if (external) pose(inbox.attach(value => api.setFrame(value)));
@@ -141,7 +142,7 @@ export function useModelPreview(host: ModelStageDescription, theme: ModelStageTh
   return {
     host: hostRef, loaded: ready, ready: modelPreviewReady(ready, external, poseStatus, loading),
     error: shown?.kind === MODEL_STAGE_FAILURE.unusable, failure: shown, notice: modelPreviewNotice(shown, retry),
-    selection, hold, boneCount, external, poseStatus, materialAvailable, emissiveCount, choose,
+    selection, hold, boneCount, external, poseStatus, surfaceModesAvailable, emissiveCount, choose,
     times: modelPreviewTimes(host.lighting, requests.held),
     pick: (name: string) => choose({animation: modelPreviewPick(selected.current.animation, name)}),
     togglePlayback: toggle,

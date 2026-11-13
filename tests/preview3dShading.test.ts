@@ -26,14 +26,14 @@ describe('the stage\'s changes to a material\'s program', () => {
     foreign.onBeforeCompile = () => undefined;
     assert.equal(modelMaterialOwned(foreign), false);
     assert.throws(() => modelMaterialChanges(foreign), /The material loader compiles a program the stage did not make/);
-    assert.throws(() => extendModelMaterials(new THREE.Mesh(new THREE.BoxGeometry(), foreign), []), /loader/);
+    assert.throws(() => extendModelMaterials(new THREE.Mesh(new THREE.BoxGeometry(), foreign), () => []), /loader/);
   });
 
   it('extends every material under an object once, each shared material once', () => {
     const shared = new THREE.MeshStandardMaterial(), root = new THREE.Group();
     root.add(new THREE.Mesh(new THREE.BoxGeometry(), shared), new THREE.Mesh(new THREE.BoxGeometry(), [shared,
       new THREE.MeshBasicMaterial()]));
-    extendModelMaterials(root, [{key: 'fog', apply: () => undefined}]);
+    extendModelMaterials(root, () => [{key: 'fog', apply: () => undefined}]);
     root.traverse(node => {
       if (node instanceof THREE.Mesh) for (const material of [node.material].flat()) {
         assert.deepEqual(modelMaterialChanges(material).map(({key}) => key), ['fog']);

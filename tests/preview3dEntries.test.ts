@@ -22,6 +22,24 @@ describe('optional 3D package boundary', () => {
     }
   });
 
+  it('gives a host, a scene package or a kind\'s author every check of a description and a frame, without three',
+    async () => {
+      const model = await import('../src/react/preview3d/model.ts');
+      const checks = ['modelStageDescription', 'modelStageActorSets', 'modelSurfaceKind', 'modelSurfaceKinds',
+        'modelActorSurfaces', 'modelSurfaceSets', 'modelSurfaceRecordsFit', 'modelSurfaceFiles', 'modelSurfaceTakes',
+        'modelFrameScope', 'modelPreviewFrame', 'modelEnvironment', 'modelStagePolicy', 'MODEL_RECORD_REFUSAL',
+        'MODEL_SURFACE_KIND_REFUSAL', 'MODEL_SURFACE_REFUSAL', 'MODEL_SURFACE_OUTPUT_REFUSAL'] as const;
+      for (const name of checks) assert.ok(name in model, name);
+      // A frame scope built from a checked description, and a frame checked against it, with nothing but this entry.
+      const description = model.modelStageDescription({actors: {focus: 'a', actors: [{id: 'a', asset: {id: 'm',
+        path: '/m.glb'}, placement: {position: [0, 0, 0], rotationQuaternion: [0, 0, 0, 1], scale: [1, 1, 1]},
+      animation: {kind: 'rest'}, surfaces: {from: 'file'}}]}, environment: null, framing: {kind: 'focus'}, orbit: true,
+      lighting: model.MODEL_STAGE_THEME_LIGHTING, surfaceSets: {}, display: 'model', surfaceMode: 'lit',
+      size: {rule: 'real'}, origin: 'file'});
+      const scope = model.modelFrameScope(description, model.modelSurfaceKinds([]));
+      assert.equal(model.modelPreviewFrame({simulationTimeSeconds: 0, entities: []}, scope).entities.length, 0);
+    });
+
   it('bundles the optional complete view with shared controls and external rendering dependencies', async () => {
     const manifest = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
     const output = await bundleEntry(manifest.exports['./preview3d/react'].source);

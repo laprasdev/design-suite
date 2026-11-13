@@ -3,8 +3,8 @@ import {test} from 'node:test';
 import * as THREE from 'three';
 import {MODEL_PREVIEW_QUATERNION_TOLERANCE} from '../src/react/preview3d/model.ts';
 import {createModelFog} from '../src/react/preview3d/fog.ts';
-import {createModelEnvironment, modelEnvironment, MODEL_ENVIRONMENT_GRID}
-  from '../src/react/preview3d/environment.ts';
+import {createModelEnvironment} from '../src/react/preview3d/environment.ts';
+import {modelEnvironment, MODEL_ENVIRONMENT_GRID} from '../src/react/preview3d/environmentModel.ts';
 
 // The fog change scenery is given; no fog is in force, so it changes no picture here.
 const fog = createModelFog(new THREE.Scene()).change;
@@ -30,9 +30,9 @@ test('validates all geometry and copies caller data before allocating the scene'
     assert.throws(() => createModelEnvironment(value, fog), /finite/);
   }
   const duplicate = fixture(); duplicate.boxes.push(duplicate.boxes[0]);
-  assert.throws(() => createModelEnvironment(duplicate, fog), /unique/);
+  assert.throws(() => createModelEnvironment(duplicate, fog), /The environment.boxes\[1\]: box pool is declared twice/);
   const zero = fixture(); zero.boxes[0].size[0] = 0;
-  assert.throws(() => createModelEnvironment(zero, fog), /positive/);
+  assert.throws(() => createModelEnvironment(zero, fog), /The environment.boxes\[0\].size must be greater than 0/);
 });
 test('disposal removes its scene subtree and releases each owned GPU resource once', () => {
   const environment = createModelEnvironment(fixture(), fog), scene = new THREE.Scene();
@@ -53,7 +53,7 @@ test('sparse geometry, colors and box lists are invalid', () => {
   const plane = fixture(); plane.plane.size = new Array(2);
   assert.throws(() => modelEnvironment(plane), /finite/);
   const boxes = fixture(); boxes.boxes = new Array(1);
-  assert.throws(() => modelEnvironment(boxes), /unique/);
+  assert.throws(() => modelEnvironment(boxes), /The environment.boxes\[0\] is a record of id, position, size, color/);
 });
 test('opt-in world grid follows the supplied plane and preserves metre spacing', () => {
   const value = fixture(), floor = {...value.plane, position: [3, 2, -4], size: [6, 8],

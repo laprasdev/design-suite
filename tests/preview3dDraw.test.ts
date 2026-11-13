@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {describe, it} from 'node:test';
 import * as THREE from 'three';
-import {createModelDraw, MODEL_DRAW_TEXT} from '../src/react/preview3d/draw.ts';
+import {createModelDraw, loadModelGlowPasses, MODEL_DRAW_TEXT} from '../src/react/preview3d/draw.ts';
 import type {ModelStageGlow, ModelStageToneCurve} from '../src/react/preview3d/lookModel.ts';
 import {ModelStageRefusal} from '../src/react/preview3d/refusal.ts';
 import {MODEL_STAGE_LAYERS} from '../src/react/preview3d/layers.ts';
@@ -11,7 +11,7 @@ import {MODEL_STAGE_LAYERS} from '../src/react/preview3d/layers.ts';
 interface Drawn {readonly what: 'scene' | 'pass'; readonly into: THREE.WebGLRenderTarget | null;
   readonly clears: boolean; readonly toneMapping: THREE.ToneMapping; readonly layers: number;
   readonly material?: THREE.Material}
-function fixture(halfFloat = true) {
+function fixture(halfFloat = true, loadPasses = loadModelGlowPasses) {
   const drawn: Drawn[] = [];
   let target: THREE.WebGLRenderTarget | null = null;
   const scene = new THREE.Scene(), canvas = new THREE.Vector2(320, 200);
@@ -31,13 +31,15 @@ function fixture(halfFloat = true) {
       renderer.info.render.triangles = pass ? 1 : 42;
     },
   };
-  const draw = createModelDraw(renderer as unknown as THREE.WebGLRenderer, scene, new THREE.Camera());
+  const view = {inspecting: false};
+  const draw = createModelDraw(renderer as unknown as THREE.WebGLRenderer, scene, new THREE.Camera(),
+    {loadPasses, inspecting: () => view.inspecting});
   // A look's curve and glow as the lighting part applies them: what they need loaded, then checked, then applied.
   const set = async (curve: ModelStageToneCurve | null, glow: ModelStageGlow | null) => {
     await Promise.all(draw.load(glow, WHERE));
     draw.prepare(curve, glow, 'Time t: look.glow')();
   };
-  return {draw, drawn, canvas, renderer, set};
+  return {draw, drawn, canvas, renderer, set, view};
 }
 const WHERE = 'Time t: look.glow';
 const GLOW = {threshold: 1.5, strength: 0.8, radius: 0.4};
@@ -85,6 +87,20 @@ describe('the frame\'s draw', () => {
       assert.equal(drawn.filter(pass => pass.what === 'scene').length, 2, 'the scene once, the aids once');
       assert.equal(draw.triangles, 84, 'the scene and the aids, as the direct draw counts them');
     });
+
+  it('draws straight to the canvas, the glow left out, while a Surface mode inspects the surfaces', async () => {
+    const {draw, drawn, set, view} = fixture();
+    await set('aces-filmic', GLOW);
+    draw.draw();
+    view.inspecting = true;
+    drawn.length = 0;
+    draw.draw();
+    assert.deepEqual(drawn, [{...CANVAS, toneMapping: THREE.ACESFilmicToneMapping}]);
+    view.inspecting = false;
+    drawn.length = 0;
+    draw.draw();
+    assert.equal((drawn[0].into as THREE.WebGLRenderTarget | null)?.samples, 4, 'Lit again: the glow again');
+  });
 
   it('applies the look\'s curve once, to the whole frame, and to nothing drawn after it', async () => {
     const {draw, drawn, set} = fixture();
@@ -142,5 +158,16 @@ describe('the frame\'s draw', () => {
     assert.throws(() => plain.draw.prepare(null, GLOW, 'Time t: look.glow'), (error: unknown) =>
       error instanceof ModelStageRefusal && error.message === MODEL_DRAW_TEXT.halfFloat('Time t: look.glow'));
     plain.draw.prepare(null, null, 'Time t: look.glow')();
+  });
+
+  it('fetches the passes again after a fetch that failed, which refuses naming the glow', async () => {
+    let calls = 0;
+    const flaky = () => ++calls === 1 ? Promise.reject(new Error('offline')) : loadModelGlowPasses();
+    const {draw} = fixture(true, flaky);
+    await assert.rejects(Promise.all(draw.load(GLOW, WHERE)), (error: unknown) =>
+      error instanceof ModelStageRefusal && error.message === MODEL_DRAW_TEXT.passes(WHERE, 'offline'));
+    await Promise.all(draw.load(GLOW, WHERE));
+    assert.equal(calls, 2);
+    draw.prepare(null, GLOW, WHERE)();
   });
 });

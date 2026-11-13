@@ -5,6 +5,7 @@ import type {ModelFog} from './fog.ts';
 import type {ModelDraw} from './draw.ts';
 import type {ModelStageSharedValues} from './sharedValues.ts';
 import type {ModelStageCommit} from './commit.ts';
+import {modelDrawnMaterials} from './renderers.ts';
 import {MODEL_STAGE_THEME_LIGHTING, modelStageTimeInForce, type ModelStageLighting, type ModelStageTime}
   from './lightingModel.ts';
 
@@ -16,12 +17,11 @@ const unlit = (material: THREE.Material): material is Unlit =>
 // holds them to a share of that colour instead.
 function stageAids(objects: readonly THREE.Object3D[]) {
   const authored = new Map<Unlit, THREE.Color>();
-  for (const object of objects) object.traverse(node => {
-    if (!(node instanceof THREE.Mesh || node instanceof THREE.Line)) return;
-    for (const material of Array.isArray(node.material) ? node.material : [node.material]) {
+  for (const object of objects) {
+    for (const material of modelDrawnMaterials(object).keys()) {
       if (unlit(material) && !authored.has(material)) authored.set(material, material.color.clone());
     }
-  });
+  }
   return (share: number) => {
     for (const [material, color] of authored) material.color.copy(color).multiplyScalar(share);
   };

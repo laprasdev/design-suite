@@ -1,4 +1,4 @@
-import {modelIsRecord as object} from './recordModel.ts';
+import {modelIsRecord as object, modelStates} from './recordModel.ts';
 import {ModelStageRefusal} from './refusal.ts';
 import {MODEL_SURFACE_PARAMETER, type ModelSurfaceKind} from './surfaceKindModel.ts';
 import {MODEL_ACTOR_SURFACES, MODEL_SURFACE_REFUSAL, modelSurfaceValue, modelSurfaceValueFits,
@@ -63,7 +63,7 @@ function fits(output: ModelMaterialOutput, kind: ModelSurfaceKind | null, where:
     values: Readonly<Record<string, unknown>>) => {
     for (const [name, value] of Object.entries(values)) {
       if (kind === null) throw new ModelStageRefusal(refusal.file(where, name));
-      if (kind.parameters[name]?.type !== form) {
+      if (!modelStates(kind.parameters, name) || kind.parameters[name].type !== form) {
         throw new ModelStageRefusal(refusal.undeclared(where, name, form, kind.id));
       }
       const at = `${where}, kind ${kind.id}: ${name}`;
@@ -94,7 +94,7 @@ export function modelSurfaceOutputs(values: unknown, takes: ModelSurfaceTakes,
 /** What an actor's renderers take, from its surfaces, the description's sets and the stage's kinds. */
 export function modelSurfaceTakes(surfaces: ModelActorSurfaces, sets: Readonly<Record<string, ModelSurfaceSet>>,
   kinds: ReadonlyMap<string, ModelSurfaceKind>): ModelSurfaceTakes {
-  if (surfaces.kind === MODEL_ACTOR_SURFACES.file) return Object.freeze({surfaces: new Map()});
+  if (surfaces.from === MODEL_ACTOR_SURFACES.file) return Object.freeze({surfaces: new Map()});
   return Object.freeze({surfaces: new Map(Object.entries(sets[surfaces.set]).map(([id, entry]) => {
     if (!('values' in entry)) return [id, null];
     const kind = kinds.get(entry.kind);

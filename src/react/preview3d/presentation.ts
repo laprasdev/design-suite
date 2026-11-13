@@ -36,7 +36,7 @@ export function modelPreviewEntity(value: unknown, modelId: string,
     throw new ModelStageRefusal('partPoses must be an explicitly empty array for this preview.');
   }
   return Object.freeze({entityId: value.entityId, modelId: value.modelId,
-    pose: modelPresentationPose(value.pose, `Entity ${value.entityId}`),
+    pose: modelPresentationPose(value.pose, `Entity ${value.entityId} pose`),
     animationLayers: modelAnimationLayers(value.animationLayers, value.entityId), partPoses: Object.freeze([]),
     materials: materials !== undefined && 'surfaces' in materials ?
       modelSurfaceOutputs(value.materials, materials, `Entity ${value.entityId}`) :

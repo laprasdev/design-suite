@@ -123,6 +123,7 @@ describe('an actor\'s host animation', () => {
     const stated = {reviewKey: 'review', floor: true, grid: true, kinds: []};
     assert.equal(modelStagePolicy({...stated, clock: 'local'}).clock, 'local');
     assert.equal(modelStagePolicy({...stated, clock: 'external'}).clock, 'external');
-    assert.throws(() => modelStagePolicy({...stated, clock: 'unknown' as ModelStageClock}), /local or external/);
+    assert.throws(() => modelStagePolicy({...stated, clock: 'unknown' as ModelStageClock}),
+      /The stage's option record.clock is one of local, external/);
   });
 });

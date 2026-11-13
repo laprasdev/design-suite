@@ -1,9 +1,12 @@
 import assert from 'node:assert/strict';
 import {describe, it} from 'node:test';
 import * as THREE from 'three';
-import {createModelMaterialInspection, createModelSurfaceModes} from '../src/react/preview3d/materials.ts';
-import {MODEL_PREVIEW_MATERIAL_SETTINGS, modelStageMaterialMode} from '../src/react/preview3d/materialModel.ts';
-import {extendModelMaterial, type ModelShader} from '../src/react/preview3d/shading.ts';
+import {createModelMaterialInspection, createModelSurfaceModes, modelStageChanges}
+  from '../src/react/preview3d/materials.ts';
+import {MODEL_PREVIEW_SURFACE_SETTINGS, modelStageSurfaceMode} from '../src/react/preview3d/surfaceModeModel.ts';
+import {extendModelMaterial, extendModelMaterials, modelMaterialChanges, type ModelShader}
+  from '../src/react/preview3d/shading.ts';
+import {createModelFog} from '../src/react/preview3d/fog.ts';
 
 // A file's material as the stage holds it, with the Surface modes; and its program as three would hand it over for a
 // material with a base colour map, an occlusion map, a normal map and an emissive map, fogged, under a tone curve.
@@ -16,7 +19,7 @@ function fixture(material: THREE.Material = new THREE.MeshStandardMaterial()) {
 const NO_KIND = () => false;
 const MAPS = Object.freeze({map: true, aoMap: true, normalMap: true, normalMapTangentSpace: true, emissiveMap: true,
   roughnessMap: true, clearcoat: true, fog: true, toneMapping: THREE.ACESFilmicToneMapping});
-function compiled(material: THREE.Material, lib: 'standard' | 'physical' = 'standard') {
+function compiled(material: THREE.Material, lib: 'standard' | 'physical' | 'basic' | 'points' = 'standard') {
   const shader = {...THREE.ShaderLib[lib], ...MAPS, uniforms: {}} as unknown as ModelShader;
   material.onBeforeCompile(shader, {} as THREE.WebGLRenderer);
   return shader;
@@ -48,16 +51,17 @@ describe('the Surface modes', () => {
     [true, false, false, false, false, false, false, false, THREE.ACESFilmicToneMapping]);
     const source = clay.fragmentShader;
     for (const line of [
-      `#include <roughnessmap_fragment>\nroughnessFactor = ${MODEL_PREVIEW_MATERIAL_SETTINGS.roughness}.0;`,
-      `#include <metalnessmap_fragment>\nmetalnessFactor = ${MODEL_PREVIEW_MATERIAL_SETTINGS.metalness}.0;`,
+      `#include <roughnessmap_fragment>\nroughnessFactor = ${MODEL_PREVIEW_SURFACE_SETTINGS.roughness}.0;`,
+      `#include <metalnessmap_fragment>\nmetalnessFactor = ${MODEL_PREVIEW_SURFACE_SETTINGS.metalness}.0;`,
       '#include <emissivemap_fragment>\ndiffuseColor.rgb = modelSurfaceClay;\ntotalEmissiveRadiance = vec3( 0.0 );',
       'uniform vec3 modelSurfaceClay;']) {
       assert.ok(source.includes(line), line);
     }
     assert.deepEqual((clay.uniforms.modelSurfaceClay.value as THREE.Color).toArray(),
-      new THREE.Color().setHex(MODEL_PREVIEW_MATERIAL_SETTINGS.clayColor).toArray());
+      new THREE.Color().setHex(MODEL_PREVIEW_SURFACE_SETTINGS.clayColor).toArray());
     // A physical material's specular intensity is held at 0; only a physical program defines IOR and USE_SPECULAR.
     assert.match(source, /#include <lights_physical_fragment>\n\n#if defined\( IOR \) && defined\( USE_SPECULAR \)\n/);
+    assert.match(source, /vec3\( 1\.0 \) \) \* 0\.0, diffuseColor\.rgb, metalnessFactor \);/);
     assert.match(source, /material\.specularF90 = mix\( 0\.0, 1\.0, metalnessFactor \);/);
   });
 
@@ -76,6 +80,38 @@ describe('the Surface modes', () => {
     assert.deepEqual([emission.fog, emission.emissiveMap], [false, true]);
   });
 
+  it('covers the programs three compiles as STANDARD; a line, points or an unlit mesh is drawn as stated in every mode',
+    () => {
+      const modes = createModelSurfaceModes(), fog = createModelFog(new THREE.Scene()), shape = new THREE.BoxGeometry();
+      const standard = new THREE.MeshStandardMaterial(), physical = new THREE.MeshPhysicalMaterial();
+      const unlit = new THREE.MeshBasicMaterial(), line = new THREE.LineBasicMaterial();
+      const points = new THREE.PointsMaterial();
+      const root = new THREE.Group();
+      root.add(new THREE.Mesh(shape, standard), new THREE.Mesh(shape, [physical, unlit]), new THREE.Line(shape, line),
+        new THREE.Points(shape, points));
+      extendModelMaterials(root, modelStageChanges(fog.change, modes));
+      const keys = (material: THREE.Material) => modelMaterialChanges(material).map(({key}) => key);
+      for (const material of [standard, physical]) {
+        assert.deepEqual(keys(material), ['model-stage-fog', 'model-surface-mode:lit']);
+      }
+      for (const material of [unlit, line, points]) assert.deepEqual(keys(material), ['model-stage-fog']);
+      const programs = [[standard, 'standard'], [physical, 'physical'], [unlit, 'basic'], [line, 'basic'],
+        [points, 'points']] as const;
+      for (const mode of ['clay', 'color', 'emission'] as const) {
+        modes.set(mode);
+        for (const [material, lib] of programs) {
+          const shader = compiled(material, lib);
+          const written = /modelSurfaceClay|outgoingLight = \w+(\.rgb)?;\n#include <opaque_fragment>/;
+          const changed = written.test(shader.fragmentShader);
+          assert.equal(changed, lib === 'standard' || lib === 'physical', `${mode} on ${lib}`);
+          assert.equal(shader.fog, !changed, `${mode} on ${lib}: fog as stated`);
+        }
+      }
+      // A line or points is no surface: only the meshes' materials say whether the modes are available.
+      assert.equal(createModelMaterialInspection(() => [standard, physical], NO_KIND).available, true);
+      assert.equal(createModelMaterialInspection(() => [standard, unlit], NO_KIND).available, false);
+    });
+
   it('reports configured emission, never inventing it from a map alone, and which models can show the modes', () => {
     const count = (material: THREE.Material) =>
       createModelMaterialInspection(() => [fixture(material).material], NO_KIND);
@@ -89,10 +125,12 @@ describe('the Surface modes', () => {
     foreign.onBeforeCompile = () => undefined;
     assert.equal(createModelMaterialInspection(() => [foreign], NO_KIND).available, false);
     assert.equal(createModelMaterialInspection(() => [], NO_KIND).available, false);
-    // A kind's material can show every mode, and counts as emitting: its program computes its emission.
-    const kind = new THREE.ShaderMaterial();
+    // A kind's material on three's standard program can show every mode, and counts as emitting: its program computes
+    // its emission. One on another program (an unlit kind's) cannot.
+    const kind = new THREE.ShaderMaterial({defines: {STANDARD: ''}}), unlit = new THREE.ShaderMaterial();
     const withKind = createModelMaterialInspection(() => [kind, kind], material => material === kind);
     assert.deepEqual([withKind.available, withKind.emissiveMaterialCount], [true, 1]);
-    assert.throws(() => modelStageMaterialMode('xray'), /Unknown material inspection mode/);
+    assert.equal(createModelMaterialInspection(() => [unlit], material => material === unlit).available, false);
+    assert.throws(() => modelStageSurfaceMode('xray'), /The stage description.surfaceMode is one of lit, clay/);
   });
 });

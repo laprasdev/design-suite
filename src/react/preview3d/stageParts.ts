@@ -14,6 +14,7 @@ import {modelSurfaceFiles, modelSurfaceRecords, modelSurfaceRecordsFit} from './
 import type {ModelTextures} from './textures.ts';
 import type {ModelSurfaceKind} from './surfaceKindModel.ts';
 import type {ModelSurfaceModes} from './materials.ts';
+import {MODEL_STAGE_SURFACE_MODE} from './surfaceModeModel.ts';
 import type {ModelSurfaceMaterials} from './surfaceMaterials.ts';
 
 export const MODEL_STAGE_PART_TEXT = Object.freeze({
@@ -57,17 +58,18 @@ export function createModelStageParts(surface: ModelStageSurface) {
   };
   // The Surface mode is the stage's, shown by every actor alike. A mode other than Lit is refused while an engine
   // drives an actor, and for any actor whose materials cannot show it, including one the description adds.
-  const materialMode = (next: ModelStageDescription, actors: readonly ModelActor[]): ModelStagePrepare[] => {
-    if (next.materialMode === 'lit' && surface.modes.mode === 'lit') return [];
+  const surfaceMode = (next: ModelStageDescription, actors: readonly ModelActor[]): ModelStagePrepare[] => {
+    const lit = next.surfaceMode === MODEL_STAGE_SURFACE_MODE.lit;
+    if (lit && surface.modes.mode === MODEL_STAGE_SURFACE_MODE.lit) return [];
     return [() => {
-      if (next.materialMode !== 'lit' && actors.some(actor => actor.driver === MODEL_STAGE_DRIVER.engine)) {
+      if (!lit && actors.some(actor => actor.driver === MODEL_STAGE_DRIVER.engine)) {
         throw new ModelStageRefusal(MODEL_ACTOR_TEXT.unlit);
       }
-      const lacking = next.materialMode === 'lit' ? undefined : actors.find(actor => !actor.materials.available);
+      const lacking = lit ? undefined : actors.find(actor => !actor.materials.available);
       if (lacking) throw new ModelStageRefusal(MODEL_STAGE_PART_TEXT.inspection(lacking.id));
       return () => {
-        if (surface.modes.mode === next.materialMode) return;
-        surface.modes.set(next.materialMode);
+        if (surface.modes.mode === next.surfaceMode) return;
+        surface.modes.set(next.surfaceMode);
         for (const actor of actors) actor.materials.refresh();
       };
     }];
@@ -89,7 +91,7 @@ export function createModelStageParts(surface: ModelStageSurface) {
     if (created) surface.scene.add(created.group);
   });
   const stageWide: Record<Exclude<ModelStageDescriptionPart,
-    'actors' | 'display' | 'materialMode' | 'size' | 'origin' | 'surfaceSets'>,
+    'actors' | 'display' | 'surfaceMode' | 'size' | 'origin' | 'surfaceSets'>,
     (next: ModelStageDescription) => ModelStagePrepare> = {
     environment: next => scenery(next.environment),
     lighting: next => () => surface.lighting.prepare(next.lighting),
@@ -119,7 +121,7 @@ export function createModelStageParts(surface: ModelStageSurface) {
       actors: readonly ModelActor[]): ModelStagePrepare[] {
       const parts = (Object.keys(stageWide) as Array<keyof typeof stageWide>).filter(part => changed.has(part));
       return [...surfaces(next, changed, actors), ...display(next, actors), ...sizing(next, actors),
-        ...materialMode(next, actors),
+        ...surfaceMode(next, actors),
         ...parts.map(part => stageWide[part](next))];
     },
     // The person orbited the view: return it to the described framing, the held pose or a fresh fit.

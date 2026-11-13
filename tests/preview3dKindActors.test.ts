@@ -6,7 +6,7 @@ import {modelSurfaceOutputs, modelSurfaceTakes} from '../src/react/preview3d/sur
 import {ModelStageRefusal} from '../src/react/preview3d/refusal.ts';
 import {kindFile, kindMaterials, kinds, record, RENDERERS, sets} from './preview3dKindFixture.ts';
 
-const SET = Object.freeze({kind: 'set', set: 'tinted'} as const), FILE = Object.freeze({kind: 'file'} as const);
+const SET = Object.freeze({from: 'set', set: 'tinted'} as const), FILE = Object.freeze({from: 'file'} as const);
 const refused = (run: () => unknown, message: string) => assert.throws(run, (error: unknown) =>
   error instanceof ModelStageRefusal && error.message === message, message);
 // As a kind's values hold it: a 32-bit float.
@@ -15,7 +15,8 @@ const linear = (value: number) => Math.fround(new THREE.Color().setRGB(value, 0,
 async function actorWith(registry?: Awaited<ReturnType<typeof kindMaterials>>) {
   const held = registry ?? await kindMaterials(), file = kindFile(), compiled: THREE.Material[] = [];
   let failing: string | undefined;
-  const surfaces = createModelActorSurfaces(file.asset, 'a', {materials: held.materials, kinds: kinds(),
+  const surfaces = createModelActorSurfaces(file.asset, {actor: 'a', path: 'a.glb'}, {materials: held.materials,
+    kinds: kinds(),
     compile: object => {
       compiled.push((object as THREE.Mesh).material as THREE.Material);
       if (failing) throw new Error(failing);

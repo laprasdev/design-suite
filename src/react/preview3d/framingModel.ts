@@ -1,6 +1,5 @@
 import {modelPreviewCamera} from './presentation.ts';
-import {ModelStageRefusal} from './refusal.ts';
-import {modelShape} from './recordModel.ts';
+import {modelFlag, modelShape} from './recordModel.ts';
 import type {ModelVector} from './placementModel.ts';
 
 export const MODEL_STAGE_FRAMING = Object.freeze({focus: 'focus', all: 'all', pose: 'pose'} as const);
@@ -12,9 +11,6 @@ export type ModelStageFraming =
   | {readonly kind: typeof MODEL_STAGE_FRAMING.focus}
   | {readonly kind: typeof MODEL_STAGE_FRAMING.all}
   | {readonly kind: typeof MODEL_STAGE_FRAMING.pose; readonly position: ModelVector; readonly target: ModelVector};
-export const MODEL_STAGE_FRAMING_REFUSAL = Object.freeze({
-  orbit: 'Whether the person may orbit is stated as true or false.',
-});
 // The fields each framing states, and nothing else.
 const FIELDS = Object.freeze({focus: ['kind'], all: ['kind'], pose: ['kind', 'position', 'target']});
 
@@ -24,7 +20,5 @@ export function modelStageFraming(value: unknown): ModelStageFraming {
   return Object.freeze({kind, ...modelPreviewCamera(record)});
 }
 
-export function modelStageOrbit(value: unknown): boolean {
-  if (typeof value !== 'boolean') throw new ModelStageRefusal(MODEL_STAGE_FRAMING_REFUSAL.orbit);
-  return value;
-}
+/** Whether the person may orbit away from the framing, stated as true or false. */
+export const modelStageOrbit = (value: unknown) => modelFlag(value, 'The stage description.orbit');

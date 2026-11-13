@@ -7,7 +7,8 @@ import {MODEL_SURFACE_PARAMETER, type ModelSurfaceKind} from './surfaceKindModel
 import type {ModelSurfaceRecord, ModelSurfaceValue} from './surfaceModel.ts';
 import type {ModelTextures} from './textures.ts';
 import type {ModelStageSharedValues} from './sharedValues.ts';
-import {extendModelMaterial, type ModelShaderChange} from './shading.ts';
+import {extendModelMaterial} from './shading.ts';
+import type {ModelStageChanges} from './materials.ts';
 import {writeModelSurfaceColor} from './color.ts';
 
 // The stage's kind materials: one per record (a kind and its values), built the first time a renderer needs it and
@@ -28,8 +29,8 @@ export interface ModelSurfaceMaterialsContext {
   readonly read: ModelFileReader;
   readonly textures: Pick<ModelTextures, 'acquire' | 'release'>;
   readonly shared: Pick<ModelStageSharedValues, 'uniforms' | 'declarations'>;
-  /** The stage's changes every model material takes: its fog and its Surface mode. */
-  readonly changes: readonly ModelShaderChange[];
+  /** The stage's changes a model material takes: its fog, and its Surface mode where the mode covers the program. */
+  readonly changes: ModelStageChanges;
 }
 export const MODEL_SURFACE_MATERIALS_TEXT = Object.freeze({
   unknown: (kind: string) => `A material was asked for kind ${kind}, which the stage was not given.`,
@@ -87,7 +88,7 @@ export function createModelSurfaceMaterials(context: ModelSurfaceMaterialsContex
       textures.push(texture);
       uniforms[`${MODEL_SURFACE_GLSL.texture}${slot.name}`] = {value: texture};
     }
-    const material = extendModelMaterial(composedProgram.make(uniforms), context.changes);
+    const fresh = composedProgram.make(uniforms), material = extendModelMaterial(fresh, context.changes(fresh));
     material.name = `surface kind ${kind.id}`;
     made.add(material);
     const entry = {key, surface: Object.freeze({material, kind, slots, declared}), textures, users: 0};

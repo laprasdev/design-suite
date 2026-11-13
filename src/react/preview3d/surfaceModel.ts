@@ -1,16 +1,19 @@
-import {modelDigest, modelEntries, modelFlag, modelIsRecord, modelName, modelNumber, modelOneOf, modelOption,
-  modelRecord, modelShape} from './recordModel.ts';
-import {modelNumbers} from './placementModel.ts';
+import {modelDigest, modelEntries, modelFlag, modelIsRecord, modelName, modelNumber, modelNumbers, modelOneOf,
+  modelOption, modelRecord, modelShape, modelStates} from './recordModel.ts';
 import {ModelStageRefusal} from './refusal.ts';
 import {MODEL_FILE_SURFACE, MODEL_SURFACE_PARAMETER, MODEL_VECTOR_SIZE, type ModelSurfaceKind}
   from './surfaceKindModel.ts';
 
-// What draws a model's renderers. An actor states one of two whole forms: the file's own materials throughout, or a
-// named set of the description's, whose keys are the file's renderers, every one exactly once. A set's entry is the
-// file's own material for that renderer, or a record: a supplied kind and a value for each of its parameters.
+// What draws a model's renderers. An actor states where its surfaces come from, one of two whole forms: the file's own
+// materials throughout, or a named set of the description's, whose keys are the file's renderers, every one exactly
+// once. A set's entry is the file's own material for that renderer (the reserved kind `file`), or a record: a supplied
+// kind and a value for each of its parameters. Sets, their entries and a record's values are keyed by the data's own
+// names, so a lookup by such a name asks whether the record states it (recordModel.ts `modelStates`).
 export const MODEL_ACTOR_SURFACES = Object.freeze({file: 'file', set: 'set'} as const);
-export type ModelActorSurfaces = {readonly kind: typeof MODEL_ACTOR_SURFACES.file}
-  | {readonly kind: typeof MODEL_ACTOR_SURFACES.set; readonly set: string};
+export type ModelActorSurfaces = {readonly from: typeof MODEL_ACTOR_SURFACES.file}
+  | {readonly from: typeof MODEL_ACTOR_SURFACES.set; readonly set: string};
+const ACTOR_SURFACES = Object.freeze({[MODEL_ACTOR_SURFACES.file]: ['from'],
+  [MODEL_ACTOR_SURFACES.set]: ['from', 'set']});
 export const MODEL_TEXTURE_WRAP = Object.freeze({repeat: 'repeat', clamp: 'clamp', mirror: 'mirror'} as const);
 export const MODEL_TEXTURE_CONSTANT = Object.freeze({white: 'white', black: 'black'} as const);
 type Wrap = typeof MODEL_TEXTURE_WRAP[keyof typeof MODEL_TEXTURE_WRAP];
@@ -54,6 +57,7 @@ export const MODEL_SURFACE_REFUSAL = Object.freeze({
   inert: (where: string, value: number) => `${where} is drawn only at ${value}.`,
   format: (where: string, path: string) =>
     `${where} ${path} is not a format the stage decodes: ${MODEL_TEXTURE_FORMATS.join(', ')}.`,
+  wrap: (where: string) => `${where} is a pair, [u, v], each one of ${Object.values(MODEL_TEXTURE_WRAP).join(', ')}.`,
 });
 const refusal = MODEL_SURFACE_REFUSAL;
 
@@ -61,7 +65,10 @@ function texture(value: unknown, where: string): ModelSurfaceTexture {
   if (modelIsRecord(value) && 'constant' in value) return Object.freeze({constant: modelOption(
     modelRecord(value, ['constant'], where).constant, MODEL_TEXTURE_CONSTANT, `${where}.constant`)});
   const record = modelRecord(value, TEXTURE_FIELDS, where);
-  const wrap = Array.isArray(record.wrap) && record.wrap.length === 2 ? record.wrap : [undefined, undefined];
+  if (!Array.isArray(record.wrap) || record.wrap.length !== 2) {
+    throw new ModelStageRefusal(refusal.wrap(`${where}.wrap`));
+  }
+  const wrap: readonly unknown[] = record.wrap;
   const pair = (name: string) => modelNumbers(record[name], 2, `${where}.${name}`) as unknown as Pair;
   const path = modelName(record.path, `${where}.path`);
   if (!FORMAT.test(path)) throw new ModelStageRefusal(refusal.format(`${where}.path`, path));
@@ -89,39 +96,41 @@ export function modelSurfaceValue(entry: unknown, where: string): ModelSurfaceVa
   return Object.freeze({texture: texture(content, at)});
 }
 function entry(input: unknown, where: string): ModelSurfaceEntry {
-  if (modelIsRecord(input) && input.kind === MODEL_FILE_SURFACE) {
+  if (modelIsRecord(input) && modelStates(input, 'kind') && input.kind === MODEL_FILE_SURFACE) {
     modelRecord(input, ['kind'], where);
     return MODEL_FILE_ENTRY;
   }
   const record = modelRecord(input, ['kind', 'values'], where);
   return Object.freeze({kind: modelName(record.kind, `${where}.kind`), values: Object.freeze(Object.fromEntries(
-    modelEntries(record.values, `${where}.values`).map(([name, item]) => [name, modelSurfaceValue(item,
-      `${where}.${name}`)])))});
+    modelEntries(record.values, `${where}.values`, 'values by parameter name').map(([name, item]) =>
+      [name, modelSurfaceValue(item, `${where}.${name}`)])))});
 }
 
 /** The description's surface sets, every form checked; whether a record fits its kind is `modelSurfaceRecordsFit`'s. */
 export function modelSurfaceSets(input: unknown): Readonly<Record<string, ModelSurfaceSet>> {
-  return Object.freeze(Object.fromEntries(modelEntries(input, 'The surfaceSets').map(([name, set]) => {
-    const where = `Surface set ${name}`;
-    return [name, Object.freeze(Object.fromEntries(modelEntries(set, where).map(([id, item]) => {
-      if (!RENDERER_ID.test(id)) throw new ModelStageRefusal(refusal.renderer(where, id));
-      return [id, entry(item, `${where}, renderer ${id}`)];
-    })))];
-  })));
+  return Object.freeze(Object.fromEntries(modelEntries(input, 'The surfaceSets', 'surface sets by name')
+    .map(([name, set]) => {
+      const where = `Surface set ${name}`;
+      return [name, Object.freeze(Object.fromEntries(modelEntries(set, where, 'entries by renderer id')
+        .map(([id, item]) => {
+          if (!RENDERER_ID.test(id)) throw new ModelStageRefusal(refusal.renderer(where, id));
+          return [id, entry(item, `${where}, renderer ${id}`)];
+        })))];
+    })));
 }
 
 /** An actor's surfaces: the file's own materials throughout, or a named set. */
 export function modelActorSurfaces(input: unknown, where: string): ModelActorSurfaces {
-  const {shape: kind, record} = modelShape(input, 'kind', {file: ['kind'], set: ['kind', 'set']}, where);
-  return kind === MODEL_ACTOR_SURFACES.file ? Object.freeze({kind}) :
-    Object.freeze({kind, set: modelName(record.set, `${where}.set`)});
+  const {shape: from, record} = modelShape(input, 'from', ACTOR_SURFACES, where);
+  return from === MODEL_ACTOR_SURFACES.file ? Object.freeze({from}) :
+    Object.freeze({from, set: modelName(record.set, `${where}.set`)});
 }
 
 /** The records of the sets these actors are drawn from, each set once. */
 export function modelSurfaceRecords(sets: Readonly<Record<string, ModelSurfaceSet>>,
   actors: readonly {readonly surfaces: ModelActorSurfaces}[]): readonly ModelSurfaceRecord[] {
   const used = new Set(actors.flatMap(({surfaces}) =>
-    surfaces.kind === MODEL_ACTOR_SURFACES.set ? [surfaces.set] : []));
+    surfaces.from === MODEL_ACTOR_SURFACES.set ? [surfaces.set] : []));
   return [...used].flatMap(name => Object.values(sets[name]).flatMap(entry => 'values' in entry ? [entry] : []));
 }
 /** The texture files named by the sets these actors are drawn from, each file once. */
@@ -149,7 +158,7 @@ export function modelSurfaceValueFits(item: ModelSurfaceValue, kind: ModelSurfac
   if ('color' in item && parameter.type === MODEL_SURFACE_PARAMETER.color && !parameter.hdr &&
     item.color.some(channel => channel > 1)) throw new ModelStageRefusal(refusal.range(at));
   const inert = kind.inert[name];
-  if (inert !== undefined && 'float' in item && item.float !== inert) {
+  if (modelStates(kind.inert, name) && 'float' in item && item.float !== inert) {
     throw new ModelStageRefusal(refusal.inert(at, inert));
   }
 }

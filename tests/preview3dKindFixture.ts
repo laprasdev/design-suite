@@ -6,7 +6,7 @@ import {modelSurfaceSets} from '../src/react/preview3d/surfaceModel.ts';
 import {createModelSurfaceMaterials} from '../src/react/preview3d/surfaceMaterials.ts';
 import {createModelStageSharedValues} from '../src/react/preview3d/sharedValues.ts';
 import {createModelFog} from '../src/react/preview3d/fog.ts';
-import {createModelSurfaceModes} from '../src/react/preview3d/materials.ts';
+import {createModelSurfaceModes, modelStageChanges} from '../src/react/preview3d/materials.ts';
 
 export const PULSE = Object.freeze({id: 'test-pulse', parameters: {_Color: {type: 'color', space: 'srgb', hdr: false},
   _Glow: {type: 'color', space: 'linear', hdr: true}, _Pulse: {type: 'float'}, _Rim: {type: 'float'},
@@ -48,7 +48,7 @@ export async function kindMaterials() {
   const acquired: unknown[] = [], released: THREE.Texture[] = [];
   const shared = createModelStageSharedValues(), fog = createModelFog(new THREE.Scene());
   const modes = createModelSurfaceModes();
-  const materials = createModelSurfaceMaterials({kinds: kinds(), shared, changes: [fog.change, modes.change],
+  const materials = createModelSurfaceMaterials({kinds: kinds(), shared, changes: modelStageChanges(fog.change, modes),
     read: async () => new TextEncoder().encode(PULSE_PROGRAM).buffer,
     textures: {acquire: value => {acquired.push(value); return new THREE.Texture();},
       release: texture => {released.push(texture);}}});

@@ -1,33 +1,35 @@
 import * as THREE from 'three';
 import type {GLTF} from 'three/addons/loaders/GLTFLoader.js';
 import type {ModelStageDisplay, ModelStagePolicy, ModelStageTheme} from './model.ts';
+import {MODEL_STAGE_DISPLAY} from './displayModel.ts';
 import {MODEL_STAGE_ORIGIN, MODEL_STAGE_SIZE, type ModelStageOrigin, type ModelStageSize} from './sizeModel.ts';
 import {applyModelTransform, disposeModelObject, modelObjectBounds, modelParts, prepareModelAsset}
   from './asset.ts';
 import {createModelRig} from './rig.ts';
 import {createModelPlayback} from './playback.ts';
-import type {ModelSurfaceModes} from './materials.ts';
+import type {ModelStageChanges, ModelSurfaceModes} from './materials.ts';
 import {createModelActorSurfaces, type ModelActorSurfacesContext} from './actorSurfaces.ts';
 import {markModelStageAids} from './layers.ts';
 import {bindModelRuntimeMaterials} from './runtimeMaterialBinding.ts';
-import {MODEL_STAGE_DRIVER, modelPreviewFrame, modelRuntimeAssetProfile} from './actorModel.ts';
-import type {ModelFrameScope, ModelStageActor, ModelStageActorSnapshot, ModelStageDriver} from './actorModel.ts';
+import {MODEL_STAGE_DRIVER, modelRuntimeAssetProfile} from './actorModel.ts';
+import type {ModelStageActor, ModelStageActorSnapshot, ModelStageDriver} from './actorModel.ts';
+import {modelPreviewFrame, type ModelFrameScope} from './frameModel.ts';
 import type {ModelPreviewEntity} from './presentation.ts';
 import {modelStageCommit, prepareWhole, type ModelStageCommit} from './commit.ts';
 import {ModelStageRefusal} from './refusal.ts';
-import {extendModelMaterials, type ModelShaderChange} from './shading.ts';
+import {extendModelMaterials} from './shading.ts';
 
 // What every actor shares from its stage: the policy, the theme, the scene it joins, the lighting of its aids and the
-// fog its file's materials take.
+// changes its file's materials take.
 export interface ModelActorContext {
   readonly policy: ModelStagePolicy;
   readonly theme: ModelStageTheme;
   readonly scene: THREE.Object3D;
   readonly lighting: {attach(objects: readonly THREE.Object3D[]): () => void};
-  readonly fog: ModelShaderChange;
-  /** The stage's Surface mode, which every model material takes. */
-  readonly surfaceModes: Pick<ModelSurfaceModes, 'change' | 'mode'>;
-  readonly rendered: (mesh: THREE.Mesh) => void;
+  /** The stage's changes each of its file's materials takes: the fog, and the Surface mode where it covers one. */
+  readonly changes: ModelStageChanges;
+  /** The stage's Surface mode in force. */
+  readonly surfaceModes: Pick<ModelSurfaceModes, 'inspecting'>;
   /** The stage's kind materials, its kinds and its compile, which the actor's surfaces draw with. */
   readonly surfaces: ModelActorSurfacesContext;
 }
@@ -36,7 +38,7 @@ export interface ModelActorSizing {readonly size: ModelStageSize; readonly origi
 export const MODEL_ACTOR_TEXT = Object.freeze({unlit: 'Runtime presentation requires lit materials.'});
 /** A renderable's one visible value: authored, not hidden by the Rig display, and not hidden by the engine. */
 export const modelRenderableVisible = (authored: boolean, display: ModelStageDisplay, engineHidden: boolean) =>
-  authored && display !== 'rig' && !engineHidden;
+  authored && display !== MODEL_STAGE_DISPLAY.rig && !engineHidden;
 
 // One loaded model and every owner it composes. Every actor is built alike; its declaration is applied through the
 // same prepare a later declaration uses.
@@ -49,9 +51,8 @@ export function createModelActor(asset: GLTF, declaration: ModelStageActor, cont
     const {placement, size: sized} = prepareModelAsset(asset);
     const points = modelParts(asset, context.theme);
     acquired.push(() => points.forEach(({marker}) => {marker.removeFromParent(); disposeModelObject(marker);}));
-    asset.scene.traverse(node => {if (node instanceof THREE.Mesh) node.onAfterRender = () => context.rendered(node);});
-    extendModelMaterials(asset.scene, [context.fog, context.surfaceModes.change]);
-    const surfaces = createModelActorSurfaces(asset, id, context.surfaces);
+    extendModelMaterials(asset.scene, context.changes);
+    const surfaces = createModelActorSurfaces(asset, {actor: id, path: source.path}, context.surfaces);
     acquired.push(() => surfaces.dispose());
     const runtimeMaterials = profile ? bindModelRuntimeMaterials(asset, profile) : undefined;
     if (runtimeMaterials) acquired.push(() => runtimeMaterials.dispose());
@@ -99,10 +100,10 @@ export function createModelActor(asset: GLTF, declaration: ModelStageActor, cont
       get sizing() {return sizing;},
       setSizing,
       /** What the actor draws in its display: the model, its rig, or both. */
-      bounds: () => rig.display === 'model' ? modelObjectBounds(placement) : rig.bounds(),
+      bounds: () => rig.display === MODEL_STAGE_DISPLAY.model ? modelObjectBounds(placement) : rig.bounds(),
       // Everything that can refuse runs here; the returned commit only applies.
       prepare(entity: ModelPreviewEntity): ModelStageCommit {
-        if (context.surfaceModes.mode !== 'lit') throw new ModelStageRefusal(MODEL_ACTOR_TEXT.unlit);
+        if (context.surfaceModes.inspecting) throw new ModelStageRefusal(MODEL_ACTOR_TEXT.unlit);
         // The engine's values and visibility reach the renderers through the runtime profile when the asset states
         // one (the description refuses one beside a set; the route leaves in step 5e), else through the surfaces.
         const values = runtimeMaterials ? runtimeMaterials.prepare(entity.materials) :

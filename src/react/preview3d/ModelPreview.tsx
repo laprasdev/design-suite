@@ -10,7 +10,7 @@ import {MODEL_ACTOR_ANIMATION, MODEL_READY_ATTRIBUTE, MODEL_PREVIEW_REVIEW, MODE
   ModelPreviewElement as element} from './model.ts';
 import type {ModelPreviewAsset, ModelStageDescription, ModelStageTheme, ModelPreviewFrame} from './model.ts';
 import {MODEL_PREVIEW_TEXT as copy, MODEL_PREVIEW_DISPLAY_OPTIONS} from './model.ts';
-import {MODEL_PREVIEW_MATERIAL_TEXT as surface, MODEL_PREVIEW_MATERIAL_OPTIONS} from './model.ts';
+import {MODEL_PREVIEW_SURFACE_TEXT as surface, MODEL_PREVIEW_SURFACE_OPTIONS} from './model.ts';
 import {MODEL_PREVIEW_LIGHTING_TEXT as lighting} from './model.ts';
 import {useModelPreview, type ModelPreviewStageOptions} from './useModelPreview.ts';
 import {modelStageFocus} from './actorModel.ts';
@@ -77,12 +77,12 @@ function PreviewContents({description, asset, assets, onSelectAsset, theme, revi
         </label>
       </div>}
       {!view.external && <div className="model-preview-fields">
-        <div className="model-preview-field model-preview-choice" style={share(MODEL_PREVIEW_MATERIAL_OPTIONS)}>
+        <div className="model-preview-field model-preview-choice" style={share(MODEL_PREVIEW_SURFACE_OPTIONS)}>
           <span>{surface.label}</span>
-          <SegmentedControl options={MODEL_PREVIEW_MATERIAL_OPTIONS} value={selection.materialMode}
-            onChange={materialMode => choose({materialMode})} ariaLabel={surface.label} fit
-            disabled={!view.ready || !view.materialAvailable}/>
-          {view.ready && !view.materialAvailable && <span role="status">{surface.unavailable}</span>}
+          <SegmentedControl options={MODEL_PREVIEW_SURFACE_OPTIONS} value={selection.surfaceMode}
+            onChange={surfaceMode => choose({surfaceMode})} ariaLabel={surface.label} fit
+            disabled={!view.ready || !view.surfaceModesAvailable}/>
+          {view.ready && !view.surfaceModesAvailable && <span role="status">{surface.unavailable}</span>}
         </div>
         <div className="model-preview-field model-preview-choice" style={share(times)}>
           <span>{lighting.label}</span>
@@ -111,7 +111,7 @@ function PreviewContents({description, asset, assets, onSelectAsset, theme, revi
         view.ready ? <span role="status">
           {view.external ? copy.runtimeReady(asset.name) : copy.ready(asset.name)}</span> :
         <LoadingIndicator>{copy.loading}</LoadingIndicator>}
-      {!view.external && view.ready && selection.materialMode === 'emission' && view.emissiveCount === 0 &&
+      {!view.external && view.ready && selection.surfaceMode === 'emission' && view.emissiveCount === 0 &&
         <span role="status">{surface.noEmission}</span>}
       {chrome && view.loaded && description.orbit && <span>{copy.orbit}</span>}
     </div>}
