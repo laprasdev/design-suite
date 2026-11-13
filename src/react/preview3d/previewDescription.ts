@@ -36,6 +36,27 @@ export function modelPreviewChoices(held: ModelPreviewChoices, host: ModelStageD
   return JSON.stringify(over) === JSON.stringify(held.over) ? held : Object.freeze({over, selection: over});
 }
 
+/**
+ * The person's choices as the view holds them. Each host description is read through `modelPreviewChoices` and what
+ * stands is kept, so a reset to the host's value lasts: a host that later declares its old value again does not
+ * bring back a choice it replaced.
+ */
+export function createModelPreviewChoices(host: ModelStageDescription) {
+  const first = modelPreviewSelectionOf(host);
+  let choices: ModelPreviewChoices = Object.freeze({over: first, selection: first});
+  return {
+    /** The selection to declare over this host description. */
+    declared(value: ModelStageDescription) {
+      choices = modelPreviewChoices(choices, value);
+      return choices.selection;
+    },
+    /** A choice the stage took, made over this host description. */
+    take(value: ModelStageDescription, selection: ModelPreviewSelection) {
+      choices = Object.freeze({over: modelPreviewSelectionOf(value), selection});
+    },
+  };
+}
+
 /** A change to the selection. */
 export const modelPreviewSelection = (previous: ModelPreviewSelection,
   change: Partial<ModelPreviewSelection>): ModelPreviewSelection => Object.freeze({...previous, ...change});
@@ -69,6 +90,8 @@ export function modelPreviewDescription(host: ModelStageDescription,
 }
 
 const descriptionKey = (value: ModelStageDescription) => JSON.stringify(value);
+// A refusal is recorded only against a stage that holds a description: the first, once it is ready.
+const UNHELD = 'A refusal was recorded before the stage held any description.';
 /** Whether the stage already shows a declared description: it holds that one, and no load is about to replace it. */
 export const modelPreviewHeld = (declared: ModelStageDescription, held: ModelStageDescription | undefined,
   loading: boolean) => !loading && held !== undefined && descriptionKey(declared) === descriptionKey(held);
@@ -99,6 +122,15 @@ export function createModelDescriptionRequests(pending: (value: boolean) => void
     request,
     /** The stage was created from this description and is now ready: it holds it. */
     hold(value: ModelStageDescription) {held = value;},
+    /**
+     * What the controls show and act on: the declared selection, or, while a refusal stands, the selection of the
+     * description the stage holds, since a refused description changed nothing on it.
+     */
+    shown(declared: ModelPreviewSelection, refused: boolean): ModelPreviewSelection {
+      if (!refused) return declared;
+      if (!held) throw new Error(UNHELD);
+      return modelPreviewSelectionOf(held);
+    },
     /** A newly declared description: one the stage already shows only clears a recorded refusal; any other is sent. */
     declare(api: Pick<ModelStageController, 'setDescription' | 'snapshot'>, value: ModelStageDescription) {
       if (!modelPreviewHeld(value, held, loading)) return request(api, value);

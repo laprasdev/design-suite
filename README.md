@@ -132,116 +132,114 @@ without a title keeps its children as they are.
 
 ## 3D preview
 
-The browser renderer for the existing `RenderTextureView` kind lives in `/preview3d`.
-Install the optional `three@0.180.0` peer and load this entry only when a 3D view opens.
-The package root and `/react` do not import it. Use `/preview3d/model` for eager data imports.
+The browser renderer for the existing `RenderTextureView` kind lives in `/preview3d`. Install the optional
+`three@0.180.0` peer and load the entry only when a 3D view opens; the package root and `/react` do not import it.
+`/preview3d/model` holds the data (types, constants, validators) for eager imports, `/preview3d/react` the
+`ModelPreview` view, and `/preview3d/styles.css` its styles.
 
 ```ts
+import {MODEL_PREVIEW_REVIEW} from '@looms/bloom-design/preview3d/model';
 const {createModelStage} = await import('@looms/bloom-design/preview3d');
-const dispose = createModelStage(host, description, theme, controller => {
-  controller.setDescription({...description, lighting: 'dark'});
-}, showError);
-// Call dispose when the view closes; it is safe to call more than once.
+const dispose = createModelStage(host, description, theme, onReady, onError,
+  {reviewKey: MODEL_PREVIEW_REVIEW, clock: 'local', floor: true, grid: true});
+// dispose() removes the canvas and the review handle; calling it again does nothing.
 ```
 
-The stage is driven by one `ModelStageDescription` of everything the host decides, applied whole or
-refused: `actors` (a `ModelStageActorSet` of declared actors and the `focus` the camera fits and the
-snapshot reports), `environment` (scenery, or `null`), `camera` (a held `{position, target}`, or `null`
-to fit the focused actor), `lighting`, `display`, `materialMode` and `size`: the stage's one size rule for every
-actor, `{rule: 'real'}` (each at its file's size, so sizes stay relative) or `{rule: 'normalized', height}`;
-a description that omits any part is refused. Each actor declares an `id`, its
-`asset` (URL, attachment bone names, optional revision and runtime material profile), a `placement`
-(a whole pose: `position`, `rotationQuaternion` and `scale` are all stated; one that omits a component is
-refused, naming the actor and the component) and an `animation` in one of three shapes: `{kind: 'rest'}`,
-`{kind: 'playing', name}` on the local clock, or `{kind: 'held', name, timeSeconds}`. A field of another
-shape is refused, never dropped. `createModelStage` takes
-the first description; `setDescription` applies each later one, keeping every unchanged part: an unchanged
-asset, drawn or still loading, is not reloaded, and a description equal to the applied one changes nothing.
-A description that loads nothing applies or throws at once; one that loads settles when its assets
-arrive, rejecting with the previous description still shown, and a later description supersedes it.
-Adding an actor, a scene or a kind of scenery is data in the description, never a new method.
+The last argument is fixed for the stage's life and every field is stated: `clock` (`'local'` or `'external'`),
+whether the stage lays its own `floor` and `grid`, and the host property `reviewKey` the controller is published
+under once the first description is shown, which is also when `onReady(controller)` is called; it does not signal
+a connected or running state machine. An actor's id and its asset's `id`, `path`, `revision`, `sha256` and
+`runtimeMaterials` identify a loaded instance: change `revision` when the same URL's contents change.
 
-The engine's side is one `ModelPreviewFrame`: `setFrame({simulationTimeSeconds, entities})` applies every
-entity, each naming a declared actor id, or refuses the whole frame before anything changes. An entity
-carries `modelId`, a full `pose`, `animationLayers`, `partPoses: []` and `materials`;
-`modelPreviewEntity(value, modelId)` validates and deep-copies one. A description may not change,
-replace or remove an actor a frame has driven; every other part of it still applies. `resetCamera()` is
-the one action: it returns a view the person orbited to the described camera. `snapshot()` reports the
-focused actor at the top level and every actor under `actors`.
+### The description
 
-Every refusal is a `ModelStageRefusal`: the stage is exactly as it was. Any other error means the stage
-is unusable. The sixth argument sets the policy: `clock` (`'local'` or `'external'`), `centerOnFloor`, `floor`, `grid`
-and `orbit`. Under the local clock the stage keeps one presentation time; it holds while the person asks for
-reduced motion or the page is hidden, and every playing clip moves only with it.
+One `ModelStageDescription` states everything the host decides, and every field is required:
 
-For the complete view, load `/preview3d/react` when the preview opens and import
-`@looms/bloom-design/preview3d/styles.css`. It composes the existing suite controls and theme
-variables; use the standard `app-root` host that the suite controls share.
+- `actors`: `{focus, actors}`, a non-empty list and the id of the one the camera fits and the snapshot reports.
+  Each actor is `{id, asset, placement, animation}`. `asset` states `id` and `path`, and may state `revision`,
+  `sha256` and `runtimeMaterials`; any other field is refused. `placement` is a whole pose: `position`,
+  `rotationQuaternion` and `scale`. `animation` is `{kind: 'rest'}`, `{kind: 'playing', name}` (local clock only)
+  or `{kind: 'held', name, timeSeconds}` within the clip; a field of another shape is refused, never dropped.
+  Actor ids are the host's; two actors may draw one asset.
+- `environment`: `{reflectZ, plane, boxes}` scenery, or `null`.
+- `framing`: `{kind: 'focus'}`, `{kind: 'all'}` (every actor) or `{kind: 'pose', position, target}`.
+- `orbit`: whether the person may orbit away from the framing.
+- `lighting` (`'light'`, `'dark'`), `display` (`'model'`, `'rig'`, `'both'`) and `materialMode` (`'lit'`, `'clay'`,
+  `'color'`, `'emission'`).
+- `size`: `{rule: 'real'}` (each actor at its file's size) or `{rule: 'normalized', height}`; `origin`: `'file'`
+  (the file's own origin, as an engine places it) or `'centred'` (centred over the placement, standing on it).
+
+### The controller
+
+- `setDescription(value)` applies a whole description, keeping every unchanged part: an unchanged asset is not
+  reloaded. One that loads nothing applies or throws at once; one that loads returns a promise that settles when
+  its assets arrive, rejects with the previous description still shown, and is superseded by a later call.
+- `setFrame(frame)` (external clock only) applies `{simulationTimeSeconds, entities}`. Each entity names a declared
+  actor by `entityId` and carries `modelId`, a whole `pose`, `animationLayers`, `partPoses: []` and `materials`
+  (empty unless the asset states `runtimeMaterials`). The whole frame is refused before anything changes. A
+  description may not change, replace or remove an actor a frame has driven.
+- `resetCamera()` returns a view the person orbited to the described framing.
+- `snapshot()` reports the focused actor at the top level (`animation`, `time`, `playing`, `hold`, `display`,
+  `boneCount`, `parts`, `poses`, the material and visibility counts) and every actor under `actors`, each with its
+  `driver` (`'host'` or `'engine'`), `pose` and applied `samples`.
+
+Under the local clock the stage keeps one presentation time that every playing clip follows; it holds while the
+person asks for reduced motion or the page is hidden, and `hold` says which. Under the external clock only frames
+move the pose. A stated time outside `[0, duration]` is refused, never wrapped or clamped.
+
+An engine frame plays at most one animation layer per actor, with `blendMode: 'override'`; a mask (`maskId`), an
+additive layer or a second layer is refused. `MODEL_PREVIEW_CAPABILITIES` (in `/preview3d/model`) states what a
+frame may carry. The host owns session, epoch, publication, generation and binding-revision guards; this surface
+does not interpret a runtime frame or evaluate gameplay.
+
+`modelPoseForBinding(pose, {reflectZ, rotationQuaternion})` (in `/preview3d/model`) is a pure coordinate adapter.
+Positions enter and leave in metres. Z reflection maps position to `[x,y,-z]` and rotation to `[-x,-y,z,w]`, then
+postmultiplies the declared local model-alignment quaternion; the composed rotation is normalized and scale is
+unchanged.
+
+### Failures
+
+A `ModelStageRefusal` means the request was not applied and the stage is exactly as it was. Any other error, or a
+failure with no stage yet, means the stage is unusable. `ModelPreview` shows either only through the suite's
+`ActionBar` notice (`ActionNotice` when `chrome` is false), with the failure's message as its detail: "Not applied"
+for a refusal, and "Preview stopped" with Retry for an unusable stage.
+
+### Rig points
+
+A point a host attaches to is an empty node named `PART-<name>` under the bone it follows. `snapshot().parts`
+reports each by `<name>` with its world `position` and `rotationQuaternion`; Rig and Both draw a marker on it.
+Rig draws the joints a skinned vertex is weighted to, and the fit in Rig and Both follows what is drawn.
+
+### ModelPreview
 
 ```tsx
-<ModelPreview assets={assets} selectedId={selectedId} onSelectAsset={setSelectedId} theme={theme}/>
+<ModelPreview description={description} assets={assets} theme={theme} stageOptions={{floor: true, grid: true}}/>
 ```
 
-Each supplied `ModelPreviewAsset` has `id`, `name`, `path`, `idleAnimation`, `animations`
-(`name` and `label`) and `attachments`. A single asset needs no `onSelectAsset` handler.
-The selected asset is the focused actor, with the asset's id as its actor id; `actors` declares
-others beside it, and `camera` and `environment` complete the description.
-All controls sit above the stage, including Rest Pose, Play/Pause, Surface, Model/Rig/Both and camera reset.
-Each control changes the person's selection, from which the view builds its one description.
-Under reduced motion the stage's time holds, so nothing plays, Play included; the view adds no hold of its own.
-The component accepts `stageOptions`, `className` and an optional `reviewKey` for existing consumers.
-Its canonical `modelPreviewReview` handle lives on `ModelPreviewElement.STAGE`.
-`MODEL_PREVIEW_TEXT` and `MODEL_PREVIEW_DISPLAY_OPTIONS` from `/preview3d/model` own the
-labels and mode choices used by the view and consumer browser checks. A failure is shown only
-through the suite's `ActionBar` notice (`ActionNotice` without chrome): "Not applied" for a refusal
-and "Preview stopped", with Retry, for an unusable stage; the failure's own message is the detail.
+`description` is the host's stage; its focused actor is the model the controls act on. `assets` are the catalog's
+`ModelPreviewAsset`s (`id`, `name`, `animations` as `{name, label}`) for the model picker, the name and the clip
+list, which starts with Rest Pose. `onSelectAsset` shows the model picker when there is more than one asset.
+`frame` is the engine's input: omit it for the local clock, pass `null` while waiting, then each
+`ModelPreviewFrame`. `stageOptions` (`floor`, `grid`), `reviewKey` (default `MODEL_PREVIEW_REVIEW`, on
+`ModelPreviewElement.STAGE`), `className`, `chrome` and `stageOverlay` complete the props. The stage is created
+again when the focused asset, the clock, `stageOptions`, `reviewKey` or the theme's colours change. With a `frame`
+the view shows only the display choice and Reset Camera, and an engine-driven actor keeps Lit materials. A `null`
+or invalid frame shows the waiting or error status while the last valid pose stays drawn; a later valid frame
+recovers without reloading, and a loading model receives only the latest valid frame. `MODEL_PREVIEW_TEXT` and
+`MODEL_PREVIEW_DISPLAY_OPTIONS` (in `/preview3d/model`) own the view's labels and display choices.
 
-The diagnostic Surface choice selects Lit, Clay, Color or Emission. Lit preserves the loaded
-materials; Clay removes surface detail to inspect shape; Color shows unlit base color; Emission
-shows the authored emissive channel. A model with no configured emission reports “No emission”.
-These temporary inspection modes preserve alpha cutouts, skinning and morphing; unsupported shaders
-remain Lit. Snapshots include `materialMode`, `materialInspectionAvailable` and `emissiveMaterialCount`.
+The Surface choice is diagnostic: Lit keeps the loaded materials, Clay removes surface detail to show shape, Color
+shows the unlit base color and Emission the authored emissive channel; a model with none reports "No emission". A
+model whose materials the inspection does not support stays Lit with `materialInspectionAvailable` false.
 
-`display: 'rig'` shows bright bone lines and joint markers while hiding the model's renderables;
-`'both'` overlays the rig, and `'model'` restores the asset's authored visibility. The actor writes each
-renderable's one visible value from its authored value, the display and the engine's last record of the
-renderers it hides, so a display change applies no frame again. Rig frames all bone
-positions; Both frames the union of the mesh and rig; Model keeps the catalog framing. Snapshots include
-`display`, `modelVisible`, `visibleModelMeshes`, `rigVisible`, `boneCount` and `visibleRigJoints`.
-`reviewKey` optionally exposes the controller on the host for browser acceptance checks.
-`onReady` means the first description is shown; it does not signal a connected or running state machine.
-Disposal removes the canvas and review handle, frees renderer resources and suppresses late load callbacks.
+The person's choices (the focused actor's clip, play or pause, the display, the surface and the lighting) are edits
+of the description held by the view; a host change of the same value replaces them. While a refusal stands, the
+controls show and act on the description the stage holds. Mount the view inside the suite's `app-root`, where its
+pickers place their popovers and its controls take their styles.
 
-Under `clock: 'external'` an actor's animation is a clip held at `timeSeconds` within its inclusive
-duration, or the rest pose; it never plays and never advances from render frames. Under the local clock a
-clip plays or is held at a stated time; the view's Pause holds the clip at the time the stage shows, and
-Play goes on from that time. Times outside the clip are
-refused without changing the pose; the stage does not wrap, clamp or resolve loops.
-
-`ModelPreview.frame` is the runtime input. Omit it for the local diagnostic view; pass `null` to wait
-for runtime data; pass a frame whose entity names the selected asset's id to apply it.
-
-Runtime mode forces an external clock, rest pose, real sizes and authored placement. It hides the model
-picker, animation selection, playback and Surface controls; display modes and camera controls remain.
-Runtime views retain the loaded Lit materials.
-Null or invalid inputs clear pending data and show waiting/error status while retaining the last
-valid visible pose. A later valid pose recovers without reloading. A loading GLB receives only the
-latest validated matching input. Fresh frame objects do not reload the asset. Asset id,
-path, optional `revision` and attachment bindings identify an instance; changing any invalidates
-it, as does switching between local and runtime modes. Change `revision` when the same URL's
-contents or pose-alignment binding changes.
-
-`modelPoseForBinding(pose, {reflectZ, rotationQuaternion})` is a pure coordinate adapter. Positions
-enter and leave in metres. Optional Z reflection maps position to `[x,y,-z]` and rotation to
-`[-x,-y,z,w]`, then postmultiplies the declared local model-alignment quaternion. The composed
-rotation is normalized to remove accepted norm/roundoff drift; scale values are unchanged.
-`MODEL_PREVIEW_CAPABILITIES` advertises pose and animation-layer support and no part-pose or material
-support. The host owns session, epoch, publication, generation and binding-revision guards;
-this surface does not interpret a runtime frame or evaluate gameplay.
-
-Consumers own asset catalogs, character selection, UI and the bridge from runtime output to the
-description and the frame. The state-machine engine evaluates states; this renderer does not.
-Native Unity previews keep their camera adapter to the same runtime contract.
+Consumers own asset catalogs, character selection, UI and the bridge from runtime output to the description and
+the frame. The state-machine engine evaluates states; this renderer does not. Native Unity previews keep their
+camera adapter to the same runtime contract.
 
 ## Verify
 

@@ -6,8 +6,8 @@ import {MODEL_PREVIEW_TEXT, MODEL_REST_POSE, MODEL_STAGE_SIZE, MODEL_STAGE_THEME
   ModelStageRefusal, modelStageFailure}
   from '../src/react/preview3d/model.ts';
 import type {ModelStageController} from '../src/react/preview3d/model.ts';
-import {createModelDescriptionRequests, modelPreviewChoices, modelPreviewDescription, modelPreviewFailure,
-  modelPreviewSelectionOf,
+import {createModelDescriptionRequests, createModelPreviewChoices, modelPreviewChoices, modelPreviewDescription,
+  modelPreviewFailure, modelPreviewSelectionOf,
   modelPreviewClip, modelPreviewNotice, modelPreviewPick, modelPreviewReady, modelPreviewToggle}
   from '../src/react/preview3d/previewDescription.ts';
 import {declaration, describing, held, playing, REST, standingAt} from './preview3dActorFixture.ts';
@@ -38,6 +38,27 @@ describe('the view\'s description', () => {
     assert.equal(modelPreviewChoices(held, posed), held);
     const relit = modelStageDescription({...host, lighting: 'dark'});
     assert.deepEqual(modelPreviewChoices(held, relit).selection, modelPreviewSelectionOf(relit));
+  });
+
+  it('keeps a reset to the host\'s value when the host later declares its old value again', () => {
+    const choices = createModelPreviewChoices(host);
+    const paused = {...modelPreviewSelectionOf(host), animation: held('run', 0.7)};
+    choices.take(host, paused);
+    assert.deepEqual(choices.declared(host), paused);
+    const halfway = modelStageDescription({...host, actors: {focus: 'otter', actors: [
+      {...host.actors.actors[0], animation: held('run', 0.5)}, host.actors.actors[1]]}});
+    assert.deepEqual(choices.declared(halfway).animation, held('run', 0.5));
+    assert.deepEqual(choices.declared(host).animation, playing('run'));
+  });
+
+  it('shows the selection of the description the stage holds while a refusal stands', () => {
+    const requests = createModelDescriptionRequests(() => undefined, () => undefined, () => undefined);
+    const shown = modelStageDescription(describing());
+    const declared = {...modelPreviewSelectionOf(shown), animation: playing('swim')};
+    assert.throws(() => requests.shown(declared, true), /^Error: A refusal was recorded before the stage held/);
+    requests.hold(shown);
+    assert.equal(requests.shown(declared, false), declared);
+    assert.deepEqual(requests.shown(declared, true), modelPreviewSelectionOf(shown));
   });
 
   it('picks a clip that plays on if the last one played and is held at its start if not, and the rest pose', () => {

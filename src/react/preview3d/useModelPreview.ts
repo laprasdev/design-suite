@@ -1,13 +1,12 @@
-import {useEffect, useLayoutEffect, useRef, useState} from 'react';
+import {useEffect, useLayoutEffect, useReducer, useRef, useState} from 'react';
 import {createModelStage} from './stage.ts';
 import type {ModelStageController, ModelStageHold, ModelStageOptions, ModelStageTheme} from './model.ts';
 import {REDUCED_MOTION_QUERY} from '../motion.ts';
 import type {ModelPreviewFrame} from './actorModel.ts';
 import type {ModelStageDescription} from './descriptionModel.ts';
 import {createModelFrameInbox, type ModelFrameStatus} from './frameInbox.ts';
-import {createModelDescriptionRequests, modelPreviewDescription, modelPreviewFailure, modelPreviewNotice,
-  modelPreviewChoices, modelPreviewPick, modelPreviewReady, modelPreviewSelection, modelPreviewSelectionOf,
-  modelPreviewToggle,
+import {createModelDescriptionRequests, createModelPreviewChoices, modelPreviewDescription, modelPreviewFailure,
+  modelPreviewNotice, modelPreviewPick, modelPreviewReady, modelPreviewSelection, modelPreviewToggle,
   type ModelPreviewSelection} from './previewDescription.ts';
 import {MODEL_STAGE_FAILURE, modelStageFailure, type ModelStageFailure} from './refusal.ts';
 
@@ -24,14 +23,10 @@ export function useModelPreview(host: ModelStageDescription, theme: ModelStageTh
   const controller = useRef<ModelStageController | null>(null);
   const release = useRef<() => void>(() => {});
   const [ready, setReady] = useState(false), [attempt, setAttempt] = useState(0);
-  // The person's choices start from the host's values and are reset when the host changes one of those values.
-  const [chosen, setChosen] = useState(() => {
-    const over = modelPreviewSelectionOf(host);
-    return {over, selection: over};
-  });
-  const standing = modelPreviewChoices(chosen, host), {selection} = standing;
-  const selected = useRef(selection);
-  selected.current = selection;
+  // The person's choices start from the host's values and are reset, for good, when the host changes one of them.
+  const [choices] = useState(() => createModelPreviewChoices(host));
+  const [, taken] = useReducer((count: number) => count + 1, 0);
+  const declared = choices.declared(host);
   const [boneCount, setBoneCount] = useState(0);
   const [materialAvailable, setMaterialAvailable] = useState(false), [emissiveCount, setEmissiveCount] = useState(0);
   // A refused request and the frame's own failure are kept apart: accepting one never clears the other.
@@ -51,7 +46,7 @@ export function useModelPreview(host: ModelStageDescription, theme: ModelStageTh
   const hostLatest = useRef(host);
   hostLatest.current = host;
   const describe = (value: ModelPreviewSelection) => modelPreviewDescription(hostLatest.current, value);
-  const description = describe(selection), described = JSON.stringify(description);
+  const description = describe(declared), described = JSON.stringify(description);
   const latest = useRef(description);
   // Whether a created stage is there to keep when a request is refused.
   const usable = useRef(true);
@@ -69,6 +64,10 @@ export function useModelPreview(host: ModelStageDescription, theme: ModelStageTh
     else setFrameFailure(null);
   };
   const [requests] = useState(() => createModelDescriptionRequests(setLoading, value => read(value), settled));
+  // The controls show and act on what the stage shows: while a refusal stands, the description it holds.
+  const selection = requests.shown(declared, failure?.kind === MODEL_STAGE_FAILURE.refused);
+  const selected = useRef(selection);
+  selected.current = selection;
   // A change of the declared description: sent, unless the stage already shows it; one equal by value is no change.
   useLayoutEffect(() => {
     latest.current = description;
@@ -90,7 +89,8 @@ export function useModelPreview(host: ModelStageDescription, theme: ModelStageTh
     const next = modelPreviewSelection(selected.current, change), api = controller.current;
     if (api && !requests.request(api, describe(next))) return;
     selected.current = next;
-    setChosen({over: standing.over, selection: next});
+    choices.take(hostLatest.current, next);
+    taken();
   };
   // Play or pause, read against the time the stage shows; a refusal goes to the one reader.
   const toggle = () => {
