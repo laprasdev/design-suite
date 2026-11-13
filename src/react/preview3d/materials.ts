@@ -2,13 +2,11 @@ import * as THREE from 'three';
 import {MODEL_PREVIEW_MATERIAL_SETTINGS as settings, modelStageMaterialMode} from './materialModel.ts';
 import type {ModelStageMaterialMode} from './materialModel.ts';
 import {ModelStageRefusal} from './refusal.ts';
+import {extendModelMaterial, modelMaterialUnchanged, replaceModelShader} from './shading.ts';
 
 const COLOR_FRAGMENT = '#include <color_fragment>';
 const OUTPUT_FRAGMENT = '#include <opaque_fragment>';
-function replaceFragment(source: string, anchor: string, replacement: string) {
-  if (!source.includes(anchor)) throw new Error('Unsupported material inspection shader.');
-  return source.replace(anchor, replacement);
-}
+const INSPECTION = 'material inspection';
 function clay(material: THREE.MeshStandardMaterial) {
   material.color.setHex(settings.clayColor);
   material.roughness = settings.roughness;
@@ -27,18 +25,16 @@ function inspectionMaterial(original: THREE.MeshStandardMaterial, mode: ModelSta
   if (mode === 'clay') clay(material);
   if (mode === 'color') material.toneMapped = false;
   material.fog = false;
-  material.customProgramCacheKey = () => `model-material-inspection:${mode}`;
-  material.onBeforeCompile = shader => {
-    // Keep the original map/vertex alpha path, including cutouts. Only replace the inspected RGB channel.
-    shader.fragmentShader = mode === 'clay' ? replaceFragment(shader.fragmentShader, COLOR_FRAGMENT,
-      `${COLOR_FRAGMENT}\ndiffuseColor.rgb = diffuse;`) : replaceFragment(shader.fragmentShader, OUTPUT_FRAGMENT,
-      `outgoingLight = ${mode === 'emission' ? 'totalEmissiveRadiance' : 'diffuseColor.rgb'};\n${OUTPUT_FRAGMENT}`);
-  };
-  return material;
+  // Keep the original map/vertex alpha path, including cutouts. Only replace the inspected RGB channel.
+  return extendModelMaterial(material, [{key: `model-material-inspection:${mode}`, apply: shader => {
+    shader.fragmentShader = mode === 'clay' ? replaceModelShader(shader.fragmentShader, COLOR_FRAGMENT,
+      `${COLOR_FRAGMENT}\ndiffuseColor.rgb = diffuse;`, INSPECTION) : replaceModelShader(shader.fragmentShader,
+      OUTPUT_FRAGMENT, `outgoingLight = ${mode === 'emission' ? 'totalEmissiveRadiance' : 'diffuseColor.rgb'};\n` +
+      OUTPUT_FRAGMENT, INSPECTION);
+  }}]);
 }
 function supported(material: THREE.Material): material is THREE.MeshStandardMaterial {
-  return material instanceof THREE.MeshStandardMaterial &&
-    material.onBeforeCompile === THREE.Material.prototype.onBeforeCompile;
+  return material instanceof THREE.MeshStandardMaterial && modelMaterialUnchanged(material);
 }
 
 // Overrides belong to this loaded model instance. Textures and geometry remain owned by its original materials/scene.

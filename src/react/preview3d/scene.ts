@@ -49,6 +49,8 @@ export function createModelScene(host: HTMLElement, theme: ModelStageTheme, poli
   resize();
   return {
     renderer, scene, camera, controls, lighting, ...framing,
+    /** The frame's one draw: the scene through the camera, to the canvas. */
+    draw() {renderer.render(scene, camera);},
     dispose() {
       observer.disconnect();
       controls.dispose();

@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import {MODEL_RUNTIME_MATERIAL, modelMaterialOutput} from './runtimeMaterialModel.ts';
 import type {ModelMaterialOutput} from './runtimeMaterialModel.ts';
 import {ModelStageRefusal} from './refusal.ts';
+import {extendModelMaterial, modelMaterialUnchanged, replaceModelShader} from './shading.ts';
 export {MODEL_RUNTIME_MATERIAL} from './runtimeMaterialModel.ts';
 export type {ModelMaterialOutput} from './runtimeMaterialModel.ts';
 export interface ModelMaterialBinding {
@@ -14,15 +15,12 @@ const EMISSION_FRAGMENT = '#include <emissivemap_fragment>';
 const EMISSION_UNIFORM = 'modelRuntimeTintedEmission';
 const key = (id: string, slot: number) => JSON.stringify([id, slot]);
 function tintedMaterial(original: THREE.MeshStandardMaterial, enabled: {value: boolean}) {
-  const material = original.clone();
-  material.customProgramCacheKey = () => MODEL_RUNTIME_MATERIAL.profile;
-  material.onBeforeCompile = shader => {
-    if (!shader.fragmentShader.includes(EMISSION_FRAGMENT)) throw new Error('Unsupported emission shader.');
+  return extendModelMaterial(original.clone(), [{key: MODEL_RUNTIME_MATERIAL.profile, apply: shader => {
     shader.uniforms[EMISSION_UNIFORM] = enabled;
-    shader.fragmentShader = `uniform bool ${EMISSION_UNIFORM};\n${shader.fragmentShader}`.replace(EMISSION_FRAGMENT,
-      `${EMISSION_FRAGMENT}\nif (${EMISSION_UNIFORM}) totalEmissiveRadiance *= diffuseColor.rgb;`);
-  };
-  return material;
+    shader.fragmentShader = `uniform bool ${EMISSION_UNIFORM};\n` + replaceModelShader(shader.fragmentShader,
+      EMISSION_FRAGMENT, `${EMISSION_FRAGMENT}\nif (${EMISSION_UNIFORM}) totalEmissiveRadiance *= diffuseColor.rgb;`,
+      MODEL_RUNTIME_MATERIAL.profile);
+  }}]);
 }
 function color(target: THREE.Color, baseline: THREE.Color, value?: readonly number[]) {
   if (value) target.setRGB(value[0], value[1], value[2], THREE.SRGBColorSpace);
@@ -49,8 +47,7 @@ export function createModelRuntimeMaterials(bindings: readonly ModelMaterialBind
         entry.binding.slot === binding.slot) throw new Error('A material slot cannot have two renderer identities.');
       const original = Array.isArray(binding.mesh.material) ? binding.mesh.material[binding.slot] :
         binding.slot === 0 ? binding.mesh.material : undefined;
-      if (!(original instanceof THREE.MeshStandardMaterial) ||
-        original.onBeforeCompile !== THREE.Material.prototype.onBeforeCompile) {
+      if (!(original instanceof THREE.MeshStandardMaterial) || !modelMaterialUnchanged(original)) {
         throw new Error('Runtime material binding requires an unmodified standard material.');
       }
       originals.set(binding.mesh, binding.mesh.material);

@@ -107,7 +107,7 @@ export function createModelStage(
       stage.fit(() => framed.reduce((bounds, actor) => bounds.union(actor.bounds()), new THREE.Box3()));
     }
     if (stage.controls.enabled) stage.controls.update();
-    stage.renderer.render(stage.scene, stage.camera);
+    stage.draw();
     frame = requestAnimationFrame(animate);
   };
   const dispose = () => {
