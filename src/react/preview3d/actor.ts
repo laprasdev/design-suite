@@ -8,6 +8,7 @@ import {createModelRig} from './rig.ts';
 import {createModelPlayback} from './playback.ts';
 import type {ModelSurfaceModes} from './materials.ts';
 import {createModelActorSurfaces, type ModelActorSurfacesContext} from './actorSurfaces.ts';
+import {markModelStageAids} from './layers.ts';
 import {bindModelRuntimeMaterials} from './runtimeMaterialBinding.ts';
 import {MODEL_STAGE_DRIVER, modelPreviewFrame, modelRuntimeAssetProfile} from './actorModel.ts';
 import type {ModelFrameScope, ModelStageActor, ModelStageActorSnapshot, ModelStageDriver} from './actorModel.ts';
@@ -84,6 +85,7 @@ export function createModelActor(asset: GLTF, declaration: ModelStageActor, cont
       };
     };
     prepareHost(declaration)();
+    markModelStageAids([rig.root, ...points.map(({marker}) => marker)]);
     context.scene.add(placement, rig.root, ...points.map(({marker}) => marker));
     return {
       id, asset, placement, points, rig, playback, prepareHost,

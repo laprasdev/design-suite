@@ -9,6 +9,7 @@ import {modelStageBuiltInTimes} from './lightingModel.ts';
 import {createModelFog} from './fog.ts';
 import {createModelDraw} from './draw.ts';
 import {createModelStageSharedValues} from './sharedValues.ts';
+import {markModelStageAids, markModelStageLights} from './layers.ts';
 
 type AidLighting = Pick<ReturnType<typeof createModelLighting>, 'floor' | 'attach'>;
 /** The stage's own floor and grid, as its policy asks: aids, so they take no fog; the floor is lit by the look. */
@@ -50,7 +51,10 @@ export function createModelScene(host: HTMLElement, theme: ModelStageTheme, poli
   const frame = createModelDraw(renderer, scene, camera);
   const shared = createModelStageSharedValues();
   const lighting = createModelLighting(renderer, builtIn, {fog, output: frame, shared});
-  scene.add(...lighting.lights, ...createModelStageAids(theme, policy, lighting));
+  const aids = createModelStageAids(theme, policy, lighting);
+  markModelStageAids(aids);
+  markModelStageLights(lighting.lights);
+  scene.add(...lighting.lights, ...aids);
   const framing = createModelFraming(camera, controls);
   const resize = () => {
     const {clientWidth: width, clientHeight: height} = host;

@@ -53,7 +53,6 @@ export const MODEL_STAGE_FOG_REFUSAL = Object.freeze({
   top: (where: string) => `${where}.top must be above its base.`,
 });
 export const MODEL_STAGE_LOOK_REFUSAL = Object.freeze({
-  curvedGlow: (where: string) => `${where}: a time with a tone curve and glow: not built.`,
 });
 const fields = MODEL_STAGE_LOOK_FIELDS, UNBOUNDED = Number.POSITIVE_INFINITY;
 /** The widest spread the bloom mixes to (UnrealBloomPass's radius), the end of the range it is meaningful on. */
@@ -106,10 +105,6 @@ export function modelStageLook(value: unknown, where: string): ModelStageLook {
   const key = modelRecord(look.key, fields.key, `${where}.key`);
   const ambient = modelRecord(look.ambient, fields.ambient, `${where}.ambient`);
   const aids = modelRecord(look.aids, fields.aids, `${where}.aids`);
-  // Glow is added to the frame the curve-less draw shows; under a curve no pipeline yet keeps the rest unchanged.
-  if (look.toneCurve !== null && look.glow !== null) {
-    throw new ModelStageRefusal(MODEL_STAGE_LOOK_REFUSAL.curvedGlow(where));
-  }
   return Object.freeze({
     backdrop: modelColor(look.backdrop, `${where}.backdrop`),
     key: Object.freeze({color: modelColor(key.color, `${where}.key.color`),

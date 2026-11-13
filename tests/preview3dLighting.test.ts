@@ -95,13 +95,13 @@ describe('stage lighting', () => {
     assert.deepEqual(outputs, [['aces-filmic', null], [null, glow], ['aces-filmic', null]]);
   });
 
-  it('refuses a time with a tone curve and glow, by name', () => {
+  it('takes a time with a tone curve and glow (the output pass applies the curve after the bloom), and no other curve',
+    () => {
     const look = {...dusk.look, toneCurve: 'aces-filmic', glow: {threshold: 1, strength: 1, radius: 0}};
-    assert.throws(() => modelStageLighting(at('dusk', [{...dusk, look}])),
-      /Time dusk: look: a time with a tone curve and glow: not built/);
+    assert.equal(modelStageLighting(at('dusk', [{...dusk, look}])).times[0].look.toneCurve, 'aces-filmic');
     assert.throws(() => modelStageLighting(at('dusk', [{...dusk, look: {...dusk.look, toneCurve: 'reinhard'}}])),
       /Time dusk: look.toneCurve is one of aces-filmic\./);
-  });
+    });
 
   it('lights a kind with one ambient and one key, as three hands them on: hemisphereLights[0], directionalLights[0]',
     () => {

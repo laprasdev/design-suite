@@ -177,7 +177,8 @@ exactly its fields: one it omits or one it does not have is refused by its path 
   `backdrop`, `key` `{color, strength, direction}`, `ambient` `{sky, ground, strength}`, `shadow`, `night` (0 to 1),
   `aids` `{floor, share}`, `fog` (`{near, far, height}` or `null`), `toneCurve` (`'aces-filmic'` or `null`) and
   `glow` (`{threshold, strength, radius}` with `radius` from 0 to 1, or `null`); colours are sRGB triples in [0, 1],
-  and a time with both a tone curve and glow is refused. The types and `modelStageLighting`, which checks a lighting
+  and under glow the scene is drawn once in linear light, the bloom added, then the curve and the display encoding
+  applied once (the stage's floor, grid and rigs are drawn after, neither bloomed nor curved). The types and `modelStageLighting`, which checks a lighting
   as the stage does, come from `/preview3d/model`. The theme's `stage`, `text` and `surface` must be `#rrggbb`.
 - `display` (`'model'`, `'rig'`, `'both'`) and `materialMode` (`'lit'`, `'clay'`, `'color'`, `'emission'`).
 - `size`: `{rule: 'real'}` (each actor at its file's size) or `{rule: 'normalized', height}`; `origin`: `'file'`
