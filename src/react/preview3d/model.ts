@@ -1,7 +1,6 @@
 import {element} from '../elementContract.ts';
 import {ModelStageRefusal} from './refusal.ts';
 import type {ModelStageMaterialMode} from './materialModel.ts';
-import type {ModelStageLighting} from './lightingModel.ts';
 import type {ModelRuntimeMaterialProfile} from './runtimeMaterialModel.ts';
 import type {ModelEnvironment} from './environment.ts';
 import type {ModelPreviewFrame, ModelStageActorSnapshot} from './actorModel.ts';
@@ -12,9 +11,11 @@ export type {ModelRuntimeMaterialProfile, ModelMaterialOutput, ModelRendererBind
 export type {ModelEnvironment, ModelEnvironmentBox} from './environment.ts';
 export {MODEL_PREVIEW_MATERIAL_TEXT, MODEL_PREVIEW_MATERIAL_OPTIONS} from './materialModel.ts';
 export type {ModelStageMaterialMode} from './materialModel.ts';
-export {MODEL_PREVIEW_LIGHTING_TEXT, MODEL_PREVIEW_LIGHTING_OPTIONS, MODEL_STAGE_THEME_LIGHTING}
+export {MODEL_PREVIEW_LIGHTING_TEXT, MODEL_STAGE_THEME_LIGHTING, MODEL_STAGE_TIME, modelStageTimeOptions}
   from './lightingModel.ts';
-export type {ModelStageLighting} from './lightingModel.ts';
+export type {ModelStageLighting, ModelStageTime} from './lightingModel.ts';
+export type {ModelStageLook} from './lookModel.ts';
+export type {ModelColor} from './colorModel.ts';
 export {modelPreviewEntity, MODEL_PREVIEW_CAPABILITIES} from './presentation.ts';
 export {modelPoseForBinding, MODEL_PREVIEW_QUATERNION_TOLERANCE} from './placementModel.ts';
 export type {ModelVector, ModelRotation, ModelPresentationPose, ModelPoseBinding} from './placementModel.ts';
@@ -71,7 +72,6 @@ export function modelStageDisplay(value: unknown): ModelStageDisplay {
 export const MODEL_STAGE = Object.freeze({
   pixelRatioLimit: 2, fieldOfView: 38, nearPlane: 0.01, farPlane: 100,
   cameraMinimum: 1, cameraMaximum: 16, cameraDirection: [0.75, 0.4, 1], fitPadding: 1.4,
-  ambientIntensity: 2, lightIntensity: 3, keyLightPosition: [3, 5, 4],
   floorRadius: 4, floorSegments: 64, floorOffset: -0.025, gridSize: 8, gridDivisions: 16,
   normalizedHeight: 2, markerRadius: 0.035, markerSegments: 12, jointRadiusRatio: 0.008, jointSegments: 8,
   millisecondsPerSecond: 1000, maxFrameDelta: 0.05,
@@ -135,7 +135,8 @@ export interface ModelStageSnapshot {
   materialMode: ModelStageMaterialMode;
   materialInspectionAvailable: boolean;
   emissiveMaterialCount: number;
-  lighting: ModelStageLighting;
+  /** The id of the time of day in force. */
+  lighting: string;
   /** The focused model's parts (its PART- nodes), each by its name with its world pose. */
   parts: readonly {name: string; position: ModelVector; rotationQuaternion: ModelRotation}[];
   poses: Record<string, ModelRotation>;

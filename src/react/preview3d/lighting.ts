@@ -1,15 +1,18 @@
 import * as THREE from 'three';
-import {MODEL_STAGE as settings} from './model.ts';
 import type {ModelStageTheme} from './model.ts';
-import {MODEL_STAGE_DARK as dark, modelStageLighting} from './lightingModel.ts';
-import type {ModelStageLighting} from './lightingModel.ts';
+import type {ModelColor} from './colorModel.ts';
+import type {ModelStageLook} from './lookModel.ts';
+import {modelStageBuiltInTimes, modelStageLighting, modelStageTimeInForce, type ModelStageLighting,
+  type ModelStageTime} from './lightingModel.ts';
 
 type Unlit = THREE.MeshBasicMaterial | THREE.LineBasicMaterial;
 const unlit = (material: THREE.Material): material is Unlit =>
   material instanceof THREE.MeshBasicMaterial || material instanceof THREE.LineBasicMaterial;
+const srgb = (target: THREE.Color, value: ModelColor) => target.setRGB(value[0], value[1], value[2],
+  THREE.SRGBColorSpace);
 
-// The unlit materials under these objects, each remembered at its authored colour. No light reaches them, so a
-// lighting holds them to a share of that colour instead.
+// The unlit materials under these objects, each remembered at its authored colour. No light reaches them, so a look
+// holds them to a share of that colour instead.
 function stageAids(objects: readonly THREE.Object3D[]) {
   const authored = new Map<Unlit, THREE.Color>();
   for (const object of objects) object.traverse(node => {
@@ -23,52 +26,46 @@ function stageAids(objects: readonly THREE.Object3D[]) {
   };
 }
 
-// What one lighting gives the stage: its colours, and the shares its lights and unlit aids keep.
-type Look = Record<'backdrop' | 'ground' | 'floor' | 'light', THREE.ColorRepresentation>
-  & Record<'lightShare' | 'aidShare', number>;
-
-// The stage's backdrop, floor, two lights and unlit aids, as one lighting at a time.
+// The stage's backdrop, floor, two lights and unlit aids, as the look of one time at a time. A look is written into the
+// same objects every time: changing a colour or a strength allocates nothing and compiles nothing.
 export function createModelLighting(renderer: Pick<THREE.WebGLRenderer, 'setClearColor'>, theme: ModelStageTheme) {
-  const looks: Record<ModelStageLighting, Look> = {
-    light: {backdrop: theme.colors.stage, ground: theme.colors.surface, floor: theme.colors.surface,
-      light: theme.colors.text, lightShare: 1, aidShare: 1},
-    dark: {...dark, ground: dark.backdrop},
-  };
+  const builtIn = modelStageBuiltInTimes(theme.colors);
   const ambient = new THREE.HemisphereLight();
   const key = new THREE.DirectionalLight();
-  key.position.fromArray(settings.keyLightPosition);
+  const backdrop = new THREE.Color();
   const aids = new Set<(share: number) => void>();
   const floors = new Set<THREE.MeshStandardMaterial>();
-  let mode: ModelStageLighting = 'light';
-  const apply = () => {
-    const look = looks[mode];
-    renderer.setClearColor(look.backdrop);
-    ambient.color.set(look.light);
-    ambient.groundColor.set(look.ground);
-    ambient.intensity = settings.ambientIntensity * look.lightShare;
-    key.color.set(look.light);
-    key.intensity = settings.lightIntensity * look.lightShare;
-    for (const floor of floors) floor.color.set(look.floor);
-    for (const hold of aids) hold(look.aidShare);
+  let time: ModelStageTime = builtIn[0];
+  const apply = (look: ModelStageLook) => {
+    renderer.setClearColor(srgb(backdrop, look.backdrop));
+    srgb(ambient.color, look.ambient.sky);
+    srgb(ambient.groundColor, look.ambient.ground);
+    ambient.intensity = look.ambient.strength;
+    srgb(key.color, look.key.color);
+    key.intensity = look.key.strength;
+    key.position.fromArray(look.key.direction);
+    for (const floor of floors) srgb(floor.color, look.aids.floor);
+    for (const hold of aids) hold(look.aids.share);
   };
-  apply();
+  apply(time.look);
   return {
     lights: [ambient, key] as const,
-    get mode() {return mode;},
+    /** The id of the time in force. */
+    get time() {return time.id;},
     set(value: ModelStageLighting) {
-      mode = modelStageLighting(value);
-      apply();
+      time = modelStageTimeInForce(modelStageLighting(value), builtIn);
+      apply(time.look);
     },
-    // The floor is lit, so it takes a colour from the lighting rather than a share.
+    // The floor is lit, so it takes a colour from the look rather than a share.
     floor(material: THREE.MeshStandardMaterial) {
       floors.add(material);
-      apply();
+      srgb(material.color, time.look.aids.floor);
     },
-    // Stage aids join at the current lighting; the returned release gives them back at their authored colours.
+    // Stage aids join at the current look; the returned release gives them back at their authored colours.
     attach(objects: readonly THREE.Object3D[]) {
       const hold = stageAids(objects);
       aids.add(hold);
-      hold(looks[mode].aidShare);
+      hold(time.look.aids.share);
       return () => {
         if (aids.delete(hold)) hold(1);
       };

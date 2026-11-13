@@ -73,8 +73,8 @@ describe('the stage description', () => {
     const applied = modelStageDescription(describing());
     assert.deepEqual([...modelStageDescriptionChanges(undefined, applied)].length, 9);
     assert.deepEqual([...modelStageDescriptionChanges(applied, modelStageDescription(describing()))], []);
-    assert.deepEqual([...modelStageDescriptionChanges(applied, modelStageDescription(describing({lighting: 'dark'})))],
-      ['lighting']);
+    const relit = modelStageDescription(describing({lighting: {time: 'dark', times: []}}));
+    assert.deepEqual([...modelStageDescriptionChanges(applied, relit)], ['lighting']);
   });
 
   it('refits for what the fit measures, and not for lighting, playing, orbit or an unframed actor', () => {
@@ -86,7 +86,7 @@ describe('the stage description', () => {
     assert.equal(refit({size: {rule: 'normalized', height: 2}}), true);
     assert.equal(refit({actors: {focus: 'a', actors: [declaration('a', 'otter', {animation: held('run', 0)})]}}), true);
     assert.equal(refit({actors: {focus: 'a', actors: [declaration('a', 'heron')]}}), true);
-    assert.equal(refit({lighting: 'dark'}), false);
+    assert.equal(refit({lighting: {time: 'dark', times: []}}), false);
     assert.equal(refit({orbit: false}), false);
     assert.equal(refit({origin: 'centred'}), true);
     assert.equal(refit({framing: {kind: 'all'}}), true);
@@ -110,7 +110,7 @@ describe('the stage description', () => {
 describe('the stage-wide parts', () => {
   const surface = () => {
     const calls: string[] = [];
-    const parts = createModelStageParts({scene: new THREE.Scene(), lighting: {set: value => calls.push(value)},
+    const parts = createModelStageParts({scene: new THREE.Scene(), lighting: {set: value => calls.push(value.time)},
       frame: (framing: ModelStageFraming, orbit: boolean) => calls.push(`${framing.kind} ${orbit}`)});
     return {calls, parts};
   };
@@ -119,7 +119,7 @@ describe('the stage-wide parts', () => {
     const {calls, parts} = surface(), {actor} = makeActor('a', CLIPS);
     const applied = modelStageDescription(describing());
     assert.deepEqual(parts.prepares(applied, modelStageDescriptionChanges(applied, applied), [actor]), []);
-    const darker = modelStageDescription(describing({lighting: 'dark'}));
+    const darker = modelStageDescription(describing({lighting: {time: 'dark', times: []}}));
     prepareWhole(parts.prepares(darker, modelStageDescriptionChanges(applied, darker), [actor]))();
     assert.deepEqual(calls, ['dark']);
   });

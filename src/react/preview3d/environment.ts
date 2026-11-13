@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import {modelPresentationRotation, modelPoseForBinding, type ModelRotation, type ModelVector}
   from './placementModel.ts';
+import {modelColor, type ModelColor} from './colorModel.ts';
 import {ModelStageRefusal} from './refusal.ts';
 
 export const MODEL_ENVIRONMENT_GRID = Object.freeze({maximumLines: 1024, elevation: 0.001});
@@ -8,13 +9,13 @@ export interface ModelEnvironmentBox {
   readonly id: string;
   readonly position: ModelVector;
   readonly size: ModelVector;
-  readonly color: ModelVector;
+  readonly color: ModelColor;
   readonly rotationQuaternion?: ModelRotation;
 }
 export interface ModelEnvironment {
   readonly reflectZ: boolean;
   readonly plane: {readonly position: ModelVector; readonly size: readonly [number, number];
-    readonly color: ModelVector; readonly grid?: {readonly spacing: number; readonly color: ModelVector}} | null;
+    readonly color: ModelColor; readonly grid?: {readonly spacing: number; readonly color: ModelColor}} | null;
   readonly boxes: readonly ModelEnvironmentBox[];
 }
 const object = (value: unknown): value is Record<string, unknown> =>
@@ -34,13 +35,7 @@ function dimensions(value: unknown, length: number) {
   if (result.some(number => number <= 0)) throw new ModelStageRefusal('Environment dimensions must be positive.');
   return result;
 }
-function tint(value: unknown): ModelVector {
-  const result = vector(value);
-  if (result.some(number => number < 0 || number > 1)) {
-    throw new ModelStageRefusal('Environment colors must be sRGB in [0, 1].');
-  }
-  return result;
-}
+const ENVIRONMENT_COLOR = 'Environment colors';
 function grid(value: unknown, size: readonly number[]) {
   if (value === undefined) return undefined;
   if (!object(value) || typeof value.spacing !== 'number' || !Number.isFinite(value.spacing) || value.spacing <= 0) {
@@ -49,7 +44,7 @@ function grid(value: unknown, size: readonly number[]) {
   const spacing = value.spacing;
   const count = size.reduce((total, dimension) => total + Math.floor(dimension / spacing) + 1, 0);
   if (count > MODEL_ENVIRONMENT_GRID.maximumLines) throw new ModelStageRefusal('Environment grid has too many lines.');
-  return Object.freeze({spacing, color: tint(value.color)});
+  return Object.freeze({spacing, color: modelColor(value.color, ENVIRONMENT_COLOR)});
 }
 export function modelEnvironment(value: unknown): ModelEnvironment {
   if (!object(value) || typeof value.reflectZ !== 'boolean' || !Array.isArray(value.boxes) ||
@@ -62,7 +57,7 @@ export function modelEnvironment(value: unknown): ModelEnvironment {
       throw new ModelStageRefusal('Environment boxes require unique IDs.');
     }
     ids.add(box.id);
-    return Object.freeze({id: box.id, position: vector(box.position), color: tint(box.color),
+    return Object.freeze({id: box.id, position: vector(box.position), color: modelColor(box.color, ENVIRONMENT_COLOR),
       size: Object.freeze(dimensions(box.size, 3)) as unknown as ModelVector,
       ...(box.rotationQuaternion !== undefined && {
         rotationQuaternion: modelPresentationRotation(box.rotationQuaternion),
@@ -71,7 +66,7 @@ export function modelEnvironment(value: unknown): ModelEnvironment {
   const size = value.plane === null ? null :
     Object.freeze(dimensions(value.plane.size, 2)) as readonly [number, number];
   const plane = value.plane === null ? null : Object.freeze({position: vector(value.plane.position),
-    color: tint(value.plane.color), size: size!, grid: grid(value.plane.grid, size!)});
+    color: modelColor(value.plane.color, ENVIRONMENT_COLOR), size: size!, grid: grid(value.plane.grid, size!)});
   return Object.freeze({reflectZ: value.reflectZ, plane, boxes: Object.freeze(boxes)});
 }
 
@@ -117,7 +112,7 @@ export function createModelEnvironment(value: unknown) {
     group.clear();
     disposed = true;
   };
-  const add = (geometry: THREE.BufferGeometry, position: ModelVector, color: ModelVector, id: string) => {
+  const add = (geometry: THREE.BufferGeometry, position: ModelVector, color: ModelColor, id: string) => {
     resources.push(geometry);
     const material = new THREE.MeshStandardMaterial();
     resources.push(material);

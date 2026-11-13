@@ -19,11 +19,11 @@ describe('the view\'s description', () => {
   it('applies the person\'s choices to the host\'s description and its focused actor, and changes nothing else', () => {
     const selection = modelPreviewSelectionOf(host);
     assert.deepEqual(selection, {animation: playing('run'), display: 'model', materialMode: 'lit',
-      lighting: MODEL_STAGE_THEME_LIGHTING});
+      lighting: MODEL_STAGE_THEME_LIGHTING.time});
     assert.deepEqual(modelPreviewDescription(host, selection), host);
     const chosen = modelPreviewDescription(host, {animation: held('run', 0.5), display: 'rig', materialMode: 'clay',
       lighting: 'dark'});
-    assert.deepEqual(chosen, {...host, display: 'rig', materialMode: 'clay', lighting: 'dark',
+    assert.deepEqual(chosen, {...host, display: 'rig', materialMode: 'clay', lighting: {time: 'dark', times: []},
       actors: {focus: 'otter', actors: [{...host.actors.actors[0], animation: held('run', 0.5)},
         host.actors.actors[1]]}});
     // The host's placement and size reach the stage as stated: the view fixes neither.
@@ -36,7 +36,13 @@ describe('the view\'s description', () => {
     // A host that moves its camera every tick keeps the person's display.
     const posed = modelStageDescription({...host, framing: {kind: 'pose', position: [0, 1, 4], target: [0, 1, 0]}});
     assert.equal(modelPreviewChoices(held, posed), held);
-    const relit = modelStageDescription({...host, lighting: 'dark'});
+    // A host that changes a time's colours, and not which time is in force, keeps every choice too.
+    const dusk = {id: 'dusk', label: 'Dusk', look: {backdrop: [0, 0, 0], key: {color: [1, 1, 1], strength: 1,
+      direction: [0, 1, 0]}, ambient: {sky: [1, 1, 1], ground: [0, 0, 0], strength: 1}, shadow: [0, 0, 0], night: 1,
+      aids: {floor: [0, 0, 0], share: 1}}};
+    const tinted = modelStageDescription({...host, lighting: {...host.lighting, times: [dusk]}});
+    assert.equal(modelPreviewChoices(held, tinted), held);
+    const relit = modelStageDescription({...host, lighting: {time: 'dark', times: []}});
     assert.deepEqual(modelPreviewChoices(held, relit).selection, modelPreviewSelectionOf(relit));
   });
 
@@ -117,7 +123,7 @@ describe('the view\'s description', () => {
     const requests = createModelDescriptionRequests(() => undefined, () => events.push('refused'),
       () => events.push('settled'));
     const shown = modelStageDescription(describing());
-    const other = modelStageDescription({...describing(), lighting: 'dark'});
+    const other = modelStageDescription({...describing(), lighting: {time: 'dark', times: []}});
     let loads = false, reject: () => void = () => undefined;
     const api = {snapshot: () => ({actorsPending: loads}) as ReturnType<ModelStageController['snapshot']>,
       setDescription: (value: unknown) => {

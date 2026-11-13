@@ -81,7 +81,7 @@ export function createModelStage(
       const hold: ModelStageHold | null = policy.clock === 'external' ? null : local(0).hold;
       return {
         id: model.id, animation, time, playing, hold, ...model.rig.snapshot(), ...model.materials.snapshot(),
-        lighting: stage.lighting.mode,
+        lighting: stage.lighting.time,
         parts: points,
         poses, triangles: stage.renderer.info.render.triangles, renderedModelMeshes: renderedMeshes.size,
         canvas: {width: stage.renderer.domElement.width, height: stage.renderer.domElement.height},

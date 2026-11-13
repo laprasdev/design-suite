@@ -52,9 +52,9 @@ test('materialModel.ts: an unknown inspection mode is a refusal and leaves the m
   assert.equal(mesh.material, original);
 });
 
-test('lightingModel.ts: an unknown lighting is a refusal and leaves the light', () => {
+test('lightingModel.ts: an unknown time is a refusal and leaves the light', () => {
   const lighting = createModelLighting({setClearColor: () => undefined}, theme);
   const before = lighting.lights[0].intensity;
-  refused(() => lighting.set('dusk' as never), /Unknown stage lighting/);
-  assert.deepEqual([lighting.mode, lighting.lights[0].intensity], ['light', before]);
+  refused(() => lighting.set({time: 'dusk', times: []}), /The lighting names time dusk/);
+  assert.deepEqual([lighting.time, lighting.lights[0].intensity], ['light', before]);
 });
