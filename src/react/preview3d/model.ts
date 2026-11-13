@@ -11,10 +11,11 @@ export type {ModelRuntimeMaterialProfile, ModelMaterialOutput, ModelRendererBind
 export type {ModelEnvironment, ModelEnvironmentBox} from './environment.ts';
 export {MODEL_PREVIEW_MATERIAL_TEXT, MODEL_PREVIEW_MATERIAL_OPTIONS} from './materialModel.ts';
 export type {ModelStageMaterialMode} from './materialModel.ts';
-export {MODEL_PREVIEW_LIGHTING_TEXT, MODEL_STAGE_THEME_LIGHTING, MODEL_STAGE_TIME, modelStageTimeOptions}
-  from './lightingModel.ts';
+export {MODEL_PREVIEW_LIGHTING_TEXT, MODEL_STAGE_BUILT_IN_TIMES, MODEL_STAGE_THEME_LIGHTING, MODEL_STAGE_TIME,
+  modelStageLighting, modelStageTimeOptions} from './lightingModel.ts';
 export type {ModelStageLighting, ModelStageTime} from './lightingModel.ts';
-export type {ModelStageLook} from './lookModel.ts';
+export {MODEL_STAGE_GLOW_WIDEST, MODEL_STAGE_TONE_CURVE} from './lookModel.ts';
+export type {ModelStageFog, ModelStageGlow, ModelStageLook, ModelStageToneCurve} from './lookModel.ts';
 export type {ModelColor} from './colorModel.ts';
 export {modelPreviewEntity, MODEL_PREVIEW_CAPABILITIES} from './presentation.ts';
 export {modelPoseForBinding, MODEL_PREVIEW_QUATERNION_TOLERANCE} from './placementModel.ts';

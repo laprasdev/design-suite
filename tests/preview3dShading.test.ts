@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {describe, it} from 'node:test';
 import * as THREE from 'three';
-import {extendModelMaterial, extendModelMaterials, modelMaterialChanges, modelMaterialOwned, replaceModelShader,
+import {extendModelMaterial, extendModelMaterials, modelMaterialChanges, modelMaterialOwned, modelShaderUniforms,
   type ModelShader} from '../src/react/preview3d/shading.ts';
 
 const shader = (fragmentShader: string) => ({fragmentShader, vertexShader: '', uniforms: {}}) as unknown as ModelShader;
@@ -41,9 +41,14 @@ describe('the stage\'s changes to a material\'s program', () => {
     });
   });
 
-  it('replaces an anchor once, and fails naming the change and the anchor when the source has none', () => {
-    assert.equal(replaceModelShader('a #x b #x', '#x', '#y', 'test'), 'a #y b #x');
-    assert.throws(() => replaceModelShader('source', '#include <fog_fragment>', '', 'fog'),
-      /The fog change needs #include <fog_fragment> in the material's shader/);
+  it('replaces one of three\'s chunks once, and fails naming the change by its program key and the chunk', () => {
+    const replacing = (key: string, chunk: string) => extendModelMaterial(new THREE.MeshBasicMaterial(),
+      [{key, apply: (value, replace) => {value.fragmentShader = replace(value.fragmentShader, chunk, '#y');}}]);
+    const compiled = shader('a #include <x> b #include <x>');
+    replacing('test', 'x').onBeforeCompile(compiled, {} as THREE.WebGLRenderer);
+    assert.equal(compiled.fragmentShader, 'a #y b #include <x>');
+    assert.throws(() => replacing('model-stage-fog', 'fog_fragment').onBeforeCompile(shader('source'),
+      {} as THREE.WebGLRenderer), /The model-stage-fog change needs #include <fog_fragment> in the material's shader/);
+    assert.equal(modelShaderUniforms({far: 'vec3', on: 'bool'}), 'uniform vec3 far;\nuniform bool on;');
   });
 });

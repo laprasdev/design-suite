@@ -1,7 +1,7 @@
 import {modelColorOfHex} from './colorModel.ts';
 import {MODEL_STAGE_TONE_CURVE, modelStageLook, type ModelStageLook} from './lookModel.ts';
 import type {ModelVector} from './placementModel.ts';
-import {modelRecord} from './recordModel.ts';
+import {modelName, modelRecord} from './recordModel.ts';
 import {ModelStageRefusal} from './refusal.ts';
 
 /** A time of day: its id, the label the view shows for it, and its look. */
@@ -31,13 +31,11 @@ export const MODEL_STAGE_THEME_LIGHTING: ModelStageLighting = Object.freeze({
 export const MODEL_STAGE_LIGHTING_FIELDS = Object.freeze({lighting: ['time', 'times'], time: ['id', 'label', 'look']});
 export const MODEL_STAGE_LIGHTING_REFUSAL = Object.freeze({
   times: 'The lighting states its own times as an array.',
-  id: (index: number) => `Time ${index} needs an id and a label.`,
-  taken: (id: string) => `Time ${id} is declared twice, or reuses a built-in time's id.`,
-  unknown: (id: unknown, known: readonly string[]) =>
-    `The lighting names time ${String(id)}; the times are ${known.join(', ')}.`,
+  taken: (where: string, value: string, owner: string) => `${where} ${value} is already ${owner}'s.`,
+  unknown: (id: string, known: readonly string[]) =>
+    `The lighting.time names ${id}; the times are ${known.join(', ')}.`,
 });
 const refusal = MODEL_STAGE_LIGHTING_REFUSAL;
-const named = (value: unknown): value is string => typeof value === 'string' && value.length > 0;
 
 // The stage as it has always been lit: one key light from this direction and one hemisphere ambient, at these
 // strengths. Dark is a night stage of its own: a deep backdrop, a floor that still reads under less light, both lights
@@ -68,29 +66,40 @@ export function modelStageBuiltInTimes(colors: ModelStageThemeColors): readonly 
     Object.freeze({id, label, look: modelStageLook(looks[id], `Time ${id}: look`)})));
 }
 
+// Each time's id and label are its own: the Lighting control shows the labels side by side, so a label used twice
+// would be two segments no one can tell apart. Every name starts out held by the built-in time that has it.
+function holder(field: 'id' | 'label') {
+  const held = new Map<string, string>(MODEL_STAGE_BUILT_IN_TIMES.map(time =>
+    [time[field], `the built-in time ${time.id}`]));
+  return (value: unknown, where: string, owner: string) => {
+    const name = modelName(value, where);
+    const earlier = held.get(name);
+    if (earlier !== undefined) throw new ModelStageRefusal(refusal.taken(where, name, earlier));
+    held.set(name, owner);
+    return name;
+  };
+}
+
 /** The lighting part, checked whole: its own times, and a time in force that names one of them or a built-in. */
 export function modelStageLighting(value: unknown): ModelStageLighting {
   const lighting = modelRecord(value, MODEL_STAGE_LIGHTING_FIELDS.lighting, 'The lighting');
   if (!Array.isArray(lighting.times)) throw new ModelStageRefusal(refusal.times);
-  const ids = new Set<string>(MODEL_STAGE_BUILT_IN_TIMES.map(({id}) => id));
+  const [ids, labels] = [holder('id'), holder('label')];
   const times = Object.freeze(Array.from(lighting.times, (entry: unknown, index) => {
     const time = modelRecord(entry, MODEL_STAGE_LIGHTING_FIELDS.time, `Time ${index}`);
-    if (!named(time.id) || !named(time.label)) throw new ModelStageRefusal(refusal.id(index));
-    if (ids.has(time.id)) throw new ModelStageRefusal(refusal.taken(time.id));
-    ids.add(time.id);
-    return Object.freeze({id: time.id, label: time.label, look: modelStageLook(time.look, `Time ${time.id}: look`)});
+    const id = ids(time.id, `Time ${index}.id`, `time ${index}`);
+    const label = labels(time.label, `Time ${index}.label`, `time ${id}`);
+    return Object.freeze({id, label, look: modelStageLook(time.look, `Time ${id}: look`)});
   }));
-  if (!named(lighting.time) || !ids.has(lighting.time)) {
-    throw new ModelStageRefusal(refusal.unknown(lighting.time, [...ids]));
-  }
-  return Object.freeze({time: lighting.time, times});
+  const time = modelName(lighting.time, 'The lighting.time');
+  modelStageTimeInForce(time, [...MODEL_STAGE_BUILT_IN_TIMES, ...times]);
+  return Object.freeze({time, times});
 }
 
-/** The time in force: one of the stage's built-ins or one of the description's own, found by its id alone. */
-export function modelStageTimeInForce(value: ModelStageLighting, builtIn: readonly ModelStageTime[]): ModelStageTime {
-  const times = [...builtIn, ...value.times];
-  const time = times.find(candidate => candidate.id === value.time);
-  if (!time) throw new ModelStageRefusal(refusal.unknown(value.time, times.map(({id}) => id)));
+/** The time in force among these, found by its id alone: the one place a time that names nothing is refused. */
+export function modelStageTimeInForce<Time extends {readonly id: string}>(id: string, times: readonly Time[]): Time {
+  const time = times.find(candidate => candidate.id === id);
+  if (!time) throw new ModelStageRefusal(refusal.unknown(id, times.map(candidate => candidate.id)));
   return time;
 }
 

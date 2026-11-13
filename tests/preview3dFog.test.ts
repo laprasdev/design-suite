@@ -3,7 +3,8 @@ import {describe, it} from 'node:test';
 import * as THREE from 'three';
 import {createModelFog} from '../src/react/preview3d/fog.ts';
 import {modelStageLook, type ModelStageFog, type ModelStageLook} from '../src/react/preview3d/lookModel.ts';
-import {extendModelMaterials, modelMaterialChanges, type ModelShader} from '../src/react/preview3d/shading.ts';
+import {extendModelMaterial, extendModelMaterials, modelMaterialChanges, type ModelShader, type ModelShaderChange}
+  from '../src/react/preview3d/shading.ts';
 import {makeActor} from './preview3dActorFixture.ts';
 
 const FOG: ModelStageFog = {near: {distance: 8, color: [0.22, 0.14, 0.24]},
@@ -28,10 +29,13 @@ function withoutFog(source: string) {
 }
 const program = (name: keyof typeof THREE.ShaderLib) => ({vertexShader: THREE.ShaderLib[name].vertexShader,
   fragmentShader: THREE.ShaderLib[name].fragmentShader, uniforms: {}}) as unknown as ModelShader;
+// A change applied to a program the way three applies it: through the hook the stage composes on a material.
+const compile = (change: ModelShaderChange, shader: ModelShader) =>
+  extendModelMaterial(new THREE.MeshBasicMaterial(), [change]).onBeforeCompile(shader, {} as THREE.WebGLRenderer);
 
 describe('the stage\'s fog', () => {
   it('holds one three.js Fog on the scene while the look has fog, its values written in place', () => {
-    const scene = new THREE.Scene(), fog = createModelFog(scene, THREE.SRGBColorSpace);
+    const scene = new THREE.Scene(), fog = createModelFog(scene);
     fog.set(FOG);
     const held = scene.fog;
     assert.ok(held instanceof THREE.Fog);
@@ -43,28 +47,26 @@ describe('the stage\'s fog', () => {
     assert.equal(held.near, 4);
   });
 
-  it('gives every program it changes the shared far colour, in the space three gives its own fog colour', () => {
-    const fog = createModelFog(new THREE.Scene(), THREE.SRGBColorSpace), shader = program('physical');
-    fog.change.apply(shader);
+  it('gives every program the shared far colour, linear, converted as the program converts its own output', () => {
+    const fog = createModelFog(new THREE.Scene()), shader = program('physical');
+    compile(fog.change, shader);
     fog.set(FOG);
-    // Three writes its fog colour as fog.color.getRGB(uniform, space): the far colour takes the same path.
+    // Held linear whatever is drawn into: the program's own output conversion, which three compiles for the target
+    // bound (sRGB to the canvas, linear into a glow target), takes it to the space three gives its near colour.
     const far = shader.uniforms.modelStageFogFar.value as THREE.Color;
-    const encoded = (space: string) => {
-      const value = new THREE.Color();
-      srgb(FOG.far.color).getRGB(value, space);
-      return value.toArray();
-    };
-    assert.deepEqual(far.toArray(), encoded(THREE.SRGBColorSpace));
-    fog.encode(THREE.LinearSRGBColorSpace);
-    assert.deepEqual(far.toArray(), encoded(THREE.LinearSRGBColorSpace));
+    assert.deepEqual(far.toArray(), srgb(FOG.far.color).toArray());
+    assert.ok(far.r < FOG.far.color[0], 'the far colour is held decoded from sRGB, not as stated');
+    assert.match(shader.fragmentShader,
+      /vec3 modelStageFogFarColor = linearToOutputTexel\( vec4\( modelStageFogFar, 1\.0 \) \)\.rgb;/);
+    assert.match(shader.fragmentShader, /mix\( fogColor, modelStageFogFarColor, modelStageFogDistance \)/);
     const other = program('basic');
-    fog.change.apply(other);
+    compile(fog.change, other);
     assert.equal(other.uniforms.modelStageFogFar, shader.uniforms.modelStageFogFar);
   });
 
   it('writes the height layer, and no layer as a strength of 0', () => {
-    const fog = createModelFog(new THREE.Scene(), THREE.SRGBColorSpace), shader = program('physical');
-    fog.change.apply(shader);
+    const fog = createModelFog(new THREE.Scene()), shader = program('physical');
+    compile(fog.change, shader);
     fog.set(FOG);
     assert.deepEqual((shader.uniforms.modelStageFogHeight.value as THREE.Vector3).toArray(), [0, 2, 0.6]);
     fog.set({...FOG, height: null});
@@ -73,8 +75,8 @@ describe('the stage\'s fog', () => {
 
   it('adds only lines inside USE_FOG, so with no fog every program is three\'s own', () => {
     for (const name of ['physical', 'standard', 'basic', 'lambert', 'points'] as const) {
-      const shader = program(name), fog = createModelFog(new THREE.Scene(), THREE.SRGBColorSpace);
-      fog.change.apply(shader);
+      const shader = program(name), fog = createModelFog(new THREE.Scene());
+      compile(fog.change, shader);
       assert.notEqual(shader.fragmentShader, THREE.ShaderLib[name].fragmentShader, name);
       assert.equal(withoutFog(shader.vertexShader), withoutFog(THREE.ShaderLib[name].vertexShader), name);
       assert.equal(withoutFog(shader.fragmentShader).replace('#include <fog_fragment>', ''),
@@ -83,7 +85,7 @@ describe('the stage\'s fog', () => {
   });
 
   it('reaches a model\'s lines and points as well as its meshes', () => {
-    const root = new THREE.Group(), fog = createModelFog(new THREE.Scene(), THREE.SRGBColorSpace);
+    const root = new THREE.Group(), fog = createModelFog(new THREE.Scene());
     root.add(new THREE.Line(new THREE.BufferGeometry(), new THREE.LineBasicMaterial()),
       new THREE.Points(new THREE.BufferGeometry(), new THREE.PointsMaterial()));
     extendModelMaterials(root, [fog.change]);
@@ -128,7 +130,7 @@ describe('the stage\'s fog', () => {
     assert.throws(() => modelStageLook(look(heightless), 'L'), /L.fog omits height/);
   });
 
-  it('takes a glow as data, refusing only what is not a glow: a value below 0 or not finite', () => {
+  it('takes a glow as data, refusing what is not a glow: below 0, not finite, or a spread outside 0 to 1', () => {
     const glow = {threshold: 0.2, strength: 3, radius: 0};
     const look = (value: unknown) => ({...modelStageLook({backdrop: [0, 0, 0], key: {color: [1, 1, 1], strength: 1,
       direction: [0, 1, 0]}, ambient: {sky: [1, 1, 1], ground: [0, 0, 0], strength: 1}, shadow: [0, 0, 0], night: 0,
@@ -137,5 +139,10 @@ describe('the stage\'s fog', () => {
     assert.throws(() => modelStageLook(look({...glow, threshold: -1}), 'L'), /L.glow.threshold must be a finite/);
     assert.throws(() => modelStageLook(look({...glow, strength: Infinity}), 'L'), /L.glow.strength must be a finite/);
     assert.throws(() => modelStageLook(look({...glow, bloom: 1}), 'L'), /L.glow does not state bloom/);
+    assert.deepEqual(modelStageLook(look({...glow, radius: 1}), 'L').glow, {...glow, radius: 1});
+    for (const radius of [1.01, 2, -0.1]) {
+      assert.throws(() => modelStageLook(look({...glow, radius}), 'L'),
+        /L.glow.radius must be a finite number from 0 to 1/);
+    }
   });
 });

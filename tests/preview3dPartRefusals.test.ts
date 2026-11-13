@@ -6,6 +6,10 @@ import {createModelEnvironment} from '../src/react/preview3d/environment.ts';
 import {createModelRuntimeMaterials} from '../src/react/preview3d/runtimeMaterials.ts';
 import {createModelMaterialInspection} from '../src/react/preview3d/materials.ts';
 import {createModelLighting} from '../src/react/preview3d/lighting.ts';
+import {modelStageBuiltInTimes} from '../src/react/preview3d/lightingModel.ts';
+import {createModelStage} from '../src/react/preview3d/stage.ts';
+import {describing} from './preview3dActorFixture.ts';
+import {modelStageDescription} from '../src/react/preview3d/descriptionModel.ts';
 import {createModelFog} from '../src/react/preview3d/fog.ts';
 import {ModelStageRefusal} from '../src/react/preview3d/refusal.ts';
 
@@ -17,10 +21,10 @@ const theme = {colors: {stage: '#000000', text: '#ffffff', surface: '#111111', s
 test('environment.ts: an invalid update is a refusal and moves no box', () => {
   const value = {reflectZ: false, plane: null, boxes: [{id: 'box', position: [1, 2, 3], size: [1, 1, 1],
     color: [.5, .5, .5]}]};
-  const environment = createModelEnvironment(value, createModelFog(new THREE.Scene(), THREE.SRGBColorSpace).change);
+  const environment = createModelEnvironment(value, createModelFog(new THREE.Scene()).change);
   const box = environment.group.getObjectByName('box')!;
   refused(() => environment.update({...value, boxes: [{...value.boxes[0], position: [9, 9, 9], color: [2, 0, 0]}]}),
-    /sRGB in \[0, 1\]/);
+    /The environment box box.color must be three finite numbers, sRGB in \[0, 1\]/);
   assert.deepEqual(box.position.toArray(), [1, 2, 3]);
   environment.dispose();
 });
@@ -54,9 +58,18 @@ test('materialModel.ts: an unknown inspection mode is a refusal and leaves the m
 });
 
 test('lightingModel.ts: an unknown time is a refusal and leaves the light', () => {
-  const lighting = createModelLighting({setClearColor: () => undefined}, theme,
-    {fog: createModelFog(new THREE.Scene(), THREE.SRGBColorSpace), output: {set: () => undefined}});
+  const lighting = createModelLighting({setClearColor: () => undefined}, modelStageBuiltInTimes(theme.colors),
+    {fog: createModelFog(new THREE.Scene()), output: {load: () => [], prepare: () => () => undefined}});
   const before = lighting.lights[0].intensity;
-  refused(() => lighting.set({time: 'dusk', times: []}), /The lighting names time dusk/);
+  refused(() => lighting.prepare({time: 'dusk', times: []})(), /The lighting.time names dusk/);
   assert.deepEqual([lighting.time, lighting.lights[0].intensity], ['light', before]);
+});
+
+test('stage.ts: a theme the stage refuses is refused before any renderer, canvas or control exists', () => {
+  // In node there is no WebGL: anything that reached the renderer would fail with another error than this refusal.
+  const host = {append: () => assert.fail('nothing is added to the host')} as unknown as HTMLElement;
+  const options = {reviewKey: 'review', clock: 'local', floor: true, grid: true} as const;
+  const short = {colors: {...theme.colors, surface: '#fff'}};
+  refused(() => createModelStage(host, modelStageDescription(describing()), short, () => undefined, () => undefined,
+    options), /The stage theme's surface must be a #rrggbb colour; it is #fff/);
 });

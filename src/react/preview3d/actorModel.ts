@@ -3,6 +3,8 @@ import {modelPresentationPose, type ModelPresentationPose} from './placementMode
 import {MODEL_PREVIEW_ENTITY_REFUSAL, modelPreviewEntity, type ModelPreviewEntity} from './presentation.ts';
 import type {ModelAnimationSample} from './animationLayerModel.ts';
 import {modelRuntimeMaterialProfile} from './runtimeMaterialModel.ts';
+import {modelIsNamed as named, modelIsRecord as object, modelName, modelNumber, modelRecord, modelShape}
+  from './recordModel.ts';
 import {ModelStageRefusal} from './refusal.ts';
 
 // Actor ids are the host's. A frame's entities are keyed by actor id and the host owns the mapping from an engine's
@@ -46,18 +48,14 @@ export interface ModelStageActorSnapshot {
   readonly animation: string;
   readonly samples: readonly ModelAnimationSample[];
 }
-// What an asset states; a field outside these is refused, never carried.
-const ASSET_FIELDS: readonly string[] = Object.freeze(['id', 'path', 'revision', 'sha256', 'runtimeMaterials']);
+const ACTOR_SET_FIELDS = Object.freeze(['focus', 'actors']);
+const ACTOR_FIELDS = Object.freeze(['id', 'asset', 'placement', 'animation']);
+// What an asset states: its id and path always; its revision, digest and runtime profile only when it has them
+// (Workbench's catalogue knows no revision; the seam's later step makes the file's identity whole). A field outside
+// these is refused, never carried.
+const ASSET_FIELDS = Object.freeze({stated: ['id', 'path'], whenKnown: ['revision', 'sha256', 'runtimeMaterials']});
 export const MODEL_ACTOR_REFUSAL = Object.freeze({
   set: 'Declared actors require a focus and a non-empty actors array.',
-  actor: (index: number) => `Actor ${index} requires an id, an asset with an id and a path, ` +
-    'a placement and an animation.',
-  asset: (id: string, field: string) => `Actor ${id}: an asset states ${ASSET_FIELDS.join(', ')}; not ${field}.`,
-  animation: (id: string) => `Actor ${id}: an animation is the rest pose, a clip playing, or a clip held at a time; ` +
-    `its kind is one of ${Object.values(MODEL_ACTOR_ANIMATION).join(', ')}.`,
-  field: (id: string, kind: string, field: string) => `Actor ${id}: a ${kind} animation does not state ${field}.`,
-  clip: (id: string, kind: string) => `Actor ${id}: a ${kind} animation names a clip.`,
-  time: (id: string) => `Actor ${id}: a held animation states a finite nonnegative timeSeconds.`,
   repeated: (id: string) => `Actor ${id} is declared twice.`,
   focus: (id: string) => `The focus ${id} names no declared actor.`,
   frame: 'A frame requires a finite nonnegative simulationTimeSeconds and an entities array.',
@@ -68,34 +66,28 @@ export const MODEL_ACTOR_REFUSAL = Object.freeze({
   digest: (id: string) => `Actor ${id}: the runtime material profile does not match the asset's SHA-256.`,
 });
 const refusal = MODEL_ACTOR_REFUSAL;
-const object = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null && !Array.isArray(value);
-const named = (value: unknown): value is string => typeof value === 'string' && value.length > 0;
 
-function animation(value: unknown, id: string): ModelStageActorAnimation {
-  const kind = object(value) ? value.kind : undefined;
-  const shape = Object.values(MODEL_ACTOR_ANIMATION).find(candidate => candidate === kind);
-  if (!object(value) || !shape) throw new ModelStageRefusal(refusal.animation(id));
-  const stray = Object.keys(value).find(field => !ANIMATION_FIELDS[shape].includes(field));
-  if (stray) throw new ModelStageRefusal(refusal.field(id, shape, stray));
+function animation(value: unknown, where: string): ModelStageActorAnimation {
+  const {shape, record} = modelShape(value, 'kind', ANIMATION_FIELDS, where);
   if (shape === MODEL_ACTOR_ANIMATION.rest) return Object.freeze({kind: shape});
-  if (!named(value.name)) throw new ModelStageRefusal(refusal.clip(id, shape));
-  if (shape === MODEL_ACTOR_ANIMATION.playing) return Object.freeze({kind: shape, name: value.name});
-  const time = value.timeSeconds;
-  if (typeof time !== 'number' || !Number.isFinite(time) || time < 0) throw new ModelStageRefusal(refusal.time(id));
-  return Object.freeze({kind: shape, name: value.name, timeSeconds: time});
+  const name = modelName(record.name, `${where}.name`);
+  if (shape === MODEL_ACTOR_ANIMATION.playing) return Object.freeze({kind: shape, name});
+  return Object.freeze({kind: shape, name,
+    timeSeconds: modelNumber(record.timeSeconds, `${where}.timeSeconds`, 0, Number.POSITIVE_INFINITY)});
+}
+function asset(value: unknown, where: string): ModelStageAsset {
+  const known = object(value) ? ASSET_FIELDS.whenKnown.filter(field => field in value) : [];
+  const record = modelRecord(value, [...ASSET_FIELDS.stated, ...known], where);
+  modelName(record.id, `${where}.id`);
+  modelName(record.path, `${where}.path`);
+  return Object.freeze({...record}) as unknown as ModelStageAsset;
 }
 function actor(value: unknown, index: number): ModelStageActor {
-  if (!object(value) || !named(value.id) || !object(value.asset) || !named(value.asset.id) ||
-    !named(value.asset.path) || !object(value.placement)) {
-    throw new ModelStageRefusal(refusal.actor(index));
-  }
-  const stray = Object.keys(value.asset).find(field => !ASSET_FIELDS.includes(field));
-  if (stray) throw new ModelStageRefusal(refusal.asset(value.id, stray));
-  const asset = value.asset as unknown as ModelStageAsset;
-  return Object.freeze({id: value.id, placement: modelPresentationPose(value.placement, `Actor ${value.id} placement`),
-    asset: Object.freeze({...asset}),
-    animation: animation(value.animation, value.id)});
+  const record = modelRecord(value, ACTOR_FIELDS, `Actor ${index}`);
+  const id = modelName(record.id, `Actor ${index}.id`);
+  return Object.freeze({id, asset: asset(record.asset, `Actor ${id}.asset`),
+    placement: modelPresentationPose(record.placement, `Actor ${id} placement`),
+    animation: animation(record.animation, `Actor ${id}.animation`)});
 }
 
 /** The focused actor of a set; refused when the focus names none of them. */
@@ -107,17 +99,17 @@ export function modelStageFocus(value: ModelStageActorSet): ModelStageActor {
 
 /** The whole set is checked before any of it is used. */
 export function modelStageActorSet(value: unknown): ModelStageActorSet {
-  if (!object(value) || !named(value.focus) || !Array.isArray(value.actors) || !value.actors.length) {
-    throw new ModelStageRefusal(refusal.set);
-  }
+  const record = modelRecord(value, ACTOR_SET_FIELDS, 'The actors');
+  const focus = modelName(record.focus, 'The actors.focus');
+  if (!Array.isArray(record.actors) || !record.actors.length) throw new ModelStageRefusal(refusal.set);
   const ids = new Set<string>();
-  const actors = Object.freeze(Array.from(value.actors, (entry: unknown, index) => {
+  const actors = Object.freeze(Array.from(record.actors, (entry: unknown, index) => {
     const next = actor(entry, index);
     if (ids.has(next.id)) throw new ModelStageRefusal(refusal.repeated(next.id));
     ids.add(next.id);
     return next;
   }));
-  const set = Object.freeze({focus: value.focus, actors});
+  const set = Object.freeze({focus, actors});
   modelStageFocus(set);
   return set;
 }

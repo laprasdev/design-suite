@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {describe, it} from 'node:test';
 import * as THREE from 'three';
 import {createModelFog} from '../src/react/preview3d/fog.ts';
-const FOG = createModelFog(new THREE.Scene(), THREE.SRGBColorSpace).change;
+const FOG = createModelFog(new THREE.Scene()).change;
 import {MODEL_STAGE_COMMIT_TEXT, prepareWhole} from '../src/react/preview3d/commit.ts';
 import {modelStageDescription, modelStageDescriptionChanges, modelStageRefit}
   from '../src/react/preview3d/descriptionModel.ts';
@@ -42,26 +42,38 @@ describe('the stage description', () => {
       'origin'] as const) {
       const value: Record<string, unknown> = describing();
       delete value[part];
-      assert.throws(() => modelStageDescription(value), /requires actors, environment, framing, orbit/);
+      assert.throws(() => modelStageDescription(value), new RegExp(`The stage description omits ${part}\\.`));
     }
+    // A part the description does not have, such as a misspelt one, is refused by name rather than dropped.
+    assert.throws(() => modelStageDescription({...describing(), lightning: {}}),
+      /The stage description does not state lightning; it states actors, environment/);
     assert.throws(() => modelStageDescription(describing({display: 'xray'})), /Unknown stage display/);
     assert.deepEqual(modelStageDescription(describing({size: {rule: 'normalized', height: 2}})).size,
       {rule: 'normalized', height: 2});
-    for (const size of [{rule: 'normalized'}, {rule: 'normalized', height: 0}, {rule: 'normalized', height: Infinity},
-      {rule: 'real', height: 2}, {rule: 'normalized', height: 2, scale: 1}, {rule: 'actual'}, null, 2]) {
-      assert.throws(() => modelStageDescription(describing({size})), /^ModelStageRefusal: A stage size is/);
+    const sizes: Array<[unknown, RegExp]> = [[{rule: 'normalized'}, /The stage size omits height/],
+      [{rule: 'normalized', height: 0}, /The stage size.height must be greater than 0/],
+      [{rule: 'normalized', height: Infinity}, /The stage size.height must be a finite number/],
+      [{rule: 'real', height: 2}, /The stage size does not state height; it states rule\./],
+      [{rule: 'normalized', height: 2, scale: 1}, /The stage size does not state scale/],
+      [{rule: 'actual'}, /The stage size states its rule, one of real, normalized/],
+      [null, /The stage size states its rule/], [2, /The stage size states its rule/]];
+    for (const [size, refusal] of sizes) {
+      assert.throws(() => modelStageDescription(describing({size})), refusal);
     }
     // An asset states what the stage reads and nothing else: a stray field, such as an old attachments map, is refused.
     assert.throws(() => modelStageDescription(describing({actors: {focus: 'a', actors: [
       {...declaration('a'), asset: {id: 'otter', path: 'otter.glb', attachments: {}}}]}})),
-    /Actor a: an asset states id, path, revision, sha256, runtimeMaterials; not attachments/);
+    /Actor a.asset does not state attachments; it states id, path\./);
     const pose = (target: number[]) => ({framing: {kind: 'pose', position: [0, 0, 0], target}});
     assert.throws(() => modelStageDescription(describing(pose([0, 0, 0]))), /distinct/);
     assert.deepEqual(modelStageDescription(describing(pose([0, 0, 1]))).framing,
       {kind: 'pose', position: [0, 0, 0], target: [0, 0, 1]});
-    for (const framing of [null, {kind: 'fit'}, {kind: 'focus', position: [0, 0, 0]},
-      {kind: 'pose', position: [0, 0, 0]}]) {
-      assert.throws(() => modelStageDescription(describing({framing})), /^ModelStageRefusal: A framing is/);
+    const framings: Array<[unknown, RegExp]> = [[null, /The framing states its kind, one of focus, all, pose/],
+      [{kind: 'fit'}, /The framing states its kind/],
+      [{kind: 'focus', position: [0, 0, 0]}, /The framing does not state position; it states kind\./],
+      [{kind: 'pose', position: [0, 0, 0]}, /The framing omits target/]];
+    for (const [framing, refusal] of framings) {
+      assert.throws(() => modelStageDescription(describing({framing})), refusal);
     }
     for (const orbit of [undefined, 1, 'yes']) {
       assert.throws(() => modelStageDescription(describing({orbit})), /orbit is stated as true or false/);
@@ -113,7 +125,7 @@ describe('the stage-wide parts', () => {
   const surface = () => {
     const calls: string[] = [];
     const parts = createModelStageParts({scene: new THREE.Scene(), fog: {change: FOG},
-      lighting: {set: value => calls.push(value.time)},
+      lighting: {load: () => [], prepare: value => () => {calls.push(value.time);}},
       frame: (framing: ModelStageFraming, orbit: boolean) => calls.push(`${framing.kind} ${orbit}`)});
     return {calls, parts};
   };
@@ -125,6 +137,18 @@ describe('the stage-wide parts', () => {
     const darker = modelStageDescription(describing({lighting: {time: 'dark', times: []}}));
     prepareWhole(parts.prepares(darker, modelStageDescriptionChanges(applied, darker), [actor]))();
     assert.deepEqual(calls, ['dark']);
+  });
+
+  it('refuses a lighting while preparing, so a refused time leaves every other part unapplied', () => {
+    const calls: string[] = [];
+    const parts = createModelStageParts({scene: new THREE.Scene(), fog: {change: FOG}, lighting: {load: () => [],
+      prepare: () => {throw new ModelStageRefusal('Time t: look.glow: glow needs half-float render targets.');}},
+    frame: (framing: ModelStageFraming) => calls.push(framing.kind)});
+    const applied = modelStageDescription(describing());
+    const next = modelStageDescription(describing({lighting: {time: 'dark', times: []}, framing: {kind: 'all'}}));
+    assert.throws(() => prepareWhole(parts.prepares(next, modelStageDescriptionChanges(applied, next), []))(),
+      (error: unknown) => error instanceof ModelStageRefusal && /half-float/.test(error.message));
+    assert.deepEqual(calls, []);
   });
 
   it('returns an orbited view to the described framing, with the described orbit', () => {

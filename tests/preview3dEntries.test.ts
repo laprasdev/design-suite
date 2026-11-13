@@ -46,4 +46,17 @@ describe('optional 3D package boundary', () => {
     assert.ok(imports.some(item => item.path === 'three/addons/loaders/GLTFLoader.js' && item.external));
     assert.ok(Object.keys(output.metafile.inputs).every(path => !path.includes('/node_modules/three/')));
   });
+
+  it('loads the glow\'s passes only once a look brings glow: a page that never glows never fetches them', async () => {
+    const manifest = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
+    const passes = /^three\/addons\/postprocessing\//;
+    for (const entry of [manifest.exports['./preview3d'].source, manifest.exports['./preview3d/react'].source]) {
+      const output = await bundleEntry(entry);
+      const imports = Object.values(output.metafile.outputs).flatMap(file => file.imports)
+        .filter(item => passes.test(item.path));
+      assert.deepEqual([...new Set(imports.map(item => `${item.path} ${item.kind}`))].sort(), [
+        'three/addons/postprocessing/Pass.js dynamic-import',
+        'three/addons/postprocessing/UnrealBloomPass.js dynamic-import'], entry);
+    }
+  });
 });

@@ -11,7 +11,7 @@ import {MODEL_ACTOR_ANIMATION, MODEL_READY_ATTRIBUTE, MODEL_PREVIEW_REVIEW, MODE
 import type {ModelPreviewAsset, ModelStageDescription, ModelStageTheme, ModelPreviewFrame} from './model.ts';
 import {MODEL_PREVIEW_TEXT as copy, MODEL_PREVIEW_DISPLAY_OPTIONS} from './model.ts';
 import {MODEL_PREVIEW_MATERIAL_TEXT as surface, MODEL_PREVIEW_MATERIAL_OPTIONS} from './model.ts';
-import {MODEL_PREVIEW_LIGHTING_TEXT as lighting, modelStageTimeOptions} from './model.ts';
+import {MODEL_PREVIEW_LIGHTING_TEXT as lighting} from './model.ts';
 import {useModelPreview, type ModelPreviewStageOptions} from './useModelPreview.ts';
 import {modelStageFocus} from './actorModel.ts';
 import {modelPreviewClip} from './previewDescription.ts';
@@ -57,7 +57,7 @@ function PreviewContents({description, asset, assets, onSelectAsset, theme, revi
   const animations = [{value: MODEL_REST_POSE, label: copy.rest},
     ...asset.animations.filter(clip => clip.name !== MODEL_REST_POSE)
       .map(clip => ({value: clip.name, label: clip.label}))];
-  const times = modelStageTimeOptions(description.lighting);
+  const {times} = view;
   const displayOptions = MODEL_PREVIEW_DISPLAY_OPTIONS.map(option =>
     ({...option, disabled: option.value !== 'model' && view.boneCount === 0}));
   return <>

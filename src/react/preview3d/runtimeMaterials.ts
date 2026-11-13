@@ -3,8 +3,9 @@ import * as THREE from 'three';
 import {MODEL_RUNTIME_MATERIAL, modelMaterialOutput} from './runtimeMaterialModel.ts';
 import type {ModelMaterialOutput} from './runtimeMaterialModel.ts';
 import {ModelStageRefusal} from './refusal.ts';
-import {extendModelMaterial, modelMaterialChanges, modelMaterialOwned, replaceModelShader, type ModelShaderChange}
-  from './shading.ts';
+import {writeModelColor} from './color.ts';
+import {extendModelMaterial, modelMaterialChanges, modelMaterialOwned, modelShaderChunk, modelShaderUniforms,
+  type ModelShaderChange} from './shading.ts';
 export {MODEL_RUNTIME_MATERIAL} from './runtimeMaterialModel.ts';
 export type {ModelMaterialOutput} from './runtimeMaterialModel.ts';
 export interface ModelMaterialBinding {
@@ -12,21 +13,22 @@ export interface ModelMaterialBinding {
   readonly slot: number;
   readonly mesh: THREE.Mesh;
 }
-const EMISSION_FRAGMENT = '#include <emissivemap_fragment>';
+const CHUNK = Object.freeze({emission: 'emissivemap_fragment', declarations: 'emissivemap_pars_fragment'});
 const EMISSION_UNIFORM = 'modelRuntimeTintedEmission';
 const key = (id: string, slot: number) => JSON.stringify([id, slot]);
 function tintedMaterial(original: THREE.MeshStandardMaterial, enabled: {value: boolean}) {
-  const tint: ModelShaderChange = {key: MODEL_RUNTIME_MATERIAL.profile, apply: shader => {
+  const tint: ModelShaderChange = {key: MODEL_RUNTIME_MATERIAL.profile, apply: (shader, replace) => {
     shader.uniforms[EMISSION_UNIFORM] = enabled;
-    shader.fragmentShader = `uniform bool ${EMISSION_UNIFORM};\n` + replaceModelShader(shader.fragmentShader,
-      EMISSION_FRAGMENT, `${EMISSION_FRAGMENT}\nif (${EMISSION_UNIFORM}) totalEmissiveRadiance *= diffuseColor.rgb;`,
-      MODEL_RUNTIME_MATERIAL.profile);
+    shader.fragmentShader = replace(replace(shader.fragmentShader, CHUNK.declarations,
+      `${modelShaderChunk(CHUNK.declarations)}\n${modelShaderUniforms({[EMISSION_UNIFORM]: 'bool'})}`),
+    CHUNK.emission, `${modelShaderChunk(CHUNK.emission)}\nif (${EMISSION_UNIFORM}) totalEmissiveRadiance *= ` +
+      'diffuseColor.rgb;');
   }};
   // The copy compiles what the original does, the stage's fog included, and then tints its emission.
   return extendModelMaterial(original.clone(), [...modelMaterialChanges(original), tint]);
 }
-function color(target: THREE.Color, baseline: THREE.Color, value?: readonly number[]) {
-  if (value) target.setRGB(value[0], value[1], value[2], THREE.SRGBColorSpace);
+function color(target: THREE.Color, baseline: THREE.Color, value?: readonly [number, number, number, number]) {
+  if (value) writeModelColor(target, value);
   else target.copy(baseline);
 }
 

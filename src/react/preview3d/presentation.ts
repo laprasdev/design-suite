@@ -1,5 +1,6 @@
 import {modelPresentationPose, modelPresentationVector, type ModelPresentationPose} from './placementModel.ts';
 import {ModelStageRefusal} from './refusal.ts';
+import {modelIsRecord as object} from './recordModel.ts';
 import {modelMaterialOutputs} from './runtimeMaterialModel.ts';
 import type {ModelMaterialOutput, ModelRuntimeMaterialProfile} from './runtimeMaterialModel.ts';
 import {modelAnimationLayers} from './animationLayerModel.ts';
@@ -18,8 +19,6 @@ export interface ModelPreviewEntity {
   readonly partPoses: readonly unknown[];
   readonly materials: readonly ModelMaterialOutput[];
 }
-const object = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null && !Array.isArray(value);
 
 // Validate every channel before any pose is applied; refusals name the entity. Accepted values never retain
 // caller-owned arrays.

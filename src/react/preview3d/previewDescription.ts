@@ -4,6 +4,7 @@ import type {ModelStageController, ModelStageDisplay} from './model.ts';
 import {MODEL_ACTOR_ANIMATION, modelStageFocus, type ModelStageActorAnimation} from './actorModel.ts';
 import type {ModelStageDescription} from './descriptionModel.ts';
 import type {ModelStageMaterialMode} from './materialModel.ts';
+import {modelStageLighting, modelStageTimeOptions} from './lightingModel.ts';
 import type {ModelFrameStatus} from './frameInbox.ts';
 import {MODEL_STAGE_FAILURE, ModelStageRefusal, type ModelStageFailure} from './refusal.ts';
 
@@ -30,10 +31,16 @@ export const modelPreviewSelectionOf = (host: ModelStageDescription): ModelPrevi
 
 /** The person's choices as the view holds them, beside the host's values they were made over. */
 export interface ModelPreviewChoices {readonly over: ModelPreviewSelection; readonly selection: ModelPreviewSelection}
-/** The choices that stand: the person's, until the host changes one of the values they edit; then the host's. */
+/**
+ * The choices that stand: the person's, until the host changes one of the values they edit; then the host's. A choice
+ * of time is a choice among the times that exist: when the host's times no longer hold the chosen one, there is no
+ * such choice any more, and the host's time in force stands in its place, so no description names a time that is not.
+ */
 export function modelPreviewChoices(held: ModelPreviewChoices, host: ModelStageDescription): ModelPreviewChoices {
   const over = modelPreviewSelectionOf(host);
-  return JSON.stringify(over) === JSON.stringify(held.over) ? held : Object.freeze({over, selection: over});
+  if (JSON.stringify(over) !== JSON.stringify(held.over)) return Object.freeze({over, selection: over});
+  const offered = modelStageTimeOptions(host.lighting).some(({value}) => value === held.selection.lighting);
+  return offered ? held : Object.freeze({over, selection: Object.freeze({...held.selection, lighting: over.lighting})});
 }
 
 /**
@@ -81,6 +88,20 @@ export function modelPreviewToggle(value: ModelStageActorAnimation, shownSeconds
   return {kind: MODEL_ACTOR_ANIMATION.held, name: value.name, timeSeconds: shownSeconds};
 }
 
+/**
+ * The Lighting control's options: the host's times once the stage's own check accepts them. A host lighting the stage
+ * refuses reaches the person as the stage's refusal of the description, in the notice, and the control then offers
+ * the times of the description the stage holds, or none before it holds one; it is never read unchecked.
+ */
+export function modelPreviewTimes(host: unknown, held: ModelStageDescription | undefined) {
+  try {
+    return modelStageTimeOptions(modelStageLighting(host));
+  } catch (error) {
+    if (!(error instanceof ModelStageRefusal)) throw error;
+    return held ? modelStageTimeOptions(held.lighting) : [];
+  }
+}
+
 /** The one description the view sends: the host's, with the person's choices applied to it and its focused actor. */
 export function modelPreviewDescription(host: ModelStageDescription,
   selection: ModelPreviewSelection): ModelStageDescription {
@@ -121,6 +142,8 @@ export function createModelDescriptionRequests(pending: (value: boolean) => void
   };
   return {
     request,
+    /** The description the stage holds, once it holds one. */
+    get held() {return held;},
     /** The stage was created from this description and is now ready: it holds it. */
     hold(value: ModelStageDescription) {held = value;},
     /**

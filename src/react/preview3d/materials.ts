@@ -2,11 +2,9 @@ import * as THREE from 'three';
 import {MODEL_PREVIEW_MATERIAL_SETTINGS as settings, modelStageMaterialMode} from './materialModel.ts';
 import type {ModelStageMaterialMode} from './materialModel.ts';
 import {ModelStageRefusal} from './refusal.ts';
-import {extendModelMaterial, modelMaterialOwned, replaceModelShader} from './shading.ts';
+import {extendModelMaterial, modelMaterialOwned, modelShaderChunk} from './shading.ts';
 
-const COLOR_FRAGMENT = '#include <color_fragment>';
-const OUTPUT_FRAGMENT = '#include <opaque_fragment>';
-const INSPECTION = 'material inspection';
+const CHUNK = Object.freeze({color: 'color_fragment', output: 'opaque_fragment'});
 function clay(material: THREE.MeshStandardMaterial) {
   material.color.setHex(settings.clayColor);
   material.roughness = settings.roughness;
@@ -26,11 +24,11 @@ function inspectionMaterial(original: THREE.MeshStandardMaterial, mode: ModelSta
   if (mode === 'color') material.toneMapped = false;
   material.fog = false;
   // Keep the original map/vertex alpha path, including cutouts. Only replace the inspected RGB channel.
-  return extendModelMaterial(material, [{key: `model-material-inspection:${mode}`, apply: shader => {
-    shader.fragmentShader = mode === 'clay' ? replaceModelShader(shader.fragmentShader, COLOR_FRAGMENT,
-      `${COLOR_FRAGMENT}\ndiffuseColor.rgb = diffuse;`, INSPECTION) : replaceModelShader(shader.fragmentShader,
-      OUTPUT_FRAGMENT, `outgoingLight = ${mode === 'emission' ? 'totalEmissiveRadiance' : 'diffuseColor.rgb'};\n` +
-      OUTPUT_FRAGMENT, INSPECTION);
+  return extendModelMaterial(material, [{key: `model-material-inspection:${mode}`, apply: (shader, replace) => {
+    shader.fragmentShader = mode === 'clay' ? replace(shader.fragmentShader, CHUNK.color,
+      `${modelShaderChunk(CHUNK.color)}\ndiffuseColor.rgb = diffuse;`) : replace(shader.fragmentShader, CHUNK.output,
+      `outgoingLight = ${mode === 'emission' ? 'totalEmissiveRadiance' : 'diffuseColor.rgb'};\n` +
+      modelShaderChunk(CHUNK.output));
   }}]);
 }
 function supported(material: THREE.Material): material is THREE.MeshStandardMaterial {

@@ -153,7 +153,8 @@ a connected or running state machine. An actor's id and its asset's `id`, `path`
 
 ### The description
 
-One `ModelStageDescription` states everything the host decides, and every field is required:
+One `ModelStageDescription` states everything the host decides, and every field is required. Each record states
+exactly its fields: one it omits or one it does not have is refused by its path (`Actor a.animation omits name`).
 
 - `actors`: `{focus, actors}`, a non-empty list and the id of the one the camera fits and the snapshot reports.
   Each actor is `{id, asset, placement, animation}`. `asset` states `id` and `path`, and may state `revision`,
@@ -164,16 +165,24 @@ One `ModelStageDescription` states everything the host decides, and every field 
 - `environment`: `{reflectZ, plane, boxes}` scenery, or `null`.
 - `framing`: `{kind: 'focus'}`, `{kind: 'all'}` (every actor) or `{kind: 'pose', position, target}`.
 - `orbit`: whether the person may orbit away from the framing.
-- `lighting` (`'light'`, `'dark'`), `display` (`'model'`, `'rig'`, `'both'`) and `materialMode` (`'lit'`, `'clay'`,
-  `'color'`, `'emission'`).
+- `lighting`: `{time, times}`, the id of the time of day in force and the description's own times, each
+  `{id, label, look}`; ids and labels are each a time's own. Two times are built in, `MODEL_STAGE_TIME.light` (the
+  consumer's theme) and `.dark`; `MODEL_STAGE_THEME_LIGHTING` is `{time: 'light', times: []}`. A look states
+  `backdrop`, `key` `{color, strength, direction}`, `ambient` `{sky, ground, strength}`, `shadow`, `night` (0 to 1),
+  `aids` `{floor, share}`, `fog` (`{near, far, height}` or `null`), `toneCurve` (`'aces-filmic'` or `null`) and
+  `glow` (`{threshold, strength, radius}` with `radius` from 0 to 1, or `null`); colours are sRGB triples in [0, 1],
+  and a time with both a tone curve and glow is refused. The types and `modelStageLighting`, which checks a lighting
+  as the stage does, come from `/preview3d/model`. The theme's `stage`, `text` and `surface` must be `#rrggbb`.
+- `display` (`'model'`, `'rig'`, `'both'`) and `materialMode` (`'lit'`, `'clay'`, `'color'`, `'emission'`).
 - `size`: `{rule: 'real'}` (each actor at its file's size) or `{rule: 'normalized', height}`; `origin`: `'file'`
   (the file's own origin, as an engine places it) or `'centred'` (centred over the placement, standing on it).
 
 ### The controller
 
 - `setDescription(value)` applies a whole description, keeping every unchanged part: an unchanged asset is not
-  reloaded. One that loads nothing applies or throws at once; one that loads returns a promise that settles when
-  its assets arrive, rejects with the previous description still shown, and is superseded by a later call.
+  reloaded. One that loads nothing applies or throws at once; one that loads (an asset, or the glow's passes the
+  first time a time brings glow) returns a promise that settles when they arrive, rejects with the previous
+  description still shown, and is superseded by a later call.
 - `setFrame(frame)` (external clock only) applies `{simulationTimeSeconds, entities}`. Each entity names a declared
   actor by `entityId` and carries `modelId`, a whole `pose`, `animationLayers`, `partPoses: []` and `materials`
   (empty unless the asset states `runtimeMaterials`). The whole frame is refused before anything changes. A

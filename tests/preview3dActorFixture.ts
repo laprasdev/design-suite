@@ -44,7 +44,7 @@ export function actorContext(clock: ModelStageClock = 'external') {
     theme: {colors: {stage: '#000', text: '#fff', surface: '#111', surfaceHi: '#222', accent: '#f00',
       accentDeep: '#800', teal: '#0ff'}},
     lighting: {attach: () => () => undefined}, rendered: () => undefined,
-    fog: createModelFog(scene, THREE.SRGBColorSpace).change,
+    fog: createModelFog(scene).change,
   };
   return {context, scene};
 }

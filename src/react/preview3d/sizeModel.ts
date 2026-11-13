@@ -1,4 +1,5 @@
 import {ModelStageRefusal} from './refusal.ts';
+import {modelNumber, modelShape} from './recordModel.ts';
 
 export const MODEL_STAGE_SIZE = Object.freeze({real: 'real', normalized: 'normalized'} as const);
 /**
@@ -7,21 +8,19 @@ export const MODEL_STAGE_SIZE = Object.freeze({real: 'real', normalized: 'normal
  */
 export type ModelStageSize = {readonly rule: typeof MODEL_STAGE_SIZE.real}
   | {readonly rule: typeof MODEL_STAGE_SIZE.normalized; readonly height: number};
-export const MODEL_STAGE_SIZE_REFUSAL = `A stage size is {rule: '${MODEL_STAGE_SIZE.real}'} or ` +
-  `{rule: '${MODEL_STAGE_SIZE.normalized}', height} with a positive finite height, and states nothing else.`;
-const object = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null && !Array.isArray(value);
+export const MODEL_STAGE_SIZE_REFUSAL = Object.freeze({
+  height: (where: string) => `${where} must be greater than 0.`,
+});
+// The fields each size rule states, and nothing else.
+const FIELDS = Object.freeze({real: ['rule'], normalized: ['rule', 'height']});
+const WHERE = 'The stage size';
 
 export function modelStageSize(value: unknown): ModelStageSize {
-  const fields = object(value) ? Object.keys(value).sort().join() : undefined;
-  if (object(value) && value.rule === MODEL_STAGE_SIZE.real && fields === 'rule') {
-    return Object.freeze({rule: MODEL_STAGE_SIZE.real});
-  }
-  if (!object(value) || value.rule !== MODEL_STAGE_SIZE.normalized || fields !== 'height,rule' ||
-    typeof value.height !== 'number' || !Number.isFinite(value.height) || value.height <= 0) {
-    throw new ModelStageRefusal(MODEL_STAGE_SIZE_REFUSAL);
-  }
-  return Object.freeze({rule: MODEL_STAGE_SIZE.normalized, height: value.height});
+  const {shape: rule, record} = modelShape(value, 'rule', FIELDS, WHERE);
+  if (rule === MODEL_STAGE_SIZE.real) return Object.freeze({rule});
+  const height = modelNumber(record.height, `${WHERE}.height`, 0, Number.POSITIVE_INFINITY);
+  if (!(height > 0)) throw new ModelStageRefusal(MODEL_STAGE_SIZE_REFUSAL.height(`${WHERE}.height`));
+  return Object.freeze({rule, height});
 }
 
 export const MODEL_STAGE_ORIGIN = Object.freeze({file: 'file', centred: 'centred'} as const);

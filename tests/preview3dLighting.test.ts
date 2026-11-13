@@ -12,21 +12,30 @@ import type {ModelStageTheme} from '../src/react/preview3d/model.ts';
 const recorded = JSON.parse(readFileSync(new URL('./preview3dLighting.fixture.json', import.meta.url), 'utf8'));
 const theme: ModelStageTheme = recorded.theme;
 function fixture() {
-  let clear: THREE.ColorRepresentation = 0;
+  // The renderer copies the clear colour it is given (WebGLBackground's clearColor.set): so does this record.
+  const clears: THREE.Color[] = [];
   const scene = new THREE.Scene();
   const outputs: unknown[] = [];
-  const lighting = createModelLighting({setClearColor: color => {clear = color;}}, theme,
-    {fog: createModelFog(scene, THREE.SRGBColorSpace), output: {set: (curve, glow) => {outputs.push([curve, glow]);}}});
+  const lighting = createModelLighting({setClearColor: color => {clears.push(new THREE.Color(color));}},
+    modelStageBuiltInTimes(theme.colors), {fog: createModelFog(scene),
+      output: {load: () => [], prepare: (curve, glow) => () => {outputs.push([curve, glow]);}}});
+  // A described lighting as the stage applies it: checked with the description, then prepared and committed.
+  const set = (value: unknown) => lighting.prepare(modelStageLighting(value))();
   const floor = new THREE.MeshStandardMaterial();
   lighting.floor(floor);
   const aid = new THREE.MeshBasicMaterial({color: '#ffffff'});
   lighting.attach([new THREE.Mesh(new THREE.BoxGeometry(), aid)]);
   const [ambient, key] = lighting.lights;
   const rgb = (color: THREE.Color) => [color.r, color.g, color.b];
-  const read = () => ({backdrop: rgb(new THREE.Color(clear)), ambient: {sky: rgb(ambient.color),
+  const backdrop = () => {
+    const color = clears.at(-1);
+    assert.ok(color, 'the backdrop was handed to the renderer');
+    return rgb(color);
+  };
+  const read = () => ({backdrop: backdrop(), ambient: {sky: rgb(ambient.color),
     ground: rgb(ambient.groundColor), intensity: ambient.intensity}, key: {color: rgb(key.color),
     intensity: key.intensity, position: key.position.toArray()}, floor: rgb(floor.color), aid: rgb(aid.color)});
-  return {lighting, read, scene, outputs};
+  return {lighting, read, scene, outputs, set};
 }
 const at = (time: string, times: readonly unknown[] = []) => ({time, times}) as never;
 const dusk: ModelStageTime = {id: 'dusk', label: 'Dusk', look: {backdrop: [0.2, 0.1, 0.3],
@@ -36,19 +45,19 @@ const dusk: ModelStageTime = {id: 'dusk', label: 'Dusk', look: {backdrop: [0.2, 
 
 describe('stage lighting', () => {
   it('draws Light and Dark with exactly the values they had before the look became data, and no fog', () => {
-    const {lighting, read, scene} = fixture();
+    const {lighting, read, scene, set} = fixture();
     assert.equal(lighting.time, MODEL_STAGE_TIME.light);
     assert.deepEqual(read(), recorded.light);
     assert.equal(scene.fog, null);
-    lighting.set(at(MODEL_STAGE_TIME.dark));
+    set(at(MODEL_STAGE_TIME.dark));
     assert.deepEqual(read(), recorded.dark);
-    lighting.set(MODEL_STAGE_THEME_LIGHTING);
+    set(MODEL_STAGE_THEME_LIGHTING);
     assert.deepEqual(read(), recorded.light);
   });
 
   it('applies a time given as data, with no code of its own, and returns to Light exactly', () => {
-    const {lighting, read} = fixture();
-    lighting.set(at('dusk', [dusk]));
+    const {lighting, read, set} = fixture();
+    set(at('dusk', [dusk]));
     const linear = (value: readonly number[]) =>
       new THREE.Color().setRGB(value[0], value[1], value[2], THREE.SRGBColorSpace).toArray();
     const {look} = dusk;
@@ -57,26 +66,26 @@ describe('stage lighting', () => {
       intensity: look.key.strength, position: [...look.key.direction]}, floor: linear(look.aids.floor),
       aid: [look.aids.share, look.aids.share, look.aids.share]});
     assert.equal(lighting.time, 'dusk');
-    lighting.set(at(MODEL_STAGE_TIME.light, [dusk]));
+    set(at(MODEL_STAGE_TIME.light, [dusk]));
     assert.deepEqual(read(), recorded.light);
   });
 
   it('brings a time\'s fog with its look, and takes it away with the next look that has none', () => {
-    const {lighting, scene} = fixture();
+    const {scene, set} = fixture();
     const fog = {near: {distance: 4, color: [0.2, 0.1, 0.3]}, far: {distance: 20, color: [0.1, 0.1, 0.2]},
       height: null};
-    lighting.set(at('dusk', [{...dusk, look: {...dusk.look, fog}}]));
+    set(at('dusk', [{...dusk, look: {...dusk.look, fog}}]));
     assert.ok(scene.fog instanceof THREE.Fog);
     assert.deepEqual([scene.fog.near, scene.fog.far], [4, 20]);
-    lighting.set(at(MODEL_STAGE_TIME.dark));
+    set(at(MODEL_STAGE_TIME.dark));
     assert.equal(scene.fog, null);
   });
 
   it('hands a time\'s tone curve and glow to the draw: Light and Dark keep the curve the stage always used', () => {
-    const {lighting, outputs} = fixture();
+    const {outputs, set} = fixture();
     const glow = {threshold: 1.5, strength: 0.8, radius: 0.4};
-    lighting.set(at('dusk', [{...dusk, look: {...dusk.look, glow}}]));
-    lighting.set(at(MODEL_STAGE_TIME.dark));
+    set(at('dusk', [{...dusk, look: {...dusk.look, glow}}]));
+    set(at(MODEL_STAGE_TIME.dark));
     assert.deepEqual(outputs, [['aces-filmic', null], [null, glow], ['aces-filmic', null]]);
   });
 
@@ -95,15 +104,25 @@ describe('stage lighting', () => {
   });
 
   it('refuses an unknown time by name, and leaves the stage as it was', () => {
-    const {lighting, read} = fixture();
-    assert.throws(() => lighting.set(at('dawn', [dusk])), /names time dawn; the times are light, dark, dusk/);
+    const {lighting, read, set} = fixture();
+    assert.throws(() => set(at('dawn', [dusk])), /The lighting.time names dawn; the times are light, dark, dusk/);
     assert.equal(lighting.time, MODEL_STAGE_TIME.light);
     assert.deepEqual(read(), recorded.light);
   });
 
   it('refuses a time that reuses an id, and a look that omits, misnames or misstates a value, by its path', () => {
-    assert.throws(() => modelStageLighting(at('dusk', [dusk, dusk])), /Time dusk is declared twice/);
-    assert.throws(() => modelStageLighting(at('light', [{...dusk, id: 'dark'}])), /reuses a built-in/);
+    assert.throws(() => modelStageLighting(at('dusk', [dusk, {...dusk, label: 'Dusk 2'}])),
+      /Time 1.id dusk is already time 0's/);
+    assert.throws(() => modelStageLighting(at('light', [{...dusk, id: 'dark'}])),
+      /Time 0.id dark is already the built-in time dark's/);
+    // Labels are shown side by side, so each is a time's own too.
+    assert.throws(() => modelStageLighting(at('dusk', [dusk, {...dusk, id: 'dusk-2'}])),
+      /Time 1.label Dusk is already time dusk's/);
+    assert.throws(() => modelStageLighting(at('dusk', [{...dusk, label: 'Light'}])),
+      /Time 0.label Light is already the built-in time light's/);
+    assert.throws(() => modelStageLighting(at('dusk', [{...dusk, id: ''}])), /Time 0.id must be a non-empty string/);
+    assert.throws(() => modelStageLighting(at('dusk', [{...dusk, label: 3}])),
+      /Time 0.label must be a non-empty string/);
     const {key, ...keyless} = dusk.look;
     assert.ok(key);
     assert.throws(() => modelStageLighting(at('dusk', [{...dusk, look: keyless}])), /Time dusk: look omits key/);
@@ -117,10 +136,8 @@ describe('stage lighting', () => {
   });
 
   it('reads the theme colours Light is made of as #rrggbb, and refuses any other form by name', () => {
-    assert.throws(() => createModelLighting({setClearColor: () => undefined},
-      {colors: {...theme.colors, surface: 'rgb(1, 2, 3)'}},
-      {fog: {set: () => undefined}, output: {set: () => undefined}}),
-    /stage theme's surface must be a #rrggbb colour/);
+    assert.throws(() => modelStageBuiltInTimes({...theme.colors, surface: 'rgb(1, 2, 3)'}),
+      /stage theme's surface must be a #rrggbb colour/);
   });
 
   it('offers the built-in times, then the description\'s own, each with its label', () => {
@@ -129,8 +146,8 @@ describe('stage lighting', () => {
   });
 
   it('gives a floor and aids that join later the look in force, and releases aids to their authored colour', () => {
-    const {lighting} = fixture();
-    lighting.set(at(MODEL_STAGE_TIME.dark));
+    const {lighting, set} = fixture();
+    set(at(MODEL_STAGE_TIME.dark));
     const late = new THREE.MeshStandardMaterial();
     lighting.floor(late);
     assert.deepEqual(late.color.toArray(), recorded.dark.floor);
@@ -141,8 +158,8 @@ describe('stage lighting', () => {
     assert.deepEqual(joint.color.toArray(), recorded.dark.aid);
     assert.deepEqual(lit.color.toArray(), [1, 1, 1]);
     release();
-    lighting.set(at(MODEL_STAGE_TIME.light));
-    lighting.set(at(MODEL_STAGE_TIME.dark));
+    set(at(MODEL_STAGE_TIME.light));
+    set(at(MODEL_STAGE_TIME.dark));
     assert.deepEqual(joint.color.toArray(), [1, 1, 1]);
     assert.deepEqual(late.color.toArray(), recorded.dark.floor);
   });

@@ -22,6 +22,8 @@ export interface ModelActorStaging {readonly actors: readonly ModelActor[]; read
 export function createModelActorSet(load: Load, build: Build) {
   let drawn: readonly ModelActor[] = [], focus: string | undefined, attempt = 0, disposed = false;
   const loading = new Map<string, Loading>();
+  // What a set also waits for beside its models (the parts' loads, each owned and cached by its part), while in flight.
+  const waiting = new Set<Promise<void>>();
   const drop = (entry: Loading) => {
     loading.delete(entry.key);
     entry.controller.abort();
@@ -87,9 +89,11 @@ export function createModelActorSet(load: Load, build: Build) {
   return {
     get actors(): readonly ModelActor[] {return drawn;},
     get focused(): ModelActor | undefined {return drawn.find(actor => actor.id === focus);},
-    get pending() {return loading.size > 0;},
+    get pending() {return loading.size > 0 || waiting.size > 0;},
     // Throws at once when nothing loads; otherwise settles when this attempt does, or when a later one supersedes it.
-    replace(next: ModelStageActorSet, show: (staged: ModelActorStaging) => void): Promise<void> {
+    // `needs` are what the description's other parts need loaded first; the staged set waits for them as for models.
+    replace(next: ModelStageActorSet, needs: readonly Promise<void>[],
+      show: (staged: ModelActorStaging) => void): Promise<void> {
       const kept = new Map(drawn.filter(actor => next.actors.some(declaration =>
         modelActorIdentity(declaration) === modelActorIdentity(actor.declaration))).map(actor => [actor.id, actor]));
       const fresh = next.actors.filter(declaration => !kept.has(declaration.id));
@@ -107,18 +111,23 @@ export function createModelActorSet(load: Load, build: Build) {
           throw error;
         }
       };
-      if (!fresh.length) {
+      if (!fresh.length && !needs.length) {
         finish([]);
         supersede([]);
         return Promise.resolve();
       }
       const wanted = fresh.map(fetch), current = supersede(wanted);
-      return Promise.allSettled(wanted.map(entry => entry.asset)).then(results => {
+      for (const need of needs) waiting.add(need);
+      const awaited = Promise.allSettled(needs).then(results => {
+        for (const need of needs) waiting.delete(need);
+        return results;
+      });
+      return Promise.all([Promise.allSettled(wanted.map(entry => entry.asset)), awaited]).then(([results, other]) => {
         // Superseded: the later attempt has taken these loads over or dropped them.
         if (current !== attempt || disposed) return;
         for (const entry of wanted) loading.delete(entry.key);
         const arrived = results.flatMap(result => result.status === 'fulfilled' ? [result.value] : []);
-        const rejected = results.find(result => result.status === 'rejected');
+        const rejected = [...results, ...other].find(result => result.status === 'rejected');
         if (rejected) {
           for (const asset of arrived) disposeModelObject(asset.scene);
           throw failure(rejected.reason);

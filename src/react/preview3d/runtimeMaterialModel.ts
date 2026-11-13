@@ -1,4 +1,5 @@
 import {ModelStageRefusal} from './refusal.ts';
+import {modelIsRecord as object} from './recordModel.ts';
 export const MODEL_RUNTIME_MATERIAL = Object.freeze({
   color: '_Color', emissionColor: '_EmissionColor', emissionStrength: '_EmissionStrength',
   profile: 'base-color-tinted-emission', colorSpace: 'srgb', emissionMask: 'white', noiseBlend: 0, nightBoost: 1,
@@ -26,8 +27,6 @@ export interface ModelRuntimeMaterialProfile {
   readonly nightBoost: typeof MODEL_RUNTIME_MATERIAL.nightBoost;
   readonly renderers: readonly ModelRendererBinding[];
 }
-const object = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null && !Array.isArray(value);
 const index = (value: unknown) => Number.isSafeInteger(value) && Number(value) >= 0;
 export const modelMaterialKey = (id: string, slot: number) => JSON.stringify([id, slot]);
 

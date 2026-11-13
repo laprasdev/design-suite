@@ -67,7 +67,7 @@ export function createModelStage(
   const setDescription = (value: unknown) => {
     live();
     const next = modelStageDescription(value);
-    return actors.replace(next.actors, staged => {
+    return actors.replace(next.actors, parts.loads(next), staged => {
       const changed = modelStageDescriptionChanges(applied, next), refit = modelStageRefit(applied, next);
       prepareWhole([staged.prepare, ...parts.prepares(next, changed, staged.actors)])();
       applied = next;

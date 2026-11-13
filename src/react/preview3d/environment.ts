@@ -2,7 +2,9 @@ import * as THREE from 'three';
 import {modelPresentationRotation, modelPoseForBinding, type ModelRotation, type ModelVector}
   from './placementModel.ts';
 import {modelColor, type ModelColor} from './colorModel.ts';
+import {writeModelColor} from './color.ts';
 import {ModelStageRefusal} from './refusal.ts';
+import {modelIsRecord as object} from './recordModel.ts';
 import {extendModelMaterial, type ModelShaderChange} from './shading.ts';
 
 export const MODEL_ENVIRONMENT_GRID = Object.freeze({maximumLines: 1024, elevation: 0.001});
@@ -19,8 +21,6 @@ export interface ModelEnvironment {
     readonly color: ModelColor; readonly grid?: {readonly spacing: number; readonly color: ModelColor}} | null;
   readonly boxes: readonly ModelEnvironmentBox[];
 }
-const object = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null && !Array.isArray(value);
 function numbers(value: unknown, length: number): number[] {
   const copy = Array.isArray(value) ? Array.from(value) : [];
   if (copy.length !== length || !copy.every(Number.isFinite)) {
@@ -36,7 +36,6 @@ function dimensions(value: unknown, length: number) {
   if (result.some(number => number <= 0)) throw new ModelStageRefusal('Environment dimensions must be positive.');
   return result;
 }
-const ENVIRONMENT_COLOR = 'Environment colors';
 function grid(value: unknown, size: readonly number[]) {
   if (value === undefined) return undefined;
   if (!object(value) || typeof value.spacing !== 'number' || !Number.isFinite(value.spacing) || value.spacing <= 0) {
@@ -45,7 +44,7 @@ function grid(value: unknown, size: readonly number[]) {
   const spacing = value.spacing;
   const count = size.reduce((total, dimension) => total + Math.floor(dimension / spacing) + 1, 0);
   if (count > MODEL_ENVIRONMENT_GRID.maximumLines) throw new ModelStageRefusal('Environment grid has too many lines.');
-  return Object.freeze({spacing, color: modelColor(value.color, ENVIRONMENT_COLOR)});
+  return Object.freeze({spacing, color: modelColor(value.color, 'The environment plane.grid.color')});
 }
 export function modelEnvironment(value: unknown): ModelEnvironment {
   if (!object(value) || typeof value.reflectZ !== 'boolean' || !Array.isArray(value.boxes) ||
@@ -58,7 +57,8 @@ export function modelEnvironment(value: unknown): ModelEnvironment {
       throw new ModelStageRefusal('Environment boxes require unique IDs.');
     }
     ids.add(box.id);
-    return Object.freeze({id: box.id, position: vector(box.position), color: modelColor(box.color, ENVIRONMENT_COLOR),
+    return Object.freeze({id: box.id, position: vector(box.position),
+      color: modelColor(box.color, `The environment box ${box.id}.color`),
       size: Object.freeze(dimensions(box.size, 3)) as unknown as ModelVector,
       ...(box.rotationQuaternion !== undefined && {
         rotationQuaternion: modelPresentationRotation(box.rotationQuaternion),
@@ -67,7 +67,8 @@ export function modelEnvironment(value: unknown): ModelEnvironment {
   const size = value.plane === null ? null :
     Object.freeze(dimensions(value.plane.size, 2)) as readonly [number, number];
   const plane = value.plane === null ? null : Object.freeze({position: vector(value.plane.position),
-    color: modelColor(value.plane.color, ENVIRONMENT_COLOR), size: size!, grid: grid(value.plane.grid, size!)});
+    color: modelColor(value.plane.color, 'The environment plane.color'), size: size!,
+    grid: grid(value.plane.grid, size!)});
   return Object.freeze({reflectZ: value.reflectZ, plane, boxes: Object.freeze(boxes)});
 }
 
@@ -95,7 +96,7 @@ function createGrid(plane: NonNullable<ModelEnvironment['plane']>, fog: ModelSha
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
   const material = extendModelMaterial(new THREE.LineBasicMaterial(), [fog]);
-  material.color.setRGB(color[0], color[1], color[2], THREE.SRGBColorSpace);
+  writeModelColor(material.color, color);
   return new THREE.LineSegments(geometry, material);
 }
 
@@ -118,7 +119,7 @@ export function createModelEnvironment(value: unknown, fog: ModelShaderChange) {
     resources.push(geometry);
     const material = extendModelMaterial(new THREE.MeshStandardMaterial(), [fog]);
     resources.push(material);
-    material.color.setRGB(color[0], color[1], color[2], THREE.SRGBColorSpace);
+    writeModelColor(material.color, color);
     const mesh = new THREE.Mesh(geometry, material);
     mesh.name = id;
     mesh.position.set(position[0], position[1], environment.reflectZ ? -position[2] : position[2]);

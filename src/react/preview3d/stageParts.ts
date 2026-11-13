@@ -6,7 +6,7 @@ import type {ModelStageFraming} from './framingModel.ts';
 import {MODEL_ACTOR_TEXT} from './actor.ts';
 import {MODEL_STAGE_DRIVER} from './actorModel.ts';
 import type {ModelStageDescription, ModelStageDescriptionPart} from './descriptionModel.ts';
-import {modelStageCommit, type ModelStagePrepare} from './commit.ts';
+import {modelStageCommit, type ModelStageCommit, type ModelStagePrepare} from './commit.ts';
 import {ModelStageRefusal} from './refusal.ts';
 import type {ModelShaderChange} from './shading.ts';
 
@@ -16,7 +16,10 @@ export const MODEL_STAGE_PART_TEXT = Object.freeze({
 // What the stage-wide parts apply to: the scene, its lighting, the fog its scenery takes and its camera framing.
 export interface ModelStageSurface {
   readonly scene: THREE.Object3D;
-  readonly lighting: {set(value: ModelStageLighting): void};
+  readonly lighting: {
+    load(value: ModelStageLighting): readonly Promise<void>[];
+    prepare(value: ModelStageLighting): ModelStageCommit;
+  };
   readonly fog: {readonly change: ModelShaderChange};
   frame(framing: ModelStageFraming, orbit: boolean): void;
 }
@@ -61,11 +64,13 @@ export function createModelStageParts(surface: ModelStageSurface) {
   const stageWide: Record<Exclude<ModelStageDescriptionPart, 'actors' | 'display' | 'materialMode' | 'size' | 'origin'>,
     (next: ModelStageDescription) => ModelStagePrepare> = {
     environment: next => scenery(next.environment),
-    lighting: next => modelStageCommit(() => surface.lighting.set(next.lighting)),
+    lighting: next => () => surface.lighting.prepare(next.lighting),
     framing: next => modelStageCommit(() => frame(next)),
     orbit: next => modelStageCommit(() => frame(next)),
   };
   return {
+    /** What a description needs loaded before its parts can be prepared, beside its actors' models. */
+    loads: (next: ModelStageDescription) => surface.lighting.load(next.lighting),
     prepares(next: ModelStageDescription, changed: ReadonlySet<ModelStageDescriptionPart>,
       actors: readonly ModelActor[]): ModelStagePrepare[] {
       const parts = (Object.keys(stageWide) as Array<keyof typeof stageWide>).filter(part => changed.has(part));

@@ -3,12 +3,16 @@ import {test} from 'node:test';
 import * as THREE from 'three';
 import {createModelRuntimeMaterials, MODEL_RUNTIME_MATERIAL as channel}
   from '../src/react/preview3d/runtimeMaterials.ts';
+import {createModelFog, MODEL_FOG_CHANGE} from '../src/react/preview3d/fog.ts';
+import {extendModelMaterial, modelMaterialChanges} from '../src/react/preview3d/shading.ts';
 
 const rendererId = 'body';
 const output = (changes = {}) => ({rendererId, slot: 0, visible: true, colors: {}, floats: {}, ...changes});
 function fixture() {
   const texture = new THREE.Texture();
-  const original = new THREE.MeshStandardMaterial({map: texture, color: 0xeeeeee});
+  // A file's material as the actor hands it over: already carrying the stage's fog.
+  const original = extendModelMaterial(new THREE.MeshStandardMaterial({map: texture, color: 0xeeeeee}),
+    [createModelFog(new THREE.Scene()).change]);
   const first = new THREE.Mesh(new THREE.BoxGeometry(), original);
   const second = new THREE.Mesh(first.geometry, original);
   const materials = createModelRuntimeMaterials([{rendererId, slot: 0, mesh: first}]);
@@ -25,9 +29,14 @@ test('runtime output owns a clone, decodes sRGB once and keeps HDR intensity', (
   assert.equal(applied.emissiveIntensity, 2.8);
   assert.deepEqual(applied.color.toArray(), new THREE.Color().setRGB(.55, .65, .8, THREE.SRGBColorSpace).toArray());
   assert.deepEqual(applied.emissive.toArray(), new THREE.Color().setRGB(.65, .8, 1, THREE.SRGBColorSpace).toArray());
-  const shader = {uniforms: {}, fragmentShader: '#include <emissivemap_fragment>'};
+  const shader = {uniforms: {}, vertexShader: THREE.ShaderLib.standard.vertexShader,
+    fragmentShader: THREE.ShaderLib.standard.fragmentShader};
   applied.onBeforeCompile(shader as THREE.WebGLProgramParametersWithUniforms, {} as THREE.WebGLRenderer);
   assert.match(shader.fragmentShader, /totalEmissiveRadiance \*= diffuseColor\.rgb/);
+  // The copy compiles what the original does, the stage's fog first, and then tints its emission.
+  assert.deepEqual(modelMaterialChanges(applied).map(({key}) => key), [MODEL_FOG_CHANGE, channel.profile]);
+  assert.equal(applied.customProgramCacheKey(), `${MODEL_FOG_CHANGE} ${channel.profile}`);
+  assert.match(shader.fragmentShader, /modelStageFogFarColor/);
   materials.dispose();
 });
 test('empty maps, omission, reset and disposal restore exact references and do not dispose borrowed textures', () => {

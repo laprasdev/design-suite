@@ -5,7 +5,7 @@ import {modelEnvironment, type ModelEnvironment} from './environment.ts';
 import {MODEL_STAGE_FRAMING, modelStageFraming, modelStageOrbit, type ModelStageFraming} from './framingModel.ts';
 import {modelStageLighting, type ModelStageLighting} from './lightingModel.ts';
 import {modelStageMaterialMode, type ModelStageMaterialMode} from './materialModel.ts';
-import {ModelStageRefusal} from './refusal.ts';
+import {modelRecord} from './recordModel.ts';
 import {modelStageOrigin, modelStageSize, type ModelStageOrigin, type ModelStageSize} from './sizeModel.ts';
 
 /** The whole host-side state of a stage: one declared description, applied whole or refused. */
@@ -25,17 +25,11 @@ export interface ModelStageDescription {
 export const MODEL_STAGE_DESCRIPTION_PARTS = Object.freeze(
   ['actors', 'environment', 'framing', 'orbit', 'lighting', 'display', 'materialMode', 'size', 'origin'] as const);
 export type ModelStageDescriptionPart = typeof MODEL_STAGE_DESCRIPTION_PARTS[number];
-export const MODEL_STAGE_DESCRIPTION_REFUSAL = Object.freeze({
-  description: `A stage description requires ${MODEL_STAGE_DESCRIPTION_PARTS.join(', ')}.`,
-});
-const object = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null && !Array.isArray(value);
 
-// Every part is checked before any is used; null is the explicit "none" of the environment.
-export function modelStageDescription(value: unknown): ModelStageDescription {
-  if (!object(value) || MODEL_STAGE_DESCRIPTION_PARTS.some(part => !(part in value))) {
-    throw new ModelStageRefusal(MODEL_STAGE_DESCRIPTION_REFUSAL.description);
-  }
+// Every part is checked before any is used, and a part the description does not have is refused by name; null is the
+// explicit "none" of the environment.
+export function modelStageDescription(input: unknown): ModelStageDescription {
+  const value = modelRecord(input, MODEL_STAGE_DESCRIPTION_PARTS, 'The stage description');
   return Object.freeze({
     actors: modelStageActorSet(value.actors),
     environment: value.environment === null ? null : modelEnvironment(value.environment),

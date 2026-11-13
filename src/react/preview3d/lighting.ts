@@ -1,17 +1,15 @@
 import * as THREE from 'three';
-import type {ModelStageTheme} from './model.ts';
-import type {ModelColor} from './colorModel.ts';
+import {writeModelColor} from './color.ts';
 import type {ModelStageLook} from './lookModel.ts';
 import type {ModelFog} from './fog.ts';
 import type {ModelDraw} from './draw.ts';
-import {modelStageBuiltInTimes, modelStageLighting, modelStageTimeInForce, type ModelStageLighting,
-  type ModelStageTime} from './lightingModel.ts';
+import type {ModelStageCommit} from './commit.ts';
+import {MODEL_STAGE_THEME_LIGHTING, modelStageTimeInForce, type ModelStageLighting, type ModelStageTime}
+  from './lightingModel.ts';
 
 type Unlit = THREE.MeshBasicMaterial | THREE.LineBasicMaterial;
 const unlit = (material: THREE.Material): material is Unlit =>
   material instanceof THREE.MeshBasicMaterial || material instanceof THREE.LineBasicMaterial;
-const srgb = (target: THREE.Color, value: ModelColor) => target.setRGB(value[0], value[1], value[2],
-  THREE.SRGBColorSpace);
 
 // The unlit materials under these objects, each remembered at its authored colour. No light reaches them, so a look
 // holds them to a share of that colour instead.
@@ -31,53 +29,65 @@ function stageAids(objects: readonly THREE.Object3D[]) {
 /** The parts of a look the scene owns: its fog, and the draw that applies its tone curve and adds its glow. */
 export interface ModelLookLayers {
   readonly fog: Pick<ModelFog, 'set'>;
-  readonly output: Pick<ModelDraw, 'set'>;
+  readonly output: Pick<ModelDraw, 'load' | 'prepare'>;
 }
 // The stage's backdrop, floor, two lights, unlit aids, fog, tone curve and glow, as the look of one time at a time. A
-// look is written into the same objects every time: changing a colour or a strength allocates nothing and compiles
-// nothing; fog or a tone curve arriving or leaving recompiles the programs it reaches, once, and glow arriving or
-// leaving makes or frees its targets.
-export function createModelLighting(renderer: Pick<THREE.WebGLRenderer, 'setClearColor'>, theme: ModelStageTheme,
-  layers: ModelLookLayers) {
-  const builtIn = modelStageBuiltInTimes(theme.colors);
+// look is written into the same objects every time: a changed colour, strength or distance allocates nothing and
+// compiles nothing. What does compile, once each, read from three r180's program key (WebGLPrograms.js 420, 463):
+// fog arriving or leaving recompiles every program that takes it; a tone curve arriving, leaving or changing
+// recompiles every program the canvas pass draws; and glow arriving compiles, on its first frame, a second variant of
+// every program the scene draws, for the linear, curve-less target its source is drawn into (WebGLPrograms.js 165-171,
+// 202). Those variants stay in each material's programs after glow leaves, so a later return compiles nothing.
+export function createModelLighting(renderer: Pick<THREE.WebGLRenderer, 'setClearColor'>,
+  builtIn: readonly ModelStageTime[], layers: ModelLookLayers) {
   const ambient = new THREE.HemisphereLight();
   const key = new THREE.DirectionalLight();
   const backdrop = new THREE.Color();
   const aids = new Set<(share: number) => void>();
   const floors = new Set<THREE.MeshStandardMaterial>();
-  let time: ModelStageTime = builtIn[0];
+  const resolve = (value: ModelStageLighting) => modelStageTimeInForce(value.time, [...builtIn, ...value.times]);
+  const prepare = (time: ModelStageTime): ModelStageCommit => {
+    const {look} = time;
+    const output = layers.output.prepare(look.toneCurve, look.glow, `Time ${time.id}: look.glow`);
+    return () => {
+      current = time;
+      apply(look);
+      output();
+    };
+  };
   const apply = (look: ModelStageLook) => {
-    renderer.setClearColor(srgb(backdrop, look.backdrop));
-    srgb(ambient.color, look.ambient.sky);
-    srgb(ambient.groundColor, look.ambient.ground);
+    renderer.setClearColor(writeModelColor(backdrop, look.backdrop));
+    writeModelColor(ambient.color, look.ambient.sky);
+    writeModelColor(ambient.groundColor, look.ambient.ground);
     ambient.intensity = look.ambient.strength;
-    srgb(key.color, look.key.color);
+    writeModelColor(key.color, look.key.color);
     key.intensity = look.key.strength;
     key.position.fromArray(look.key.direction);
-    for (const floor of floors) srgb(floor.color, look.aids.floor);
+    for (const floor of floors) writeModelColor(floor.color, look.aids.floor);
     for (const hold of aids) hold(look.aids.share);
     layers.fog.set(look.fog);
-    layers.output.set(look.toneCurve, look.glow);
   };
-  apply(time.look);
+  // The stage starts at the consumer's own theme, the time it shows when a description states no other.
+  let current = resolve(MODEL_STAGE_THEME_LIGHTING);
+  prepare(current)();
   return {
     lights: [ambient, key] as const,
     /** The id of the time in force. */
-    get time() {return time.id;},
-    set(value: ModelStageLighting) {
-      time = modelStageTimeInForce(modelStageLighting(value), builtIn);
-      apply(time.look);
-    },
+    get time() {return current.id;},
+    /** What showing a described lighting needs loaded first: the glow's passes, when its time brings glow. */
+    load: (value: ModelStageLighting) => layers.output.load(resolve(value).look.glow),
+    /** A described lighting, already checked whole: its time in force resolved, and what drawing it needs refused. */
+    prepare: (value: ModelStageLighting) => prepare(resolve(value)),
     // The floor is lit, so it takes a colour from the look rather than a share.
     floor(material: THREE.MeshStandardMaterial) {
       floors.add(material);
-      srgb(material.color, time.look.aids.floor);
+      writeModelColor(material.color, current.look.aids.floor);
     },
     // Stage aids join at the current look; the returned release gives them back at their authored colours.
     attach(objects: readonly THREE.Object3D[]) {
       const hold = stageAids(objects);
       aids.add(hold);
-      hold(time.look.aids.share);
+      hold(current.look.aids.share);
       return () => {
         if (aids.delete(hold)) hold(1);
       };

@@ -28,8 +28,11 @@ export interface ModelStageLook {
 export const MODEL_STAGE_TONE_CURVE = Object.freeze({acesFilmic: 'aces-filmic'} as const);
 export type ModelStageToneCurve = typeof MODEL_STAGE_TONE_CURVE[keyof typeof MODEL_STAGE_TONE_CURVE];
 /**
- * Glow: the linear luminance above which a pixel blooms, before tone mapping; how strongly the bloom is added back; and
- * how far it spreads, from 0 (tight) up. Whether a threshold blooms lit surfaces is a judgement about a picture.
+ * Glow: the linear luminance above which a pixel blooms; how strongly the bloom is added back; and how far it spreads,
+ * from 0 (tight) to 1 (wide). The spread is the bloom's mix between its tight and wide weightings of its five blur
+ * levels (three's UnrealBloomPass), meaningful only from 0 to 1: past 1.25 its tightest weight turns negative and the
+ * bloom subtracts light. A wider spread is a different bloom, not a larger number. Whether a threshold blooms lit
+ * surfaces is a judgement about a picture.
  */
 export interface ModelStageGlow {readonly threshold: number; readonly strength: number; readonly radius: number}
 /** Fog by distance from the camera, from a near colour to a far one, and a height layer below a level, or null. */
@@ -55,6 +58,8 @@ export const MODEL_STAGE_LOOK_REFUSAL = Object.freeze({
   curvedGlow: (where: string) => `${where}: a time with a tone curve and glow: not built.`,
 });
 const fields = MODEL_STAGE_LOOK_FIELDS, UNBOUNDED = Number.POSITIVE_INFINITY;
+/** The widest spread the bloom mixes to (UnrealBloomPass's radius), the end of the range it is meaningful on. */
+export const MODEL_STAGE_GLOW_WIDEST = 1;
 
 function direction(value: unknown, where: string): ModelVector {
   const vector = modelPresentationVector(value, where);
@@ -84,13 +89,14 @@ function fog(value: unknown, where: string): ModelStageFog | null {
   return Object.freeze({near, far,
     height: record.height === null ? null : height(record.height, `${where}.height`)});
 }
-// Glow refuses only what is not a glow at all: a value that is not finite, or below 0.
+// Glow refuses what is not a glow at all: a threshold or strength that is not finite or is below 0, and a spread
+// outside the range the bloom mixes over.
 function glow(value: unknown, where: string): ModelStageGlow | null {
   if (value === null) return null;
   const record = modelRecord(value, fields.glow, where);
-  const [threshold, strength, radius] = fields.glow.map(name =>
-    modelNumber(record[name], `${where}.${name}`, 0, UNBOUNDED));
-  return Object.freeze({threshold, strength, radius});
+  return Object.freeze({threshold: modelNumber(record.threshold, `${where}.threshold`, 0, UNBOUNDED),
+    strength: modelNumber(record.strength, `${where}.strength`, 0, UNBOUNDED),
+    radius: modelNumber(record.radius, `${where}.radius`, 0, MODEL_STAGE_GLOW_WIDEST)});
 }
 
 function toneCurve(value: unknown, where: string): ModelStageToneCurve | null {

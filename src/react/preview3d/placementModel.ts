@@ -1,4 +1,5 @@
 import {ModelStageRefusal} from './refusal.ts';
+import {modelIsRecord as object} from './recordModel.ts';
 
 // The stage's placement data, with no renderer: vectors, unit rotations and whole poses, their validators and the one
 // coordinate adapter. Every other preview file reaches these through here, so none of them imports another for them.
@@ -21,8 +22,6 @@ export interface ModelPoseBinding {
   readonly rotationQuaternion: ModelRotation;
 }
 const MODEL_POSE_BINDING_OWNER = 'The pose to bind';
-const object = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null && !Array.isArray(value);
 function numbers(value: unknown, count: number, name: string): number[] {
   const copy = Array.isArray(value) ? Array.from(value) : [];
   if (copy.length !== count || !copy.every(Number.isFinite)) {

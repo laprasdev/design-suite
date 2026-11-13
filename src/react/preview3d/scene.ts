@@ -5,10 +5,36 @@ import type {ModelStagePolicy, ModelStageTheme} from './model.ts';
 import {createModelFraming} from './camera.ts';
 import {disposeModelObject} from './asset.ts';
 import {createModelLighting} from './lighting.ts';
+import {modelStageBuiltInTimes} from './lightingModel.ts';
 import {createModelFog} from './fog.ts';
 import {createModelDraw} from './draw.ts';
 
+type AidLighting = Pick<ReturnType<typeof createModelLighting>, 'floor' | 'attach'>;
+/** The stage's own floor and grid, as its policy asks: aids, so they take no fog; the floor is lit by the look. */
+export function createModelStageAids(theme: ModelStageTheme, policy: ModelStagePolicy, lighting: AidLighting) {
+  const aids: THREE.Object3D[] = [];
+  if (policy.floor) {
+    const surface = new THREE.MeshStandardMaterial({roughness: 1, fog: false});
+    const floor = new THREE.Mesh(new THREE.CircleGeometry(settings.floorRadius, settings.floorSegments), surface);
+    lighting.floor(surface);
+    floor.rotation.x = -Math.PI / 2;
+    floor.position.y = settings.floorOffset;
+    aids.push(floor);
+  }
+  if (policy.grid) {
+    const grid = new THREE.GridHelper(settings.gridSize, settings.gridDivisions,
+      theme.colors.accentDeep, theme.colors.surfaceHi);
+    grid.material.fog = false;
+    grid.position.y = settings.floorOffset / 2;
+    lighting.attach([grid]);
+    aids.push(grid);
+  }
+  return aids;
+}
+
 export function createModelScene(host: HTMLElement, theme: ModelStageTheme, policy: ModelStagePolicy) {
+  // The theme is read before anything is built, so a theme the stage refuses leaves no canvas or context behind.
+  const builtIn = modelStageBuiltInTimes(theme.colors);
   const renderer = new THREE.WebGLRenderer({antialias: true, preserveDrawingBuffer: true});
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, settings.pixelRatioLimit));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -19,27 +45,10 @@ export function createModelScene(host: HTMLElement, theme: ModelStageTheme, poli
   controls.minDistance = settings.cameraMinimum;
   controls.maxDistance = settings.cameraMaximum;
   controls.maxPolarAngle = Math.PI / 2;
-  const fog = createModelFog(scene, renderer.outputColorSpace);
-  const frame = createModelDraw(renderer, scene, camera, fog);
-  const lighting = createModelLighting(renderer, theme, {fog, output: frame});
-  scene.add(...lighting.lights);
-  // The stage's own aids (floor, grid, rig, markers) take no fog.
-  if (policy.floor) {
-    const surface = new THREE.MeshStandardMaterial({roughness: 1, fog: false});
-    const floor = new THREE.Mesh(new THREE.CircleGeometry(settings.floorRadius, settings.floorSegments), surface);
-    lighting.floor(surface);
-    floor.rotation.x = -Math.PI / 2;
-    floor.position.y = settings.floorOffset;
-    scene.add(floor);
-  }
-  if (policy.grid) {
-    const grid = new THREE.GridHelper(settings.gridSize, settings.gridDivisions,
-      theme.colors.accentDeep, theme.colors.surfaceHi);
-    grid.material.fog = false;
-    grid.position.y = settings.floorOffset / 2;
-    scene.add(grid);
-    lighting.attach([grid]);
-  }
+  const fog = createModelFog(scene);
+  const frame = createModelDraw(renderer, scene, camera);
+  const lighting = createModelLighting(renderer, builtIn, {fog, output: frame});
+  scene.add(...lighting.lights, ...createModelStageAids(theme, policy, lighting));
   const framing = createModelFraming(camera, controls);
   const resize = () => {
     const {clientWidth: width, clientHeight: height} = host;

@@ -7,7 +7,7 @@ import {createModelEnvironment, modelEnvironment, MODEL_ENVIRONMENT_GRID}
   from '../src/react/preview3d/environment.ts';
 
 // The fog change scenery is given; no fog is in force, so it changes no picture here.
-const fog = createModelFog(new THREE.Scene(), THREE.SRGBColorSpace).change;
+const fog = createModelFog(new THREE.Scene()).change;
 
 const fixture = () => ({reflectZ: true, plane: {position: [0, 0, 0], size: [24, 32], color: [.2, .3, .4]},
   boxes: [{id: 'pool', position: [-4, .5, -4], size: [2, 1, 2], color: [.55, .65, .8]}]});

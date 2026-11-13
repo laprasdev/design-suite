@@ -6,8 +6,8 @@ import type {ModelPreviewFrame} from './actorModel.ts';
 import type {ModelStageDescription} from './descriptionModel.ts';
 import {createModelFrameInbox, type ModelFrameStatus} from './frameInbox.ts';
 import {createModelDescriptionRequests, createModelPreviewChoices, modelPreviewDescription, modelPreviewFailure,
-  modelPreviewNotice, modelPreviewPick, modelPreviewReady, modelPreviewSelection, modelPreviewToggle,
-  type ModelPreviewSelection} from './previewDescription.ts';
+  modelPreviewNotice, modelPreviewPick, modelPreviewReady, modelPreviewSelection, modelPreviewTimes,
+  modelPreviewToggle, type ModelPreviewSelection} from './previewDescription.ts';
 import {MODEL_STAGE_FAILURE, modelStageFailure, type ModelStageFailure} from './refusal.ts';
 
 /** What the view fixes when it creates its stage: the clock follows whether an engine frame is given. */
@@ -140,6 +140,7 @@ export function useModelPreview(host: ModelStageDescription, theme: ModelStageTh
     host: hostRef, loaded: ready, ready: modelPreviewReady(ready, external, poseStatus, loading),
     error: shown?.kind === MODEL_STAGE_FAILURE.unusable, failure: shown, notice: modelPreviewNotice(shown, retry),
     selection, hold, boneCount, external, poseStatus, materialAvailable, emissiveCount, choose,
+    times: modelPreviewTimes(host.lighting, requests.held),
     pick: (name: string) => choose({animation: modelPreviewPick(selected.current.animation, name)}),
     togglePlayback: toggle,
     resetCamera() {

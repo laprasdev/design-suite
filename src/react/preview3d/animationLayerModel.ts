@@ -1,4 +1,5 @@
 import {ModelStageRefusal} from './refusal.ts';
+import {modelIsNamed as named, modelIsRecord as object} from './recordModel.ts';
 // The engine's animation layers for one actor, validated from unknown input. Clip lookup belongs to playback.
 // Engine cross-fade weights are floats: each weight's range and a layer's sum are compared within this tolerance.
 export const MODEL_PREVIEW_WEIGHT_TOLERANCE = 1e-6;
@@ -36,9 +37,6 @@ export const MODEL_ANIMATION_REFUSAL = Object.freeze({
     `Actor ${owner}: layer ${layer} (clips ${clips}) has sample weights summing past 1.`,
 });
 const refusal = MODEL_ANIMATION_REFUSAL;
-const object = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null && !Array.isArray(value);
-const named = (value: unknown): value is string => typeof value === 'string' && value.length > 0;
 const unit = (value: unknown): value is number => typeof value === 'number' &&
   value >= -MODEL_PREVIEW_WEIGHT_TOLERANCE && value <= 1 + MODEL_PREVIEW_WEIGHT_TOLERANCE;
 const clipList = (samples: readonly unknown[]) =>
