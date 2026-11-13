@@ -12,10 +12,17 @@ export const MODEL_SURFACE_LIGHT = Object.freeze({standard: 'standard', unlit: '
 export const MODEL_SURFACE_COVERAGE = Object.freeze({opaque: 'opaque', cutout: 'cutout', blended: 'blended'} as const);
 export const MODEL_SURFACE_SIDE = Object.freeze({front: 'front', back: 'back', double: 'double'} as const);
 export const MODEL_VECTOR_SIZE = Object.freeze({two: 2, three: 3, four: 4} as const);
+/** How many numbers a vertex attribute of the file's own holds per vertex. */
+export const MODEL_ATTRIBUTE_SIZE = Object.freeze({one: 1, two: 2, three: 3, four: 4} as const);
 /** The reserved kind id of a file's own material, which the stage draws as the file states it. */
 export const MODEL_FILE_SURFACE = 'file';
 type Of<T> = T[keyof T];
 export type ModelColorSpace = Of<typeof MODEL_COLOR_SPACE>;
+/**
+ * A vertex attribute a kind reads: one of three's own by its name ('uv', 'color'), or one of the file's own (a glTF
+ * custom attribute, `_DEPTH`, which three names `_depth`) by its name and the numbers it holds per vertex.
+ */
+export type ModelSurfaceAttribute = string | {readonly name: string; readonly size: Of<typeof MODEL_ATTRIBUTE_SIZE>};
 export type ModelSurfaceParameter =
   | {readonly type: typeof MODEL_SURFACE_PARAMETER.color; readonly space: ModelColorSpace; readonly hdr: boolean}
   | {readonly type: typeof MODEL_SURFACE_PARAMETER.vector; readonly size: Of<typeof MODEL_VECTOR_SIZE>}
@@ -28,8 +35,8 @@ export interface ModelSurfaceKind {
   readonly parameters: Readonly<Record<string, ModelSurfaceParameter>>;
   /** Float parameters the port draws only at this value: a record stating another is refused by name. */
   readonly inert: Readonly<Record<string, number>>;
-  /** The vertex attributes the kind reads, as three names a glTF's: 'uv', 'uv1', 'color', '_depth'. */
-  readonly attributes: readonly string[];
+  /** The vertex attributes the kind reads, as three names a glTF's: three's own by name, the file's own with a size. */
+  readonly attributes: readonly ModelSurfaceAttribute[];
   readonly light: Of<typeof MODEL_SURFACE_LIGHT>;
   readonly coverage: Of<typeof MODEL_SURFACE_COVERAGE>;
   readonly side: Of<typeof MODEL_SURFACE_SIDE>;
@@ -42,6 +49,7 @@ export interface ModelSurfaceKind {
 }
 export const MODEL_SURFACE_KIND_FIELDS = Object.freeze({kind: ['id', 'parameters', 'inert', 'attributes', 'light',
   'coverage', 'side', 'fog', 'displacement', 'webProgram'], webProgram: ['path', 'sha256'], displacement: ['reach'],
+attribute: ['name', 'size'],
 parameter: Object.freeze({color: ['type', 'space', 'hdr'], vector: ['type', 'size'], float: ['type'],
   keyword: ['type'], texture: ['type', 'space']})});
 const fields = MODEL_SURFACE_KIND_FIELDS;
@@ -76,15 +84,24 @@ function parameter(value: unknown, where: string): ModelSurfaceParameter {
   }
   return Object.freeze({type});
 }
-function attributes(value: unknown, where: string): readonly string[] {
+/** An attribute's name, whichever form it is stated in. */
+export const modelAttributeName = (attribute: ModelSurfaceAttribute) =>
+  typeof attribute === 'string' ? attribute : attribute.name;
+function attribute(value: unknown, where: string): ModelSurfaceAttribute {
+  if (typeof value === 'string') return modelName(value, where);
+  const record = modelRecord(value, fields.attribute, where), name = modelName(record.name, `${where}.name`);
+  if (!glslName(name)) throw new ModelStageRefusal(refusal.glsl(where, name));
+  return Object.freeze({name, size: modelOption(record.size, MODEL_ATTRIBUTE_SIZE, `${where}.size`)});
+}
+function attributes(value: unknown, where: string): readonly ModelSurfaceAttribute[] {
   if (!Array.isArray(value)) throw new ModelStageRefusal(refusal.list(where));
   const listed = new Set<string>();
-  value.forEach((name: unknown, index) => {
-    const attribute = modelName(name, `${where}[${index}]`);
-    if (listed.has(attribute)) throw new ModelStageRefusal(refusal.twice(where, attribute));
-    listed.add(attribute);
-  });
-  return Object.freeze([...listed]);
+  return Object.freeze(Array.from(value, (entry: unknown, index) => {
+    const read = attribute(entry, `${where}[${index}]`), name = modelAttributeName(read);
+    if (listed.has(name)) throw new ModelStageRefusal(refusal.twice(where, name));
+    listed.add(name);
+    return read;
+  }));
 }
 
 /** One kind's declaration, checked whole; `where` names it in every refusal. */

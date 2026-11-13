@@ -51,10 +51,8 @@ describe('a surface kind\'s web program', () => {
       [false, true, false, THREE.BackSide, false]);
   });
 
-  it('refuses, by name, a kind this stage cannot draw yet, and a parameter GLSL cannot name', () => {
+  it('refuses, by name, an attribute the web stage cannot hand a kind, and a parameter GLSL cannot name', () => {
     const drawable = (change: object) => () => modelSurfaceDrawable(modelSurfaceKind({...PULSE, ...change}, 'K'));
-    refused(drawable({light: 'unlit'}), MODEL_SURFACE_PROGRAM_TEXT.light('test-pulse', 'unlit'));
-    refused(drawable({displacement: {reach: '_Pulse'}}), MODEL_SURFACE_PROGRAM_TEXT.displacement('test-pulse'));
     refused(drawable({attributes: ['uv1']}), MODEL_SURFACE_PROGRAM_TEXT.attribute('test-pulse', 'uv1'));
     for (const name of ['__Color', '_Main__Tex', 'Main Tex', '_Color.r', '1st', '']) {
       refused(() => modelSurfaceKind({...PULSE, parameters: {[name]: {type: 'float'}}}, 'K'),

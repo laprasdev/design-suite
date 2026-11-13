@@ -4,7 +4,7 @@ import {modelFileRenderers, modelSurfaceSetCovers, type ModelRenderer} from './r
 import {MODEL_ACTOR_SURFACES, type ModelActorSurfaces, type ModelSurfaceRecord, type ModelSurfaceSet}
   from './surfaceModel.ts';
 import type {ModelMaterialOutput} from './surfaceOutputModel.ts';
-import {MODEL_SURFACE_PARAMETER, type ModelSurfaceKind} from './surfaceKindModel.ts';
+import {MODEL_SURFACE_PARAMETER, modelAttributeName, type ModelSurfaceKind} from './surfaceKindModel.ts';
 import type {ModelSurfaceMaterial, ModelSurfaceMaterials} from './surfaceMaterials.ts';
 import {MODEL_SURFACE_GLSL} from './surfaceProgram.ts';
 import {writeModelSurfaceColor} from './color.ts';
@@ -23,6 +23,8 @@ export const MODEL_ACTOR_SURFACES_TEXT = Object.freeze({
   mesh: (where: string) => `${where}: a kind draws a mesh, and this renderer draws lines or points.`,
   attribute: (where: string, name: string) => `${where}: the kind reads the vertex attribute ${name}, which the ` +
     'mesh does not have.',
+  size: (where: string, name: string, size: number, held: number) =>
+    `${where}: the kind reads ${name} as ${size} numbers a vertex; the mesh holds ${held}.`,
   program: (where: string, why: string) => `${where}: the kind's web program cannot be drawn: ${why}`,
 });
 const SLOT = 4;
@@ -39,9 +41,13 @@ const NOTHING_BEFORE_RENDER = THREE.Object3D.prototype.onBeforeRender;
 export function createModelActorSurfaces(asset: GLTF, file: {readonly actor: string; readonly path: string},
   context: ModelActorSurfacesContext) {
   const {actor} = file;
-  // Each mesh's own material, as the file and the stage's changes made it at build.
-  const originals = new Map<THREE.Mesh, THREE.Material | THREE.Material[]>();
-  asset.scene.traverse(node => {if (node instanceof THREE.Mesh) originals.set(node, node.material);});
+  // Each mesh's own material, as the file and the stage's changes made it at build, and whether three culls it.
+  const originals = new Map<THREE.Mesh, THREE.Material | THREE.Material[]>(), culled = new Map<THREE.Mesh, boolean>();
+  asset.scene.traverse(node => {
+    if (!(node instanceof THREE.Mesh)) return;
+    originals.set(node, node.material);
+    culled.set(node, node.frustumCulled);
+  });
   // The renderers by id, read from the loader's associations the first time a set or a frame's values need them.
   let ids: ReadonlyMap<string, ModelRenderer> | undefined;
   const renderers = () => ids ??= modelFileRenderers(asset, actor, file.path);
@@ -49,6 +55,9 @@ export function createModelActorSurfaces(asset: GLTF, file: {readonly actor: str
   const draw = (node: THREE.Mesh, held: Drawn) => {
     const {material} = held.surface, uniform = material.uniforms[MODEL_SURFACE_GLSL.values];
     node.material = material;
+    // A kind that moves vertices draws beyond the mesh's own bounds, which three culls by: the renderer is drawn
+    // whatever the view (padding the bounds by the kind's reach is not built).
+    if (held.surface.kind.displacement !== null) node.frustumCulled = false;
     node.onBeforeRender = () => {
       if (uniform.value === held.effective && !held.changed) return;
       uniform.value = held.effective;
@@ -58,13 +67,19 @@ export function createModelActorSurfaces(asset: GLTF, file: {readonly actor: str
   };
   const restore = (node: THREE.Mesh) => {
     node.material = originals.get(node)!;
+    node.frustumCulled = culled.get(node)!;
     node.onBeforeRender = NOTHING_BEFORE_RENDER;
   };
   const prepareRecord = (id: string, node: ModelRenderer, record: ModelSurfaceRecord): Drawn => {
     const kind = context.kinds.get(record.kind)!, where = `Actor ${actor}, renderer ${id}, kind ${kind.id}`;
     if (!(node instanceof THREE.Mesh)) throw new ModelStageRefusal(MODEL_ACTOR_SURFACES_TEXT.mesh(where));
-    const lacking = kind.attributes.find(name => !(name in node.geometry.attributes));
-    if (lacking) throw new ModelStageRefusal(MODEL_ACTOR_SURFACES_TEXT.attribute(where, lacking));
+    for (const attribute of kind.attributes) {
+      const name = modelAttributeName(attribute), held = node.geometry.getAttribute(name);
+      if (!held) throw new ModelStageRefusal(MODEL_ACTOR_SURFACES_TEXT.attribute(where, name));
+      if (typeof attribute !== 'string' && held.itemSize !== attribute.size) {
+        throw new ModelStageRefusal(MODEL_ACTOR_SURFACES_TEXT.size(where, name, attribute.size, held.itemSize));
+      }
+    }
     const surface = context.materials.material(record), shown = node.material;
     // Compiled on this very mesh (its skinning, morphs and attributes are part of the program), then given back: the
     // mesh draws the kind only when the commit installs it.

@@ -171,7 +171,8 @@ exactly its fields: one it omits or one it does not have is refused by its path 
 - `surfaceSets`: named sets, each keyed by every renderer of the file it is for (`gltf-node:<n>/primitive:<m>`,
   each exactly once, checked against the loaded file), each entry `{kind: 'file'}` or a record `{kind, values}` of a
   surface kind the stage was given (`kinds`, a creation option: each kind's declaration, `[]` for none). A record
-  is drawn by its kind's web program (one shared material per record, compiled before the description is shown);
+  is drawn by its kind's web program (one shared material per record, compiled before the description is shown; a
+  kind is lit by three's standard model or unlit, may move its vertices, and may read a file's own attributes);
   an engine frame's material values are taken only on a parameter the renderer's kind declares. A record's
   `values` give every parameter of its kind one of `{color: [r, g, b, a]}`, `{vector: [...]}`, `{float}`,
   `{keyword}` or `{texture}`, a texture being `{path, sha256, wrap: [u, v], scale: [u, v], offset: [u, v]}` (a PNG,
