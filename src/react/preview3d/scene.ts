@@ -12,7 +12,6 @@ export function createModelScene(host: HTMLElement, theme: ModelStageTheme, poli
   const renderer = new THREE.WebGLRenderer({antialias: true, preserveDrawingBuffer: true});
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, settings.pixelRatioLimit));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
-  renderer.toneMapping = THREE.ACESFilmicToneMapping;
   host.append(renderer.domElement);
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(settings.fieldOfView, 1, settings.nearPlane, settings.farPlane);
@@ -22,7 +21,7 @@ export function createModelScene(host: HTMLElement, theme: ModelStageTheme, poli
   controls.maxPolarAngle = Math.PI / 2;
   const fog = createModelFog(scene, renderer.outputColorSpace);
   const frame = createModelDraw(renderer, scene, camera, fog);
-  const lighting = createModelLighting(renderer, theme, {fog, glow: frame});
+  const lighting = createModelLighting(renderer, theme, {fog, output: frame});
   scene.add(...lighting.lights);
   // The stage's own aids (floor, grid, rig, markers) take no fog.
   if (policy.floor) {

@@ -39,7 +39,7 @@ describe('the view\'s description', () => {
     // A host that changes a time's colours, and not which time is in force, keeps every choice too.
     const dusk = {id: 'dusk', label: 'Dusk', look: {backdrop: [0, 0, 0], key: {color: [1, 1, 1], strength: 1,
       direction: [0, 1, 0]}, ambient: {sky: [1, 1, 1], ground: [0, 0, 0], strength: 1}, shadow: [0, 0, 0], night: 1,
-      aids: {floor: [0, 0, 0], share: 1}, fog: null, glow: null}};
+      aids: {floor: [0, 0, 0], share: 1}, fog: null, toneCurve: null, glow: null}};
     const tinted = modelStageDescription({...host, lighting: {...host.lighting, times: [dusk]}});
     assert.equal(modelPreviewChoices(held, tinted), held);
     const relit = modelStageDescription({...host, lighting: {time: 'dark', times: []}});

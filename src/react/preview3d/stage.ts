@@ -16,6 +16,9 @@ import {prepareWhole} from './commit.ts';
 import {ModelStageRefusal} from './refusal.ts';
 
 const asError = (error: unknown) => error instanceof Error ? error : new Error(String(error));
+// Where each of the stage's times sits in its one typed array: the last applied frame's, the presentation time, and
+// the wall clock at the last frame, in milliseconds.
+const STAGE_TIME = Object.freeze({appliedFrame: 0, presentation: 1, lastFrame: 2});
 export const MODEL_STAGE_TEXT = Object.freeze({
   notReady: 'The preview model is not ready.', disposed: 'The preview has been disposed.',
   external: 'Runtime presentation requires an external clock.',
@@ -38,10 +41,12 @@ export function createModelStage(
   const actors = createModelActorSet(load, (asset, declaration) => createModelActor(asset, declaration, context));
   const parts = createModelStageParts(stage);
   let applied: ModelStageDescription | undefined;
-  let disposed = false, lastTime = performance.now(), frame = 0;
+  let disposed = false, frame = 0;
   // The stage's one presentation time. Under the external clock only setFrame moves it; under the local clock the
   // elapsed time does, unless reduced motion or a hidden page holds it. Every clip on the local clock moves with it.
-  let appliedFrameSeconds = 0, presentationSeconds = 0;
+  // The times live in one typed array made here, so writing them every frame boxes no number.
+  const times = new Float64Array(Object.keys(STAGE_TIME).length);
+  times[STAGE_TIME.lastFrame] = performance.now();
   // Why the local clock holds, read from the page as it is now through one media query the stage keeps.
   const motion = window.matchMedia(REDUCED_MOTION_QUERY);
   const hold = () => modelLocalHold(motion.matches, document.hidden);
@@ -75,7 +80,7 @@ export function createModelStage(
     setDescription,
     setFrame(value) {
       if (policy.clock !== 'external') throw new ModelStageRefusal(MODEL_STAGE_TEXT.external);
-      appliedFrameSeconds = applyModelFrame(actors.actors, value);
+      times[STAGE_TIME.appliedFrame] = applyModelFrame(actors.actors, value);
     },
     resetCamera: () => parts.resetCamera(current().applied),
     snapshot() {
@@ -99,16 +104,18 @@ export function createModelStage(
       };
     },
   };
-  // The frame loop allocates nothing: every value it writes has a home made when the stage or a description was.
+  // The frame loop makes no object, array or closure: every value it writes has a home made when the stage or a
+  // description was. Numbers it hands to calls (the elapsed time, each playback's advance) can still be boxed by V8:
+  // about 0.2 KB a frame, measured with one actor.
   const animate = (now: number) => {
-    const previous = presentationSeconds;
-    presentationSeconds = policy.clock === 'external' ? appliedFrameSeconds :
-      presentationSeconds + modelLocalAdvance(now - lastTime, hold());
-    lastTime = now;
+    const previous = times[STAGE_TIME.presentation];
+    times[STAGE_TIME.presentation] = policy.clock === 'external' ? times[STAGE_TIME.appliedFrame] :
+      previous + modelLocalAdvance(now - times[STAGE_TIME.lastFrame], hold());
+    times[STAGE_TIME.lastFrame] = now;
     const drawn = actors.actors;
     for (let index = 0; index < drawn.length; index++) {
       const actor = drawn[index];
-      actor.playback.update(presentationSeconds - previous);
+      actor.playback.update(times[STAGE_TIME.presentation] - previous);
       actor.placement.updateMatrixWorld(true);
       actor.rig.update();
     }

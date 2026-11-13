@@ -3,6 +3,8 @@ import {MODEL_STAGE as settings} from './model.ts';
 import type {ModelStageDisplay, ModelStageTheme} from './model.ts';
 import {modelObjectBounds, type ModelPart} from './asset.ts';
 
+// A link is drawn as one line: two ends of three coordinates each.
+const LINK_FLOATS = 6;
 const renderable = (node: THREE.Object3D) =>
   node instanceof THREE.Mesh || node instanceof THREE.Line || node instanceof THREE.Points;
 const visibleInTree = (node: THREE.Object3D): boolean => node.visible && (!node.parent || visibleInTree(node.parent));
@@ -46,7 +48,7 @@ export function createModelRig(asset: THREE.Object3D, theme: ModelStageTheme, pa
   const root = new THREE.Group();
   root.visible = false;
   const lines = new THREE.LineSegments(new THREE.BufferGeometry().setAttribute('position',
-    new THREE.BufferAttribute(new Float32Array(links.length * 6), 3)),
+    new THREE.BufferAttribute(new Float32Array(links.length * LINK_FLOATS), 3)),
   new THREE.LineBasicMaterial({color: theme.colors.teal, depthTest: false, depthWrite: false, toneMapped: false,
     fog: false}));
   lines.renderOrder = 1;
@@ -66,7 +68,7 @@ export function createModelRig(asset: THREE.Object3D, theme: ModelStageTheme, pa
   const unit = new THREE.Quaternion(), scale = new THREE.Vector3(1, 1, 1);
   const position = new THREE.Vector3(), other = new THREE.Vector3();
   const matrix = new THREE.Matrix4();
-  const ends = lines.geometry.getAttribute('position');
+  const ends = lines.geometry.getAttribute('position'), endPositions = ends.array;
   return {
     root,
     /** The asset's renderables and their authored visibility; the actor writes their visibility, the rig reads it. */
@@ -79,7 +81,8 @@ export function createModelRig(asset: THREE.Object3D, theme: ModelStageTheme, pa
       root.visible = value !== 'model';
       for (const {marker} of parts) marker.visible = root.visible;
     },
-    // Runs every frame, so it writes into what the rig already holds and allocates nothing.
+    // Runs every frame, so it writes into what the rig already holds and makes no object, array or closure. The line
+    // ends are written straight into their typed array: handing coordinates to a call can box each one.
     update() {
       for (let index = 0; index < bones.length; index++) {
         joints.setMatrixAt(index, matrix.compose(bones[index].getWorldPosition(position), unit, scale));
@@ -88,8 +91,13 @@ export function createModelRig(asset: THREE.Object3D, theme: ModelStageTheme, pa
       for (let index = 0; index < links.length; index++) {
         links[index][0].getWorldPosition(position);
         links[index][1].getWorldPosition(other);
-        ends.setXYZ(index * 2, position.x, position.y, position.z);
-        ends.setXYZ(index * 2 + 1, other.x, other.y, other.z);
+        const at = index * LINK_FLOATS;
+        endPositions[at] = position.x;
+        endPositions[at + 1] = position.y;
+        endPositions[at + 2] = position.z;
+        endPositions[at + 3] = other.x;
+        endPositions[at + 4] = other.y;
+        endPositions[at + 5] = other.z;
       }
       ends.needsUpdate = true;
       for (let index = 0; index < parts.length; index++) {

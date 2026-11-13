@@ -14,9 +14,9 @@ const theme: ModelStageTheme = recorded.theme;
 function fixture() {
   let clear: THREE.ColorRepresentation = 0;
   const scene = new THREE.Scene();
-  const glows: unknown[] = [];
+  const outputs: unknown[] = [];
   const lighting = createModelLighting({setClearColor: color => {clear = color;}}, theme,
-    {fog: createModelFog(scene, THREE.SRGBColorSpace), glow: {set: value => {glows.push(value);}}});
+    {fog: createModelFog(scene, THREE.SRGBColorSpace), output: {set: (curve, glow) => {outputs.push([curve, glow]);}}});
   const floor = new THREE.MeshStandardMaterial();
   lighting.floor(floor);
   const aid = new THREE.MeshBasicMaterial({color: '#ffffff'});
@@ -26,13 +26,13 @@ function fixture() {
   const read = () => ({backdrop: rgb(new THREE.Color(clear)), ambient: {sky: rgb(ambient.color),
     ground: rgb(ambient.groundColor), intensity: ambient.intensity}, key: {color: rgb(key.color),
     intensity: key.intensity, position: key.position.toArray()}, floor: rgb(floor.color), aid: rgb(aid.color)});
-  return {lighting, read, scene, glows};
+  return {lighting, read, scene, outputs};
 }
 const at = (time: string, times: readonly unknown[] = []) => ({time, times}) as never;
 const dusk: ModelStageTime = {id: 'dusk', label: 'Dusk', look: {backdrop: [0.2, 0.1, 0.3],
   key: {color: [1, 0.5, 0], strength: 1.5, direction: [-2, 1, 0]},
   ambient: {sky: [0.4, 0.2, 0.5], ground: [0.1, 0, 0.2], strength: 0.75}, shadow: [0.15, 0.1, 0.25], night: 0.5,
-  aids: {floor: [0.3, 0.2, 0.1], share: 0.5}, fog: null, glow: null}};
+  aids: {floor: [0.3, 0.2, 0.1], share: 0.5}, fog: null, toneCurve: null, glow: null}};
 
 describe('stage lighting', () => {
   it('draws Light and Dark with exactly the values they had before the look became data, and no fog', () => {
@@ -72,12 +72,20 @@ describe('stage lighting', () => {
     assert.equal(scene.fog, null);
   });
 
-  it('hands a time\'s glow to the draw, and none for a time without', () => {
-    const {lighting, glows} = fixture();
+  it('hands a time\'s tone curve and glow to the draw: Light and Dark keep the curve the stage always used', () => {
+    const {lighting, outputs} = fixture();
     const glow = {threshold: 1.5, strength: 0.8, radius: 0.4};
     lighting.set(at('dusk', [{...dusk, look: {...dusk.look, glow}}]));
-    lighting.set(at(MODEL_STAGE_TIME.light));
-    assert.deepEqual(glows, [null, glow, null]);
+    lighting.set(at(MODEL_STAGE_TIME.dark));
+    assert.deepEqual(outputs, [['aces-filmic', null], [null, glow], ['aces-filmic', null]]);
+  });
+
+  it('refuses a time with a tone curve and glow, by name', () => {
+    const look = {...dusk.look, toneCurve: 'aces-filmic', glow: {threshold: 1, strength: 1, radius: 0}};
+    assert.throws(() => modelStageLighting(at('dusk', [{...dusk, look}])),
+      /Time dusk: look: a time with a tone curve and glow: not built/);
+    assert.throws(() => modelStageLighting(at('dusk', [{...dusk, look: {...dusk.look, toneCurve: 'reinhard'}}])),
+      /Time dusk: look.toneCurve is one of aces-filmic, or null/);
   });
 
   it('states where each built-in time sits between day and night, and its shadow colour', () => {
@@ -111,7 +119,7 @@ describe('stage lighting', () => {
   it('reads the theme colours Light is made of as #rrggbb, and refuses any other form by name', () => {
     assert.throws(() => createModelLighting({setClearColor: () => undefined},
       {colors: {...theme.colors, surface: 'rgb(1, 2, 3)'}},
-      {fog: {set: () => undefined}, glow: {set: () => undefined}}),
+      {fog: {set: () => undefined}, output: {set: () => undefined}}),
     /stage theme's surface must be a #rrggbb colour/);
   });
 

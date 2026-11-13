@@ -19,9 +19,14 @@ export interface ModelStageLook {
   readonly aids: {readonly floor: ModelColor; readonly share: number};
   /** The time's fog, or null for none. How its fields combine is the stage's rule, stated once in fog.ts. */
   readonly fog: ModelStageFog | null;
+  /** The curve that maps the frame's light to the screen, or null for none: colours come out as stated. */
+  readonly toneCurve: ModelStageToneCurve | null;
   /** The time's glow, or null for none: what is brighter than the threshold blooms (draw.ts). */
   readonly glow: ModelStageGlow | null;
 }
+/** The tone curves the stage can draw: the one it has always used. */
+export const MODEL_STAGE_TONE_CURVE = Object.freeze({acesFilmic: 'aces-filmic'} as const);
+export type ModelStageToneCurve = typeof MODEL_STAGE_TONE_CURVE[keyof typeof MODEL_STAGE_TONE_CURVE];
 /**
  * Glow: the linear luminance above which a pixel blooms, before tone mapping; how strongly the bloom is added back; and
  * how far it spreads, from 0 (tight) up. Whether a threshold blooms lit surfaces is a judgement about a picture.
@@ -34,7 +39,7 @@ export interface ModelStageFog {
   readonly height: {readonly base: number; readonly top: number; readonly strength: number} | null;
 }
 export const MODEL_STAGE_LOOK_FIELDS = Object.freeze({
-  look: ['backdrop', 'key', 'ambient', 'shadow', 'night', 'aids', 'fog', 'glow'],
+  look: ['backdrop', 'key', 'ambient', 'shadow', 'night', 'aids', 'fog', 'toneCurve', 'glow'],
   key: ['color', 'strength', 'direction'], ambient: ['sky', 'ground', 'strength'], aids: ['floor', 'share'],
   fog: ['near', 'far', 'height'], reach: ['distance', 'color'], height: ['base', 'top', 'strength'],
   glow: ['threshold', 'strength', 'radius'],
@@ -43,6 +48,11 @@ export const MODEL_STAGE_FOG_REFUSAL = Object.freeze({
   near: (where: string) => `${where}.near.distance must be greater than 0.`,
   far: (where: string) => `${where}.far.distance must be greater than its near distance.`,
   top: (where: string) => `${where}.top must be above its base.`,
+});
+export const MODEL_STAGE_LOOK_REFUSAL = Object.freeze({
+  curve: (where: string) =>
+    `${where}.toneCurve is one of ${Object.values(MODEL_STAGE_TONE_CURVE).join(', ')}, or null.`,
+  curvedGlow: (where: string) => `${where}: a time with a tone curve and glow: not built.`,
 });
 const fields = MODEL_STAGE_LOOK_FIELDS, UNBOUNDED = Number.POSITIVE_INFINITY;
 
@@ -83,12 +93,23 @@ function glow(value: unknown, where: string): ModelStageGlow | null {
   return Object.freeze({threshold, strength, radius});
 }
 
+function toneCurve(value: unknown, where: string): ModelStageToneCurve | null {
+  if (value === null) return null;
+  const curve = Object.values(MODEL_STAGE_TONE_CURVE).find(candidate => candidate === value);
+  if (!curve) throw new ModelStageRefusal(MODEL_STAGE_LOOK_REFUSAL.curve(where));
+  return curve;
+}
+
 /** One look, checked whole; `where` names it in every refusal, as `Time dusk: look`. */
 export function modelStageLook(value: unknown, where: string): ModelStageLook {
   const look = modelRecord(value, fields.look, where);
   const key = modelRecord(look.key, fields.key, `${where}.key`);
   const ambient = modelRecord(look.ambient, fields.ambient, `${where}.ambient`);
   const aids = modelRecord(look.aids, fields.aids, `${where}.aids`);
+  // Glow is added to the frame the curve-less draw shows; under a curve no pipeline yet keeps the rest unchanged.
+  if (look.toneCurve !== null && look.glow !== null) {
+    throw new ModelStageRefusal(MODEL_STAGE_LOOK_REFUSAL.curvedGlow(where));
+  }
   return Object.freeze({
     backdrop: modelColor(look.backdrop, `${where}.backdrop`),
     key: Object.freeze({color: modelColor(key.color, `${where}.key.color`),
@@ -102,6 +123,7 @@ export function modelStageLook(value: unknown, where: string): ModelStageLook {
     aids: Object.freeze({floor: modelColor(aids.floor, `${where}.aids.floor`),
       share: modelNumber(aids.share, `${where}.aids.share`, 0, 1)}),
     fog: fog(look.fog, `${where}.fog`),
+    toneCurve: toneCurve(look.toneCurve, `${where}`),
     glow: glow(look.glow, `${where}.glow`),
   });
 }

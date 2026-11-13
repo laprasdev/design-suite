@@ -1,5 +1,5 @@
 import {modelColorOfHex} from './colorModel.ts';
-import {modelStageLook, type ModelStageLook} from './lookModel.ts';
+import {MODEL_STAGE_TONE_CURVE, modelStageLook, type ModelStageLook} from './lookModel.ts';
 import type {ModelVector} from './placementModel.ts';
 import {modelRecord} from './recordModel.ts';
 import {ModelStageRefusal} from './refusal.ts';
@@ -58,10 +58,11 @@ export function modelStageBuiltInTimes(colors: ModelStageThemeColors): readonly 
   const looks: Record<ModelStageBuiltInTime, ModelStageLook> = {
     light: {backdrop: stage, key: {color: text, strength: STAGE_LIGHT.key, direction: STAGE_LIGHT.direction},
       ambient: {sky: text, ground: surface, strength: STAGE_LIGHT.ambient}, shadow: surface, night: 0,
-      aids: {floor: surface, share: 1}, fog: null, glow: null},
+      aids: {floor: surface, share: 1}, fog: null, toneCurve: MODEL_STAGE_TONE_CURVE.acesFilmic, glow: null},
     dark: {backdrop, ambient: {sky: light, ground: backdrop, strength: STAGE_LIGHT.ambient * DARK.lightShare},
       key: {color: light, strength: STAGE_LIGHT.key * DARK.lightShare, direction: STAGE_LIGHT.direction},
-      shadow: backdrop, night: 1, aids: {floor, share: DARK.aidShare}, fog: null, glow: null},
+      shadow: backdrop, night: 1, aids: {floor, share: DARK.aidShare}, fog: null,
+      toneCurve: MODEL_STAGE_TONE_CURVE.acesFilmic, glow: null},
   };
   return Object.freeze(MODEL_STAGE_BUILT_IN_TIMES.map(({id, label}) =>
     Object.freeze({id, label, look: modelStageLook(looks[id], `Time ${id}: look`)})));

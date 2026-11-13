@@ -3,7 +3,7 @@ import {describe, it} from 'node:test';
 import * as THREE from 'three';
 import {createModelFog} from '../src/react/preview3d/fog.ts';
 import {modelStageLook, type ModelStageFog, type ModelStageLook} from '../src/react/preview3d/lookModel.ts';
-import {modelMaterialChanges, type ModelShader} from '../src/react/preview3d/shading.ts';
+import {extendModelMaterials, modelMaterialChanges, type ModelShader} from '../src/react/preview3d/shading.ts';
 import {makeActor} from './preview3dActorFixture.ts';
 
 const FOG: ModelStageFog = {near: {distance: 8, color: [0.22, 0.14, 0.24]},
@@ -72,7 +72,7 @@ describe('the stage\'s fog', () => {
   });
 
   it('adds only lines inside USE_FOG, so with no fog every program is three\'s own', () => {
-    for (const name of ['physical', 'standard', 'basic', 'lambert'] as const) {
+    for (const name of ['physical', 'standard', 'basic', 'lambert', 'points'] as const) {
       const shader = program(name), fog = createModelFog(new THREE.Scene(), THREE.SRGBColorSpace);
       fog.change.apply(shader);
       assert.notEqual(shader.fragmentShader, THREE.ShaderLib[name].fragmentShader, name);
@@ -80,6 +80,19 @@ describe('the stage\'s fog', () => {
       assert.equal(withoutFog(shader.fragmentShader).replace('#include <fog_fragment>', ''),
         withoutFog(THREE.ShaderLib[name].fragmentShader).replace('#include <fog_fragment>', ''), name);
     }
+  });
+
+  it('reaches a model\'s lines and points as well as its meshes', () => {
+    const root = new THREE.Group(), fog = createModelFog(new THREE.Scene(), THREE.SRGBColorSpace);
+    root.add(new THREE.Line(new THREE.BufferGeometry(), new THREE.LineBasicMaterial()),
+      new THREE.Points(new THREE.BufferGeometry(), new THREE.PointsMaterial()));
+    extendModelMaterials(root, [fog.change]);
+    root.traverse(node => {
+      if (node instanceof THREE.Line || node instanceof THREE.Points) {
+        assert.deepEqual(modelMaterialChanges(node.material as THREE.Material).map(({key}) => key),
+          ['model-stage-fog']);
+      }
+    });
   });
 
   it('reaches a file\'s own materials, and none of the stage\'s aids', () => {
@@ -99,7 +112,7 @@ describe('the stage\'s fog', () => {
   it('refuses a fog whose distances or height cannot be drawn, by its path', () => {
     const look = (fog: unknown) => ({backdrop: [0, 0, 0], key: {color: [1, 1, 1], strength: 1, direction: [0, 1, 0]},
       ambient: {sky: [1, 1, 1], ground: [0, 0, 0], strength: 1}, shadow: [0, 0, 0], night: 0,
-      aids: {floor: [0, 0, 0], share: 1}, fog, glow: null}) as unknown as ModelStageLook;
+      aids: {floor: [0, 0, 0], share: 1}, fog, toneCurve: null, glow: null}) as unknown as ModelStageLook;
     assert.equal(modelStageLook(look(null), 'L').fog, null);
     assert.deepEqual(modelStageLook(look(FOG), 'L').fog, FOG);
     assert.throws(() => modelStageLook(look({...FOG, near: {...FOG.near, distance: 0}}), 'L'),
@@ -119,7 +132,7 @@ describe('the stage\'s fog', () => {
     const glow = {threshold: 0.2, strength: 3, radius: 0};
     const look = (value: unknown) => ({...modelStageLook({backdrop: [0, 0, 0], key: {color: [1, 1, 1], strength: 1,
       direction: [0, 1, 0]}, ambient: {sky: [1, 1, 1], ground: [0, 0, 0], strength: 1}, shadow: [0, 0, 0], night: 0,
-    aids: {floor: [0, 0, 0], share: 1}, fog: null, glow: null}, 'L'), glow: value});
+    aids: {floor: [0, 0, 0], share: 1}, fog: null, toneCurve: null, glow: null}, 'L'), glow: value});
     assert.deepEqual(modelStageLook(look(glow), 'L').glow, glow);
     assert.throws(() => modelStageLook(look({...glow, threshold: -1}), 'L'), /L.glow.threshold must be a finite/);
     assert.throws(() => modelStageLook(look({...glow, strength: Infinity}), 'L'), /L.glow.strength must be a finite/);

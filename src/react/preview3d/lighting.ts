@@ -28,15 +28,15 @@ function stageAids(objects: readonly THREE.Object3D[]) {
   };
 }
 
-/** The parts of a look the scene owns: its fog, and the draw that adds its glow. */
+/** The parts of a look the scene owns: its fog, and the draw that applies its tone curve and adds its glow. */
 export interface ModelLookLayers {
   readonly fog: Pick<ModelFog, 'set'>;
-  readonly glow: Pick<ModelDraw, 'set'>;
+  readonly output: Pick<ModelDraw, 'set'>;
 }
-// The stage's backdrop, floor, two lights, unlit aids, fog and glow, as the look of one time at a time. A look is
-// written into the same objects every time: changing a colour or a strength allocates nothing and compiles nothing;
-// only fog arriving or leaving recompiles the programs that take it, and glow arriving or leaving makes or frees its
-// targets.
+// The stage's backdrop, floor, two lights, unlit aids, fog, tone curve and glow, as the look of one time at a time. A
+// look is written into the same objects every time: changing a colour or a strength allocates nothing and compiles
+// nothing; fog or a tone curve arriving or leaving recompiles the programs it reaches, once, and glow arriving or
+// leaving makes or frees its targets.
 export function createModelLighting(renderer: Pick<THREE.WebGLRenderer, 'setClearColor'>, theme: ModelStageTheme,
   layers: ModelLookLayers) {
   const builtIn = modelStageBuiltInTimes(theme.colors);
@@ -57,7 +57,7 @@ export function createModelLighting(renderer: Pick<THREE.WebGLRenderer, 'setClea
     for (const floor of floors) srgb(floor.color, look.aids.floor);
     for (const hold of aids) hold(look.aids.share);
     layers.fog.set(look.fog);
-    layers.glow.set(look.glow);
+    layers.output.set(look.toneCurve, look.glow);
   };
   apply(time.look);
   return {

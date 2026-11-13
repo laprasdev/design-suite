@@ -39,11 +39,15 @@ export function modelMaterialChanges(material: THREE.Material): readonly ModelSh
   return changes;
 }
 
-/** Every material under an object, each once, extended with these changes; each must compile three's own program. */
+/**
+ * Every material under an object, each once, extended with these changes; each must compile three's own program. A
+ * model's lines and points are drawn too, so they are extended like its meshes.
+ */
 export function extendModelMaterials(root: THREE.Object3D, changes: readonly ModelShaderChange[]) {
   const materials = new Set<THREE.Material>();
   root.traverse(node => {
-    if (node instanceof THREE.Mesh) for (const material of [node.material].flat()) materials.add(material);
+    if (!(node instanceof THREE.Mesh || node instanceof THREE.Line || node instanceof THREE.Points)) return;
+    for (const material of [node.material].flat()) materials.add(material);
   });
   for (const material of materials) {
     if (modelMaterialChanges(material).length) throw new Error(MODEL_SHADING_TEXT.foreign(material.name));
