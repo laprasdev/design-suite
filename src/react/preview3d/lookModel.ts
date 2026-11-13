@@ -19,7 +19,14 @@ export interface ModelStageLook {
   readonly aids: {readonly floor: ModelColor; readonly share: number};
   /** The time's fog, or null for none. How its fields combine is the stage's rule, stated once in fog.ts. */
   readonly fog: ModelStageFog | null;
+  /** The time's glow, or null for none: what is brighter than the threshold blooms (draw.ts). */
+  readonly glow: ModelStageGlow | null;
 }
+/**
+ * Glow: the linear luminance above which a pixel blooms, before tone mapping; how strongly the bloom is added back; and
+ * how far it spreads, from 0 (tight) up. Whether a threshold blooms lit surfaces is a judgement about a picture.
+ */
+export interface ModelStageGlow {readonly threshold: number; readonly strength: number; readonly radius: number}
 /** Fog by distance from the camera, from a near colour to a far one, and a height layer below a level, or null. */
 export interface ModelStageFog {
   readonly near: {readonly distance: number; readonly color: ModelColor};
@@ -27,9 +34,10 @@ export interface ModelStageFog {
   readonly height: {readonly base: number; readonly top: number; readonly strength: number} | null;
 }
 export const MODEL_STAGE_LOOK_FIELDS = Object.freeze({
-  look: ['backdrop', 'key', 'ambient', 'shadow', 'night', 'aids', 'fog'],
+  look: ['backdrop', 'key', 'ambient', 'shadow', 'night', 'aids', 'fog', 'glow'],
   key: ['color', 'strength', 'direction'], ambient: ['sky', 'ground', 'strength'], aids: ['floor', 'share'],
   fog: ['near', 'far', 'height'], reach: ['distance', 'color'], height: ['base', 'top', 'strength'],
+  glow: ['threshold', 'strength', 'radius'],
 } as const);
 export const MODEL_STAGE_FOG_REFUSAL = Object.freeze({
   near: (where: string) => `${where}.near.distance must be greater than 0.`,
@@ -66,6 +74,14 @@ function fog(value: unknown, where: string): ModelStageFog | null {
   return Object.freeze({near, far,
     height: record.height === null ? null : height(record.height, `${where}.height`)});
 }
+// Glow refuses only what is not a glow at all: a value that is not finite, or below 0.
+function glow(value: unknown, where: string): ModelStageGlow | null {
+  if (value === null) return null;
+  const record = modelRecord(value, fields.glow, where);
+  const [threshold, strength, radius] = fields.glow.map(name =>
+    modelNumber(record[name], `${where}.${name}`, 0, UNBOUNDED));
+  return Object.freeze({threshold, strength, radius});
+}
 
 /** One look, checked whole; `where` names it in every refusal, as `Time dusk: look`. */
 export function modelStageLook(value: unknown, where: string): ModelStageLook {
@@ -86,5 +102,6 @@ export function modelStageLook(value: unknown, where: string): ModelStageLook {
     aids: Object.freeze({floor: modelColor(aids.floor, `${where}.aids.floor`),
       share: modelNumber(aids.share, `${where}.aids.share`, 0, 1)}),
     fog: fog(look.fog, `${where}.fog`),
+    glow: glow(look.glow, `${where}.glow`),
   });
 }

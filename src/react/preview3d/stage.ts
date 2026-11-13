@@ -93,7 +93,7 @@ export function createModelStage(
         id: model.id, animation, time, playing, hold: held, ...model.rig.snapshot(), ...model.materials.snapshot(),
         lighting: stage.lighting.time,
         parts: points,
-        poses, triangles: stage.renderer.info.render.triangles, renderedModelMeshes: renderedMeshes.size,
+        poses, triangles: stage.triangles(), renderedModelMeshes: renderedMeshes.size,
         canvas: {width: stage.renderer.domElement.width, height: stage.renderer.domElement.height},
         actors: actors.actors.map(actor => actor.snapshot()), actorsPending: actors.pending,
       };

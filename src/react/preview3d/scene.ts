@@ -6,6 +6,7 @@ import {createModelFraming} from './camera.ts';
 import {disposeModelObject} from './asset.ts';
 import {createModelLighting} from './lighting.ts';
 import {createModelFog} from './fog.ts';
+import {createModelDraw} from './draw.ts';
 
 export function createModelScene(host: HTMLElement, theme: ModelStageTheme, policy: ModelStagePolicy) {
   const renderer = new THREE.WebGLRenderer({antialias: true, preserveDrawingBuffer: true});
@@ -20,7 +21,8 @@ export function createModelScene(host: HTMLElement, theme: ModelStageTheme, poli
   controls.maxDistance = settings.cameraMaximum;
   controls.maxPolarAngle = Math.PI / 2;
   const fog = createModelFog(scene, renderer.outputColorSpace);
-  const lighting = createModelLighting(renderer, theme, fog);
+  const frame = createModelDraw(renderer, scene, camera, fog);
+  const lighting = createModelLighting(renderer, theme, {fog, glow: frame});
   scene.add(...lighting.lights);
   // The stage's own aids (floor, grid, rig, markers) take no fog.
   if (policy.floor) {
@@ -44,6 +46,7 @@ export function createModelScene(host: HTMLElement, theme: ModelStageTheme, poli
     const {clientWidth: width, clientHeight: height} = host;
     if (!width || !height) return;
     renderer.setSize(width, height, false);
+    frame.resize();
     camera.aspect = width / height;
     camera.updateProjectionMatrix();
     framing.requestFit();
@@ -53,12 +56,14 @@ export function createModelScene(host: HTMLElement, theme: ModelStageTheme, poli
   resize();
   return {
     renderer, scene, camera, controls, lighting, fog, ...framing,
-    /** The frame's one draw: the scene through the camera, to the canvas. */
-    draw() {renderer.render(scene, camera);},
+    /** The frame's one draw, straight or through the look's glow; and the triangles its scene pass drew. */
+    draw: frame.draw,
+    triangles: () => frame.triangles,
     dispose() {
       observer.disconnect();
       controls.dispose();
       disposeModelObject(scene);
+      frame.dispose();
       renderer.dispose();
       renderer.domElement.remove();
     },

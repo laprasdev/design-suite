@@ -99,7 +99,7 @@ describe('the stage\'s fog', () => {
   it('refuses a fog whose distances or height cannot be drawn, by its path', () => {
     const look = (fog: unknown) => ({backdrop: [0, 0, 0], key: {color: [1, 1, 1], strength: 1, direction: [0, 1, 0]},
       ambient: {sky: [1, 1, 1], ground: [0, 0, 0], strength: 1}, shadow: [0, 0, 0], night: 0,
-      aids: {floor: [0, 0, 0], share: 1}, fog}) as unknown as ModelStageLook;
+      aids: {floor: [0, 0, 0], share: 1}, fog, glow: null}) as unknown as ModelStageLook;
     assert.equal(modelStageLook(look(null), 'L').fog, null);
     assert.deepEqual(modelStageLook(look(FOG), 'L').fog, FOG);
     assert.throws(() => modelStageLook(look({...FOG, near: {...FOG.near, distance: 0}}), 'L'),
@@ -113,5 +113,16 @@ describe('the stage\'s fog', () => {
     const {height, ...heightless} = FOG;
     assert.ok(height);
     assert.throws(() => modelStageLook(look(heightless), 'L'), /L.fog omits height/);
+  });
+
+  it('takes a glow as data, refusing only what is not a glow: a value below 0 or not finite', () => {
+    const glow = {threshold: 0.2, strength: 3, radius: 0};
+    const look = (value: unknown) => ({...modelStageLook({backdrop: [0, 0, 0], key: {color: [1, 1, 1], strength: 1,
+      direction: [0, 1, 0]}, ambient: {sky: [1, 1, 1], ground: [0, 0, 0], strength: 1}, shadow: [0, 0, 0], night: 0,
+    aids: {floor: [0, 0, 0], share: 1}, fog: null, glow: null}, 'L'), glow: value});
+    assert.deepEqual(modelStageLook(look(glow), 'L').glow, glow);
+    assert.throws(() => modelStageLook(look({...glow, threshold: -1}), 'L'), /L.glow.threshold must be a finite/);
+    assert.throws(() => modelStageLook(look({...glow, strength: Infinity}), 'L'), /L.glow.strength must be a finite/);
+    assert.throws(() => modelStageLook(look({...glow, bloom: 1}), 'L'), /L.glow does not state bloom/);
   });
 });

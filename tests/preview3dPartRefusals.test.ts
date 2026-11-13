@@ -55,7 +55,7 @@ test('materialModel.ts: an unknown inspection mode is a refusal and leaves the m
 
 test('lightingModel.ts: an unknown time is a refusal and leaves the light', () => {
   const lighting = createModelLighting({setClearColor: () => undefined}, theme,
-    createModelFog(new THREE.Scene(), THREE.SRGBColorSpace));
+    {fog: createModelFog(new THREE.Scene(), THREE.SRGBColorSpace), glow: {set: () => undefined}});
   const before = lighting.lights[0].intensity;
   refused(() => lighting.set({time: 'dusk', times: []}), /The lighting names time dusk/);
   assert.deepEqual([lighting.time, lighting.lights[0].intensity], ['light', before]);
