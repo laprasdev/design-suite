@@ -110,6 +110,22 @@ describe('stage lighting', () => {
       assert.deepEqual(fixture().lighting.lights.map(light => light.type), ['HemisphereLight', 'DirectionalLight']);
     });
 
+  it('shares with an unlit kind the look\'s key and ambient, in world space, as three hands its lit programs them',
+    () => {
+      const {lighting, set, shared} = fixture();
+      set(at('dusk', [dusk]));
+      const [ambient, key] = lighting.lights, {uniforms} = shared;
+      const value = (name: keyof typeof uniforms) => uniforms[name].value as THREE.Vector3 | THREE.Color;
+      // three's key shines from its position toward its target, the origin; its hemisphere's sky is its up, +Y.
+      assert.deepEqual([key.target.position.toArray(), ambient.position.toArray()], [[0, 0, 0], [0, 1, 0]]);
+      const near = (actual: THREE.Vector3 | THREE.Color, expected: THREE.Vector3 | THREE.Color) =>
+        assert.ok(actual.toArray().every((part, index) => Math.abs(part - expected.toArray()[index]) < 1e-12));
+      near(value('stageKeyDirection'), key.position.clone().normalize());
+      near(value('stageKeyColor'), key.color.clone().multiplyScalar(key.intensity));
+      near(value('stageAmbientSky'), ambient.color.clone().multiplyScalar(ambient.intensity));
+      near(value('stageAmbientGround'), ambient.groundColor.clone().multiplyScalar(ambient.intensity));
+    });
+
   it('states where each built-in time sits between day and night, and its shadow colour', () => {
     const [light, dark] = modelStageBuiltInTimes(theme.colors);
     assert.deepEqual([light.look.night, dark.look.night], [0, 1]);

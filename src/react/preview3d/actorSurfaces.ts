@@ -6,7 +6,7 @@ import {MODEL_ACTOR_SURFACES, type ModelActorSurfaces, type ModelSurfaceRecord, 
 import type {ModelMaterialOutput} from './surfaceOutputModel.ts';
 import {MODEL_SURFACE_PARAMETER, modelAttributeName, type ModelSurfaceKind} from './surfaceKindModel.ts';
 import type {ModelSurfaceMaterial, ModelSurfaceMaterials} from './surfaceMaterials.ts';
-import {MODEL_SURFACE_GLSL} from './surfaceProgram.ts';
+import {MODEL_SURFACE_GLSL} from './surfaceGlsl.ts';
 import {writeModelSurfaceColor} from './color.ts';
 import {createModelMaterialInspection} from './materials.ts';
 import {ModelStageRefusal} from './refusal.ts';

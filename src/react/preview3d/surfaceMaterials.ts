@@ -1,8 +1,8 @@
 import * as THREE from 'three';
 import type {ModelFileReader} from './files.ts';
 import {createModelFileCache} from './fileCache.ts';
-import {createModelSurfaceProgram, modelSurfaceSlots, MODEL_SURFACE_GLSL,
-  type ModelSurfaceProgram, type ModelSurfaceSlot} from './surfaceProgram.ts';
+import {createModelSurfaceProgram, type ModelSurfaceProgram} from './surfaceProgram.ts';
+import {MODEL_SURFACE_GLSL, modelSurfaceSlots, type ModelSurfaceSlot} from './surfaceGlsl.ts';
 import {MODEL_SURFACE_PARAMETER, type ModelSurfaceKind} from './surfaceKindModel.ts';
 import type {ModelSurfaceRecord, ModelSurfaceValue} from './surfaceModel.ts';
 import type {ModelTextures} from './textures.ts';
