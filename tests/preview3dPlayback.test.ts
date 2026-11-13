@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import {describe, it} from 'node:test';
 import * as THREE from 'three';
 import {createModelPlayback} from '../src/react/preview3d/playback.ts';
-import {MODEL_REST_POSE, MODEL_STAGE, MODEL_STAGE_HOLD, modelLocalAdvance, modelStagePolicy, type ModelStageClock}
+import {MODEL_REST_POSE, MODEL_STAGE, MODEL_STAGE_HOLD, modelLocalAdvance, modelLocalHold, modelStagePolicy,
+  type ModelStageClock}
   from '../src/react/preview3d/model.ts';
 import type {ModelStageActorAnimation} from '../src/react/preview3d/model.ts';
 import {held as heldClip, playing, REST} from './preview3dActorFixture.ts';
@@ -109,12 +110,13 @@ describe('an actor\'s host animation', () => {
 
   it('moves the local clock\'s one time by the capped elapsed time, and holds it under reduced motion or a hidden page',
     () => {
-      const moving = {reducedMotion: false, hidden: false};
-      assert.deepEqual(modelLocalAdvance(16, moving), {seconds: 0.016, hold: null});
-      assert.deepEqual(modelLocalAdvance(10_000, moving), {seconds: MODEL_STAGE.maxFrameDelta, hold: null});
-      assert.deepEqual(modelLocalAdvance(16, {...moving, reducedMotion: true}),
-        {seconds: 0, hold: MODEL_STAGE_HOLD.reducedMotion});
-      assert.deepEqual(modelLocalAdvance(16, {...moving, hidden: true}), {seconds: 0, hold: MODEL_STAGE_HOLD.hidden});
+      assert.equal(modelLocalHold(false, false), null);
+      assert.equal(modelLocalAdvance(16, null), 0.016);
+      assert.equal(modelLocalAdvance(10_000, null), MODEL_STAGE.maxFrameDelta);
+      assert.equal(modelLocalHold(true, true), MODEL_STAGE_HOLD.reducedMotion);
+      assert.equal(modelLocalHold(false, true), MODEL_STAGE_HOLD.hidden);
+      assert.equal(modelLocalAdvance(16, MODEL_STAGE_HOLD.reducedMotion), 0);
+      assert.equal(modelLocalAdvance(16, MODEL_STAGE_HOLD.hidden), 0);
     });
 
   it('accepts only the declared clock owners, stated', () => {

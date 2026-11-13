@@ -1,10 +1,10 @@
 import * as THREE from 'three';
-import {reducedMotion} from '../motion.ts';
-import {modelLocalAdvance, modelStagePolicy} from './model.ts';
+import {REDUCED_MOTION_QUERY} from '../motion.ts';
+import {modelLocalAdvance, modelLocalHold, modelStagePolicy} from './model.ts';
 import type {ModelStageController, ModelStageHold, ModelStageOptions, ModelStageTheme} from './model.ts';
 import {loadModelStageAsset} from './asset.ts';
 import {createModelScene} from './scene.ts';
-import {applyModelFrame, createModelActor} from './actor.ts';
+import {applyModelFrame, createModelActor, type ModelActor} from './actor.ts';
 import {createModelActorSet} from './actorSet.ts';
 import {modelRuntimeAssetProfile} from './actorModel.ts';
 import type {ModelStageActor} from './actorModel.ts';
@@ -42,9 +42,17 @@ export function createModelStage(
   // The stage's one presentation time. Under the external clock only setFrame moves it; under the local clock the
   // elapsed time does, unless reduced motion or a hidden page holds it. Every clip on the local clock moves with it.
   let appliedFrameSeconds = 0, presentationSeconds = 0;
-  // The local clock over this much elapsed time, and why it holds, read from the page as it is now.
-  const local = (elapsedMilliseconds: number) =>
-    modelLocalAdvance(elapsedMilliseconds, {reducedMotion: reducedMotion(), hidden: document.hidden});
+  // Why the local clock holds, read from the page as it is now through one media query the stage keeps.
+  const motion = window.matchMedia(REDUCED_MOTION_QUERY);
+  const hold = () => modelLocalHold(motion.matches, document.hidden);
+  // The actors the framing fits, taken when a description is shown, and the one box a due fit measures them into.
+  let framed: readonly ModelActor[] = [];
+  const fitted = new THREE.Box3();
+  const measure = () => {
+    fitted.makeEmpty();
+    for (const actor of framed) fitted.union(actor.bounds());
+    return fitted;
+  };
   const live = () => {if (disposed) throw new Error(MODEL_STAGE_TEXT.disposed);};
   const current = () => {
     const focused = actors.focused;
@@ -58,6 +66,8 @@ export function createModelStage(
       const changed = modelStageDescriptionChanges(applied, next), refit = modelStageRefit(applied, next);
       prepareWhole([staged.prepare, ...parts.prepares(next, changed, staged.actors)])();
       applied = next;
+      const ids = new Set(modelStageFramed(next).map(({id}) => id));
+      framed = staged.actors.filter(actor => ids.has(actor.id));
       if (refit) stage.requestFit();
     });
   };
@@ -78,9 +88,9 @@ export function createModelStage(
         if (node instanceof THREE.Bone) poses[node.name] = node.quaternion.toArray();
       });
       const {animation, time, playing} = model.playback.review();
-      const hold: ModelStageHold | null = policy.clock === 'external' ? null : local(0).hold;
+      const held: ModelStageHold | null = policy.clock === 'external' ? null : hold();
       return {
-        id: model.id, animation, time, playing, hold, ...model.rig.snapshot(), ...model.materials.snapshot(),
+        id: model.id, animation, time, playing, hold: held, ...model.rig.snapshot(), ...model.materials.snapshot(),
         lighting: stage.lighting.time,
         parts: points,
         poses, triangles: stage.renderer.info.render.triangles, renderedModelMeshes: renderedMeshes.size,
@@ -89,23 +99,21 @@ export function createModelStage(
       };
     },
   };
+  // The frame loop allocates nothing: every value it writes has a home made when the stage or a description was.
   const animate = (now: number) => {
     const previous = presentationSeconds;
     presentationSeconds = policy.clock === 'external' ? appliedFrameSeconds :
-      presentationSeconds + local(now - lastTime).seconds;
+      presentationSeconds + modelLocalAdvance(now - lastTime, hold());
     lastTime = now;
-    for (const actor of actors.actors) {
+    const drawn = actors.actors;
+    for (let index = 0; index < drawn.length; index++) {
+      const actor = drawn[index];
       actor.playback.update(presentationSeconds - previous);
       actor.placement.updateMatrixWorld(true);
       actor.rig.update();
     }
     // Before the first description is shown there is nothing to frame; a held pose frames no actor.
-    // The drawn actors are the applied description's, swapped in by the same commit.
-    const ids = new Set(applied ? modelStageFramed(applied).map(({id}) => id) : []);
-    const framed = actors.actors.filter(actor => ids.has(actor.id));
-    if (framed.length) {
-      stage.fit(() => framed.reduce((bounds, actor) => bounds.union(actor.bounds()), new THREE.Box3()));
-    }
+    if (framed.length) stage.fit(measure);
     if (stage.controls.enabled) stage.controls.update();
     stage.draw();
     frame = requestAnimationFrame(animate);

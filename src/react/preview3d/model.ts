@@ -76,17 +76,17 @@ export const MODEL_STAGE = Object.freeze({
   normalizedHeight: 2, markerRadius: 0.035, markerSegments: 12, jointRadiusRatio: 0.008, jointSegments: 8,
   millisecondsPerSecond: 1000, maxFrameDelta: 0.05,
 });
-/**
- * How the local clock's one presentation time moves in a frame: by the elapsed time, capped, or not at all, held for
- * a stated reason. Everything that moves with the local clock reads this time.
- */
-export function modelLocalAdvance(elapsedMilliseconds: number, held: {readonly reducedMotion: boolean;
-  readonly hidden: boolean}): {readonly seconds: number; readonly hold: ModelStageHold | null} {
-  if (held.reducedMotion) return {seconds: 0, hold: MODEL_STAGE_HOLD.reducedMotion};
-  if (held.hidden) return {seconds: 0, hold: MODEL_STAGE_HOLD.hidden};
-  return {seconds: Math.min(elapsedMilliseconds / MODEL_STAGE.millisecondsPerSecond, MODEL_STAGE.maxFrameDelta),
-    hold: null};
+/** Why the local clock's time is held still, from the page as it is now; null while it runs. */
+export function modelLocalHold(reducedMotion: boolean, hidden: boolean): ModelStageHold | null {
+  if (reducedMotion) return MODEL_STAGE_HOLD.reducedMotion;
+  return hidden ? MODEL_STAGE_HOLD.hidden : null;
 }
+/**
+ * How far the local clock's one presentation time moves in a frame: by the elapsed time, capped, or not at all while
+ * it is held. Everything that moves with the local clock reads this time.
+ */
+export const modelLocalAdvance = (elapsedMilliseconds: number, hold: ModelStageHold | null) => hold === null ?
+  Math.min(elapsedMilliseconds / MODEL_STAGE.millisecondsPerSecond, MODEL_STAGE.maxFrameDelta) : 0;
 export interface ModelStageAsset {
   id: string;
   path: string;

@@ -64,6 +64,7 @@ export function createModelRig(asset: THREE.Object3D, theme: ModelStageTheme, pa
   const unit = new THREE.Quaternion(), scale = new THREE.Vector3(1, 1, 1);
   const position = new THREE.Vector3(), other = new THREE.Vector3();
   const matrix = new THREE.Matrix4();
+  const ends = lines.geometry.getAttribute('position');
   return {
     root,
     /** The asset's renderables and their authored visibility; the actor writes their visibility, the rig reads it. */
@@ -76,18 +77,22 @@ export function createModelRig(asset: THREE.Object3D, theme: ModelStageTheme, pa
       root.visible = value !== 'model';
       for (const {marker} of parts) marker.visible = root.visible;
     },
+    // Runs every frame, so it writes into what the rig already holds and allocates nothing.
     update() {
-      bones.forEach((bone, index) => {
-        joints.setMatrixAt(index, matrix.compose(bone.getWorldPosition(position), unit, scale));
-      });
+      for (let index = 0; index < bones.length; index++) {
+        joints.setMatrixAt(index, matrix.compose(bones[index].getWorldPosition(position), unit, scale));
+      }
       joints.instanceMatrix.needsUpdate = true;
-      const ends = lines.geometry.getAttribute('position');
-      links.forEach(([joint, parent], index) => {
-        ends.setXYZ(index * 2, ...joint.getWorldPosition(position).toArray());
-        ends.setXYZ(index * 2 + 1, ...parent.getWorldPosition(other).toArray());
-      });
+      for (let index = 0; index < links.length; index++) {
+        links[index][0].getWorldPosition(position);
+        links[index][1].getWorldPosition(other);
+        ends.setXYZ(index * 2, position.x, position.y, position.z);
+        ends.setXYZ(index * 2 + 1, other.x, other.y, other.z);
+      }
       ends.needsUpdate = true;
-      for (const {marker, node} of parts) node.getWorldPosition(marker.position);
+      for (let index = 0; index < parts.length; index++) {
+        parts[index].node.getWorldPosition(parts[index].marker.position);
+      }
       root.updateMatrixWorld(true);
     },
     /** What the aid draws, with the model in Both: the drawn joints and parts; the model alone when it has none. */
