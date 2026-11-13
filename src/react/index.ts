@@ -17,8 +17,9 @@ export { PipRow, PipRowForm, type PipRowFormValue, type PipRowProps } from "./Pi
 export { Button, type ButtonProps, type ButtonVariant } from "./Button.tsx";
 export { Modal, type ModalProps } from './Modal.tsx';
 export { ModalRow, type ModalRowProps, type ModalTitleProps } from './ModalLayout.tsx';
-export { ModalElement, MODAL_TITLED_ATTRIBUTE, MODAL_ROW_LABELLED_ATTRIBUTE } from './modalElements.ts';
-export { PlayerIcon, PlayerStatusRings, type PlayerIconProps, type PhotoRing, type StatusRing, type RingSegment, type Hand, type ActiveHand } from './PlayerIcon.tsx';
+export { ModalElement, ModalPlacement, MODAL_TITLED_ATTRIBUTE, MODAL_ROW_LABELLED_ATTRIBUTE } from './modalElements.ts';
+export { PlayerIcon, PlayerStatusRings, type PlayerIconProps, type PhotoRing, type StatusRing, type RingSegment,
+  type Hand, type ActiveHand } from './PlayerIcon.tsx';
 export { focusableControls } from './focusable.ts';
 export { KEPT_ROOM_ATTRIBUTE, SCROLL_STEP_PX, modalGrowthLimit } from './modalRoom.ts';
 export { element, type ElementContract } from './elementContract.ts';
@@ -28,7 +29,9 @@ export { BarElement, BarSlotElement, barSlotsWithin } from './barElements.ts';
 export { ActionBar, type ActionBarProps, type ActionBarNotice } from './ActionBar.tsx';
 export { ActionBarElement, ActionBarSlotElement, BarParticipantElement } from './actionBarElements.ts';
 export { HoverDetail } from './HoverDetail.tsx';
-export { SegmentedControl, TEXT_SEGMENT_VARIANT, JOINED_SEGMENT_VARIANT, ICON_SEGMENT_VARIANT, SEGMENT_GROUP_START_ATTRIBUTE, type SegmentValue, type SegmentOption, type SingleSegmentProps } from './SegmentedControl.tsx';
+export { SegmentedControl, TEXT_SEGMENT_VARIANT, JOINED_SEGMENT_VARIANT, ICON_SEGMENT_VARIANT,
+  SEGMENT_GROUP_START_ATTRIBUTE, type SegmentValue, type SegmentOption,
+  type SingleSegmentProps } from './SegmentedControl.tsx';
 export { type SegmentPending } from './segmentPending.tsx';
 export { HeaderIconButton, HEADER_CONTROL_SIZE, GearIcon, SidePanelIcon, ResetIcon } from './HeaderIconButton.tsx';
 export { SegmentDefaultsContext, type SegmentDefaults } from './segmentContext.ts';
@@ -102,3 +105,8 @@ export { ModulationSocket } from './inputs/ModulationSocket.tsx';
 export {PlaybackArrows, PlayIcon, PauseIcon, FastForwardIcon, SuperFastForwardIcon} from './PlaybackIcons.tsx';
 
 export {useFontReadiness} from './useFontReadiness.ts';
+
+export {HeaderSky} from './sky/HeaderSky.tsx';
+export {ThemeMoon, type ThemeMoonProps} from './sky/ThemeMoon.tsx';
+
+export {BaseContainer, type BaseContainerProps} from '../synth/components/synth/base/BaseContainer.tsx';

@@ -46,7 +46,7 @@ Skins are data. `unity/Runtime/Resources/SharedSchema/Design/Synth` holds the ba
 
 ## Use
 
-Consumers install this package plus React, and import compiled ESM.
+Consumers install this package plus React and React DOM, and import compiled ESM.
 
 ```jsx
 import {createTheme} from '@looms/bloom-design';

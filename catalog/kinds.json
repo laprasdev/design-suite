@@ -29,7 +29,7 @@
     "GameViewTabs",
     "PageNavigation"
    ],
-   "note": "Inside an ActionBar it takes the text form by itself; a control's own props still win. Vertical, joined, tabs, fit and scroll make a rail of kinds: rows share its height, the chosen row's indicator slides, and an option's own style draws a line at its edge. ModuleGroups is the text form for a tab's groups, and inline it sits on a row of its own controls, such as a band's tag. Closed, a vertical joined rail floating in its space draws a rule above its first row and below its last. Cell accepts pixels or a CSS token reference (HEADER_CONTROL_SIZE for header controls), making every option a square of the given size with no padding, for an icon strip such as an event's triggers; it doesn't combine with fit. Wrap is the grid form, taking cell, columns and frame as one typed prop and writing the CSS variables its rules read itself; glyphShare and onPoint are top-level props, shared with the icons form. Glyph-wide columns spread edge to edge across the frame, so the first and last glyphs sit on its edges, and rows share its height. A glyph takes its glyphShare of the cell its columns and rows give it, each press area is that whole cell, and the frame is never shorter than its rows of the smallest cell. The consumer measures the columns against that cell from the frame, which wrap hands over, and the gap is the one the CSS lays and sizes by. onPoint reports the option hovered or focused; a control that reports keeps its options pointable when it can't be changed, and presses nothing then. The choice kind's icons form is a cluster of a few options each drawn by an icon, such as a relationship's type: every option a square of ICON_CLUSTER_BOX (φ above the grid's iconChoiceBox, the size a grid's icons reach in the smallest tile), its icon in the slot glyphShare gives it (the options' own icons fill that slot, and the hint names each one), the cells together at that size with the frame ending where they do, so the field takes only the room its cells need and the next field takes the rest of the row. The choice kind's grid form is that, in the icons look with iconChoiceBox as the smallest cell and iconChoiceGlyph as its glyph: many options each drawn by an icon, such as an element's affinity or nature, each naming itself in the page hint. Icons and grid are chosen from data whose options all provide icons, never as skin overrides. Pending is the single choice's saving form: pending={value,label} shows that option chosen at once, its text the loading Poké Ball (PokeballSpinner, sized to the text) beside the label in a status; the control is busy, ignores every press and fades its other options. The consumer owns the save and its confirmed value; without pending nothing changes."
+   "note": "Inside an ActionBar it takes the text form by itself; a control's own props still win. Vertical, joined, tabs, fit and scroll make a rail of kinds: rows share its height, the chosen row's indicator slides, and an option's own style draws a line at its edge. ModuleGroups is the text form for a tab's groups, and inline it sits on a row of its own controls, such as a band's tag. Closed, a vertical joined rail floating in its space draws a rule above its first row and below its last. Cell accepts pixels or a CSS token reference (HEADER_CONTROL_SIZE for header controls), making every option a square of the given size with no padding, for an icon strip such as an event's triggers; it doesn't combine with fit. Wrap is the grid form, taking cell, columns and frame as one typed prop and writing the CSS variables its rules read itself; glyphShare and onPoint are top-level props, shared with the icons form. Glyph-wide columns spread edge to edge across the frame, so the first and last glyphs sit on its edges, and rows share its height. A glyph takes its glyphShare of the cell its columns and rows give it, each press area is that whole cell, and the frame is never shorter than its rows of the smallest cell. The consumer measures the columns against that cell from the frame, which wrap hands over, and the gap is the one the CSS lays and sizes by. onPoint reports the option hovered or focused; a control that reports keeps its options pointable when it can't be changed, and presses nothing then. The choice kind's icons form is a cluster of a few options each drawn by an icon, such as a relationship's type: every option a square of ICON_CLUSTER_BOX (\u03c6 above the grid's iconChoiceBox, the size a grid's icons reach in the smallest tile), its icon in the slot glyphShare gives it (the options' own icons fill that slot, and the hint names each one), the cells together at that size with the frame ending where they do, so the field takes only the room its cells need and the next field takes the rest of the row. The choice kind's grid form is that, in the icons look with iconChoiceBox as the smallest cell and iconChoiceGlyph as its glyph: many options each drawn by an icon, such as an element's affinity or nature, each naming itself in the page hint. Icons and grid are chosen from data whose options all provide icons, never as skin overrides. Pending is the single choice's saving form: pending={value,label} shows that option chosen at once, its text the loading Pok\u00e9 Ball (PokeballSpinner, sized to the text) beside the label in a status; the control is busy, ignores every press and fades its other options. The consumer owns the save and its confirmed value; without pending nothing changes."
   },
   "Cycle": {
    "data": "enum, one option visible",
@@ -50,7 +50,7 @@
     "Boolean",
     "LabeledToggle"
    ],
-   "note": "Forms: cell, setting, switch. Open: is it a Cycle form in Unity, which has no enum entry but does have SynthBooleanShader?",
+   "note": "Forms: cell, setting, switch. Open: is it a Cycle form in Unity, which has no enum entry but does have SynthBooleanShader? The setting form can show only its selection mark; checkbox semantics and the toggle stay in Boolean.",
    "core": [
     "SettingToggle"
    ],
@@ -214,7 +214,8 @@
     "Modal",
     "ModalRow",
     "GooExpander",
-    "GraphDisplay"
+    "GraphDisplay",
+    "BaseContainer"
    ],
    "core": [
     "MenuCard",
@@ -222,7 +223,7 @@
     "AppHeader",
     "FooterTray"
    ],
-   "note": "Modal has a titled form: its title, ModalRow rows on two shared columns and an actions row that stays in view while the rows scroll. GooExpander offers tab and square fused shapes, and a crisp bordered panel form expanding from a rail edge without overshoot. A module's field is ModuleField, from the synth ModuleGrid: its form is the stack of control, reading and name sharing one centre, the control filling the cell's height, or one line as high as a yes/no line with the control, its name and its reading, for a tile too short to stack them."
+   "note": "Modal has a titled form: its title, ModalRow rows on two shared columns and an actions row that stays in view while the rows scroll. GooExpander offers tab and square fused shapes, and a crisp bordered panel form expanding from a rail edge without overshoot. A module's field is ModuleField, from the synth ModuleGrid: its form is the stack of control, reading and name sharing one centre, the control filling the cell's height, or one line as high as a yes/no line with the control, its name and its reading, for a tile too short to stack them. BaseContainer owns page card/link surfaces through container forms and tokens. Modal owns dialog, anchored help, media and ViewStack shells. GraphDisplay owns the graph surface and its optional pan/zoom viewport."
   },
   "SelectField": {
    "data": "enum, long list",
@@ -249,11 +250,10 @@
   "ActionBar": {
    "data": "the current actors and their state",
    "webFirst": "baseball core ActionBar",
-   "note": "Web-first. Optional notice shows feedback beneath the header with action-label typography and an optional recovery action. PageHeaderBar's centerRow puts the centre slot on its own row at phone width, its below slot holds content under the header (the notice, floating or not, sits beneath it), and floatingNotice floats the notice over the page under the header as the header-notices layer, so what is below never moves. PageFooter's compact drops its settings' labels at phone width; each setting keeps its label as the control's hover hint. Reaches C# once promoted in the language.",
+   "note": "Web-first. Optional notice shows feedback beneath the header with action-label typography and an optional recovery action. PageHeaderBar's centerRow puts the centre slot on its own row at phone width, its below slot holds content under the header (the notice, floating or not, sits beneath it), and floatingNotice floats the notice over the page under the header as the header-notices layer, so what is below never moves. PageFooter's compact drops its settings' labels at phone width; each setting keeps its label as the control's hover hint. Reaches C# once promoted in the language. HeaderSky composes constellations and ThemeMoon; ThemeMoon composes the SegmentedControl icons form for theme selection.",
    "core": [
     "ActionBar",
     "Bar",
-    "BarParticipants",
     "PlayerBarParticipants"
    ],
    "kit": [
@@ -265,7 +265,9 @@
     "HeaderBrand",
     "HeaderBack",
     "HeaderIconButton",
-    "PageFooter"
+    "PageFooter",
+    "HeaderSky",
+    "ThemeMoon"
    ]
   },
   "CaretButton": {
@@ -310,7 +312,7 @@
     "TextInput",
     "ModuleTextInput"
    ],
-   "note": "Single-line, multiline and credential fields use the same text control. Native input attributes retain browser password-manager and validation behavior."
+   "note": "Single-line, multiline and credential fields use the same text control. Native input attributes retain browser password-manager and validation behavior. Input and underline are theme forms of TextInput, including multiline and autosizing; ModuleTextInput supplies module layout to the same renderer."
   }
  }
 }

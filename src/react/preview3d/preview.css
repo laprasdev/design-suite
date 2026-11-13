@@ -1,10 +1,17 @@
 .model-preview {
   display:flex;flex-direction:column;gap:var(--field-gap);min-width:0;color:var(--text);
-  --button-padding-block:6px;--button-padding-inline:10px;
+  --button-padding-block:6px;--button-padding-inline:10px;--field-segment:4rem;
 }
 .model-preview-controls {display:flex;flex-direction:column;gap:var(--field-gap);min-width:0;}
-.model-preview-fields {display:flex;gap:var(--field-gap);min-width:0;}
-.model-preview-field {display:flex;flex:1;flex-direction:column;gap:4px;min-width:0;}
+.model-preview-fields {display:flex;flex-wrap:wrap;gap:var(--field-gap);min-width:0;}
+/* A field asks for one segment's width per share, so fields on one row keep segments of one width and a row too
+   narrow for that wraps. */
+.model-preview-field {
+  display:flex;flex:var(--field-share,1) 1 calc(var(--field-share,1) * var(--field-segment));
+  flex-direction:column;gap:4px;min-width:0;
+}
+/* A field of segments never squeezes a label, whatever its row. */
+.model-preview-choice {min-width:max-content;}
 .model-preview-field>span {color:var(--dim);font-size:var(--caption-size);}
 .model-preview-actions.action-bar {
   --bar-columns:auto minmax(0,1fr) auto;--action-bar-inset:0px;--bar-gap:var(--field-gap);

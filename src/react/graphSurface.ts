@@ -9,9 +9,12 @@ export function graphDots(color = 'var(--text)', zoom = 1): CSSProperties {
 /** Shared graph edge treatment. Apply to the background layer to keep nodes and ports crisp. */
 export type GraphEdge = 'left' | 'right' | 'top' | 'bottom';
 const ALL_EDGES: readonly GraphEdge[] = ['left', 'right', 'top', 'bottom'];
-export function graphEdgeFade(inset: number, edges: readonly GraphEdge[] = ALL_EDGES): CSSProperties {
-  const start = (edge: GraphEdge) => edges.includes(edge) ? `transparent,black ${inset}px` : 'black';
-  const end = (edge: GraphEdge) => edges.includes(edge) ? `black calc(100% - ${inset}px),transparent` : 'black';
+export function graphEdgeFade(inset: number | Partial<Record<GraphEdge, number | string>>,
+  edges: readonly GraphEdge[] = ALL_EDGES): CSSProperties {
+  const distance = (edge: GraphEdge) => {const value = typeof inset === 'number' ? inset : inset[edge] ?? 0;
+    return typeof value === 'number' ? `${value}px` : value;};
+  const start = (edge: GraphEdge) => edges.includes(edge) ? `transparent,black ${distance(edge)}` : 'black';
+  const end = (edge: GraphEdge) => edges.includes(edge) ? `black calc(100% - ${distance(edge)}),transparent` : 'black';
   const mask = `linear-gradient(to right,${start('left')},${end('right')}),`
     + `linear-gradient(to bottom,${start('top')},${end('bottom')})`;
   return {maskImage: mask, WebkitMaskImage: mask, maskComposite: 'intersect', WebkitMaskComposite: 'source-in'};

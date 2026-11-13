@@ -1,0 +1,8 @@
+.bd-graph-display.graph-canvas {overflow:hidden;cursor:grab;touch-action:none;}
+.bd-graph-display.graph-canvas:active {cursor:grabbing;}
+.graph-world {position:absolute;top:0;left:0;transform-origin:0 0;}
+.graph-world .bd-nodegraph-fit {overflow:visible;}
+.graph-corner {position:absolute;right:var(--graph-tools-right,28px);bottom:var(--graph-tools-bottom,22px);z-index:3;display:flex;flex-direction:column;align-items:flex-end;gap:8px;}
+.graph-corner:has(.graph-tools) {right:var(--graph-tools-right,18px);bottom:var(--graph-tools-bottom,18px);}
+.graph-tools {display:flex;align-items:center;gap:8px;}
+.graph-zoom {display:flex;gap:2px;--button-min-width:26px;--button-padding-block:2px;--button-padding-inline:6px;--label-value-size:12px;}

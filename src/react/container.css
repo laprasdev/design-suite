@@ -1,0 +1,4 @@
+.bd-container[data-container-form] {box-sizing:border-box;background:var(--container-background,var(--card));border:var(--line-width) solid var(--container-border,var(--line));border-radius:var(--container-radius,var(--r));box-shadow:var(--container-shadow,inset 0 1px 0 var(--bevel));padding:var(--container-padding,12px 14px);}
+.bd-container[data-container-form=flat] {background:transparent;border-color:transparent;box-shadow:none;}
+.bd-container[href] {color:var(--text);}
+.bd-container[href]:hover {color:var(--pink);border-color:var(--pink);}

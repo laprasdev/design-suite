@@ -4,11 +4,11 @@ import {MODEL_STAGE as settings} from './model.ts';
 import type {ModelStagePolicy, ModelStageTheme} from './model.ts';
 import {createModelFraming} from './camera.ts';
 import {disposeModelObject} from './asset.ts';
+import {createModelLighting} from './lighting.ts';
 
 export function createModelScene(host: HTMLElement, theme: ModelStageTheme, policy: ModelStagePolicy) {
   const renderer = new THREE.WebGLRenderer({antialias: true, preserveDrawingBuffer: true});
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, settings.pixelRatioLimit));
-  renderer.setClearColor(theme.colors.stage);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   host.append(renderer.domElement);
@@ -19,13 +19,12 @@ export function createModelScene(host: HTMLElement, theme: ModelStageTheme, poli
   controls.minDistance = settings.cameraMinimum;
   controls.maxDistance = settings.cameraMaximum;
   controls.maxPolarAngle = Math.PI / 2;
-  scene.add(new THREE.HemisphereLight(theme.colors.text, theme.colors.surface, settings.ambientIntensity));
-  const light = new THREE.DirectionalLight(theme.colors.text, settings.lightIntensity);
-  light.position.fromArray(settings.keyLightPosition);
-  scene.add(light);
+  const lighting = createModelLighting(renderer, theme);
+  scene.add(...lighting.lights);
   if (policy.floor) {
-    const floor = new THREE.Mesh(new THREE.CircleGeometry(settings.floorRadius, settings.floorSegments),
-      new THREE.MeshStandardMaterial({color: theme.colors.surface, roughness: 1}));
+    const surface = new THREE.MeshStandardMaterial({roughness: 1});
+    const floor = new THREE.Mesh(new THREE.CircleGeometry(settings.floorRadius, settings.floorSegments), surface);
+    lighting.floor(surface);
     floor.rotation.x = -Math.PI / 2;
     floor.position.y = settings.floorOffset;
     scene.add(floor);
@@ -35,6 +34,7 @@ export function createModelScene(host: HTMLElement, theme: ModelStageTheme, poli
       theme.colors.accentDeep, theme.colors.surfaceHi);
     grid.position.y = settings.floorOffset / 2;
     scene.add(grid);
+    lighting.attach([grid]);
   }
   const framing = createModelFraming(camera, controls, policy.orbit);
   const resize = () => {
@@ -49,7 +49,7 @@ export function createModelScene(host: HTMLElement, theme: ModelStageTheme, poli
   observer.observe(host);
   resize();
   return {
-    renderer, scene, camera, controls, ...framing,
+    renderer, scene, camera, controls, lighting, ...framing,
     dispose() {
       observer.disconnect();
       controls.dispose();

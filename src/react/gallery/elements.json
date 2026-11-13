@@ -233,6 +233,10 @@
       {
         "id": "input",
         "label": "Line"
+      },
+      {
+        "id": "underline",
+        "label": "Underline"
       }
     ]
   },

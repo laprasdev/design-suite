@@ -9,6 +9,7 @@
 // When the top view changes, the current view fades out and the new one fades in.
 // =====================================================
 import React, { useState, useEffect, type ReactNode } from "react";
+import {Modal} from './Modal.tsx';
 
 // A view on the stack: its key and its content.
 export interface StackView {
@@ -37,26 +38,15 @@ export function ViewStack({ views, onClose, className = "" }: ViewStackProps) {
     return () => clearTimeout(t);
   }, [top, displayed]);
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [onClose]);
-
   if (!displayed) return null;
   // The shown view stays current: its key's latest content, until another view replaces it.
   const shown = top && top.key === displayed.key ? top : displayed;
 
   return (
-    <div className="bd-vs-backdrop" onClick={onClose}>
-      <div
-        className={`bd-vs-modal${className ? " " + className : ""}`}
-        onClick={(e) => e.stopPropagation()}
-      >
+    <Modal open onClose={onClose} className={`bd-vs-modal${className ? " " + className : ""}`}>
         <div className="bd-vs-view" key={shown.key} data-leaving={leaving ? "true" : "false"}>
           {shown.node}
         </div>
-      </div>
-    </div>
+    </Modal>
   );
 }

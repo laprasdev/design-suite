@@ -8,19 +8,21 @@ export type LabelKind = "name" | "value" | "action";
 
 /** A text accent. kind: "name" (field name, uppercase/dim) | "value" (current
  *  value, preserves case, brighter). */
-export function Label({ kind = "name", children, className = "", ...rest }: HTMLAttributes<HTMLSpanElement> & { kind?: LabelKind }) {
+export function Label({ kind = "name", form = "text", children, className = "",
+  ...rest }: HTMLAttributes<HTMLSpanElement> & { kind?: LabelKind; form?: "text" | "pill" }) {
   return (
-    <span className={`bd-label bd-label--${kind}${className ? " " + className : ""}`} {...rest}>
+    <span data-label-form={form} className={`bd-label bd-label--${kind}${className ? " " + className : ""}`} {...rest}>
       {children}
     </span>
   );
 }
 
 /** An icon/glyph slot. Pass an <svg>, character, or image as children. */
-export function Glyph({ children, size = 14, className = "", ...rest }: HTMLAttributes<HTMLSpanElement> & { size?: number }) {
+export function Glyph({ children, size = 14, form = "glyph", pulse = false, className = "",
+  ...rest }: HTMLAttributes<HTMLSpanElement> & { size?: number; form?: "glyph" | "dot"; pulse?: boolean }) {
   return (
     <span
-      className={`bd-glyph${className ? " " + className : ""}`}
+      data-glyph-form={form} data-pulse={pulse || undefined} className={`bd-glyph${className ? " " + className : ""}`}
       style={{ width: size, height: size }}
       aria-hidden="true"
       {...rest}
@@ -41,7 +43,8 @@ export function Divider({ vertical = false, className = "" }: { vertical?: boole
 }
 
 /** A bordered box that frames a glyph/value (AccentKind.LightBox). */
-export function LightBox({ children, className = "", ...rest }: HTMLAttributes<HTMLSpanElement> & { children?: ReactNode }) {
+export function LightBox({ children, className = "",
+  ...rest }: HTMLAttributes<HTMLSpanElement> & { children?: ReactNode }) {
   return (
     <span className={`bd-lightbox${className ? " " + className : ""}`} {...rest}>
       {children}

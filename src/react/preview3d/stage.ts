@@ -83,6 +83,10 @@ export function createModelStage(
       environment = next;
       if (next) stage.scene.add(next.group);
     },
+    setLighting(value) {
+      if (disposed) throw new Error('The preview has been disposed.');
+      stage.lighting.set(value);
+    },
     setCamera: stage.setCamera,
     resetCamera: stage.resetCamera,
     snapshot() {
@@ -96,6 +100,7 @@ export function createModelStage(
       });
       return {
         id: source.id, ...model.playback.snapshot(), ...model.rig.snapshot(), ...model.materials.snapshot(),
+        lighting: stage.lighting.mode,
         attachmentPositions: Object.fromEntries(positions), attachmentProjections: Object.fromEntries(projections),
         poses, triangles: stage.renderer.info.render.triangles, renderedModelMeshes: renderedMeshes.size,
         canvas: {width: stage.renderer.domElement.width, height: stage.renderer.domElement.height},
@@ -132,6 +137,7 @@ export function createModelStage(
       if (runtimeMaterials) acquired.push(() => runtimeMaterials.dispose());
       const rig = createModelRig(asset.scene, theme, markers);
       acquired.push(() => {rig.root.removeFromParent(); disposeModelObject(rig.root);});
+      acquired.push(stage.lighting.attach([rig.root, ...markers.map(({marker}) => marker)]));
       stage.scene.add(placement, rig.root, ...markers.map(({marker}) => marker));
       const playback = createModelPlayback(asset.scene, asset.animations, policy.clock);
       loaded = {asset, placement, markers, rig, playback, materials, runtimeMaterials};

@@ -10,18 +10,19 @@
 import React, { type ButtonHTMLAttributes } from "react";
 import { Label, type LabelKind } from "./accents.tsx";
 
-export type ButtonVariant = "primary" | "ghost" | "accent" | "text" | "subtle";
+export type ButtonVariant = "primary" | "ghost" | "accent" | "text" | "subtle" | "navigation";
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
-  labelKind?: LabelKind;
+  labelKind?: LabelKind | "none";
   glow?: boolean;
 }
 
-export function Button({ variant = "ghost", labelKind = "action", glow = false, type = "button", className = "", children, ...rest }: ButtonProps) {
+export function Button({ variant = "ghost", labelKind = "action", glow = false, type = "button", className = "",
+  children, ...rest }: ButtonProps) {
   const classes = ["bd-btn", `bd-btn--${variant}`, glow && "bd-text-glow", className].filter(Boolean).join(" ");
   return (
     <button type={type} className={classes} {...rest}>
-      <Label kind={labelKind}>{children}</Label>
+      {labelKind === "none" ? children : <Label kind={labelKind}>{children}</Label>}
     </button>
   );
 }

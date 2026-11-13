@@ -1,24 +1,12 @@
-/* Modal — the one overlay primitive. A themed, centered box over a dimmed
-   backdrop that fades in on open and out on close. Behaviour is composed via
-   props, never subclassed:
-     · dismissible   → backdrop click / Esc calls onClose (default true)
-     · blocking      → while open, the page outside the modal is inert and focus
-                       moves into the dialog, returning where it was on close
-     · returnFocusRef → the invoking control, when opening disables or blurs it
-                        before the modal can capture document.activeElement
-     · ariaLabel     → the dialog's accessible name, or labelledBy → the id of
-                       the heading that names it
-     · keepRoomFor   → a selector for content that opens inside the dialog; the
-                       dialog keeps room for its height (useHeldTop)
-   Content is passed as children; given a `title`, ModalLayout sets them out as
-   rows (ModalRow) under it, above an `actions` row. The shell owns only the backdrop,
-   placement (useHeldTop) and fade, themed through host CSS custom properties. */
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefObject, type SyntheticEvent, type KeyboardEvent as ReactKeyboardEvent } from "react";
+/* Modal owns the shell for dialogs, contained teaching panels and anchored help.
+   Placement changes where it sits; every form keeps the same themed surface. */
+import { useEffect, useLayoutEffect, useRef, useState, type HTMLAttributes, type ReactNode, type RefObject, type SyntheticEvent, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import {focusableControls} from './focusable.ts';
+import {LayoutDimensions} from '../layout.ts';
 import {KEPT_ROOM_ATTRIBUTE,SCROLL_STEP_PX,keptRoom,modalGrowthLimit} from './modalRoom.ts';
 import { cssRect } from './cssZoom.ts';
 import { ModalLayout, type ModalTitleProps } from './ModalLayout.tsx';
-import { MODAL_TITLED_ATTRIBUTE } from './modalElements.ts';
+import { MODAL_TITLED_ATTRIBUTE, MODAL_PLACEMENT_ATTRIBUTE, ModalPlacement } from './modalElements.ts';
 const FADE_MS = 200;
 
 /* Keep a node mounted through its fade-out, returning [mounted, visible].
@@ -50,14 +38,7 @@ function inertOutside(node: HTMLElement) {
   return () => changed.forEach((sibling) => { sibling.inert = false; });
 }
 
-/* A dialog opens centred. Once a disclosure inside it is used (a control that
-   expands content, or a details summary), it holds its top edge: what opens or
-   closes beneath the control grows or shrinks the dialog downward with it, so the
-   control stays under the pointer, until the dialog's growth limit and the room
-   beneath run out and it scrolls within. A resize of its parent centres it again. A dialog
-   that keeps room for content (`keepRoomFor`) rests that much short of its maximum
-   height and is centred with the room beneath it, for its held growth to fill.
-   Returns the handlers that hold it and follow what a control opens. */
+// Hold the top after a disclosure opens, letting content grow downward and scroll.
 const DISCLOSURE = "[aria-expanded], summary", PLACED = ["alignSelf", "marginTop", "maxHeight", "marginBottom"] as const;
 // The dialog's top as laid out, without its entrance transform (a rise, and a scale
 // about its centre).
@@ -83,18 +64,7 @@ const moving = (node: Element) => node.getAnimations({ subtree: true }).some((an
 // The browser has clamped the dialog's scroll short of `scrollTop` to content that
 // got shorter: it rests at its furthest.
 const clamped = (node: HTMLElement, scrollTop: number) => node.scrollTop < scrollTop && node.scrollTop + node.clientHeight >= node.scrollHeight - SCROLL_STEP_PX;
-// At rest a dialog that keeps room watches its content's size; held, it follows
-// its content frame by frame while that moves, so it never measures a size
-// another component's resize observer is still changing. Its content can also
-// start to move after a frame in which nothing did: a box that resizes as the
-// content inside it settles does so from its own resize observer, after that
-// frame's follow, and a slow frame can see a whole opening finish unseen. Held, a
-// change inside it (its content, or a style such as that box's new height) is
-// followed from the next frame. A resize observer cannot watch for it: a box
-// resizing from its own observer would leave the dialog's notification
-// undelivered, an error in WebKit.
-// A held dialog: the height and content height it was held at, the content
-// height last followed, the scroll its control was used at, and its growth limit.
+// Follow content while it moves; release the hold only when the containing frame resizes.
 interface HeldDialog {
   height: number;
   content: number;
@@ -188,7 +158,8 @@ function useHeldTop(mounted: boolean, keepRoomFor: string | undefined, backdrop:
   return {hold, opened};
 }
 
-export type ModalProps = ModalTitleProps & {
+export type ModalProps = ModalTitleProps & Omit<HTMLAttributes<HTMLDivElement>, 'title'|'children'> & {
+  form?: "dialog" | "media";
   open: boolean;
   onClose?: () => void;
   dismissible?: boolean;
@@ -200,11 +171,20 @@ export type ModalProps = ModalTitleProps & {
   keepRoomFor?: string;
   className?: string;
   children: ReactNode;
+  placement?: (typeof ModalPlacement)[keyof typeof ModalPlacement];
+  panelRef?: RefObject<HTMLDivElement>;
 };
-export function Modal({ open, onClose, dismissible = true, dismissOnContent = false, blocking = false, returnFocusRef, ariaLabel, labelledBy, keepRoomFor, className = "", title, actions, children }: ModalProps) {
+export function Modal({
+  form = "dialog", open, onClose, dismissible = true, dismissOnContent = false, blocking = false, returnFocusRef,
+  ariaLabel, labelledBy, keepRoomFor, className = "", title, actions, children,
+  placement = ModalPlacement.VIEWPORT, panelRef, role = 'dialog',
+  onClick, onKeyDown, tabIndex, style, ...attributes
+}: ModalProps) {
   const [mounted, visible] = useFadeMount(open);
-  const backdrop = useRef<HTMLDivElement>(null), dialog = useRef<HTMLDivElement>(null), {hold, opened} = useHeldTop(mounted, keepRoomFor, backdrop, dialog);
-  const blocked = blocking && open && mounted;
+  const backdrop = useRef<HTMLDivElement>(null), ownDialog = useRef<HTMLDivElement>(null), dialog = panelRef ?? ownDialog;
+  const viewport = placement === ModalPlacement.VIEWPORT, anchored = placement === ModalPlacement.ANCHORED;
+  const {hold, opened} = useHeldTop(mounted && viewport, keepRoomFor, backdrop, dialog);
+  const blocked = blocking && open && mounted && viewport;
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
   const close = () => onCloseRef.current?.();
@@ -226,7 +206,7 @@ export function Modal({ open, onClose, dismissible = true, dismissOnContent = fa
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && close();
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open, interactive]);
+  }, [open, interactive, viewport]);
 
   useEffect(() => {
     const node = dialog.current, area = backdrop.current;
@@ -237,13 +217,23 @@ export function Modal({ open, onClose, dismissible = true, dismissOnContent = fa
   }, [blocked]);
 
   if (!mounted) return null;
-  return (
-    <div ref={backdrop} className={`sd-modal-bg${visible ? " sd-in" : ""}`} onClick={interactive ? close : undefined}>
-      <div ref={dialog} className={`sd-modal${className ? " " + className : ""}`} role="dialog" aria-modal="true" data-dismissible={interactive} {...{[MODAL_TITLED_ATTRIBUTE]: title !== undefined}}
-        aria-label={ariaLabel ?? title} aria-labelledby={labelledBy} tabIndex={blocking ? -1 : undefined} onClick={(e) => {e.stopPropagation();if(interactive&&dismissOnContent&&e.target instanceof Element&&!e.target.closest('button,a,input,textarea,select,label,summary,[role=button]'))close();}}
-        onPointerDownCapture={hold} onKeyDownCapture={hold} onClickCapture={opened} onKeyDown={containFocus}>
-        {title === undefined ? children : <ModalLayout title={title} actions={actions}>{children}</ModalLayout>}
-      </div>
-    </div>
-  );
+  const clickPanel: NonNullable<ModalProps['onClick']> = event => {
+    event.stopPropagation();
+    onClick?.(event);
+    const control = event.target instanceof Element &&
+      event.target.closest('button,a,input,textarea,select,label,summary,[role=button]');
+    if (!event.defaultPrevented && interactive && dismissOnContent && !control) close();
+  };
+  const panel = <div {...attributes} ref={dialog} className={`sd-modal${className ? " " + className : ""}`}
+    style={{'--sd-modal-radius':`${LayoutDimensions.radius.module}px`,...style}}
+    role={role} data-modal-form={form} aria-modal={viewport && role === 'dialog' ? true : undefined} data-dismissible={interactive}
+    {...{[MODAL_TITLED_ATTRIBUTE]: title !== undefined, [MODAL_PLACEMENT_ATTRIBUTE]: placement}}
+    aria-label={ariaLabel ?? title} aria-labelledby={labelledBy} tabIndex={tabIndex ?? (blocking ? -1 : undefined)}
+    onClick={clickPanel} onPointerDownCapture={viewport ? hold : undefined}
+    onKeyDownCapture={viewport ? hold : undefined} onClickCapture={viewport ? opened : undefined}
+    onKeyDown={event => { containFocus(event); onKeyDown?.(event); }}>
+    {title === undefined ? children : <ModalLayout title={title} actions={actions}>{children}</ModalLayout>}
+  </div>;
+  return anchored ? panel : <div ref={backdrop} className={`sd-modal-bg${visible ? " sd-in" : ""}`}
+    {...{[MODAL_PLACEMENT_ATTRIBUTE]: placement}} onClick={interactive ? close : undefined}>{panel}</div>;
 }

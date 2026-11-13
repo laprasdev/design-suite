@@ -57,12 +57,16 @@ export function StyleProvider({ children, persist = true, initialStyleName, pale
   const [persisted] = useState<Partial<PersistedStyleState>>(() => palette ? {} : initialStyleName
     ? {styleName: initialStyleName} : loadPersistedState());
 
-  const [savedStyleName, setStyleNameState] = useState(persisted.styleName && SKIN_FILES[persisted.styleName] ? persisted.styleName : DEFAULT_SKIN);
+  const [savedStyleName, setStyleNameState] = useState(persisted.styleName && SKIN_FILES[persisted.styleName]
+    ? persisted.styleName : DEFAULT_SKIN);
   const styleName = palette ?? savedStyleName;
   if (!SKIN_FILES[styleName]) throw new Error(`Unknown palette: ${styleName}`);
-  const [primaryColorOverride, setPrimaryColorOverrideState] = useState<string | null>(persisted.primaryColorOverride ?? null);
-  const [secondaryColorOverride, setSecondaryColorOverrideState] = useState<string | null>(persisted.secondaryColorOverride ?? null);
-  const [backgroundOverride, setBackgroundOverrideState] = useState<string | null>(persisted.backgroundOverride ?? null);
+  const [primaryColorOverride,
+    setPrimaryColorOverrideState] = useState<string | null>(persisted.primaryColorOverride ?? null);
+  const [secondaryColorOverride,
+    setSecondaryColorOverrideState] = useState<string | null>(persisted.secondaryColorOverride ?? null);
+  const [backgroundOverride, setBackgroundOverrideState] = useState<string | null>(persisted.backgroundOverride
+    ?? null);
   const [advancedSettings, setAdvancedSettingsState] = useState<AdvancedSettings>({
     ...DEFAULT_ADVANCED_SETTINGS,
     ...persisted.advancedSettings
@@ -131,7 +135,8 @@ export function StyleProvider({ children, persist = true, initialStyleName, pale
     const accentMode = advancedSettings.accentColorMode ?? 'styled';
     if (accentMode === 'primary') style.accentColor = style.primaryColor;
     else if (accentMode === 'secondary') style.accentColor = style.secondaryColor;
-    else if (accentMode === 'custom' && advancedSettings.accentColorOverride) style.accentColor = advancedSettings.accentColorOverride;
+    else if (accentMode === 'custom'
+      && advancedSettings.accentColorOverride) style.accentColor = advancedSettings.accentColorOverride;
     return style;
   };
 
@@ -161,9 +166,12 @@ export function StyleProvider({ children, persist = true, initialStyleName, pale
 }
 
 export function useStyle() {
-  const context = useContext(StyleContext);
+  const context = useStyleContext();
   if (!context) {
     throw new Error('useStyle must be used within StyleProvider');
   }
   return context;
 }
+
+/** Standalone kinds inherit document tokens; synth compositions supply a style scope. */
+export function useStyleContext() { return useContext(StyleContext); }

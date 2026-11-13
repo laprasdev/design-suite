@@ -101,7 +101,8 @@
   ],
   "peerDependencies": {
     "react": ">=18",
-    "three": "0.180.0"
+    "three": "0.180.0",
+    "react-dom": ">=18"
   },
   "license": "UNLICENSED",
   "files": [
@@ -118,7 +119,8 @@
     "check": "tsc -p . && node scripts/size-gate.mjs",
     "test": "node --test tests/*.test.ts",
     "check:graph": "tsc -p tsconfig.graph-tests.json",
-    "check:forms": "tsc -p tsconfig.form-tests.json && node --test tests/photos.test.ts tests/pipRowForm.test.ts"
+    "check:forms": "tsc -p tsconfig.form-tests.json && node --test tests/photos.test.ts tests/pipRowForm.test.ts tests/loading.test.ts",
+    "check:sky": "tsc -p tsconfig.sky-tests.json"
   },
   "devDependencies": {
     "@types/react": "^18.3.31",
@@ -126,7 +128,9 @@
     "esbuild": "0.28.2",
     "three": "0.180.0",
     "typescript": "^7.0.2",
-    "@types/node": "25.9.9"
+    "@types/node": "25.9.9",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
   },
   "dependencies": {
     "lucide-react": "^0.487.0",

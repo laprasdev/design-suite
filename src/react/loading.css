@@ -32,31 +32,38 @@
 }
 .loading-indicator { display:inline-flex;align-items:center;justify-content:center;gap:10px;vertical-align:middle;color:inherit; }
 .loading-indicator>span:last-child { min-width:0; }
+@property --loading-visibility { syntax:'<number>';inherits:true;initial-value:1; }
 /* Only the composed label opts into this presentation; older same-class hosts retain their layout. */
-.loading-indicator:has(>.loading-label) { --loading-cycle:4s;gap:calc(var(--field-gap,8px) * 1.5); }
-/* The composed ball and label share one clock; standalone artwork keeps its own default. */
-.loading-indicator:has(>.loading-label)>.loading-pokeball { --loading-cycle:inherit; }
+.loading-indicator:has(>.loading-label) {
+ --loading-cycle:4s;--loading-rest-opacity:.5;
+ --loading-near-glow:.4em;--loading-far-glow:.9em;
+ gap:calc(var(--field-gap,8px) * 1.5);color:var(--text);
+ animation:loading-breathe var(--loading-cycle) ease-in-out infinite;
+}
+/* One inherited progress keeps both fades in phase, with a visible floor for the ball. */
+.loading-indicator:has(>.loading-label)>.loading-pokeball {
+ --loading-cycle:inherit;
+ opacity:calc(var(--loading-rest-opacity) + (1 - var(--loading-rest-opacity)) * var(--loading-visibility));
+}
 .loading-label {
- --loading-label-light:255 255 255;--loading-label-rest-opacity:0;
- --loading-label-near-glow:.4em;--loading-label-far-glow:.9em;
- min-width:0;font-family:var(--font-chrome,inherit);font-size:max(12px,var(--type-control,13px));letter-spacing:normal;
- color:rgb(var(--loading-label-light));animation:loading-label-breathe var(--loading-cycle) ease-in-out infinite;
+ min-width:0;color:inherit;opacity:var(--loading-visibility);
 }
 .loading-label:empty { display:none; }
-@keyframes loading-label-breathe {
- 0%,100% { opacity:var(--loading-label-rest-opacity);text-shadow:0 0 var(--loading-label-near-glow) rgb(var(--loading-label-light) / 0),0 0 var(--loading-label-far-glow) rgb(var(--loading-label-light) / 0); }
- 50% { opacity:1;text-shadow:0 0 var(--loading-label-near-glow) rgb(var(--loading-label-light) / .4),0 0 var(--loading-label-far-glow) rgb(var(--loading-label-light) / .14); }
+@keyframes loading-breathe {
+ 0%,100% { --loading-visibility:0;filter:drop-shadow(0 0 var(--loading-near-glow) transparent) drop-shadow(0 0 var(--loading-far-glow) transparent); }
+ 50% { --loading-visibility:1;filter:drop-shadow(0 0 var(--loading-near-glow) color-mix(in srgb,currentColor 40%,transparent)) drop-shadow(0 0 var(--loading-far-glow) color-mix(in srgb,currentColor 14%,transparent)); }
 }
 /* A whole page loading sits in the middle of the window, whatever else is laid out. */
 .loading-screen { position:fixed;inset:0;display:grid;place-items:center;color:var(--dim); }
 @media (prefers-reduced-motion:reduce) {
- .loading-label { animation:none;opacity:1;text-shadow:none; }
+ .loading-indicator:has(>.loading-label) { animation:none;filter:none; }
  .glow-particles i { animation:none;opacity:.3; }
  .loading-pokeball>svg { animation:none; }
  .loading-pokeball>.loading-burst { display:none; }
 }
 
 /* Keep a stable accessible status while the page waits for its actual font faces. */
-.loading-indicator[data-text-ready=false]>.loading-label { animation:none;opacity:0;text-shadow:none; }
+.loading-indicator[data-text-ready=false] { animation:none;color:var(--dim);filter:none; }
+.loading-indicator[data-text-ready=false]>.loading-label { opacity:0; }
 .loading-indicator[data-text-ready=false]>.loading-pokeball>svg,
 .loading-indicator[data-text-ready=false]>.loading-pokeball>.loading-burst i { animation:none; }

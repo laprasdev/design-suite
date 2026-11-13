@@ -1,8 +1,8 @@
 /* A small read-only ledger: named counts and notes in aligned columns. */
-.bd-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.bd-table { width: 100%; border-collapse: collapse; font-size:var(--table-size,12px);overflow-wrap:normal; }
 .bd-table th {
   text-align: left; padding: 2px 12px 4px 0;
-  font-size: 9px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;
+  font-size:var(--table-heading-size,12px); font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;
   color: var(--color-dim, #82828e);
 }
 .bd-table td {
@@ -11,7 +11,7 @@
   color: var(--color-text, #f0f0f3);
 }
 .bd-table td:first-child { font-weight: 600; white-space: nowrap; }
-.bd-table td:last-child { color: var(--color-dim, #82828e); }
+.bd-table td:last-child { color:var(--table-last-color,var(--color-dim,#82828e)); }
 
 /* Fit: the table as wide as its content, even inside a stretching grid or flex parent, for a compact comparison beside
    other content; its heads keep the 12px floor and every column reads in the text colour. */
