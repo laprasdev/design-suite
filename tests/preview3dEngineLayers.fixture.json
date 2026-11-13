@@ -1,0 +1,182 @@
+{
+ "source": "Hand-written test data from implementation-design.md section 1 (worked 0.2 s cross-fade); replace with ism-runtime output, keeping this shape.",
+ "stepSeconds": 0.016666666666666666,
+ "clips": {
+  "Ready": {
+   "lengthSeconds": 3.333
+  },
+  "Skating": {
+   "lengthSeconds": 1.25
+  }
+ },
+ "ticks": [
+  {
+   "tick": 59,
+   "animationLayers": [
+    {
+     "layerId": "Base",
+     "weight": 1,
+     "blendMode": "override",
+     "samples": [
+      {
+       "sampleId": "Base/Ready#0",
+       "clipId": "Ready",
+       "timeSeconds": 0.9833333333333333,
+       "weight": 1
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "tick": 60,
+   "animationLayers": [
+    {
+     "layerId": "Base",
+     "weight": 1,
+     "blendMode": "override",
+     "samples": [
+      {
+       "sampleId": "Base/Ready#0",
+       "clipId": "Ready",
+       "timeSeconds": 1.0,
+       "weight": 1
+      },
+      {
+       "sampleId": "Base/Skating#1",
+       "clipId": "Skating",
+       "timeSeconds": 0,
+       "weight": 0
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "tick": 66,
+   "animationLayers": [
+    {
+     "layerId": "Base",
+     "weight": 1,
+     "blendMode": "override",
+     "samples": [
+      {
+       "sampleId": "Base/Ready#0",
+       "clipId": "Ready",
+       "timeSeconds": 1.1,
+       "weight": 0.5
+      },
+      {
+       "sampleId": "Base/Skating#1",
+       "clipId": "Skating",
+       "timeSeconds": 0.1,
+       "weight": 0.5
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "tick": 120,
+   "animationLayers": [
+    {
+     "layerId": "Base",
+     "weight": 1,
+     "blendMode": "override",
+     "samples": [
+      {
+       "sampleId": "Base/Skating#1",
+       "clipId": "Skating",
+       "timeSeconds": 1.0,
+       "weight": 1
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "tick": 150,
+   "animationLayers": [
+    {
+     "layerId": "Base",
+     "weight": 1,
+     "blendMode": "override",
+     "samples": [
+      {
+       "sampleId": "Base/Skating#1",
+       "clipId": "Skating",
+       "timeSeconds": 0.25,
+       "weight": 1
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "tick": 180,
+   "animationLayers": [
+    {
+     "layerId": "Base",
+     "weight": 1,
+     "blendMode": "override",
+     "samples": [
+      {
+       "sampleId": "Base/Skating#1",
+       "clipId": "Skating",
+       "timeSeconds": 0.75,
+       "weight": 1
+      },
+      {
+       "sampleId": "Base/Ready#2",
+       "clipId": "Ready",
+       "timeSeconds": 0,
+       "weight": 0
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "tick": 186,
+   "animationLayers": [
+    {
+     "layerId": "Base",
+     "weight": 1,
+     "blendMode": "override",
+     "samples": [
+      {
+       "sampleId": "Base/Skating#1",
+       "clipId": "Skating",
+       "timeSeconds": 0.85,
+       "weight": 0.5
+      },
+      {
+       "sampleId": "Base/Ready#2",
+       "clipId": "Ready",
+       "timeSeconds": 0.1,
+       "weight": 0.5
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "tick": 200,
+   "animationLayers": [
+    {
+     "layerId": "Base",
+     "weight": 1,
+     "blendMode": "override",
+     "samples": [
+      {
+       "sampleId": "Base/Ready#2",
+       "clipId": "Ready",
+       "timeSeconds": 0.3333333333333333,
+       "weight": 1
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

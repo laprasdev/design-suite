@@ -8,7 +8,7 @@ import {createTheme, themeVariables} from '../../theme.ts';
 import {Typography} from '../../tokens.ts';
 import {MODEL_READY_ATTRIBUTE, MODEL_PREVIEW_REVIEW, MODEL_REST_POSE, ModelPreviewElement as element} from './model.ts';
 import type {ModelPreviewAsset, ModelStageOptions, ModelStageTheme, ModelPreviewPresentation} from './model.ts';
-import type {ModelStageCamera, ModelEnvironment} from './model.ts';
+import type {ModelStageCamera, ModelEnvironment, ModelStageActor} from './model.ts';
 import {MODEL_PREVIEW_TEXT as copy, MODEL_PREVIEW_DISPLAY_OPTIONS} from './model.ts';
 import {MODEL_PREVIEW_MATERIAL_TEXT as surface, MODEL_PREVIEW_MATERIAL_OPTIONS} from './model.ts';
 import {MODEL_PREVIEW_LIGHTING_TEXT as lighting, MODEL_PREVIEW_LIGHTING_OPTIONS} from './model.ts';
@@ -20,10 +20,12 @@ export interface ModelPreviewProps {
   onSelectAsset?: (id: string) => void;
   theme: ModelStageTheme;
   reviewKey?: string;
-  stageOptions?: Omit<ModelStageOptions, 'reviewKey' | 'clock'>;
+  stageOptions?: Omit<ModelStageOptions, 'reviewKey' | 'clock' | 'actors'>;
   presentation?: ModelPreviewPresentation | null;
   camera?: ModelStageCamera | null;
   environment?: ModelEnvironment | null;
+  /** Declared actors beside the selected model; a change replaces them without reloading the model. */
+  actors?: readonly ModelStageActor[];
   className?: string;
   chrome?: boolean;
   /** Consumer controls anchored within the rendered stage. */
@@ -42,9 +44,9 @@ function previewTheme(theme: ModelStageTheme): CSSProperties {
 const share = (options: readonly unknown[]) => ({'--field-share': options.length}) as CSSProperties;
 
 function PreviewContents({asset, assets, onSelectAsset, theme, reviewKey = MODEL_PREVIEW_REVIEW,
-  stageOptions, presentation, camera, environment, chrome = true, stageOverlay}:
+  stageOptions, presentation, camera, environment, actors, chrome = true, stageOverlay}:
   ModelPreviewProps & {asset: ModelPreviewAsset}) {
-  const view = useModelPreview(asset, theme, reviewKey, stageOptions, presentation, {camera, environment});
+  const view = useModelPreview(asset, theme, reviewKey, stageOptions, presentation, {camera, environment}, actors);
   const animations = [{value: MODEL_REST_POSE, label: copy.rest},
     ...asset.animations.filter(clip => clip.name !== MODEL_REST_POSE)
       .map(clip => ({value: clip.name, label: clip.label}))];
@@ -90,12 +92,12 @@ function PreviewContents({asset, assets, onSelectAsset, theme, reviewKey = MODEL
     <div ref={view.host} className={element.STAGE.className} aria-label={copy.canvas(asset.name)}
       aria-busy={!view.loaded && !view.error}
       {...{[MODEL_READY_ATTRIBUTE]: view.ready && (!view.external || view.poseStatus === 'ready')}}>{stageOverlay}</div>
-    {(chrome || !view.ready || view.sceneError || (view.external && view.poseStatus !== 'ready')) &&
+    {(chrome || !view.ready || view.failure || (view.external && view.poseStatus !== 'ready')) &&
       <div className="model-preview-status">
       {view.error ? <div role="alert">{copy.failed}{' '}
         <Button variant="subtle" onClick={view.retry}>{copy.retry}</Button>
-      </div> : view.sceneError ? <span role="alert">{copy.sceneInvalid}</span> :
-        view.external && view.poseStatus === 'error' ? <span role="alert">{copy.runtimeInvalid}</span> :
+      </div> : view.external && view.poseStatus === 'error' ? <span role="alert">{copy.runtimeInvalid}</span> :
+        view.failure ? <span role="alert">{copy.sceneInvalid}</span> :
         view.external && view.poseStatus === 'waiting' ? <span role="status">{copy.runtimeWaiting}</span> :
         view.ready ? <span role="status">
           {view.external ? copy.runtimeReady(asset.name) : copy.ready(asset.name)}</span> :

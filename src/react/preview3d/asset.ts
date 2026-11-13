@@ -1,7 +1,9 @@
 import * as THREE from 'three';
-import type {GLTF} from 'three/addons/loaders/GLTFLoader.js';
+import {GLTFLoader, type GLTF} from 'three/addons/loaders/GLTFLoader.js';
 import {MODEL_STAGE as settings} from './model.ts';
 import type {ModelStageAsset, ModelStagePolicy, ModelStageTheme, ModelStageTransform} from './model.ts';
+import type {ModelRuntimeMaterialProfile} from './runtimeMaterialModel.ts';
+import {loadModelRuntimeAsset} from './runtimeMaterialBinding.ts';
 
 export function disposeModelObject(object: THREE.Object3D) {
   const skeletons = new Set<THREE.Skeleton>();
@@ -62,4 +64,16 @@ export function modelAttachments(asset: Pick<GLTF, 'scene'>, character: ModelSta
     marker.visible = false;
     return {key, bone, marker};
   });
+}
+
+// The one loader for every actor: a verified runtime asset when materials are bound, otherwise the plain GLB.
+export async function loadModelStageAsset(path: string, runtimeMaterials: ModelRuntimeMaterialProfile | undefined,
+  signal: AbortSignal): Promise<GLTF> {
+  if (runtimeMaterials) return loadModelRuntimeAsset(path, runtimeMaterials, signal);
+  const asset = await new GLTFLoader().loadAsync(path);
+  if (signal.aborted) {
+    disposeModelObject(asset.scene);
+    signal.throwIfAborted();
+  }
+  return asset;
 }

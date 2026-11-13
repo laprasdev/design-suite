@@ -8,6 +8,9 @@ import type {ModelStageCamera, ModelEnvironment} from './model.ts';
 import {createModelPresentationInbox, modelPreviewCamera} from './presentation.ts';
 import {modelEnvironment} from './environment.ts';
 import type {ModelPreviewPresentation, ModelPresentationStatus} from './presentation.ts';
+import type {ModelStageActor} from './actorModel.ts';
+import {createModelActorReplacement, modelPreviewReady} from './actorReplacement.ts';
+import {MODEL_STAGE_FAILURE, modelStageFailure, type ModelStageFailure} from './refusal.ts';
 
 type Scene = {camera?: ModelStageCamera | null; environment?: ModelEnvironment | null};
 function prepareScene(scene: Scene): Scene {
@@ -23,10 +26,11 @@ function applyScene(api: ModelStageController, scene: Scene, previous?: Scene) {
   }
 }
 
+const NO_ACTORS: readonly ModelStageActor[] = Object.freeze([]);
 export function useModelPreview(asset: ModelPreviewAsset, theme: ModelStageTheme,
-  reviewKey: string, options: Omit<ModelStageOptions, 'reviewKey' | 'clock'> = {},
+  reviewKey: string, options: Omit<ModelStageOptions, 'reviewKey' | 'clock' | 'actors'> = {},
   presentation?: ModelPreviewPresentation | null,
-  scene: Scene = {}) {
+  scene: Scene = {}, actors: readonly ModelStageActor[] = NO_ACTORS) {
   const external = presentation !== undefined;
   const [inbox] = useState(() => createModelPresentationInbox(asset.id, asset.runtimeMaterials));
   const [poseStatus, setPoseStatus] = useState<ModelPresentationStatus>('waiting');
@@ -47,30 +51,60 @@ export function useModelPreview(asset: ModelPreviewAsset, theme: ModelStageTheme
   const [lighting, setLighting] = useState<ModelStageLighting>('light');
   const selected = useRef({animation, playing, display, materialMode, lighting});
   const latestScene = useRef<Scene>({});
-  const [sceneError, setSceneError] = useState(false);
+  const [failure, setFailure] = useState<ModelStageFailure | null>(null);
+  const [actorsPending, setActorsPending] = useState(false);
+  // Whether a created stage is there to keep when a request is refused.
+  const usable = useRef(true);
+  // The one place a failure is read, decided by its kind: a refusal leaves the stage as it was and is recorded;
+  // anything else, or any failure with no stage to keep (creation, onError), fails the stage and is recorded too.
+  const read = (value: unknown, stageKept = usable.current) => {
+    const next = modelStageFailure(value, stageKept);
+    setFailure(next);
+    if (next.kind === MODEL_STAGE_FAILURE.unusable) failed();
+  };
+  const settled = () => setFailure(value => value?.kind === MODEL_STAGE_FAILURE.refused ? null : value);
+  const request = (run: () => void) => {
+    try {run(); settled(); return true;}
+    catch (value) {read(value); return false;}
+  };
+  const pose = (status: ModelPresentationStatus) => {
+    setPoseStatus(status);
+    if (status === 'error') read(inbox.failure);
+    else settled();
+  };
+  const [replacement] = useState(() => createModelActorReplacement(setActorsPending, value => read(value)));
+  // The set the stage holds or is loading; a change while it loads is sent once the stage is ready.
+  // Compared by value, as attachments and the environment are: a parent's new array of the same actors is no change.
+  const actorsKey = JSON.stringify(actors);
+  const latestActors = useRef(actors), stagedActors = useRef(actorsKey);
   useLayoutEffect(() => {
-    if (external) setPoseStatus(inbox.receive(presentation));
+    latestActors.current = actors;
+    if (!controller.current || stagedActors.current === actorsKey) return;
+    stagedActors.current = actorsKey;
+    replacement.request(controller.current, actors);
+  }, [actorsKey, replacement]);
+  useLayoutEffect(() => {
+    if (external) pose(inbox.receive(presentation));
   }, [external, inbox, presentation]);
   useEffect(() => () => inbox.clear(), [inbox]);
-  const failed = () => {
+  function failed() {
+    usable.current = false;
     controller.current = null;
     setReady(false);
     setError(true);
     inbox.detach();
     release.current();
-  };
+  }
   const command = (run: (api: ModelStageController) => void) => {
-    if (!controller.current) return false;
-    try {run(controller.current); return true;}
-    catch {failed(); return false;}
+    const api = controller.current;
+    return api ? request(() => run(api)) : false;
   };
   useLayoutEffect(() => {
-    try {
+    request(() => {
       const accepted = prepareScene(scene);
       if (controller.current) applyScene(controller.current, accepted, latestScene.current);
       latestScene.current = accepted;
-      setSceneError(false);
-    } catch {setSceneError(true);}
+    });
   }, [scene.camera, scene.environment]);
   const changePlaying = (value: boolean) => {
     if (controller.current && !command(api => api.setPlaying(value))) return;
@@ -89,6 +123,10 @@ export function useModelPreview(asset: ModelPreviewAsset, theme: ModelStageTheme
     let active = true, dispose = () => {};
     setReady(false);
     setError(false);
+    stagedActors.current = JSON.stringify(latestActors.current);
+    usable.current = true;
+    setFailure(null);
+    setActorsPending(false);
     try {
       dispose = createModelStage(node, asset, theme, api => {
         if (!active) return;
@@ -103,12 +141,16 @@ export function useModelPreview(asset: ModelPreviewAsset, theme: ModelStageTheme
         setMaterialAvailable(snapshot.materialInspectionAvailable);
         setEmissiveCount(snapshot.emissiveMaterialCount);
         applyScene(api, latestScene.current);
-        if (external) setPoseStatus(inbox.attach(value => api.setPresentation(value)));
+        if (stagedActors.current !== JSON.stringify(latestActors.current)) {
+          stagedActors.current = JSON.stringify(latestActors.current);
+          replacement.request(api, latestActors.current);
+        }
+        if (external) pose(inbox.attach(value => api.setPresentation(value)));
         setReady(true);
-      }, () => {if (active) failed();}, {...options, normalizeHeight, centerOnFloor,
-        reviewKey, clock: external ? 'external' : 'local'});
+      }, value => {if (active) read(value, false);}, {...options, normalizeHeight, centerOnFloor,
+        reviewKey, clock: external ? 'external' : 'local', actors: latestActors.current});
       release.current = dispose;
-    } catch {failed();}
+    } catch (value) {read(value, false);}
     return () => {
       active = false;
       controller.current = null;
@@ -121,8 +163,8 @@ export function useModelPreview(asset: ModelPreviewAsset, theme: ModelStageTheme
     options.floor, options.grid, options.orbit, theme.colors.stage, theme.colors.text, theme.colors.surface,
     theme.colors.surfaceHi, theme.colors.accent, theme.colors.accentDeep, theme.colors.teal]);
   return {
-    host, loaded: ready, ready: ready && (!external || poseStatus === 'ready'),
-    error, sceneError, animation, playing, display, boneCount, external, poseStatus,
+    host, loaded: ready, ready: modelPreviewReady(ready, external, poseStatus, actorsPending),
+    error, failure, animation, playing, display, boneCount, external, poseStatus,
     materialMode, materialAvailable, emissiveCount, lighting,
     chooseAnimation(value: string) {
       if (external) return;

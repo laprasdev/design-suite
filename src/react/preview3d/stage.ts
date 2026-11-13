@@ -1,28 +1,23 @@
 import * as THREE from 'three';
-import {GLTFLoader, type GLTF} from 'three/addons/loaders/GLTFLoader.js';
 import {MODEL_STAGE as settings, modelStagePolicy} from './model.ts';
 import type {ModelStageAsset, ModelStageController, ModelStageOptions, ModelStageTheme} from './model.ts';
-import {applyModelTransform, disposeModelObject, modelAttachments, prepareModelAsset} from './asset.ts';
+import type {ModelStageDisplay, ModelStageMaterialMode} from './model.ts';
+import {disposeModelObject, loadModelStageAsset} from './asset.ts';
 import {createModelScene} from './scene.ts';
-import {createModelRig} from './rig.ts';
-import {createModelPlayback} from './playback.ts';
-import {createModelMaterialInspection} from './materials.ts';
-import {bindModelRuntimeMaterials, loadModelRuntimeAsset, modelRuntimeAssetProfile} from './runtimeMaterialBinding.ts';
-import {modelPreviewPresentation} from './presentation.ts';
-import type {ModelPreviewPresentation} from './presentation.ts';
+import {modelRuntimeAssetProfile} from './runtimeMaterialBinding.ts';
 import {createModelEnvironment} from './environment.ts';
+import {applyModelFrame, createModelActor, MODEL_ACTOR_TEXT, type ModelActor} from './actor.ts';
+import {createModelActorSet, MODEL_ACTOR_SET_TEXT} from './actorSet.ts';
+import {MODEL_STAGE_DRIVER, modelStageActors} from './actorModel.ts';
+import type {ModelPreviewEntity, ModelStageActor} from './actorModel.ts';
+import {ModelStageRefusal} from './refusal.ts';
 
-interface LoadedModel {
-  asset: GLTF;
-  placement: THREE.Group;
-  playback: ReturnType<typeof createModelPlayback>;
-  materials: ReturnType<typeof createModelMaterialInspection>;
-  runtimeMaterials?: ReturnType<typeof bindModelRuntimeMaterials>;
-  presentation?: ModelPreviewPresentation;
-  rig: ReturnType<typeof createModelRig>;
-  markers: ReturnType<typeof modelAttachments>;
-}
 const asError = (error: unknown) => error instanceof Error ? error : new Error(String(error));
+export const MODEL_STAGE_TEXT = Object.freeze({
+  notReady: 'The preview model is not ready.', disposed: 'The preview has been disposed.',
+  external: 'Runtime presentation requires an external clock.',
+  inspection: (id: string) => `Actor ${id} does not support material inspection.`,
+});
 
 export function createModelStage(
   host: HTMLElement, character: ModelStageAsset, theme: ModelStageTheme,
@@ -32,51 +27,77 @@ export function createModelStage(
   const source = Object.freeze({id: character.id, path: character.path, revision: character.revision,
     attachments: Object.freeze({...character.attachments}), runtimeMaterials: modelRuntimeAssetProfile(character)});
   const policy = modelStagePolicy(options);
+  const declaredActors = modelStageActors(options.actors ?? [], source.id);
   const stage = createModelScene(host, theme, policy);
   const request = new AbortController();
-  let loaded: LoadedModel | undefined;
+  const renderedMeshes = new Set<string>();
+  const context = {policy, theme, scene: stage.scene, lighting: stage.lighting,
+    rendered: (mesh: THREE.Mesh) => {renderedMeshes.add(mesh.uuid);}};
+  let loaded: ModelActor | undefined;
   let environment: ReturnType<typeof createModelEnvironment> | undefined;
   let disposed = false, lastTime = performance.now(), frame = 0;
-  const renderedMeshes = new Set<string>();
+  // Under the external clock the presentation time moves only by setFrame: a host on setPresentation leaves it 0.
+  let appliedFrameSeconds = 0, localSeconds = 0;
+  let display: ModelStageDisplay = 'model', materialMode: ModelStageMaterialMode = 'lit';
+  const load = (declaration: ModelStageActor, signal: AbortSignal) =>
+    loadModelStageAsset(declaration.asset.path, modelRuntimeAssetProfile(declaration.asset), signal);
+  // A new actor joins at the stage's display and Surface choice, through the same owners as the character.
+  const actors = createModelActorSet(source.id, load, (asset, declaration) => {
+    const actor = createModelActor(asset, declaration, context);
+    try {
+      actor.rig.setDisplay(display);
+      actor.materials.setMode(materialMode);
+    } catch (error) {actor.dispose(); throw error;}
+    return actor;
+  });
   const current = () => {
-    if (!loaded || disposed) throw new Error('The preview model is not ready.');
+    if (!loaded || disposed) throw new Error(MODEL_STAGE_TEXT.notReady);
     return loaded;
   };
-  const setAnimation = (name: string) => {
-    current().playback.setAnimation(name);
-    stage.requestFit();
+  const everyActor = () => [current(), ...actors.actors];
+  const apply = (value: unknown) => {
+    if (policy.clock !== 'external') throw new ModelStageRefusal(MODEL_STAGE_TEXT.external);
+    return applyModelFrame(everyActor(), value);
   };
+  const presented = () => everyActor().flatMap(actor =>
+    actor.presentation ? [{...actor.presentation, entityId: actor.id} satisfies ModelPreviewEntity] : []);
   const api: ModelStageController = {
-    setAnimation,
+    setAnimation(name) {
+      current().playback.setAnimation(name);
+      stage.requestFit();
+    },
     setAnimationTime: value => current().playback.setAnimationTime(value),
     setPlaying: value => current().playback.setPlaying(value),
     setSkeleton: value => api.setDisplay(value ? 'both' : 'model'),
     setDisplay(value) {
-      const model = current();
-      model.rig.setDisplay(value);
-      if (model.presentation) api.setPresentation(model.presentation);
+      for (const actor of everyActor()) actor.rig.setDisplay(value);
+      display = value;
+      const entities = presented();
+      if (entities.length) apply({simulationTimeSeconds: appliedFrameSeconds, entities});
       stage.requestFit();
     },
     setMaterialMode(value) {
-      if (current().presentation && value !== 'lit') throw new Error('Runtime presentation requires lit materials.');
-      current().materials.setMode(value);
+      const all = everyActor();
+      if (value !== 'lit' && all.some(actor => actor.presentation)) throw new ModelStageRefusal(MODEL_ACTOR_TEXT.unlit);
+      const lacking = value === 'lit' ? undefined :
+        all.find(actor => !actor.materials.snapshot().materialInspectionAvailable);
+      if (lacking) throw new ModelStageRefusal(MODEL_STAGE_TEXT.inspection(lacking.id));
+      for (const actor of all) actor.materials.setMode(value);
+      materialMode = value;
     },
-    setTransform: value => applyModelTransform(current().placement, value),
+    setTransform: value => current().setPlacement(value),
     setPresentation(value) {
-      const model = current();
-      if (policy.clock !== 'external') throw new Error('Runtime presentation requires an external clock.');
-      const accepted = modelPreviewPresentation(value, source.id, source.runtimeMaterials);
-      const commit = model.runtimeMaterials?.prepare(accepted.materials);
-      if (model.materials.snapshot().materialMode !== 'lit') {
-        throw new Error('Runtime presentation requires lit materials.');
+      apply({simulationTimeSeconds: appliedFrameSeconds, entities: [{...value, entityId: current().id}]});
+    },
+    setFrame(value) {appliedFrameSeconds = apply(value);},
+    setActors(value) {
+      if (current().driver === MODEL_STAGE_DRIVER.engine) {
+        throw new ModelStageRefusal(MODEL_ACTOR_SET_TEXT.engineDriven(source.id));
       }
-      commit?.();
-      applyModelTransform(model.placement, accepted.pose);
-      model.presentation = accepted;
-      if (model.rig.display === 'rig') model.rig.setDisplay('rig');
+      return actors.replace(value);
     },
     setEnvironment(value) {
-      if (disposed) throw new Error('The preview has been disposed.');
+      if (disposed) throw new Error(MODEL_STAGE_TEXT.disposed);
       if (value !== null && environment?.update(value)) return;
       const next = value === null ? undefined : createModelEnvironment(value);
       environment?.dispose();
@@ -84,7 +105,7 @@ export function createModelStage(
       if (next) stage.scene.add(next.group);
     },
     setLighting(value) {
-      if (disposed) throw new Error('The preview has been disposed.');
+      if (disposed) throw new Error(MODEL_STAGE_TEXT.disposed);
       stage.lighting.set(value);
     },
     setCamera: stage.setCamera,
@@ -98,74 +119,56 @@ export function createModelStage(
       model.asset.scene.traverse(node => {
         if (node instanceof THREE.Bone) poses[node.name] = node.quaternion.toArray();
       });
+      const {animation, time, playing} = model.playback.review();
       return {
-        id: source.id, ...model.playback.snapshot(), ...model.rig.snapshot(), ...model.materials.snapshot(),
+        id: source.id, animation, time, playing, ...model.rig.snapshot(), ...model.materials.snapshot(),
         lighting: stage.lighting.mode,
         attachmentPositions: Object.fromEntries(positions), attachmentProjections: Object.fromEntries(projections),
         poses, triangles: stage.renderer.info.render.triangles, renderedModelMeshes: renderedMeshes.size,
         canvas: {width: stage.renderer.domElement.width, height: stage.renderer.domElement.height},
+        actors: everyActor().map(actor => actor.snapshot()), actorsPending: actors.pending,
       };
     },
   };
   const animate = (now: number) => {
     const delta = Math.min((now - lastTime) / settings.millisecondsPerSecond, settings.maxFrameDelta);
     lastTime = now;
+    localSeconds += delta;
+    // The one place this frame's presentation time is known; time-driven scenery reads it here.
+    const presentationSeconds = policy.clock === 'external' ? appliedFrameSeconds : localSeconds;
     if (loaded) {
-      loaded.playback.update(delta, !document.hidden);
-      loaded.placement.updateMatrixWorld(true);
-      loaded.rig.update();
+      for (const actor of everyActor()) {
+        actor.playback.update(delta, !document.hidden);
+        actor.placement.updateMatrixWorld(true);
+        actor.rig.update();
+      }
       stage.fit(loaded.placement, loaded.rig.display === 'model' ? undefined : loaded.rig.bounds());
     }
     if (stage.controls.enabled) stage.controls.update();
     stage.renderer.render(stage.scene, stage.camera);
     frame = requestAnimationFrame(animate);
   };
-  const load = (asset: GLTF) => {
-    if (disposed) {disposeModelObject(asset.scene); return;}
-    const acquired: Array<() => void> = [];
-    try {
-      const placement = prepareModelAsset(asset, policy);
-      const markers = modelAttachments(asset, source, theme);
-      acquired.push(() => markers.forEach(({marker}) => {marker.removeFromParent(); disposeModelObject(marker);}));
-      asset.scene.traverse(node => {
-        if (node instanceof THREE.Mesh) node.onAfterRender = () => {renderedMeshes.add(node.uuid);};
-      });
-      const materials = createModelMaterialInspection(asset.scene);
-      acquired.push(() => materials.dispose());
-      const runtimeMaterials = source.runtimeMaterials
-        ? bindModelRuntimeMaterials(asset, source.runtimeMaterials) : undefined;
-      if (runtimeMaterials) acquired.push(() => runtimeMaterials.dispose());
-      const rig = createModelRig(asset.scene, theme, markers);
-      acquired.push(() => {rig.root.removeFromParent(); disposeModelObject(rig.root);});
-      acquired.push(stage.lighting.attach([rig.root, ...markers.map(({marker}) => marker)]));
-      stage.scene.add(placement, rig.root, ...markers.map(({marker}) => marker));
-      const playback = createModelPlayback(asset.scene, asset.animations, policy.clock);
-      loaded = {asset, placement, markers, rig, playback, materials, runtimeMaterials};
-      if (options.reviewKey) Object.defineProperty(host, options.reviewKey, {value: api, configurable: true});
-      onReady(api);
-    } catch (error) {
-      if (!loaded) {
-        for (const dispose of acquired.reverse()) dispose();
-        asset.scene.parent?.removeFromParent();
-        disposeModelObject(asset.scene);
-      }
-      if (!disposed) onError(asError(error));
+  // The character and the declared actors load together; one failure leaves the stage unusable and is reported once.
+  const characterAsset = loadModelStageAsset(source.path, source.runtimeMaterials, request.signal);
+  Promise.allSettled([characterAsset, actors.replace(declaredActors)]).then(([asset, declared]) => {
+    if (asset.status === 'fulfilled' && (disposed || declared.status === 'rejected')) {
+      disposeModelObject(asset.value.scene);
     }
-  };
-  const fail = (error: unknown) => {if (!disposed) onError(asError(error));};
-  if (source.runtimeMaterials) {
-    loadModelRuntimeAsset(source.path, source.runtimeMaterials, request.signal).then(load, fail);
-  }
-  else new GLTFLoader().load(source.path, load, undefined, fail);
+    if (disposed) return;
+    if (asset.status === 'rejected') throw asset.reason;
+    if (declared.status === 'rejected') throw declared.reason;
+    loaded = createModelActor(asset.value, {id: source.id, asset: source, placement: {}}, context);
+    if (options.reviewKey) Object.defineProperty(host, options.reviewKey, {value: api, configurable: true});
+    onReady(api);
+  }).catch(error => {if (!disposed) onError(asError(error));});
   frame = requestAnimationFrame(animate);
   return () => {
     if (disposed) return;
     disposed = true;
     request.abort();
     cancelAnimationFrame(frame);
-    loaded?.playback.dispose();
-    loaded?.runtimeMaterials?.dispose();
-    loaded?.materials.dispose();
+    actors.dispose();
+    loaded?.dispose();
     environment?.dispose();
     stage.dispose();
     if (options.reviewKey && Reflect.get(host, options.reviewKey) === api) {

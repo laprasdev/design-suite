@@ -1,9 +1,11 @@
 import {element} from '../elementContract.ts';
+import {ModelStageRefusal} from './refusal.ts';
 import type {ModelStageMaterialMode} from './materialModel.ts';
 import type {ModelStageLighting} from './lightingModel.ts';
 import type {ModelRuntimeMaterialProfile} from './runtimeMaterialModel.ts';
 import type {ModelEnvironment} from './environment.ts';
 import type {ModelPreviewPresentation} from './presentation.ts';
+import type {ModelPreviewFrame, ModelStageActor, ModelStageActorSnapshot} from './actorModel.ts';
 export {MODEL_RUNTIME_MATERIAL, modelRuntimeMaterialProfile} from './runtimeMaterialModel.ts';
 export type {ModelRuntimeMaterialProfile, ModelMaterialOutput, ModelRendererBinding} from './runtimeMaterialModel.ts';
 export type {ModelEnvironment, ModelEnvironmentBox} from './environment.ts';
@@ -13,10 +15,19 @@ export {MODEL_PREVIEW_LIGHTING_TEXT, MODEL_PREVIEW_LIGHTING_OPTIONS} from './lig
 export type {ModelStageLighting} from './lightingModel.ts';
 export {modelPreviewPresentation, modelPoseForBinding, MODEL_PREVIEW_CAPABILITIES,
   MODEL_PREVIEW_QUATERNION_TOLERANCE} from './presentation.ts';
+export {MODEL_PREVIEW_WEIGHT_TOLERANCE} from './animationLayerModel.ts';
 export type {ModelPreviewPresentation, ModelPresentationPose, ModelPoseBinding} from './presentation.ts';
+export {ModelStageRefusal, MODEL_STAGE_FAILURE, modelStageFailure} from './refusal.ts';
+export type {ModelStageFailure, ModelStageFailureKind} from './refusal.ts';
+export {MODEL_ANIMATION_LAYER, MODEL_ANIMATION_REFUSAL, modelAnimationLayers} from './animationLayerModel.ts';
+export type {ModelAnimationLayer, ModelAnimationSample} from './animationLayerModel.ts';
+export {MODEL_ACTOR_REFUSAL, MODEL_STAGE_DRIVER, modelPreviewFrame, modelStageActors} from './actorModel.ts';
+export type {ModelPreviewEntity, ModelPreviewFrame, ModelStageActor, ModelStageActorSnapshot,
+  ModelStageDriver} from './actorModel.ts';
 
 export const MODEL_READY_ATTRIBUTE = 'data-model-ready';
 export const MODEL_REST_POSE = 'rest-pose';
+export const MODEL_ANIMATION_SAMPLES = 'animation-samples';
 export const MODEL_PREVIEW_REVIEW = 'modelPreviewReview';
 export const ModelPreviewElement = Object.freeze({
   ROOT: element('model-preview'), STAGE: element('model-preview-stage'), CONTROLS: element('model-preview-controls'),
@@ -76,6 +87,8 @@ export interface ModelStageOptions {
   floor?: boolean;
   grid?: boolean;
   orbit?: boolean;
+  /** Declared actors beside the character, loaded with it; `setActors` replaces them later. */
+  actors?: readonly ModelStageActor[];
 }
 export interface ModelStageTransform {
   position?: ModelVector;
@@ -89,7 +102,8 @@ export interface ModelStageCamera {
 export interface ModelStageSnapshot {
   id: string;
   animation: string;
-  time: number;
+  /** null while engine samples play: `actors` holds what was applied. */
+  time: number | null;
   playing: boolean;
   skeletonVisible: boolean;
   display: ModelStageDisplay;
@@ -108,6 +122,8 @@ export interface ModelStageSnapshot {
   triangles: number;
   renderedModelMeshes: number;
   canvas: {width: number; height: number};
+  actors: readonly ModelStageActorSnapshot[];
+  actorsPending: boolean;
 }
 export interface ModelStageController {
   setAnimation(name: string): void;
@@ -119,6 +135,14 @@ export interface ModelStageController {
   setLighting(value: ModelStageLighting): void;
   setTransform(value: ModelStageTransform): void;
   setPresentation(value: ModelPreviewPresentation): void;
+  /** Applies one host-built frame to every actor it names, or refuses it whole before anything changes. */
+  setFrame(value: ModelPreviewFrame): void;
+  /**
+   * Replaces the declared actors, keeping unchanged ones. Throws at once for an invalid set or while any actor is
+   * engine-driven. The promise resolves on the swap or when a later call supersedes it, and rejects when an asset
+   * could not be shown; the previous set then stays drawn.
+   */
+  setActors(value: readonly ModelStageActor[]): Promise<void>;
   setEnvironment(value: ModelEnvironment | null): void;
   setCamera(value: ModelStageCamera): void;
   resetCamera(): void;
@@ -126,10 +150,12 @@ export interface ModelStageController {
 }
 export function modelStagePolicy(options: ModelStageOptions = {}) {
   const clock = options.clock === undefined ? 'local' : options.clock;
-  if (clock !== 'local' && clock !== 'external') throw new Error('Preview clock must be local or external.');
+  if (clock !== 'local' && clock !== 'external') {
+    throw new ModelStageRefusal('Preview clock must be local or external.');
+  }
   const height = options.normalizeHeight === undefined ? MODEL_STAGE.normalizedHeight : options.normalizeHeight;
   if (height !== null && (!Number.isFinite(height) || height <= 0)) {
-    throw new Error('Preview height must be positive or null.');
+    throw new ModelStageRefusal('Preview height must be positive or null.');
   }
   return {
     clock, normalizeHeight: height, centerOnFloor: options.centerOnFloor ?? true,

@@ -13,8 +13,8 @@ const close = (actual: number, expected: number) => assert.ok(Math.abs(actual - 
 describe('pose-only model presentation boundary', () => {
   it('requires every unsupported channel to be explicitly empty before accepting a pose', () => {
     assert.deepEqual(MODEL_PREVIEW_CAPABILITIES,
-      {pose: true, animationLayers: false, partPoses: false, materials: false});
-    for (const key of ['animationLayers', 'partPoses', 'materials']) {
+      {pose: true, animationLayers: true, partPoses: false, materials: false});
+    for (const key of ['partPoses', 'materials']) {
       const missing: Record<string, unknown> = input();
       delete missing[key];
       assert.throws(() => modelPreviewPresentation(missing, 'otter'), /explicitly empty/);
