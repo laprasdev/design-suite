@@ -9,10 +9,10 @@ import {MODEL_STAGE_COMMIT_TEXT, prepareWhole} from '../src/react/preview3d/comm
 import {modelStageDescription, modelStageDescriptionChanges, modelStageRefit}
   from '../src/react/preview3d/descriptionModel.ts';
 import {createModelStageParts} from '../src/react/preview3d/stageParts.ts';
-import {applyModelFrame} from '../src/react/preview3d/actor.ts';
 import {ModelStageRefusal} from '../src/react/preview3d/model.ts';
 import type {ModelStageController, ModelStageFraming} from '../src/react/preview3d/model.ts';
-import {actorContext, close, declaration, describing, entity, frame, held, makeActor, playing, STANDING}
+import {NO_FILES, applyFrame, actorContext, close,
+   declaration, describing, entity, frame, held, makeActor, playing, STANDING}
   from './preview3dActorFixture.ts';
 
 // The controller is one description, one frame, one read and one action. Adding an actor, a scene or a kind of
@@ -126,7 +126,7 @@ describe('the stage description', () => {
 describe('the stage-wide parts', () => {
   const surface = () => {
     const calls: string[] = [];
-    const parts = createModelStageParts({textures: {load: () => [], keep: () => undefined},
+    const parts = createModelStageParts({...NO_FILES,
       scene: new THREE.Scene(), fog: {change: FOG}, kinds: new Map(), modes: MODES(),
       lighting: {load: () => [], prepare: value => () => {calls.push(value.time);}},
       frame: (framing: ModelStageFraming, orbit: boolean) => calls.push(`${framing.kind} ${orbit}`)});
@@ -144,7 +144,7 @@ describe('the stage-wide parts', () => {
 
   it('refuses a lighting while preparing, so a refused time leaves every other part unapplied', () => {
     const calls: string[] = [];
-    const parts = createModelStageParts({textures: {load: () => [], keep: () => undefined},
+    const parts = createModelStageParts({...NO_FILES,
       scene: new THREE.Scene(), fog: {change: FOG}, kinds: new Map(), modes: MODES(),
       lighting: {load: () => [],
         prepare: () => {throw new ModelStageRefusal('Time t: look.glow: glow needs half-float render targets.');}},
@@ -190,7 +190,7 @@ describe('the stage-wide parts', () => {
   it('refuses an inspection surface while an actor is engine-driven, before any actor changes', () => {
     const {parts} = surface(), {context} = actorContext();
     const {actor: a} = makeActor('a', CLIPS, {}, context), {actor: b} = makeActor('b', CLIPS, {}, context);
-    applyModelFrame([a, b], frame(0, entity('a')));
+    applyFrame([a, b], frame(0, entity('a')));
     const applied = modelStageDescription(describing());
     const clay = modelStageDescription(describing({materialMode: 'clay'}));
     assert.throws(() => prepareWhole(parts.prepares(clay, modelStageDescriptionChanges(applied, clay), [a, b])),

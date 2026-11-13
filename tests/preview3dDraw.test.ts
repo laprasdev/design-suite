@@ -32,11 +32,12 @@ function fixture(halfFloat = true) {
   const draw = createModelDraw(renderer as unknown as THREE.WebGLRenderer, scene, new THREE.Camera());
   // A look's curve and glow as the lighting part applies them: what they need loaded, then checked, then applied.
   const set = async (curve: ModelStageToneCurve | null, glow: ModelStageGlow | null) => {
-    await Promise.all(draw.load(glow));
+    await Promise.all(draw.load(glow, WHERE));
     draw.prepare(curve, glow, 'Time t: look.glow')();
   };
   return {draw, drawn, canvas, renderer, set};
 }
+const WHERE = 'Time t: look.glow';
 const GLOW = {threshold: 1.5, strength: 0.8, radius: 0.4};
 const uniforms = (pass: Drawn) => (pass.material as THREE.ShaderMaterial).uniforms;
 const CANVAS = {what: 'scene', into: null, clears: true};
@@ -50,7 +51,7 @@ describe('the frame\'s draw', () => {
     assert.equal(draw.triangles, 42);
     await set(null, null);
     assert.equal(renderer.toneMapping, THREE.NoToneMapping);
-    assert.deepEqual(draw.load(null), []);
+    assert.deepEqual(draw.load(null, WHERE), []);
   });
 
   it('with glow, draws the canvas first exactly as without, then only adds the bloom onto it', async () => {
@@ -122,13 +123,13 @@ describe('the frame\'s draw', () => {
   it('loads the glow\'s passes once, when a look first brings glow, and refuses glow it cannot draw', async () => {
     const {draw} = fixture();
     assert.throws(() => draw.prepare(null, GLOW, 'Time t: look.glow'), new RegExp(MODEL_DRAW_TEXT.unloaded));
-    const first = draw.load(GLOW);
+    const first = draw.load(GLOW, WHERE);
     assert.equal(first.length, 1);
-    assert.equal(draw.load(GLOW)[0], first[0], 'one load while it is in flight');
+    assert.equal(draw.load(GLOW, WHERE)[0], first[0], 'one load while it is in flight');
     await Promise.all(first);
-    assert.deepEqual(draw.load(GLOW), []);
+    assert.deepEqual(draw.load(GLOW, WHERE), []);
     const plain = fixture(false);
-    await Promise.all(plain.draw.load(GLOW));
+    await Promise.all(plain.draw.load(GLOW, WHERE));
     assert.throws(() => plain.draw.prepare(null, GLOW, 'Time t: look.glow'), (error: unknown) =>
       error instanceof ModelStageRefusal && error.message === MODEL_DRAW_TEXT.halfFloat('Time t: look.glow'));
     plain.draw.prepare(null, null, 'Time t: look.glow')();

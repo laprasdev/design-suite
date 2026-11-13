@@ -2,8 +2,8 @@ import {modelDigest, modelEntries, modelFlag, modelIsRecord, modelName, modelNum
   modelRecord, modelShape} from './recordModel.ts';
 import {modelNumbers} from './placementModel.ts';
 import {ModelStageRefusal} from './refusal.ts';
-import {MODEL_FILE_SURFACE, MODEL_SURFACE_PARAMETER, MODEL_VECTOR_SIZE, type ModelSurfaceKind,
-  type ModelSurfaceParameter} from './surfaceKindModel.ts';
+import {MODEL_FILE_SURFACE, MODEL_SURFACE_PARAMETER, MODEL_VECTOR_SIZE, type ModelSurfaceKind}
+  from './surfaceKindModel.ts';
 
 // What draws a model's renderers. An actor states one of two whole forms: the file's own materials throughout, or a
 // named set of the description's, whose keys are the file's renderers, every one exactly once. A set's entry is the
@@ -37,6 +37,9 @@ const RENDERER_ID = /^gltf-node:(0|[1-9]\d*)\/primitive:(0|[1-9]\d*)$/;
 export const modelRendererId = (node: number, primitive: number) => `gltf-node:${node}/primitive:${primitive}`;
 const FORMS = Object.values(MODEL_SURFACE_PARAMETER);
 const TEXTURE_FIELDS = Object.freeze(['path', 'sha256', 'wrap', 'scale', 'offset']);
+/** The image formats the stage decodes (the browser's own decoder, as three's glTF loader uses it), by a path's end. */
+export const MODEL_TEXTURE_FORMATS = Object.freeze(['png', 'jpg', 'jpeg', 'webp']);
+const FORMAT = new RegExp(`\\.(${MODEL_TEXTURE_FORMATS.join('|')})(?:[?#].*)?$`, 'i');
 export const MODEL_SURFACE_REFUSAL = Object.freeze({
   renderer: (where: string, id: string) => `${where}: ${id} is not a renderer id, gltf-node:<n>/primitive:<m>.`,
   unknownSet: (where: string, set: string, sets: readonly string[]) =>
@@ -49,6 +52,8 @@ export const MODEL_SURFACE_REFUSAL = Object.freeze({
   negative: (where: string) => `${where} has a channel below 0.`,
   range: (where: string) => `${where} is not HDR: each channel is from 0 to 1.`,
   inert: (where: string, value: number) => `${where} is drawn only at ${value}.`,
+  format: (where: string, path: string) =>
+    `${where} ${path} is not a format the stage decodes: ${MODEL_TEXTURE_FORMATS.join(', ')}.`,
 });
 const refusal = MODEL_SURFACE_REFUSAL;
 
@@ -58,12 +63,14 @@ function texture(value: unknown, where: string): ModelSurfaceTexture {
   const record = modelRecord(value, TEXTURE_FIELDS, where);
   const wrap = Array.isArray(record.wrap) && record.wrap.length === 2 ? record.wrap : [undefined, undefined];
   const pair = (name: string) => modelNumbers(record[name], 2, `${where}.${name}`) as unknown as Pair;
-  return Object.freeze({path: modelName(record.path, `${where}.path`), sha256: modelDigest(record.sha256,
+  const path = modelName(record.path, `${where}.path`);
+  if (!FORMAT.test(path)) throw new ModelStageRefusal(refusal.format(`${where}.path`, path));
+  return Object.freeze({path, sha256: modelDigest(record.sha256,
     `${where}.sha256`), wrap: Object.freeze([0, 1].map(axis => modelOption(wrap[axis], MODEL_TEXTURE_WRAP,
     `${where}.wrap[${axis}]`))) as unknown as readonly [Wrap, Wrap], scale: pair('scale'), offset: pair('offset')});
 }
-// A value's form, checked without its kind: exactly one of the forms, its content whole and finite.
-function value(entry: unknown, where: string): ModelSurfaceValue {
+/** A value's form, checked without its kind: exactly one of the forms, its content whole and finite. */
+export function modelSurfaceValue(entry: unknown, where: string): ModelSurfaceValue {
   const {name, content} = modelOneOf(entry, FORMS, where), at = `${where}.${name}`;
   if (name === MODEL_SURFACE_PARAMETER.color) {
     const color = modelNumbers(content, 4, at);
@@ -88,7 +95,8 @@ function entry(input: unknown, where: string): ModelSurfaceEntry {
   }
   const record = modelRecord(input, ['kind', 'values'], where);
   return Object.freeze({kind: modelName(record.kind, `${where}.kind`), values: Object.freeze(Object.fromEntries(
-    modelEntries(record.values, `${where}.values`).map(([name, item]) => [name, value(item, `${where}.${name}`)])))});
+    modelEntries(record.values, `${where}.values`).map(([name, item]) => [name, modelSurfaceValue(item,
+      `${where}.${name}`)])))});
 }
 
 /** The description's surface sets, every form checked; whether a record fits its kind is `modelSurfaceRecordsFit`'s. */
@@ -109,31 +117,41 @@ export function modelActorSurfaces(input: unknown, where: string): ModelActorSur
     Object.freeze({kind, set: modelName(record.set, `${where}.set`)});
 }
 
+/** The records of the sets these actors are drawn from, each set once. */
+export function modelSurfaceRecords(sets: Readonly<Record<string, ModelSurfaceSet>>,
+  actors: readonly {readonly surfaces: ModelActorSurfaces}[]): readonly ModelSurfaceRecord[] {
+  const used = new Set(actors.flatMap(({surfaces}) =>
+    surfaces.kind === MODEL_ACTOR_SURFACES.set ? [surfaces.set] : []));
+  return [...used].flatMap(name => Object.values(sets[name]).flatMap(entry => 'values' in entry ? [entry] : []));
+}
 /** The texture files named by the sets these actors are drawn from, each file once. */
 export function modelSurfaceFiles(sets: Readonly<Record<string, ModelSurfaceSet>>,
   actors: readonly {readonly surfaces: ModelActorSurfaces}[]): readonly ModelSurfaceFile[] {
-  const used = new Set(actors.flatMap(({surfaces}) =>
-    surfaces.kind === MODEL_ACTOR_SURFACES.set ? [surfaces.set] : []));
   const files = new Map<string, ModelSurfaceFile>();
-  for (const name of used) for (const entry of Object.values(sets[name])) {
-    if (!('values' in entry)) continue;
-    for (const item of Object.values(entry.values)) {
-      if ('texture' in item && 'sha256' in item.texture) {
-        files.set(item.texture.sha256, Object.freeze({path: item.texture.path, sha256: item.texture.sha256}));
-      }
+  for (const entry of modelSurfaceRecords(sets, actors)) for (const item of Object.values(entry.values)) {
+    if ('texture' in item && 'sha256' in item.texture) {
+      files.set(item.texture.sha256, Object.freeze({path: item.texture.path, sha256: item.texture.sha256}));
     }
   }
   return Object.freeze([...files.values()]);
 }
 
-function fit(item: ModelSurfaceValue, parameter: ModelSurfaceParameter, at: string) {
-  const [stated] = Object.keys(item);
+/**
+ * A value against its kind's parameter, the one rule for a record's value and an engine's: of the parameter's type and
+ * size, a colour that is not HDR within [0, 1], and an inert parameter at its one value.
+ */
+export function modelSurfaceValueFits(item: ModelSurfaceValue, kind: ModelSurfaceKind, name: string, at: string) {
+  const parameter = kind.parameters[name], [stated] = Object.keys(item);
   if (!(parameter.type in item)) throw new ModelStageRefusal(refusal.form(at, parameter.type, stated));
   if ('vector' in item && parameter.type === MODEL_SURFACE_PARAMETER.vector && item.vector.length !== parameter.size) {
     throw new ModelStageRefusal(refusal.size(at, parameter.size));
   }
   if ('color' in item && parameter.type === MODEL_SURFACE_PARAMETER.color && !parameter.hdr &&
     item.color.some(channel => channel > 1)) throw new ModelStageRefusal(refusal.range(at));
+  const inert = kind.inert[name];
+  if (inert !== undefined && 'float' in item && item.float !== inert) {
+    throw new ModelStageRefusal(refusal.inert(at, inert));
+  }
 }
 /** Every record against its kind: the kind was given, its parameters are exactly the record's, each value fits. */
 export function modelSurfaceRecordsFit(sets: Readonly<Record<string, ModelSurfaceSet>>,
@@ -143,13 +161,8 @@ export function modelSurfaceRecordsFit(sets: Readonly<Record<string, ModelSurfac
     const where = `Surface set ${name}, renderer ${id}`, kind = kinds.get(entry.kind);
     if (!kind) throw new ModelStageRefusal(refusal.kind(where, entry.kind, [...kinds.keys()]));
     modelRecord(entry.values, Object.keys(kind.parameters), `${where}, kind ${kind.id}: values`);
-    for (const [parameter, declared] of Object.entries(kind.parameters)) {
-      const item = entry.values[parameter], at = `${where}, kind ${kind.id}: ${parameter}`;
-      fit(item, declared, at);
-      const inert = kind.inert[parameter];
-      if (inert !== undefined && 'float' in item && item.float !== inert) {
-        throw new ModelStageRefusal(refusal.inert(at, inert));
-      }
+    for (const parameter of Object.keys(kind.parameters)) {
+      modelSurfaceValueFits(entry.values[parameter], kind, parameter, `${where}, kind ${kind.id}: ${parameter}`);
     }
   }
 }

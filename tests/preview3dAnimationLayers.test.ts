@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {describe, it} from 'node:test';
 import {MODEL_ANIMATION_LAYER, modelAnimationLayers, modelPreviewEntity} from '../src/react/preview3d/model.ts';
 import {createModelFrameInbox} from '../src/react/preview3d/frameInbox.ts';
-import {declaration} from './preview3dActorFixture.ts';
+import {declaration, fileScene} from './preview3dActorFixture.ts';
 import {ModelStageRefusal} from '../src/react/preview3d/model.ts';
 
 const sample = (clipId = 'run', weight = 1, timeSeconds = 0.5, sampleId = `base/${clipId}#0`) =>
@@ -86,7 +86,7 @@ describe('engine animation layers', () => {
       modelId: 'otter', animationLayers, partPoses: [], materials: [],
       pose: {position: [0, 0, 0], rotationQuaternion: [0, 0, 0, 1], scale: [1, 1, 1]}}]});
     const frameInbox = createModelFrameInbox(), actors = [declaration('otter')];
-    const inbox = {...frameInbox, receive: (value: unknown) => frameInbox.receive(value, actors),
+    const inbox = {...frameInbox, receive: (value: unknown) => frameInbox.receive(value, fileScene(actors), []),
       get failure() {return frameInbox.failure;}};
     const failure = () => inbox.failure;
     const message = () => {const value = failure(); return value instanceof Error ? value.message : value;};

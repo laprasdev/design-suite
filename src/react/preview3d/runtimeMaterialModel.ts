@@ -1,16 +1,11 @@
 import {ModelStageRefusal} from './refusal.ts';
 import {modelIsDigest, modelIsRecord as object} from './recordModel.ts';
+import {modelMaterialOutputShape, type ModelMaterialOutput} from './surfaceOutputModel.ts';
+export type {ModelMaterialOutput} from './surfaceOutputModel.ts';
 export const MODEL_RUNTIME_MATERIAL = Object.freeze({
   color: '_Color', emissionColor: '_EmissionColor', emissionStrength: '_EmissionStrength',
   profile: 'base-color-tinted-emission', colorSpace: 'srgb', emissionMask: 'white', noiseBlend: 0, nightBoost: 1,
 } as const);
-export interface ModelMaterialOutput {
-  readonly rendererId: string;
-  readonly slot: number;
-  readonly visible: boolean;
-  readonly colors: Readonly<Record<string, readonly [number, number, number, number]>>;
-  readonly floats: Readonly<Record<string, number>>;
-}
 export interface ModelRendererBinding {
   readonly rendererId: string;
   readonly nodeIndex: number;
@@ -64,31 +59,23 @@ export function modelRuntimeMaterialProfile(value: unknown): ModelRuntimeMateria
     renderers: Object.freeze(renderers)});
 }
 
+// The profile's names and colour form, over the one shape check (surfaceOutputModel.ts).
 export function modelMaterialOutput(value: unknown): ModelMaterialOutput {
-  if (!object(value) || typeof value.rendererId !== 'string' || !value.rendererId || !index(value.slot) ||
-    typeof value.visible !== 'boolean' || !object(value.colors) || !object(value.floats)) {
-    throw new ModelStageRefusal('A complete runtime material output is required.');
-  }
-  const colors: Record<string, readonly [number, number, number, number]> = {};
-  const floats: Record<string, number> = {};
-  for (const [name, components] of Object.entries(value.colors)) {
+  const output = modelMaterialOutputShape(value, 'A runtime material output');
+  for (const [name, components] of Object.entries(output.colors)) {
     if (name !== MODEL_RUNTIME_MATERIAL.color && name !== MODEL_RUNTIME_MATERIAL.emissionColor) {
       throw new ModelStageRefusal(`Unsupported runtime color: ${name}`);
     }
-    const copy = Array.isArray(components) ? Array.from(components) : [];
-    if (copy.length !== 4 || !copy.every(Number.isFinite) || copy.some(number => number < 0) || copy[3] !== 1) {
+    if (components.some(number => number < 0) || components[3] !== 1) {
       throw new ModelStageRefusal('This material binding requires nonnegative sRGB colors with opaque alpha.');
     }
-    colors[name] = Object.freeze(copy) as unknown as readonly [number, number, number, number];
   }
-  for (const [name, number] of Object.entries(value.floats)) {
-    if (name !== MODEL_RUNTIME_MATERIAL.emissionStrength || typeof number !== 'number' || !Number.isFinite(number)) {
+  for (const name of Object.keys(output.floats)) {
+    if (name !== MODEL_RUNTIME_MATERIAL.emissionStrength) {
       throw new ModelStageRefusal(`Unsupported or nonfinite runtime material float: ${name}`);
     }
-    floats[name] = number;
   }
-  return Object.freeze({rendererId: value.rendererId, slot: Number(value.slot), visible: value.visible,
-    colors: Object.freeze(colors), floats: Object.freeze(floats)});
+  return output;
 }
 
 export function modelMaterialOutputs(values: unknown, profile?: ModelRuntimeMaterialProfile) {

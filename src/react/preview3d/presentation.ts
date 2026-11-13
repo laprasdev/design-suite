@@ -3,6 +3,7 @@ import {ModelStageRefusal} from './refusal.ts';
 import {modelIsRecord as object} from './recordModel.ts';
 import {modelMaterialOutputs} from './runtimeMaterialModel.ts';
 import type {ModelMaterialOutput, ModelRuntimeMaterialProfile} from './runtimeMaterialModel.ts';
+import {modelSurfaceOutputs, type ModelSurfaceTakes} from './surfaceOutputModel.ts';
 import {modelAnimationLayers} from './animationLayerModel.ts';
 import type {ModelAnimationLayer} from './animationLayerModel.ts';
 
@@ -21,9 +22,10 @@ export interface ModelPreviewEntity {
 }
 
 // Validate every channel before any pose is applied; refusals name the entity. Accepted values never retain
-// caller-owned arrays.
+// caller-owned arrays. `materials` is what the actor's renderers take: the runtime profile's renderers (until that
+// route leaves, step 5e), or its surfaces' renderers; with neither, the frame states no material.
 export function modelPreviewEntity(value: unknown, modelId: string,
-  materials?: ModelRuntimeMaterialProfile): ModelPreviewEntity {
+  materials?: ModelRuntimeMaterialProfile | ModelSurfaceTakes): ModelPreviewEntity {
   if (!object(value) || typeof value.entityId !== 'string' || !value.entityId) {
     throw new ModelStageRefusal(MODEL_PREVIEW_ENTITY_REFUSAL.entity);
   }
@@ -36,7 +38,9 @@ export function modelPreviewEntity(value: unknown, modelId: string,
   return Object.freeze({entityId: value.entityId, modelId: value.modelId,
     pose: modelPresentationPose(value.pose, `Entity ${value.entityId}`),
     animationLayers: modelAnimationLayers(value.animationLayers, value.entityId), partPoses: Object.freeze([]),
-    materials: modelMaterialOutputs(value.materials, materials)});
+    materials: materials !== undefined && 'surfaces' in materials ?
+      modelSurfaceOutputs(value.materials, materials, `Entity ${value.entityId}`) :
+      modelMaterialOutputs(value.materials, materials)});
 }
 
 export function modelPreviewCamera(value: unknown) {

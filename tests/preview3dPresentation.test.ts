@@ -4,7 +4,7 @@ import {modelPreviewEntity, modelPoseForBinding, MODEL_PREVIEW_CAPABILITIES}
   from '../src/react/preview3d/model.ts';
 import {createModelFrameInbox} from '../src/react/preview3d/frameInbox.ts';
 import type {ModelPresentationPose, ModelPreviewFrame} from '../src/react/preview3d/model.ts';
-import {declaration} from './preview3dActorFixture.ts';
+import {declaration, fileScene} from './preview3dActorFixture.ts';
 
 const input = (x = 1, modelId = 'otter') => ({entityId: 'e', modelId,
   pose: {position: [x, 2, 3], rotationQuaternion: [0, 0, 0, 1], scale: [2, 3, 4]},
@@ -15,7 +15,7 @@ const ACTORS = [declaration('e')];
 const inboxOf = () => {
   const inbox = createModelFrameInbox();
   return {inbox, receive: (value: unknown) => inbox.receive(value === null ? null :
-    {simulationTimeSeconds: 0, entities: [value]}, ACTORS)};
+    {simulationTimeSeconds: 0, entities: [value]}, fileScene(ACTORS), [])};
 };
 const poseOf = (value: ModelPreviewFrame) => value.entities[0].pose;
 

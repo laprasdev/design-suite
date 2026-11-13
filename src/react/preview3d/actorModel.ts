@@ -6,7 +6,11 @@ import {modelRuntimeMaterialProfile} from './runtimeMaterialModel.ts';
 import {modelIsNamed as named, modelIsRecord as object, modelName, modelNumber, modelRecord, modelShape}
   from './recordModel.ts';
 import {ModelStageRefusal} from './refusal.ts';
-import {modelActorSurfaces, type ModelActorSurfaces} from './surfaceModel.ts';
+import {MODEL_ACTOR_SURFACES, modelActorSurfaces, type ModelActorSurfaces, type ModelSurfaceSet}
+  from './surfaceModel.ts';
+import {modelSurfaceTakes, type ModelSurfaceTakes} from './surfaceOutputModel.ts';
+import type {ModelSurfaceKind} from './surfaceKindModel.ts';
+import type {ModelRuntimeMaterialProfile} from './runtimeMaterialModel.ts';
 
 // Actor ids are the host's. A frame's entities are keyed by actor id and the host owns the mapping from an engine's
 // entity ids to them. Two actors may share one asset, so an actor's id is never taken from its asset.
@@ -67,6 +71,8 @@ export const MODEL_ACTOR_REFUSAL = Object.freeze({
   twice: (id: string) => `Frame entity ${id} appears twice.`,
   profile: (id: string) => `Actor ${id}: the runtime material profile belongs to another asset or revision.`,
   digest: (id: string) => `Actor ${id}: the runtime material profile does not match the asset's SHA-256.`,
+  routes: (id: string) => `Actor ${id} states a runtime material profile and a surface set: two routes for engine ` +
+    'values. A set\'s renderers take them by their kinds; the profile route leaves in step 5e.',
 });
 const refusal = MODEL_ACTOR_REFUSAL;
 
@@ -88,10 +94,13 @@ function asset(value: unknown, where: string): ModelStageAsset {
 function actor(value: unknown, index: number): ModelStageActor {
   const record = modelRecord(value, ACTOR_FIELDS, `Actor ${index}`);
   const id = modelName(record.id, `Actor ${index}.id`);
-  return Object.freeze({id, asset: asset(record.asset, `Actor ${id}.asset`),
-    placement: modelPresentationPose(record.placement, `Actor ${id} placement`),
-    animation: animation(record.animation, `Actor ${id}.animation`),
-    surfaces: modelActorSurfaces(record.surfaces, `Actor ${id}.surfaces`)});
+  const declared = asset(record.asset, `Actor ${id}.asset`);
+  const surfaces = modelActorSurfaces(record.surfaces, `Actor ${id}.surfaces`);
+  if (declared.runtimeMaterials && surfaces.kind === MODEL_ACTOR_SURFACES.set) {
+    throw new ModelStageRefusal(refusal.routes(id));
+  }
+  return Object.freeze({id, asset: declared, placement: modelPresentationPose(record.placement,
+    `Actor ${id} placement`), animation: animation(record.animation, `Actor ${id}.animation`), surfaces});
 }
 
 /** The focused actor of a set; refused when the focus names none of them. */
@@ -141,7 +150,23 @@ export function modelRuntimeAssetProfile(value: ModelStageActor) {
   return profile;
 }
 
-export function modelPreviewFrame(value: unknown, actors: readonly ModelStageActor[]): ModelPreviewFrame {
+/** What a frame is checked against: the declared actors and, by actor id, what each one's renderers take. */
+export interface ModelFrameScope {
+  readonly actors: readonly ModelStageActor[];
+  readonly takes: ReadonlyMap<string, ModelRuntimeMaterialProfile | ModelSurfaceTakes>;
+}
+/** A description's frame scope, made once when it is applied: an actor with a runtime profile takes through it (the
+ * description refuses one with a set too), every other one through its surfaces. */
+export function modelFrameScope(value: {readonly actors: ModelStageActorSet;
+  readonly surfaceSets: Readonly<Record<string, ModelSurfaceSet>>},
+kinds: ReadonlyMap<string, ModelSurfaceKind>): ModelFrameScope {
+  const {actors} = value.actors;
+  return Object.freeze({actors, takes: new Map(actors.map(actor => [actor.id,
+    modelRuntimeAssetProfile(actor) ?? modelSurfaceTakes(actor.surfaces, value.surfaceSets, kinds)]))});
+}
+
+export function modelPreviewFrame(value: unknown, scope: ModelFrameScope): ModelPreviewFrame {
+  const {actors} = scope;
   const time = object(value) ? value.simulationTimeSeconds : undefined;
   if (!object(value) || typeof time !== 'number' || !Number.isFinite(time) || time < 0 ||
     !Array.isArray(value.entities)) {
@@ -159,7 +184,7 @@ export function modelPreviewFrame(value: unknown, actors: readonly ModelStageAct
     if (!actor) throw new ModelStageRefusal(refusal.undeclared(id));
     if (seen.has(id)) throw new ModelStageRefusal(refusal.twice(id));
     seen.add(id);
-    return modelPreviewEntity(entity, actor.asset.id, modelRuntimeAssetProfile(actor));
+    return modelPreviewEntity(entity, actor.asset.id, scope.takes.get(id));
   });
   return Object.freeze({simulationTimeSeconds: time, entities: Object.freeze(entities)});
 }

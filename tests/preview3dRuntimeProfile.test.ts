@@ -11,8 +11,9 @@ import {bindModelRuntimeMaterials} from '../src/react/preview3d/runtimeMaterialB
 import {modelPreviewCamera} from '../src/react/preview3d/presentation.ts';
 import {modelRuntimeAssetProfile} from '../src/react/preview3d/actorModel.ts';
 import {createModelFrameInbox} from '../src/react/preview3d/frameInbox.ts';
-import {actorContext, describing, FILE_SURFACES, REST, STANDING} from './preview3dActorFixture.ts';
-import {applyModelFrame, createModelActor} from '../src/react/preview3d/actor.ts';
+import {NO_FILES, actorContext, applyFrame, describing, fileScene, FILE_SURFACES, REST, STANDING}
+  from './preview3dActorFixture.ts';
+import {createModelActor} from '../src/react/preview3d/actor.ts';
 import {createModelStageParts} from '../src/react/preview3d/stageParts.ts';
 import {modelStageDescription} from '../src/react/preview3d/descriptionModel.ts';
 import {prepareWhole} from '../src/react/preview3d/commit.ts';
@@ -31,7 +32,7 @@ const actor = (runtimeMaterials: unknown = profile()) => ({id: 'otter', placemen
 const createInbox = (runtimeMaterials?: unknown) => {
   const inbox = createModelFrameInbox(), actors = [actor(runtimeMaterials)];
   return {attach: inbox.attach, receive: (value: ReturnType<typeof frame>) =>
-    inbox.receive({simulationTimeSeconds: 0, entities: [value]}, actors)};
+    inbox.receive({simulationTimeSeconds: 0, entities: [value]}, fileScene(actors), [])};
 };
 const frame = () => ({entityId: 'otter', modelId: 'otter', pose: {position: [1, 2, 3], rotationQuaternion: [0, 0, 0, 1],
   scale: [1, 1, 1]}, materials: [material()], animationLayers: [], partPoses: []});
@@ -115,7 +116,7 @@ test('a display change after a frame leaves the engine\'s hidden renderer hidden
       [node, {nodes: 65, meshes: 0}], [mesh, {meshes: 0, primitives: 0}]]);
     const asset = {scene, animations: [], parser: {associations}} as unknown as GLTF;
     const model = createModelActor(asset, actor(), actorContext().context);
-    const parts = createModelStageParts({textures: {load: () => [], keep: () => undefined},
+    const parts = createModelStageParts({...NO_FILES,
       scene: new THREE.Scene(), fog: {change: FOG}, kinds: new Map(),
       modes: createModelSurfaceModes(),
       lighting: {load: () => [], prepare: () => () => undefined}, frame: () => undefined});
@@ -123,7 +124,7 @@ test('a display change after a frame leaves the engine\'s hidden renderer hidden
       new Set(['display']), [model]))();
     const outputs = (visible: boolean) => ({simulationTimeSeconds: 0, entities: [{...frame(), materials: [
       {...material(), visible}]}]});
-    applyModelFrame([model], outputs(false));
+    applyFrame([model], outputs(false));
     const prepare = t.mock.method(model, 'prepare');
     for (const display of ['rig', 'both', 'model']) {
       show(display);
@@ -131,7 +132,7 @@ test('a display change after a frame leaves the engine\'s hidden renderer hidden
     }
     assert.equal(prepare.mock.callCount(), 0);
     prepare.mock.restore();
-    applyModelFrame([model], outputs(true));
+    applyFrame([model], outputs(true));
     assert.equal(mesh.visible, true);
     show('rig');
     assert.equal(mesh.visible, false);

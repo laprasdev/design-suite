@@ -74,7 +74,7 @@ export function useModelPreview(host: ModelStageDescription, theme: ModelStageTh
     if (controller.current) requests.declare(controller.current, description);
   }, [described]);
   useLayoutEffect(() => {
-    if (external) pose(inbox.receive(frame, latest.current.actors.actors));
+    if (external) pose(inbox.receive(frame, latest.current, options.kinds));
   }, [external, inbox, frame]);
   useEffect(() => () => inbox.clear(), [inbox]);
   function failed() {

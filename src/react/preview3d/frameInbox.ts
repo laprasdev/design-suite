@@ -1,4 +1,6 @@
-import {modelPreviewFrame, type ModelPreviewFrame, type ModelStageActor} from './actorModel.ts';
+import {modelFrameScope, modelPreviewFrame, type ModelPreviewFrame} from './actorModel.ts';
+import type {ModelStageDescription} from './descriptionModel.ts';
+import {modelSurfaceKinds, type ModelSurfaceKind} from './surfaceKindModel.ts';
 
 export type ModelFrameStatus = 'waiting' | 'pending' | 'ready' | 'error';
 
@@ -25,10 +27,12 @@ export function createModelFrameInbox() {
   return {
     get status() {return status;},
     get failure() {return failure;},
-    // Validated against the declared actors: an entity must name one of them and match its model.
-    receive(value: unknown, actors: readonly ModelStageActor[]): ModelFrameStatus {
+    // Validated against the declared actors and the kinds the stage is given: an entity must name one of them, match
+    // its model, and state only values its renderers take.
+    receive(value: unknown, declared: Pick<ModelStageDescription, 'actors' | 'surfaceSets'>,
+      kinds: readonly ModelSurfaceKind[]): ModelFrameStatus {
       if (value === null) {pending = null; status = 'waiting'; failure = undefined; return status;}
-      try {pending = modelPreviewFrame(value, actors);}
+      try {pending = modelPreviewFrame(value, modelFrameScope(declared, modelSurfaceKinds(kinds)));}
       catch (error) {return refuse(error);}
       return applyPending();
     },

@@ -6,15 +6,15 @@ import {applyModelTransform, disposeModelObject, modelObjectBounds, modelParts, 
   from './asset.ts';
 import {createModelRig} from './rig.ts';
 import {createModelPlayback} from './playback.ts';
-import {createModelMaterialInspection, type ModelSurfaceModes} from './materials.ts';
+import type {ModelSurfaceModes} from './materials.ts';
+import {createModelActorSurfaces, type ModelActorSurfacesContext} from './actorSurfaces.ts';
 import {bindModelRuntimeMaterials} from './runtimeMaterialBinding.ts';
 import {MODEL_STAGE_DRIVER, modelPreviewFrame, modelRuntimeAssetProfile} from './actorModel.ts';
-import type {ModelStageActor, ModelStageActorSnapshot, ModelStageDriver} from './actorModel.ts';
+import type {ModelFrameScope, ModelStageActor, ModelStageActorSnapshot, ModelStageDriver} from './actorModel.ts';
 import type {ModelPreviewEntity} from './presentation.ts';
 import {modelStageCommit, prepareWhole, type ModelStageCommit} from './commit.ts';
 import {ModelStageRefusal} from './refusal.ts';
 import {extendModelMaterials, type ModelShaderChange} from './shading.ts';
-import {modelFileRenderers} from './renderers.ts';
 
 // What every actor shares from its stage: the policy, the theme, the scene it joins, the lighting of its aids and the
 // fog its file's materials take.
@@ -27,6 +27,8 @@ export interface ModelActorContext {
   /** The stage's Surface mode, which every model material takes. */
   readonly surfaceModes: Pick<ModelSurfaceModes, 'change' | 'mode'>;
   readonly rendered: (mesh: THREE.Mesh) => void;
+  /** The stage's kind materials, its kinds and its compile, which the actor's surfaces draw with. */
+  readonly surfaces: ModelActorSurfacesContext;
 }
 /** How an actor's model sits in its placement: the stage's size rule and origin. */
 export interface ModelActorSizing {readonly size: ModelStageSize; readonly origin: ModelStageOrigin}
@@ -48,7 +50,8 @@ export function createModelActor(asset: GLTF, declaration: ModelStageActor, cont
     acquired.push(() => points.forEach(({marker}) => {marker.removeFromParent(); disposeModelObject(marker);}));
     asset.scene.traverse(node => {if (node instanceof THREE.Mesh) node.onAfterRender = () => context.rendered(node);});
     extendModelMaterials(asset.scene, [context.fog, context.surfaceModes.change]);
-    const materials = createModelMaterialInspection(asset.scene);
+    const surfaces = createModelActorSurfaces(asset, id, context.surfaces);
+    acquired.push(() => surfaces.dispose());
     const runtimeMaterials = profile ? bindModelRuntimeMaterials(asset, profile) : undefined;
     if (runtimeMaterials) acquired.push(() => runtimeMaterials.dispose());
     const rig = createModelRig(asset.scene, context.theme, points);
@@ -83,9 +86,11 @@ export function createModelActor(asset: GLTF, declaration: ModelStageActor, cont
     prepareHost(declaration)();
     context.scene.add(placement, rig.root, ...points.map(({marker}) => marker));
     return {
-      id, asset, placement, points, rig, playback, materials, prepareHost,
-      /** The file's renderers by id, as a surface set must name them. */
-      renderers: () => modelFileRenderers(asset),
+      id, asset, placement, points, rig, playback, prepareHost,
+      /** What draws the file's renderers, as the description's surfaces state it. */
+      surfaces,
+      /** What the materials the actor draws with allow: the Surface modes, and how many emit. */
+      materials: surfaces.inspection,
       get declaration() {return current;},
       get driver() {return driver;},
       setDisplay(value: ModelStageDisplay) {rig.setDisplay(value); showRenderables();},
@@ -96,11 +101,12 @@ export function createModelActor(asset: GLTF, declaration: ModelStageActor, cont
       // Everything that can refuse runs here; the returned commit only applies.
       prepare(entity: ModelPreviewEntity): ModelStageCommit {
         if (context.surfaceModes.mode !== 'lit') throw new ModelStageRefusal(MODEL_ACTOR_TEXT.unlit);
+        // The engine's values and visibility reach the renderers through the runtime profile when the asset states
+        // one (the description refuses one beside a set; the route leaves in step 5e), else through the surfaces.
+        const values = runtimeMaterials ? runtimeMaterials.prepare(entity.materials) :
+          surfaces.prepareValues(entity.materials);
         return prepareWhole([
-          ...(runtimeMaterials ? [() => {
-            const commit = runtimeMaterials.prepare(entity.materials);
-            return () => {engineHidden = commit();};
-          }] : []),
+          modelStageCommit(() => {engineHidden = values();}),
           () => playback.prepareLayers(entity.animationLayers),
           modelStageCommit(() => {
             applyModelTransform(placement, entity.pose);
@@ -126,8 +132,8 @@ export type ModelActor = ReturnType<typeof createModelActor>;
 
 // Validate the frame and prepare every named actor before any commits: a refusal leaves every actor as it was. An
 // actor the frame does not name keeps what it shows.
-export function applyModelFrame(actors: readonly ModelActor[], value: unknown) {
-  const accepted = modelPreviewFrame(value, actors.map(actor => actor.declaration));
+export function applyModelFrame(actors: readonly ModelActor[], scope: ModelFrameScope, value: unknown) {
+  const accepted = modelPreviewFrame(value, scope);
   const named = new Map(accepted.entities.map(entity => [entity.entityId, entity]));
   prepareWhole(actors.flatMap(actor => {
     const entity = named.get(actor.id);

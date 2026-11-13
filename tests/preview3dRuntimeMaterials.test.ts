@@ -103,7 +103,8 @@ test('sparse color arrays cannot replace a previously accepted material', () => 
   const {materials, first} = fixture();
   materials.prepare([output({floats: {[channel.emissionStrength]: .4}})])();
   const previous = first.material, sparse = new Array(4); sparse[3] = 1;
-  assert.throws(() => materials.prepare([output({colors: {[channel.color]: sparse}})]), /opaque alpha/);
+  assert.throws(() => materials.prepare([output({colors: {[channel.color]: sparse}})]),
+    /a colour is four finite numbers/);
   assert.equal(first.material, previous);
   assert.equal((first.material as THREE.MeshStandardMaterial).emissiveIntensity, .4);
   materials.dispose();

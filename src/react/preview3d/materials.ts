@@ -10,7 +10,7 @@ import {modelMaterialOwned, modelShaderChunk, modelShaderUniforms, type ModelSha
 // compiled before. Lit changes nothing. The other three show one term of the material without fog: Clay its shape in
 // a neutral colour and finish (no texture but the base colour's alpha, no emission, none of the physical extras),
 // Color its base colour untoned, Emission its emission.
-const CHUNK = Object.freeze({color: 'color_fragment', colorDeclarations: 'color_pars_fragment',
+const CHUNK = Object.freeze({colorDeclarations: 'color_pars_fragment',
   roughness: 'roughnessmap_fragment', metalness: 'metalnessmap_fragment', emission: 'emissivemap_fragment',
   physical: 'lights_physical_fragment', output: 'opaque_fragment', toneMapping: 'tonemapping_fragment'});
 const CLAY_UNIFORM = 'modelSurfaceClay';
@@ -37,10 +37,12 @@ function clay(shader: ModelShader, replace: ModelShaderReplace, color: {value: T
   shader.uniforms[CLAY_UNIFORM] = color;
   let source = after(replace, shader.fragmentShader, CHUNK.colorDeclarations,
     modelShaderUniforms({[CLAY_UNIFORM]: 'vec3'}));
-  source = after(replace, source, CHUNK.color, `diffuseColor.rgb = ${CLAY_UNIFORM};`);
   source = after(replace, source, CHUNK.roughness, `roughnessFactor = ${float(settings.roughness)};`);
   source = after(replace, source, CHUNK.metalness, `metalnessFactor = ${float(settings.metalness)};`);
-  source = after(replace, source, CHUNK.emission, 'totalEmissiveRadiance = vec3( 0.0 );');
+  // After the emission chunk, so after a kind's surface too (surfaceProgram.ts calls it just before that chunk); no
+  // chunk between the base colour and here reads the colour's rgb, only its alpha.
+  source = after(replace, source, CHUNK.emission,
+    `diffuseColor.rgb = ${CLAY_UNIFORM};\ntotalEmissiveRadiance = vec3( 0.0 );`);
   // Standard and physical programs both include this chunk; only a physical one defines IOR and USE_SPECULAR.
   shader.fragmentShader = after(replace, source, CHUNK.physical, CLAY_SPECULAR);
 }
@@ -75,24 +77,27 @@ export function createModelSurfaceModes() {
 export type ModelSurfaceModes = ReturnType<typeof createModelSurfaceModes>;
 
 /**
- * What one model's own materials allow and hold: whether every one can show the modes (a standard material whose
- * program only the stage changed), how many emit, and the one way to have them compile the mode in force.
+ * What the materials an actor draws with allow, read each time it is asked, since its surfaces can change: whether
+ * every one can show the modes (a standard material whose program only the stage changed, or a kind's material, which
+ * the stage builds on three's standard program), how many emit, and the one way to have them compile the mode in
+ * force. A kind's emission is its program's to compute, which the stage cannot read ahead, so a kind's material counts
+ * as one that emits: the view never says "No emission" over a kind that glows.
  */
-export function createModelMaterialInspection(root: THREE.Object3D) {
-  const originals = new Set<THREE.Material>();
-  root.traverse(node => {
-    if (node instanceof THREE.Mesh) for (const material of [node.material].flat()) originals.add(material);
-  });
-  const supported = (material: THREE.Material): material is THREE.MeshStandardMaterial =>
+export function createModelMaterialInspection(shown: () => Iterable<THREE.Material>,
+  kind: (material: THREE.Material) => boolean) {
+  const standard = (material: THREE.Material): material is THREE.MeshStandardMaterial =>
     material instanceof THREE.MeshStandardMaterial && modelMaterialOwned(material);
-  const available = originals.size > 0 && [...originals].every(supported);
-  const emits = (material: THREE.MeshStandardMaterial) => material.emissiveIntensity > 0 &&
-    Math.max(material.emissive.r, material.emissive.g, material.emissive.b) > 0;
-  const emissiveMaterialCount = [...originals].filter(material => supported(material) && emits(material)).length;
+  const emits = (material: THREE.Material) => kind(material) || (standard(material) &&
+    material.emissiveIntensity > 0 && Math.max(material.emissive.r, material.emissive.g, material.emissive.b) > 0);
+  const distinct = () => [...new Set(shown())];
   return {
-    available, emissiveMaterialCount,
-    /** The mode changed: every one of the model's materials takes its program for it on its next draw. */
-    refresh() {for (const material of originals) material.needsUpdate = true;},
+    get available() {
+      const materials = distinct();
+      return materials.length > 0 && materials.every(material => kind(material) || standard(material));
+    },
+    get emissiveMaterialCount() {return distinct().filter(emits).length;},
+    /** The mode changed: every material the actor draws with takes its program for it on its next draw. */
+    refresh() {for (const material of distinct()) material.needsUpdate = true;},
   };
 }
 export type ModelMaterialInspection = ReturnType<typeof createModelMaterialInspection>;

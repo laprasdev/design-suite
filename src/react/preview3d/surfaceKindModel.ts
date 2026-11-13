@@ -51,7 +51,14 @@ export const MODEL_SURFACE_KIND_REFUSAL = Object.freeze({
   float: (where: string, name: string) => `${where} names ${name}, which is not a declared float parameter.`,
   twice: (where: string, name: string) => `${where} lists ${name} twice.`,
   list: (where: string) => `${where} is a list.`,
+  glsl: (where: string, name: string) => `${where} names ${name}, which is not a GLSL name: a letter or underscore, ` +
+    'then letters, digits and underscores, never two underscores in a row.',
 });
+// A parameter's name becomes part of the names a kind's program reads it by (`surfaceParameter` and the name, for one
+// web host), so it must be a GLSL identifier, and GLSL reserves any name with two underscores in a row (measured:
+// three r180 in Chromium refuses a program declaring `surfaceParameter__Color`).
+const GLSL_NAME = /^[A-Za-z_][A-Za-z0-9_]*$/;
+const glslName = (name: string) => GLSL_NAME.test(name) && !name.includes('__');
 const refusal = MODEL_SURFACE_KIND_REFUSAL;
 
 function parameter(value: unknown, where: string): ModelSurfaceParameter {
@@ -85,7 +92,10 @@ export function modelSurfaceKind(value: unknown, where: string): ModelSurfaceKin
   const id = modelName(kind.id, `${where}.id`);
   if (id === MODEL_FILE_SURFACE) throw new ModelStageRefusal(refusal.reserved(`${where}.id`));
   const parameters = Object.freeze(Object.fromEntries(modelEntries(kind.parameters, `${where}.parameters`)
-    .map(([name, entry]) => [name, parameter(entry, `${where}.parameters.${name}`)])));
+    .map(([name, entry]) => {
+      if (!glslName(name)) throw new ModelStageRefusal(refusal.glsl(`${where}.parameters`, name));
+      return [name, parameter(entry, `${where}.parameters.${name}`)];
+    })));
   const float = (name: unknown, at: string) => {
     if (!modelIsNamed(name) || parameters[name]?.type !== MODEL_SURFACE_PARAMETER.float) {
       throw new ModelStageRefusal(refusal.float(at, String(name)));

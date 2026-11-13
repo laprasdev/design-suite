@@ -6,18 +6,18 @@ import type {ModelStageFraming} from './framingModel.ts';
 import {MODEL_ACTOR_TEXT} from './actor.ts';
 import {MODEL_STAGE_DRIVER} from './actorModel.ts';
 import type {ModelStageDescription, ModelStageDescriptionPart} from './descriptionModel.ts';
-import {modelStageCommit, type ModelStageCommit, type ModelStagePrepare} from './commit.ts';
+import {modelStageCommit, prepareWhole, type ModelStageCommit, type ModelStagePrepare} from './commit.ts';
+import type {ModelStagedLoad} from './fileCache.ts';
 import {ModelStageRefusal} from './refusal.ts';
 import type {ModelShaderChange} from './shading.ts';
-import {MODEL_ACTOR_SURFACES, modelSurfaceFiles, modelSurfaceRecordsFit} from './surfaceModel.ts';
+import {modelSurfaceFiles, modelSurfaceRecords, modelSurfaceRecordsFit} from './surfaceModel.ts';
 import type {ModelTextures} from './textures.ts';
 import type {ModelSurfaceKind} from './surfaceKindModel.ts';
-import {modelSurfaceSetCovers} from './renderers.ts';
 import type {ModelSurfaceModes} from './materials.ts';
+import type {ModelSurfaceMaterials} from './surfaceMaterials.ts';
 
 export const MODEL_STAGE_PART_TEXT = Object.freeze({
   inspection: (id: string) => `Actor ${id} does not support material inspection.`,
-  undrawn: (where: string, kind: string) => `${where}: the stage cannot draw kind ${kind} yet.`,
 });
 // What the stage-wide parts apply to: the scene, its lighting, the fog its scenery takes and its camera framing.
 export interface ModelStageSurface {
@@ -33,6 +33,8 @@ export interface ModelStageSurface {
   readonly modes: Pick<ModelSurfaceModes, 'mode' | 'set'>;
   /** The textures surface records name, read in the staged load. */
   readonly textures: Pick<ModelTextures, 'load' | 'keep'>;
+  /** The kinds' materials: their programs read in the staged load, and those no actor draws with freed. */
+  readonly materials: Pick<ModelSurfaceMaterials, 'load' | 'keep' | 'sweep'>;
   frame(framing: ModelStageFraming, orbit: boolean): void;
 }
 
@@ -70,25 +72,14 @@ export function createModelStageParts(surface: ModelStageSurface) {
       };
     }];
   };
-  // Every record fits its kind, and every actor drawn from a set has exactly its file's renderers in it. Until the
-  // stage builds kind materials (step 5d), a record of a supplied kind is refused by name.
+  // Every actor's surfaces are prepared (the records were checked against their kinds before anything loaded): a set
+  // names exactly its file's renderers, and each record an actor's renderer now takes has its kind's material ready
+  // and compiled on that renderer. A kept actor whose surfaces or set changed takes the change here.
   const surfaces = (next: ModelStageDescription, changed: ReadonlySet<ModelStageDescriptionPart>,
     actors: readonly ModelActor[]): ModelStagePrepare[] => {
     if (!changed.has('surfaceSets') && !changed.has('actors')) return [];
-    return [() => {
-      modelSurfaceRecordsFit(next.surfaceSets, surface.kinds);
-      for (const [name, set] of Object.entries(next.surfaceSets)) for (const [id, entry] of Object.entries(set)) {
-        if ('values' in entry) {
-          throw new ModelStageRefusal(MODEL_STAGE_PART_TEXT.undrawn(`Surface set ${name}, renderer ${id}`, entry.kind));
-        }
-      }
-      next.actors.actors.forEach((declared, index) => {
-        if (declared.surfaces.kind !== MODEL_ACTOR_SURFACES.set) return;
-        modelSurfaceSetCovers(declared.id, declared.surfaces.set, next.surfaceSets[declared.surfaces.set],
-          actors[index].renderers());
-      });
-      return () => surface.textures.keep(modelSurfaceFiles(next.surfaceSets, next.actors.actors));
-    }];
+    return [() => prepareWhole(next.actors.actors.map((declared, index) =>
+      () => actors[index].surfaces.prepare(declared.surfaces, next.surfaceSets)))];
   };
   const scenery = (value: ModelStageDescription['environment']) => modelStageCommit(() => {
     if (value !== null && environment?.update(value)) return;
@@ -106,9 +97,24 @@ export function createModelStageParts(surface: ModelStageSurface) {
     orbit: next => modelStageCommit(() => frame(next)),
   };
   return {
-    /** What a description needs loaded before its parts can be prepared, beside its actors' models. */
-    loads: (next: ModelStageDescription) => [...surface.lighting.load(next.lighting),
-      ...surface.textures.load(modelSurfaceFiles(next.surfaceSets, next.actors.actors))],
+    /**
+     * What a description needs loaded before its parts can be prepared, beside its actors' models. What can be
+     * refused without loading anything (every record against its kind) is refused first, so no read starts for it.
+     */
+    loads(next: ModelStageDescription): ModelStagedLoad {
+      modelSurfaceRecordsFit(next.surfaceSets, surface.kinds);
+      const records = modelSurfaceRecords(next.surfaceSets, next.actors.actors);
+      const files = [surface.textures.load(modelSurfaceFiles(next.surfaceSets, next.actors.actors)),
+        surface.materials.load(records)];
+      return {pending: [...surface.lighting.load(next.lighting), ...files.flatMap(({pending}) => pending)],
+        release() {for (const file of files) file.release();}};
+    },
+    /** A description is in force: the materials no actor draws with are freed, then every file it does not name. */
+    keep(next: ModelStageDescription) {
+      surface.materials.sweep();
+      surface.materials.keep(modelSurfaceRecords(next.surfaceSets, next.actors.actors));
+      surface.textures.keep(modelSurfaceFiles(next.surfaceSets, next.actors.actors));
+    },
     prepares(next: ModelStageDescription, changed: ReadonlySet<ModelStageDescriptionPart>,
       actors: readonly ModelActor[]): ModelStagePrepare[] {
       const parts = (Object.keys(stageWide) as Array<keyof typeof stageWide>).filter(part => changed.has(part));

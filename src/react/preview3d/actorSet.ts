@@ -5,6 +5,7 @@ import type {ModelStageActor, ModelStageActorSet} from './actorModel.ts';
 import type {ModelActor} from './actor.ts';
 import {prepareWhole, type ModelStageCommit} from './commit.ts';
 import {ModelStageRefusal} from './refusal.ts';
+import type {ModelStagedLoad} from './fileCache.ts';
 
 export const MODEL_ACTOR_SET_TEXT = Object.freeze({
   engineDriven: (id: string) => `Actor ${id} is engine-driven; a description cannot change, replace or remove it.`,
@@ -22,8 +23,10 @@ export interface ModelActorStaging {readonly actors: readonly ModelActor[]; read
 export function createModelActorSet(load: Load, build: Build) {
   let drawn: readonly ModelActor[] = [], focus: string | undefined, attempt = 0, disposed = false;
   const loading = new Map<string, Loading>();
-  // What a set also waits for beside its models (the parts' loads, each owned and cached by its part), while in flight.
+  // What a set also waits for beside its models (the parts' loads, each owned and cached by its part), while in flight,
+  // and the release of the attempt in flight's: a later attempt that is taken lets go of what the earlier waited on.
   const waiting = new Set<Promise<void>>();
+  let letGo: (() => void) | undefined;
   const drop = (entry: Loading) => {
     loading.delete(entry.key);
     entry.controller.abort();
@@ -71,7 +74,8 @@ export function createModelActorSet(load: Load, build: Build) {
       };
     }};
   };
-  // A load or build failure is a refusal while a previous set stands; the stage's first set fails as it is.
+  // A model's load or build failure is a refusal while a previous set stands; the stage's first set fails as it is. A
+  // part's own load refuses in its own words (fileCache.ts, draw.ts).
   const failure = (error: unknown) => !drawn.length || error instanceof ModelStageRefusal ? error :
     new ModelStageRefusal(MODEL_ACTOR_SET_TEXT.failed(error instanceof Error ? error.message : String(error)),
       {cause: error});
@@ -91,8 +95,9 @@ export function createModelActorSet(load: Load, build: Build) {
     get focused(): ModelActor | undefined {return drawn.find(actor => actor.id === focus);},
     get pending() {return loading.size > 0 || waiting.size > 0;},
     // Throws at once when nothing loads; otherwise settles when this attempt does, or when a later one supersedes it.
-    // `needs` are what the description's other parts need loaded first; the staged set waits for them as for models.
-    replace(next: ModelStageActorSet, needs: readonly Promise<void>[],
+    // `needs` are what the description's other parts need loaded first; the staged set waits for them as for models,
+    // and releases them once it is shown, refused or superseded.
+    replace(next: ModelStageActorSet, needs: ModelStagedLoad,
       show: (staged: ModelActorStaging) => void): Promise<void> {
       const kept = new Map(drawn.filter(actor => next.actors.some(declaration =>
         modelActorIdentity(declaration) === modelActorIdentity(actor.declaration))).map(actor => [actor.id, actor]));
@@ -100,6 +105,8 @@ export function createModelActorSet(load: Load, build: Build) {
       // A set supersedes the attempts before it only once it is taken: a refusal leaves their loads running.
       const supersede = (wanted: readonly Loading[]) => {
         for (const entry of [...loading.values()]) if (!wanted.includes(entry)) drop(entry);
+        letGo?.();
+        letGo = needs.release;
         return ++attempt;
       };
       const finish = (assets: readonly GLTF[]) => {
@@ -111,32 +118,41 @@ export function createModelActorSet(load: Load, build: Build) {
           throw error;
         }
       };
-      if (!fresh.length && !needs.length) {
-        finish([]);
-        supersede([]);
+      if (!fresh.length && !needs.pending.length) {
+        try {
+          finish([]);
+          supersede([]);
+        } finally {needs.release();}
         return Promise.resolve();
       }
       const wanted = fresh.map(fetch), current = supersede(wanted);
-      for (const need of needs) waiting.add(need);
-      const awaited = Promise.allSettled(needs).then(results => {
-        for (const need of needs) waiting.delete(need);
+      for (const need of needs.pending) waiting.add(need);
+      const awaited = Promise.allSettled(needs.pending).then(results => {
+        for (const need of needs.pending) waiting.delete(need);
         return results;
       });
       return Promise.all([Promise.allSettled(wanted.map(entry => entry.asset)), awaited]).then(([results, other]) => {
-        // Superseded: the later attempt has taken these loads over or dropped them.
+        // Superseded: the later attempt has taken these loads over or dropped them, and let go of these needs.
         if (current !== attempt || disposed) return;
-        for (const entry of wanted) loading.delete(entry.key);
-        const arrived = results.flatMap(result => result.status === 'fulfilled' ? [result.value] : []);
-        const rejected = [...results, ...other].find(result => result.status === 'rejected');
-        if (rejected) {
-          for (const asset of arrived) disposeModelObject(asset.scene);
-          throw failure(rejected.reason);
+        try {
+          for (const entry of wanted) loading.delete(entry.key);
+          const arrived = results.flatMap(result => result.status === 'fulfilled' ? [result.value] : []);
+          const model = results.find(result => result.status === 'rejected');
+          const part = other.find(result => result.status === 'rejected');
+          if (model || part) {
+            for (const asset of arrived) disposeModelObject(asset.scene);
+            throw model ? failure(model.reason) : part!.reason;
+          }
+          finish(arrived);
+        } finally {
+          letGo = undefined;
+          needs.release();
         }
-        finish(arrived);
       });
     },
     dispose() {
       disposed = true;
+      letGo?.();
       for (const entry of [...loading.values()]) drop(entry);
       for (const actor of drawn) actor.dispose();
       drawn = [];

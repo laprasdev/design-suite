@@ -1,9 +1,10 @@
 import assert from 'node:assert/strict';
 import {describe, it} from 'node:test';
-import {applyModelFrame, modelRenderableVisible} from '../src/react/preview3d/actor.ts';
+import {modelRenderableVisible} from '../src/react/preview3d/actor.ts';
 import {MODEL_REST_POSE, MODEL_STAGE_DRIVER, MODEL_STAGE_ORIGIN, MODEL_STAGE_SIZE, modelStageActorSet}
   from '../src/react/preview3d/model.ts';
-import {actorContext, BIND, clipValue, declaration, entity, frame, held, layer, makeActor, playing, REST, sample,
+import {applyFrame, actorContext, BIND, clipValue,
+   declaration, entity, frame, held, layer, makeActor, playing, REST, sample,
   STANDING, standingAt, FILE_SURFACES} from './preview3dActorFixture.ts';
 
 const CLIPS = [{name: 'run', duration: 2}, {name: 'walk', duration: 4}];
@@ -15,7 +16,7 @@ const pair = () => {
 describe('declared actors under one frame', () => {
   it('gives each named actor its own samples and pose in one call, and returns the frame time', () => {
     const {a, b} = pair();
-    const time = applyModelFrame([a.actor, b.actor], frame(1.5,
+    const time = applyFrame([a.actor, b.actor], frame(1.5,
       entity('a', [layer(sample('run', 1))], [1, 0, 0]), entity('b', [layer(sample('walk', 3))], [9, 0, 0])));
     assert.equal(time, 1.5);
     assert.equal(a.bone.position.x, clipValue(0, 1));
@@ -30,11 +31,11 @@ describe('declared actors under one frame', () => {
     assert.deepEqual(b.actor.snapshot(), {id: 'b', modelId: 'otter', driver: MODEL_STAGE_DRIVER.host,
       animation: MODEL_REST_POSE, samples: [],
       pose: {position: [5, 0, 0], rotationQuaternion: [0, 0, 0, 1], scale: [1, 1, 1]}});
-    applyModelFrame([a.actor, b.actor], frame(0, entity('a')));
+    applyFrame([a.actor, b.actor], frame(0, entity('a')));
     assert.equal(b.actor.snapshot().driver, MODEL_STAGE_DRIVER.host);
     b.actor.prepareHost(declaration('b', 'otter', {placement: standingAt([6, 0, 0])}))();
     assert.deepEqual(b.actor.snapshot().pose.position, [6, 0, 0]);
-    applyModelFrame([a.actor, b.actor], frame(0.1, entity('b', [], [7, 0, 0])));
+    applyFrame([a.actor, b.actor], frame(0.1, entity('b', [], [7, 0, 0])));
     assert.equal(b.actor.snapshot().driver, MODEL_STAGE_DRIVER.engine);
     assert.deepEqual(b.actor.snapshot().pose.position, [7, 0, 0]);
   });
@@ -72,7 +73,7 @@ describe('declared actors under one frame', () => {
 
   it('refuses a whole frame when one actor\'s clip is unknown, naming that actor and clip, and applies nothing', () => {
     const {a, b} = pair();
-    assert.throws(() => applyModelFrame([a.actor, b.actor], frame(1,
+    assert.throws(() => applyFrame([a.actor, b.actor], frame(1,
       entity('a', [layer(sample('run', 1))], [1, 0, 0]), entity('b', [layer(sample('swim', 0))]))),
     /^ModelStageRefusal: Actor b: clip swim is not an animation in the model file/);
     const {driver, pose} = a.actor.snapshot();
@@ -93,7 +94,7 @@ describe('declared actors under one frame', () => {
       [frame(0, {...named, entityId: ''}), /requires an entityId/],
     ];
     for (const [value, pattern] of refusals) {
-      assert.throws(() => applyModelFrame([a.actor, b.actor], value), pattern);
+      assert.throws(() => applyFrame([a.actor, b.actor], value), pattern);
       assert.equal(a.actor.snapshot().driver, MODEL_STAGE_DRIVER.host);
     }
   });
@@ -102,12 +103,12 @@ describe('declared actors under one frame', () => {
     const {a, b} = pair(), still = makeActor('h', CLIPS, {animation: held('walk', 0)});
     assert.equal(still.bone.position.x, clipValue(1, 0));
     assert.equal(still.actor.snapshot().animation, 'walk');
-    applyModelFrame([still.actor], frame(0, entity('h', [layer(sample('run', 1))])));
+    applyFrame([still.actor], frame(0, entity('h', [layer(sample('run', 1))])));
     assert.equal(still.bone.position.x, clipValue(0, 1));
-    applyModelFrame([still.actor], frame(0.1, entity('h')));
+    applyFrame([still.actor], frame(0.1, entity('h')));
     assert.equal(still.bone.position.x, clipValue(1, 0));
-    applyModelFrame([a.actor, b.actor], frame(0, entity('a', [layer(sample('run', 1))])));
-    applyModelFrame([a.actor, b.actor], frame(0.1, entity('a')));
+    applyFrame([a.actor, b.actor], frame(0, entity('a', [layer(sample('run', 1))])));
+    applyFrame([a.actor, b.actor], frame(0.1, entity('a')));
     assert.deepEqual(a.bone.position.toArray(), [...BIND]);
   });
 
@@ -121,7 +122,7 @@ describe('declared actors under one frame', () => {
   it('accepts an asset with no skeleton and no clips, drawn at rest', () => {
     const {actor} = makeActor('still', []);
     assert.deepEqual(actor.snapshot().samples, []);
-    applyModelFrame([actor], frame(0, entity('still', [], [1, 2, 3])));
+    applyFrame([actor], frame(0, entity('still', [], [1, 2, 3])));
     assert.deepEqual(actor.snapshot().pose.position, [1, 2, 3]);
   });
 });

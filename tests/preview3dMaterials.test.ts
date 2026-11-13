@@ -12,6 +12,8 @@ function fixture(material: THREE.Material = new THREE.MeshStandardMaterial()) {
   extendModelMaterial(material, [modes.change]);
   return {modes, mesh, material};
 }
+// The materials of a model with no kind: none is a kind's.
+const NO_KIND = () => false;
 const MAPS = Object.freeze({map: true, aoMap: true, normalMap: true, normalMapTangentSpace: true, emissiveMap: true,
   roughnessMap: true, clearcoat: true, fog: true, toneMapping: THREE.ACESFilmicToneMapping});
 function compiled(material: THREE.Material, lib: 'standard' | 'physical' = 'standard') {
@@ -32,7 +34,7 @@ describe('the Surface modes', () => {
       assert.equal(material.customProgramCacheKey(), `model-surface-mode:${mode}`);
       assert.equal(mesh.material, material, 'no copy is ever drawn in its place');
     }
-    const inspection = createModelMaterialInspection(mesh), version = material.version;
+    const inspection = createModelMaterialInspection(() => [mesh.material], NO_KIND), version = material.version;
     inspection.refresh();
     assert.equal(material.version, version + 1, 'a mode change has the material take its program again');
   });
@@ -45,10 +47,11 @@ describe('the Surface modes', () => {
       clay.roughnessMap, clay.clearcoat, clay.fog, clay.toneMapping],
     [true, false, false, false, false, false, false, false, THREE.ACESFilmicToneMapping]);
     const source = clay.fragmentShader;
-    for (const line of ['#include <color_fragment>\ndiffuseColor.rgb = modelSurfaceClay;',
+    for (const line of [
       `#include <roughnessmap_fragment>\nroughnessFactor = ${MODEL_PREVIEW_MATERIAL_SETTINGS.roughness}.0;`,
       `#include <metalnessmap_fragment>\nmetalnessFactor = ${MODEL_PREVIEW_MATERIAL_SETTINGS.metalness}.0;`,
-      '#include <emissivemap_fragment>\ntotalEmissiveRadiance = vec3( 0.0 );', 'uniform vec3 modelSurfaceClay;']) {
+      '#include <emissivemap_fragment>\ndiffuseColor.rgb = modelSurfaceClay;\ntotalEmissiveRadiance = vec3( 0.0 );',
+      'uniform vec3 modelSurfaceClay;']) {
       assert.ok(source.includes(line), line);
     }
     assert.deepEqual((clay.uniforms.modelSurfaceClay.value as THREE.Color).toArray(),
@@ -74,7 +77,8 @@ describe('the Surface modes', () => {
   });
 
   it('reports configured emission, never inventing it from a map alone, and which models can show the modes', () => {
-    const count = (material: THREE.Material) => createModelMaterialInspection(fixture(material).mesh);
+    const count = (material: THREE.Material) =>
+      createModelMaterialInspection(() => [fixture(material).material], NO_KIND);
     assert.equal(count(new THREE.MeshStandardMaterial({emissive: 0xff0000})).emissiveMaterialCount, 1);
     assert.equal(count(new THREE.MeshStandardMaterial({emissiveMap: new THREE.Texture()})).emissiveMaterialCount, 0);
     assert.equal(count(new THREE.MeshStandardMaterial({emissive: 0xff0000, emissiveIntensity: 0}))
@@ -83,8 +87,12 @@ describe('the Surface modes', () => {
     assert.equal(count(new THREE.MeshBasicMaterial()).available, false);
     const foreign = new THREE.MeshStandardMaterial();
     foreign.onBeforeCompile = () => undefined;
-    assert.equal(createModelMaterialInspection(new THREE.Mesh(new THREE.BoxGeometry(), foreign)).available, false);
-    assert.equal(createModelMaterialInspection(new THREE.Group()).available, false);
+    assert.equal(createModelMaterialInspection(() => [foreign], NO_KIND).available, false);
+    assert.equal(createModelMaterialInspection(() => [], NO_KIND).available, false);
+    // A kind's material can show every mode, and counts as emitting: its program computes its emission.
+    const kind = new THREE.ShaderMaterial();
+    const withKind = createModelMaterialInspection(() => [kind, kind], material => material === kind);
+    assert.deepEqual([withKind.available, withKind.emissiveMaterialCount], [true, 1]);
     assert.throws(() => modelStageMaterialMode('xray'), /Unknown material inspection mode/);
   });
 });

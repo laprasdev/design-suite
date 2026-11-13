@@ -6,8 +6,8 @@ import {loadModelStageAsset} from './asset.ts';
 import {createModelScene} from './scene.ts';
 import {applyModelFrame, createModelActor, type ModelActor} from './actor.ts';
 import {createModelActorSet} from './actorSet.ts';
-import {modelRuntimeAssetProfile} from './actorModel.ts';
-import type {ModelStageActor} from './actorModel.ts';
+import {modelFrameScope, modelRuntimeAssetProfile} from './actorModel.ts';
+import type {ModelFrameScope, ModelStageActor} from './actorModel.ts';
 import {modelStageDescription, modelStageDescriptionChanges, modelStageFramed, modelStageRefit}
   from './descriptionModel.ts';
 import type {ModelStageDescription} from './descriptionModel.ts';
@@ -15,13 +15,17 @@ import {createModelStageParts} from './stageParts.ts';
 import {createModelSurfaceModes} from './materials.ts';
 import {createModelTextures, decodeModelImage} from './textures.ts';
 import {readModelFile} from './files.ts';
+import {createModelSurfaceMaterials} from './surfaceMaterials.ts';
+import {modelSurfaceDrawable} from './surfaceProgram.ts';
 import {prepareWhole} from './commit.ts';
 import {ModelStageRefusal} from './refusal.ts';
 
 const asError = (error: unknown) => error instanceof Error ? error : new Error(String(error));
-// Where each of the stage's times sits in its one typed array: the last applied frame's, the presentation time, and
-// the wall clock at the last frame, in milliseconds.
-const STAGE_TIME = Object.freeze({appliedFrame: 0, presentation: 1, lastFrame: 2});
+// Where each of the stage's times sits in its one typed array: the last applied frame's, the presentation time, the
+// wall clock at the last frame, in milliseconds, and, under the external clock, the kinds' decorative time.
+const STAGE_TIME = Object.freeze({appliedFrame: 0, presentation: 1, lastFrame: 2, decorative: 3});
+// Before a description is shown no actor is declared, so a frame may name none.
+const NO_ACTORS: ModelFrameScope = Object.freeze({actors: [], takes: new Map()});
 export const MODEL_STAGE_TEXT = Object.freeze({
   notReady: 'The preview model is not ready.', disposed: 'The preview has been disposed.',
   external: 'Runtime presentation requires an external clock.',
@@ -35,17 +39,21 @@ export function createModelStage(
   options: ModelStageOptions,
 ): () => void {
   const policy = modelStagePolicy(options);
+  // A kind this stage cannot draw is refused before anything is built, so it leaves no canvas behind.
+  for (const kind of policy.kinds.values()) modelSurfaceDrawable(kind);
   const stage = createModelScene(host, theme, policy);
   const renderedMeshes = new Set<string>();
   const modes = createModelSurfaceModes(), textures = createModelTextures(readModelFile, decodeModelImage);
+  const materials = createModelSurfaceMaterials({kinds: policy.kinds, read: readModelFile, textures,
+    shared: stage.shared, changes: [stage.fog.change, modes.change]});
   const context = {policy, theme, scene: stage.scene, lighting: stage.lighting, fog: stage.fog.change,
-    surfaceModes: modes,
+    surfaceModes: modes, surfaces: {materials, kinds: policy.kinds, compile: stage.compile},
     rendered: (mesh: THREE.Mesh) => {renderedMeshes.add(mesh.uuid);}};
   const load = (declaration: ModelStageActor, signal: AbortSignal) =>
     loadModelStageAsset(declaration.asset.path, modelRuntimeAssetProfile(declaration), signal);
   const actors = createModelActorSet(load, (asset, declaration) => createModelActor(asset, declaration, context));
-  const parts = createModelStageParts({...stage, kinds: policy.kinds, modes, textures});
-  let applied: ModelStageDescription | undefined;
+  const parts = createModelStageParts({...stage, kinds: policy.kinds, modes, textures, materials});
+  let applied: ModelStageDescription | undefined, scope = NO_ACTORS;
   let disposed = false, frame = 0;
   // The stage's one presentation time. Under the external clock only setFrame moves it; under the local clock the
   // elapsed time does, unless reduced motion or a hidden page holds it. Every clip on the local clock moves with it.
@@ -76,6 +84,8 @@ export function createModelStage(
       const changed = modelStageDescriptionChanges(applied, next), refit = modelStageRefit(applied, next);
       prepareWhole([staged.prepare, ...parts.prepares(next, changed, staged.actors)])();
       applied = next;
+      scope = modelFrameScope(next, policy.kinds);
+      parts.keep(next);
       const ids = new Set(modelStageFramed(next).map(({id}) => id));
       framed = staged.actors.filter(actor => ids.has(actor.id));
       if (refit) stage.requestFit();
@@ -85,7 +95,7 @@ export function createModelStage(
     setDescription,
     setFrame(value) {
       if (policy.clock !== 'external') throw new ModelStageRefusal(MODEL_STAGE_TEXT.external);
-      times[STAGE_TIME.appliedFrame] = applyModelFrame(actors.actors, value);
+      times[STAGE_TIME.appliedFrame] = applyModelFrame(actors.actors, scope, value);
     },
     resetCamera: () => parts.resetCamera(current().applied),
     snapshot() {
@@ -114,10 +124,20 @@ export function createModelStage(
   // The frame loop makes no object, array or closure: every value it writes has a home made when the stage or a
   // description was. Numbers it hands to calls (the elapsed time, each playback's advance) can still be boxed by V8:
   // about 0.2 KB a frame, measured with one actor.
+  // The kinds' decorative time moves by the page's clock and holds as the local clock does, on either clock. Under the
+  // local clock that is the presentation time itself; under the external one it is kept on its own. It is written
+  // into the shared numbers once a frame, typed array to typed array (each double the loop computes costs a boxed
+  // number while the loop runs unoptimised, measured: harness/measure.mjs).
+  const {numbers: shared, secondsAt} = stage.shared;
+  const external = policy.clock === 'external';
+  const decorative = external ? STAGE_TIME.decorative : STAGE_TIME.presentation;
   const animate = (now: number) => {
     const previous = times[STAGE_TIME.presentation];
-    times[STAGE_TIME.presentation] = policy.clock === 'external' ? times[STAGE_TIME.appliedFrame] :
-      previous + modelLocalAdvance(now - times[STAGE_TIME.lastFrame], hold());
+    if (external) {
+      times[STAGE_TIME.presentation] = times[STAGE_TIME.appliedFrame];
+      times[STAGE_TIME.decorative] += modelLocalAdvance(now - times[STAGE_TIME.lastFrame], hold());
+    } else times[STAGE_TIME.presentation] = previous + modelLocalAdvance(now - times[STAGE_TIME.lastFrame], hold());
+    shared[secondsAt] = times[decorative];
     times[STAGE_TIME.lastFrame] = now;
     const drawn = actors.actors;
     for (let index = 0; index < drawn.length; index++) {
@@ -138,6 +158,7 @@ export function createModelStage(
     cancelAnimationFrame(frame);
     actors.dispose();
     parts.dispose();
+    materials.dispose();
     textures.dispose();
     stage.dispose();
     if (Reflect.get(host, options.reviewKey) === api) {

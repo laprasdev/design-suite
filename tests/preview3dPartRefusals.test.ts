@@ -11,7 +11,7 @@ import type {ModelActor} from '../src/react/preview3d/actor.ts';
 import {createModelLighting} from '../src/react/preview3d/lighting.ts';
 import {modelStageBuiltInTimes} from '../src/react/preview3d/lightingModel.ts';
 import {createModelStage} from '../src/react/preview3d/stage.ts';
-import {describing} from './preview3dActorFixture.ts';
+import {NO_FILES, describing} from './preview3dActorFixture.ts';
 import {modelStageDescription} from '../src/react/preview3d/descriptionModel.ts';
 import {createModelFog} from '../src/react/preview3d/fog.ts';
 import {ModelStageRefusal} from '../src/react/preview3d/refusal.ts';
@@ -43,7 +43,7 @@ test('runtimeMaterials.ts: an unknown renderer is a refusal and installs no mate
 
 test('stageParts.ts: a Surface mode an actor cannot show is a refusal and leaves the mode', () => {
   const modes = createModelSurfaceModes();
-  const parts = createModelStageParts({textures: {load: () => [], keep: () => undefined},
+  const parts = createModelStageParts({...NO_FILES,
       scene: new THREE.Scene(), fog: createModelFog(new THREE.Scene()),
     kinds: new Map(), modes, lighting: {load: () => [], prepare: () => () => undefined}, frame: () => undefined});
   const clay = modelStageDescription(describing({materialMode: 'clay'}));
@@ -58,7 +58,8 @@ test('stageParts.ts: a Surface mode an actor cannot show is a refusal and leaves
 
 test('lightingModel.ts: an unknown time is a refusal and leaves the light', () => {
   const lighting = createModelLighting({setClearColor: () => undefined}, modelStageBuiltInTimes(theme.colors),
-    {fog: createModelFog(new THREE.Scene()), output: {load: () => [], prepare: () => () => undefined}});
+    {fog: createModelFog(new THREE.Scene()), output: {load: () => [], prepare: () => () => undefined},
+      shared: {setLook: () => undefined}});
   const before = lighting.lights[0].intensity;
   refused(() => lighting.prepare({time: 'dusk', times: []})(), /The lighting.time names dusk/);
   assert.deepEqual([lighting.time, lighting.lights[0].intensity], ['light', before]);

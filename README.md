@@ -165,8 +165,9 @@ exactly its fields: one it omits or one it does not have is refused by its path 
   materials throughout) or `{kind: 'set', set}`, naming one of `surfaceSets`.
 - `surfaceSets`: named sets, each keyed by every renderer of the file it is for (`gltf-node:<n>/primitive:<m>`,
   each exactly once, checked against the loaded file), each entry `{kind: 'file'}` or a record `{kind, values}` of a
-  surface kind the stage was given (`kinds`, a creation option: each kind's declaration, `[]` for none). Until the
-  stage draws kinds, a record is refused by name.
+  surface kind the stage was given (`kinds`, a creation option: each kind's declaration, `[]` for none). A record
+  is drawn by its kind's web program (one shared material per record, compiled before the description is shown);
+  an engine frame's material values are taken only on a parameter the renderer's kind declares.
 - `environment`: `{reflectZ, plane, boxes}` scenery, or `null`.
 - `framing`: `{kind: 'focus'}`, `{kind: 'all'}` (every actor) or `{kind: 'pose', position, target}`.
 - `orbit`: whether the person may orbit away from the framing.

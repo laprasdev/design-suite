@@ -19,7 +19,15 @@ const HALF_FLOAT = Object.freeze(['EXT_color_buffer_float', 'EXT_color_buffer_ha
 export const MODEL_DRAW_TEXT = Object.freeze({
   halfFloat: (where: string) => `${where}: glow needs half-float render targets; this browser's WebGL has none.`,
   unloaded: 'The glow was prepared before its passes were loaded.',
+  passes: (where: string, why: string) => `${where}: the bloom passes could not be loaded: ${why}`,
 });
+// What three r180 keeps for a material it compiled (WebGLRenderer.getProgram) and on that program after its first use
+// (WebGLProgram.js onFirstUse); its typings declare neither.
+interface Compiled {
+  readonly currentProgram: THREE.WebGLProgram & {readonly diagnostics?: {readonly runnable: boolean;
+    readonly programLog: string; readonly vertexShader: {readonly log: string};
+    readonly fragmentShader: {readonly log: string}}};
+}
 interface GlowPasses {readonly Bloom: typeof UnrealBloomPass; readonly Quad: typeof FullScreenQuad}
 type Glow = {target: THREE.WebGLRenderTarget; bloom: UnrealBloomPass; add: FullScreenQuad;
   material: THREE.ShaderMaterial};
@@ -81,12 +89,14 @@ export function createModelDraw(renderer: THREE.WebGLRenderer, scene: THREE.Scen
     glow.bloom.radius = value.radius;
   };
   return {
-    /** What drawing this glow needs loaded first: the glow's passes, fetched once, when a look first brings glow. */
-    load(value: ModelStageGlow | null): readonly Promise<void>[] {
+    /** What drawing this glow needs loaded first: the glow's passes, fetched once, when a look first brings glow;
+     * `where` names the glow in a refusal. */
+    load(value: ModelStageGlow | null, where: string): readonly Promise<void>[] {
       if (value === null || passes) return [];
       loading ??= loadGlowPasses().then(loaded => {passes = loaded;}, (error: unknown) => {
         loading = undefined;
-        throw error;
+        throw new ModelStageRefusal(MODEL_DRAW_TEXT.passes(where, error instanceof Error ? error.message :
+          String(error)), {cause: error});
       });
       return [loading];
     },
@@ -106,6 +116,31 @@ export function createModelDraw(renderer: THREE.WebGLRenderer, scene: THREE.Scen
       renderer.getDrawingBufferSize(size);
       glow.target.setSize(size.x, size.y);
       glow.bloom.setSize(size.x, size.y);
+    },
+    /**
+     * Compiles what drawing an object needs, as the canvas pass draws it, so that it happens inside the staged build:
+     * a program three cannot build throws here (a change's missing chunk, from its hook), and one the browser cannot
+     * link throws its compiler's log, never in a frame. The program each material uses is judged, new or reused: three
+     * keeps a program that failed to link under its key, so a second description with the same broken kind meets it.
+     */
+    compile(object: THREE.Object3D) {
+      // A link failure is read from the program's own diagnostics below; three's console report is not needed.
+      renderer.debug.onShaderError = () => undefined;
+      let failure: string | undefined;
+      try {
+        for (const material of renderer.compile(object, camera, scene)) {
+          const program = (renderer.properties.get(material) as Compiled).currentProgram;
+          program.getUniforms();
+          const {diagnostics} = program;
+          if (diagnostics && !diagnostics.runnable) {
+            failure ??= [diagnostics.programLog, diagnostics.vertexShader.log, diagnostics.fragmentShader.log]
+              .filter(Boolean).join(' ');
+          }
+        }
+      } finally {
+        renderer.debug.onShaderError = null;
+      }
+      if (failure !== undefined) throw new Error(failure);
     },
     draw() {
       renderer.render(scene, camera);

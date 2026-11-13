@@ -27,18 +27,18 @@ export const modelShaderChunk = (name: string) => `#include <${name}>`;
 export const modelShaderUniforms = (uniforms: Readonly<Record<string, string>>) =>
   Object.entries(uniforms).map(([name, type]) => `uniform ${type} ${name};`).join('\n');
 
-/** One chunk of a source replaced once; a source without it fails, naming the change's key and the chunk. */
-function replaceChunk(key: string): ModelShaderReplace {
+/** One chunk of a source replaced once, text as written; a source without it fails, naming the change and the chunk. */
+export function modelShaderReplace(key: string): ModelShaderReplace {
   return (source, chunk, replacement) => {
     const anchor = modelShaderChunk(chunk);
     if (!source.includes(anchor)) throw new Error(MODEL_SHADING_TEXT.anchor(key, anchor));
-    return source.replace(anchor, replacement);
+    return source.replace(anchor, () => replacement);
   };
 }
 
 export function extendModelMaterial<T extends THREE.Material>(material: T, changes: readonly ModelShaderChange[]): T {
   material.onBeforeCompile = shader => {
-    for (const change of changes) change.apply(shader, replaceChunk(change.key));
+    for (const change of changes) change.apply(shader, modelShaderReplace(change.key));
   };
   // three asks for the key at every program lookup (with glow, for every material twice a frame), so the joined key
   // is held and rebuilt only when one of its changes names another state; asking allocates nothing.

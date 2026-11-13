@@ -8,6 +8,7 @@ import {createModelLighting} from './lighting.ts';
 import {modelStageBuiltInTimes} from './lightingModel.ts';
 import {createModelFog} from './fog.ts';
 import {createModelDraw} from './draw.ts';
+import {createModelStageSharedValues} from './sharedValues.ts';
 
 type AidLighting = Pick<ReturnType<typeof createModelLighting>, 'floor' | 'attach'>;
 /** The stage's own floor and grid, as its policy asks: aids, so they take no fog; the floor is lit by the look. */
@@ -47,7 +48,8 @@ export function createModelScene(host: HTMLElement, theme: ModelStageTheme, poli
   controls.maxPolarAngle = Math.PI / 2;
   const fog = createModelFog(scene);
   const frame = createModelDraw(renderer, scene, camera);
-  const lighting = createModelLighting(renderer, builtIn, {fog, output: frame});
+  const shared = createModelStageSharedValues();
+  const lighting = createModelLighting(renderer, builtIn, {fog, output: frame, shared});
   scene.add(...lighting.lights, ...createModelStageAids(theme, policy, lighting));
   const framing = createModelFraming(camera, controls);
   const resize = () => {
@@ -63,7 +65,9 @@ export function createModelScene(host: HTMLElement, theme: ModelStageTheme, poli
   observer.observe(host);
   resize();
   return {
-    renderer, scene, camera, controls, lighting, fog, ...framing,
+    renderer, scene, camera, controls, lighting, fog, shared, ...framing,
+    /** Compiles an object's programs inside the staged build (draw.ts). */
+    compile: frame.compile,
     /** The frame's one draw, straight or through the look's glow; and the triangles its scene pass drew. */
     draw: frame.draw,
     triangles: () => frame.triangles,

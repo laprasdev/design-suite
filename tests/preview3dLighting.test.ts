@@ -4,6 +4,7 @@ import {describe, it} from 'node:test';
 import * as THREE from 'three';
 import {createModelLighting} from '../src/react/preview3d/lighting.ts';
 import {createModelFog} from '../src/react/preview3d/fog.ts';
+import {createModelStageSharedValues, MODEL_STAGE_SHARED_UNIFORM} from '../src/react/preview3d/sharedValues.ts';
 import {MODEL_STAGE_THEME_LIGHTING, MODEL_STAGE_TIME, modelStageBuiltInTimes, modelStageLighting,
   modelStageTimeOptions, type ModelStageTime} from '../src/react/preview3d/lightingModel.ts';
 import type {ModelStageTheme} from '../src/react/preview3d/model.ts';
@@ -16,8 +17,9 @@ function fixture() {
   const clears: THREE.Color[] = [];
   const scene = new THREE.Scene();
   const outputs: unknown[] = [];
+  const shared = createModelStageSharedValues();
   const lighting = createModelLighting({setClearColor: color => {clears.push(new THREE.Color(color));}},
-    modelStageBuiltInTimes(theme.colors), {fog: createModelFog(scene),
+    modelStageBuiltInTimes(theme.colors), {fog: createModelFog(scene), shared,
       output: {load: () => [], prepare: (curve, glow) => () => {outputs.push([curve, glow]);}}});
   // A described lighting as the stage applies it: checked with the description, then prepared and committed.
   const set = (value: unknown) => lighting.prepare(modelStageLighting(value))();
@@ -35,7 +37,7 @@ function fixture() {
   const read = () => ({backdrop: backdrop(), ambient: {sky: rgb(ambient.color),
     ground: rgb(ambient.groundColor), intensity: ambient.intensity}, key: {color: rgb(key.color),
     intensity: key.intensity, position: key.position.toArray()}, floor: rgb(floor.color), aid: rgb(aid.color)});
-  return {lighting, read, scene, outputs, set};
+  return {lighting, read, scene, outputs, set, shared};
 }
 const at = (time: string, times: readonly unknown[] = []) => ({time, times}) as never;
 const dusk: ModelStageTime = {id: 'dusk', label: 'Dusk', look: {backdrop: [0.2, 0.1, 0.3],
@@ -56,11 +58,15 @@ describe('stage lighting', () => {
   });
 
   it('applies a time given as data, with no code of its own, and returns to Light exactly', () => {
-    const {lighting, read, set} = fixture();
+    const {lighting, read, set, shared} = fixture();
     set(at('dusk', [dusk]));
     const linear = (value: readonly number[]) =>
       new THREE.Color().setRGB(value[0], value[1], value[2], THREE.SRGBColorSpace).toArray();
     const {look} = dusk;
+    // The look is the one owner of night and the shadow colour that every kind's program reads.
+    assert.deepEqual([shared.uniforms[MODEL_STAGE_SHARED_UNIFORM.numbers].value[1],
+      shared.uniforms[MODEL_STAGE_SHARED_UNIFORM.shadow].value.toArray()], [Math.fround(look.night),
+      linear(look.shadow)]);
     assert.deepEqual(read(), {backdrop: linear(look.backdrop), ambient: {sky: linear(look.ambient.sky),
       ground: linear(look.ambient.ground), intensity: look.ambient.strength}, key: {color: linear(look.key.color),
       intensity: look.key.strength, position: [...look.key.direction]}, floor: linear(look.aids.floor),
@@ -96,6 +102,12 @@ describe('stage lighting', () => {
     assert.throws(() => modelStageLighting(at('dusk', [{...dusk, look: {...dusk.look, toneCurve: 'reinhard'}}])),
       /Time dusk: look.toneCurve is one of aces-filmic\./);
   });
+
+  it('lights a kind with one ambient and one key, as three hands them on: hemisphereLights[0], directionalLights[0]',
+    () => {
+      // A kind's program reads these two by index (kind-contract.md): the stage adds no other light anywhere.
+      assert.deepEqual(fixture().lighting.lights.map(light => light.type), ['HemisphereLight', 'DirectionalLight']);
+    });
 
   it('states where each built-in time sits between day and night, and its shadow colour', () => {
     const [light, dark] = modelStageBuiltInTimes(theme.colors);

@@ -10,8 +10,12 @@ import {createModelSurfaceModes} from '../src/react/preview3d/materials.ts';
 import {createModelFog} from '../src/react/preview3d/fog.ts';
 import {ModelStageRefusal} from '../src/react/preview3d/refusal.ts';
 import {modelStagePolicy} from '../src/react/preview3d/model.ts';
-import {actorAsset, actorContext, declaration, describing} from './preview3dActorFixture.ts';
+import {NO_FILES, actorAsset, actorContext, declaration, describing} from './preview3dActorFixture.ts';
 import {createModelActor} from '../src/react/preview3d/actor.ts';
+import {MODEL_ACTOR_REFUSAL} from '../src/react/preview3d/actorModel.ts';
+import {prepareWhole} from '../src/react/preview3d/commit.ts';
+import {kindFile, kindMaterials, kinds as kindKinds, RENDERERS as KIND_RENDERERS, sets as kindSets}
+  from './preview3dKindFixture.ts';
 
 // The kind the seam is proven with: tests only, never shipped.
 const PULSE = {id: 'test-pulse', parameters: {_Color: {type: 'color', space: 'srgb', hdr: false},
@@ -117,7 +121,7 @@ describe('surface kinds, records and sets', () => {
     const associated = {...asset, parser: {associations: new Map([[body, {nodes: 0, meshes: 0, primitives: 0}]])}};
     const actor = createModelActor(associated as never, declaration('a', 'otter',
       {surfaces: {kind: 'set', set: 'own'}}), actorContext().context);
-    const parts = createModelStageParts({textures: {load: () => [], keep: () => undefined},
+    const parts = createModelStageParts({...NO_FILES,
       scene: new THREE.Scene(), kinds: kinds(), modes: createModelSurfaceModes(),
       frame: () => undefined,
       lighting: {load: () => [], prepare: () => () => undefined}, fog: createModelFog(new THREE.Scene())});
@@ -132,16 +136,27 @@ describe('surface kinds, records and sets', () => {
     actor.dispose();
   });
 
-  it('refuses an actor naming a set the description lacks, and a record the stage cannot draw yet', () => {
-    refused(() => modelStageDescription(describing({actors: {focus: 'a', actors: [
-      declaration('a', 'otter', {surfaces: {kind: 'set', set: 'tinted'}})]}})),
-    /Actor a.surfaces.set names surface set tinted; the description's sets are none/);
-    const next = modelStageDescription(describing({surfaceSets: {tinted: {[RENDERER]: RECORD}}}));
-    const parts = createModelStageParts({textures: {load: () => [], keep: () => undefined},
-      scene: new THREE.Scene(), kinds: kinds(), modes: createModelSurfaceModes(),
-      frame: () => undefined,
-      lighting: {load: () => [], prepare: () => () => undefined}, fog: createModelFog(new THREE.Scene())});
-    refused(() => parts.prepares(next, modelStageDescriptionChanges(undefined, next), []).map(prepare => prepare()),
-      new RegExp(`Surface set tinted, renderer ${RENDERER}: the stage cannot draw kind test-pulse yet`));
-  });
+  it('refuses a set the description lacks or one beside a runtime profile, and draws a record through the parts',
+    async () => {
+      refused(() => modelStageDescription(describing({actors: {focus: 'a', actors: [
+        declaration('a', 'otter', {surfaces: {kind: 'set', set: 'tinted'}})]}})),
+      /Actor a.surfaces.set names surface set tinted; the description's sets are none/);
+      refused(() => modelStageDescription(describing({surfaceSets: kindSets(), actors: {focus: 'a', actors: [
+        declaration('a', 'otter', {surfaces: {kind: 'set', set: 'tinted'},
+          asset: {id: 'otter', path: 'otter.glb', runtimeMaterials: {}} as never})]}})),
+      new RegExp(MODEL_ACTOR_REFUSAL.routes('a').replace(/[.?]/g, '\\$&')));
+      const {materials} = await kindMaterials(), {asset, body} = kindFile();
+      const context = {...actorContext().context, surfaces: {materials, kinds: kindKinds(), compile: () => undefined}};
+      const actor = createModelActor(asset, declaration('a', 'otter', {surfaces: {kind: 'set', set: 'tinted'}}),
+        context);
+      const parts = createModelStageParts({...NO_FILES, scene: new THREE.Scene(), kinds: kindKinds(),
+        modes: createModelSurfaceModes(), frame: () => undefined, fog: createModelFog(new THREE.Scene()),
+        lighting: {load: () => [], prepare: () => () => undefined}});
+      const next = modelStageDescription(describing({surfaceSets: kindSets(), actors: {focus: 'a',
+        actors: [actor.declaration]}}));
+      prepareWhole(parts.prepares(next, modelStageDescriptionChanges(undefined, next), [actor]))();
+      assert.equal(body.material, materials.material(kindSets().tinted[KIND_RENDERERS.body] as never).material,
+        'a record is drawn by its kind');
+      actor.dispose();
+    });
 });

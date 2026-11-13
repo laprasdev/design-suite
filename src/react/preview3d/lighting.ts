@@ -3,6 +3,7 @@ import {writeModelColor} from './color.ts';
 import type {ModelStageLook} from './lookModel.ts';
 import type {ModelFog} from './fog.ts';
 import type {ModelDraw} from './draw.ts';
+import type {ModelStageSharedValues} from './sharedValues.ts';
 import type {ModelStageCommit} from './commit.ts';
 import {MODEL_STAGE_THEME_LIGHTING, modelStageTimeInForce, type ModelStageLighting, type ModelStageTime}
   from './lightingModel.ts';
@@ -26,10 +27,12 @@ function stageAids(objects: readonly THREE.Object3D[]) {
   };
 }
 
-/** The parts of a look the scene owns: its fog, and the draw that applies its tone curve and adds its glow. */
+/** The parts of a look the scene owns: its fog, the draw that applies its tone curve and adds its glow, and the values
+ * the stage shares with every kind's program (its night and shadow colour). */
 export interface ModelLookLayers {
   readonly fog: Pick<ModelFog, 'set'>;
   readonly output: Pick<ModelDraw, 'load' | 'prepare'>;
+  readonly shared: Pick<ModelStageSharedValues, 'setLook'>;
 }
 // The stage's backdrop, floor, two lights, unlit aids, fog, tone curve and glow, as the look of one time at a time. A
 // look is written into the same objects every time: a changed colour, strength or distance allocates nothing and
@@ -46,9 +49,10 @@ export function createModelLighting(renderer: Pick<THREE.WebGLRenderer, 'setClea
   const aids = new Set<(share: number) => void>();
   const floors = new Set<THREE.MeshStandardMaterial>();
   const resolve = (value: ModelStageLighting) => modelStageTimeInForce(value.time, [...builtIn, ...value.times]);
+  const glowOf = (time: ModelStageTime) => `Time ${time.id}: look.glow`;
   const prepare = (time: ModelStageTime): ModelStageCommit => {
     const {look} = time;
-    const output = layers.output.prepare(look.toneCurve, look.glow, `Time ${time.id}: look.glow`);
+    const output = layers.output.prepare(look.toneCurve, look.glow, glowOf(time));
     return () => {
       current = time;
       apply(look);
@@ -66,6 +70,7 @@ export function createModelLighting(renderer: Pick<THREE.WebGLRenderer, 'setClea
     for (const floor of floors) writeModelColor(floor.color, look.aids.floor);
     for (const hold of aids) hold(look.aids.share);
     layers.fog.set(look.fog);
+    layers.shared.setLook(look);
   };
   // The stage starts at the consumer's own theme, the time it shows when a description states no other.
   let current = resolve(MODEL_STAGE_THEME_LIGHTING);
@@ -75,7 +80,10 @@ export function createModelLighting(renderer: Pick<THREE.WebGLRenderer, 'setClea
     /** The id of the time in force. */
     get time() {return current.id;},
     /** What showing a described lighting needs loaded first: the glow's passes, when its time brings glow. */
-    load: (value: ModelStageLighting) => layers.output.load(resolve(value).look.glow),
+    load: (value: ModelStageLighting) => {
+      const time = resolve(value);
+      return layers.output.load(time.look.glow, glowOf(time));
+    },
     /** A described lighting, already checked whole: its time in force resolved, and what drawing it needs refused. */
     prepare: (value: ModelStageLighting) => prepare(resolve(value)),
     // The floor is lit, so it takes a colour from the look rather than a share.

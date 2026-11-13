@@ -4,7 +4,11 @@ import * as THREE from 'three';
 import {createModelFog} from '../src/react/preview3d/fog.ts';
 import {createModelSurfaceModes} from '../src/react/preview3d/materials.ts';
 import type {GLTF} from 'three/addons/loaders/GLTFLoader.js';
-import {createModelActor, type ModelActorContext} from '../src/react/preview3d/actor.ts';
+import {applyModelFrame, createModelActor, type ModelActor, type ModelActorContext}
+  from '../src/react/preview3d/actor.ts';
+import {modelFrameScope} from '../src/react/preview3d/actorModel.ts';
+import {createModelSurfaceMaterials} from '../src/react/preview3d/surfaceMaterials.ts';
+import {createModelStageSharedValues} from '../src/react/preview3d/sharedValues.ts';
 import {MODEL_ACTOR_ANIMATION, MODEL_ANIMATION_LAYER, MODEL_STAGE_FRAMING, MODEL_STAGE_ORIGIN, MODEL_STAGE_SIZE,
   MODEL_STAGE_THEME_LIGHTING, modelStagePolicy,
   type ModelStageActor, type ModelStageClock}
@@ -46,6 +50,9 @@ export function actorContext(clock: ModelStageClock = 'external') {
       accentDeep: '#800', teal: '#0ff'}},
     lighting: {attach: () => () => undefined}, rendered: () => undefined,
     fog: createModelFog(scene).change, surfaceModes: createModelSurfaceModes(),
+    surfaces: {materials: createModelSurfaceMaterials({kinds: new Map(), read: () => Promise.reject(new Error('none')),
+      textures: {acquire: () => new THREE.Texture(), release: () => undefined},
+      shared: createModelStageSharedValues(), changes: []}), kinds: new Map(), compile: () => undefined},
   };
   return {context, scene};
 }
@@ -84,3 +91,14 @@ export const describing = (changes: Record<string, unknown> = {}) => ({
   orbit: true, lighting: MODEL_STAGE_THEME_LIGHTING, surfaceSets: {}, display: 'model', materialMode: 'lit',
   size: {rule: MODEL_STAGE_SIZE.real}, origin: MODEL_STAGE_ORIGIN.file,
   ...changes});
+// Actors drawn with their files' own materials, as a frame is checked against them: no renderer takes a value.
+export const fileScene = (actors: readonly ModelStageActor[]) =>
+  ({actors: {focus: actors[0].id, actors}, surfaceSets: {}});
+/** A frame applied as the stage applies it, to actors drawn with their files' own materials. */
+export const applyFrame = (actors: readonly ModelActor[], value: unknown) =>
+  applyModelFrame(actors, modelFrameScope(fileScene(actors.map(actor => actor.declaration)), new Map()), value);
+/** A staged load that waits on nothing. */
+export const NO_LOAD = Object.freeze({pending: [], release: () => undefined});
+/** The parts' file registries, for a test that loads no file. */
+export const NO_FILES = Object.freeze({textures: {load: () => NO_LOAD, keep: () => undefined},
+  materials: {load: () => NO_LOAD, keep: () => undefined, sweep: () => undefined}});
