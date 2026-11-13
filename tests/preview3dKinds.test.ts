@@ -24,8 +24,11 @@ describe('a surface kind\'s web program', () => {
   it('is placed in three\'s own standard program: what it reads declared, its surface called once', () => {
     const kind = modelSurfaceKind(PULSE, 'K');
     const {fragmentShader, make} = createModelSurfaceProgram(kind, PULSE_PROGRAM, '<shared>');
-    const surface = 'kindSurface( diffuseColor, totalEmissiveRadiance );\n#include <emissivemap_fragment>';
-    assert.equal(fragmentShader.split(surface).length, 2, 'called once, just before three\'s emission chunk');
+    const surface = 'kindSurface( diffuseColor, totalEmissiveRadiance );';
+    assert.equal(fragmentShader.split(surface).length, 2, 'called once');
+    assert.ok(fragmentShader.indexOf('#include <normal_fragment_maps>') < fragmentShader.indexOf(surface));
+    assert.ok(fragmentShader.indexOf(surface) < fragmentShader.indexOf('#include <emissivemap_fragment>'),
+      'just before three\'s emission chunk, nothing lit yet');
     for (const line of ['uniform vec4 surfaceValues[ 7 ];', 'uniform sampler2D surfaceTexture_Mask;', '<shared>',
       'vec4 surfaceParameter_Color() { return surfaceValues[ 0 ]; }',
       'vec4 surfaceParameter_Glow() { return surfaceValues[ 1 ]; }',

@@ -60,8 +60,13 @@ export function createModelSurfaceMaterials(context: ModelSurfaceMaterialsContex
   // that could fail only to refuse a description that needs nothing new). A read that failed holds nothing.
   const programs = createModelFileCache<string>(context.read, {what: 'web program of a surface kind',
     decode: async bytes => new TextDecoder().decode(bytes), free: () => undefined, used: () => true});
+  // A kind's web program is its own file and the shared files it includes, each read once by SHA-256.
   const webPrograms = (records: readonly ModelSurfaceRecord[]) => [...new Set(records.flatMap(record =>
-    context.kinds.get(record.kind) ?? []))].map(kind => kind.webProgram);
+    context.kinds.get(record.kind) ?? []))].flatMap(({webProgram: {path, sha256, includes}}) =>
+    [...includes, {path, sha256}]);
+  // Its text: the files it includes, in the order declared, ahead of its own.
+  const text = ({webProgram: {path, sha256, includes}}: ModelSurfaceKind) =>
+    [...includes, {path, sha256}].map(file => programs.get(file)).join('\n');
   const composed = new Map<string, ModelSurfaceProgram>();
   type Built = {readonly key: string; readonly surface: ModelSurfaceMaterial; readonly textures: THREE.Texture[];
     users: number};
@@ -75,7 +80,7 @@ export function createModelSurfaceMaterials(context: ModelSurfaceMaterialsContex
   const program = (kind: ModelSurfaceKind) => {
     const held = composed.get(kind.id);
     if (held) return held;
-    const fresh = createModelSurfaceProgram(kind, programs.get(kind.webProgram), context.shared.declarations);
+    const fresh = createModelSurfaceProgram(kind, text(kind), context.shared.declarations);
     composed.set(kind.id, fresh);
     return fresh;
   };
@@ -110,8 +115,9 @@ export function createModelSurfaceMaterials(context: ModelSurfaceMaterialsContex
     }
   };
   return {
-    /** A staged load of what drawing these records needs: the web program of each of their kinds, read once. The
-     * records were checked against the kinds before (stageParts.ts), so each names a kind the stage was given. */
+    /** A staged load of what drawing these records needs: the web program of each of their kinds and the files it
+     * includes, each read once. The records were checked against the kinds before (stageParts.ts), so each names a
+     * kind the stage was given. */
     load: (records: readonly ModelSurfaceRecord[]) => programs.load(webPrograms(records)),
     /** The material of a record, built the first time it is asked for; it counts no user until one draws with it. */
     material(record: ModelSurfaceRecord): ModelSurfaceMaterial {
