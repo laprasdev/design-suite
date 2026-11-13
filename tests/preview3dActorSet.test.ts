@@ -6,7 +6,7 @@ import {createModelActorSet, type ModelActorStaging} from '../src/react/preview3
 import {prepareWhole} from '../src/react/preview3d/commit.ts';
 import {ModelStageRefusal} from '../src/react/preview3d/model.ts';
 import type {ModelStageActor} from '../src/react/preview3d/model.ts';
-import {actorAsset, actorContext, declaration, entity, frame, held} from './preview3dActorFixture.ts';
+import {actorAsset, actorContext, declaration, entity, frame, held, standingAt} from './preview3dActorFixture.ts';
 
 // Each load waits until the test settles it; disposal is observed on the loaded body's geometry.
 function harness() {
@@ -26,7 +26,7 @@ function harness() {
   return {set, scene, loads, loading, replace};
 }
 const at = (id: string, x = 0, extra: Partial<ModelStageActor> = {}) =>
-  declaration(id, 'otter', {placement: {position: [x, 0, 0]}, ...extra});
+  declaration(id, 'otter', {placement: standingAt([x, 0, 0]), ...extra});
 const ids = (actors: readonly {id: string}[]) => actors.map(actor => actor.id);
 
 describe('replacing the declared actors', () => {
@@ -81,7 +81,7 @@ describe('replacing the declared actors', () => {
     loading('a').settle();
     await first;
     const adding = replace(at('a'), at('b'));
-    assert.throws(() => replace(at('a', 0, {animation: held('swim')})), /^ModelStageRefusal: Actor a: clip swim/);
+    assert.throws(() => replace(at('a', 0, {animation: held('swim', 0)})), /^ModelStageRefusal: Actor a: clip swim/);
     loading('b').settle();
     await adding;
     assert.deepEqual([ids(loads), ids(set.actors), loading('b').disposed(), set.pending],
@@ -114,7 +114,7 @@ describe('replacing the declared actors', () => {
 
   it('rejects an asset that loads but cannot be built, and turns a loader that throws into a rejection', async () => {
     const {set, loading, replace} = harness();
-    const failing = replace(at('h', 0, {animation: held('swim')}));
+    const failing = replace(at('h', 0, {animation: held('swim', 0)}));
     loading('h').settle();
     await assert.rejects(failing, /Actor h: clip swim/);
     assert.deepEqual(set.actors, []);

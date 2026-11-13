@@ -1,11 +1,12 @@
 import {modelStageDisplay} from './model.ts';
 import type {ModelStageCamera, ModelStageDisplay} from './model.ts';
-import {modelStageActorSet, modelStageFocus, type ModelStageActorSet} from './actorModel.ts';
+import {MODEL_ACTOR_ANIMATION, modelStageActorSet, modelStageFocus, type ModelStageActorSet} from './actorModel.ts';
 import {modelEnvironment, type ModelEnvironment} from './environment.ts';
 import {modelPreviewCamera} from './presentation.ts';
 import {modelStageLighting, type ModelStageLighting} from './lightingModel.ts';
 import {modelStageMaterialMode, type ModelStageMaterialMode} from './materialModel.ts';
 import {ModelStageRefusal} from './refusal.ts';
+import {modelStageSize, type ModelStageSize} from './sizeModel.ts';
 
 /** The whole host-side state of a stage: one declared description, applied whole or refused. */
 export interface ModelStageDescription {
@@ -17,9 +18,10 @@ export interface ModelStageDescription {
   readonly lighting: ModelStageLighting;
   readonly display: ModelStageDisplay;
   readonly materialMode: ModelStageMaterialMode;
+  readonly size: ModelStageSize;
 }
 export const MODEL_STAGE_DESCRIPTION_PARTS = Object.freeze(
-  ['actors', 'environment', 'camera', 'lighting', 'display', 'materialMode'] as const);
+  ['actors', 'environment', 'camera', 'lighting', 'display', 'materialMode', 'size'] as const);
 export type ModelStageDescriptionPart = typeof MODEL_STAGE_DESCRIPTION_PARTS[number];
 export const MODEL_STAGE_DESCRIPTION_REFUSAL = Object.freeze({
   description: `A stage description requires ${MODEL_STAGE_DESCRIPTION_PARTS.join(', ')}.`,
@@ -37,7 +39,7 @@ export function modelStageDescription(value: unknown): ModelStageDescription {
     environment: value.environment === null ? null : modelEnvironment(value.environment),
     camera: value.camera === null ? null : modelPreviewCamera(value.camera),
     lighting: modelStageLighting(value.lighting), display: modelStageDisplay(value.display),
-    materialMode: modelStageMaterialMode(value.materialMode),
+    materialMode: modelStageMaterialMode(value.materialMode), size: modelStageSize(value.size),
   });
 }
 
@@ -48,12 +50,14 @@ export function modelStageDescriptionChanges(applied: ModelStageDescription | un
     !applied || JSON.stringify(applied[part]) !== JSON.stringify(next[part])));
 }
 
-/** Whether the camera's fit must be taken again: the first description, or a new focus, asset, clip or display. */
+/** Whether the camera's fit must be taken again: the first description, or a new focus, asset, clip, display or
+ * size. */
 export function modelStageRefit(applied: ModelStageDescription | undefined, next: ModelStageDescription) {
   if (!applied) return true;
   const framed = (value: ModelStageDescription) => {
     const {id, asset, animation} = modelStageFocus(value.actors);
-    return JSON.stringify([id, asset, animation.name, value.display]);
+    const clip = animation.kind === MODEL_ACTOR_ANIMATION.rest ? null : animation.name;
+    return JSON.stringify([id, asset, clip, value.display, value.size]);
   };
   return framed(applied) !== framed(next);
 }

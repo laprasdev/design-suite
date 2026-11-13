@@ -6,25 +6,31 @@ import type {ModelRuntimeMaterialProfile} from './runtimeMaterialModel.ts';
 import type {ModelEnvironment} from './environment.ts';
 import type {ModelPreviewFrame, ModelStageActorSnapshot} from './actorModel.ts';
 import type {ModelStageDescription} from './descriptionModel.ts';
+import type {ModelRotation, ModelVector} from './placementModel.ts';
 export {MODEL_RUNTIME_MATERIAL, modelRuntimeMaterialProfile} from './runtimeMaterialModel.ts';
 export type {ModelRuntimeMaterialProfile, ModelMaterialOutput, ModelRendererBinding} from './runtimeMaterialModel.ts';
 export type {ModelEnvironment, ModelEnvironmentBox} from './environment.ts';
 export {MODEL_PREVIEW_MATERIAL_TEXT, MODEL_PREVIEW_MATERIAL_OPTIONS} from './materialModel.ts';
 export type {ModelStageMaterialMode} from './materialModel.ts';
-export {MODEL_PREVIEW_LIGHTING_TEXT, MODEL_PREVIEW_LIGHTING_OPTIONS} from './lightingModel.ts';
+export {MODEL_PREVIEW_LIGHTING_TEXT, MODEL_PREVIEW_LIGHTING_OPTIONS, MODEL_STAGE_THEME_LIGHTING}
+  from './lightingModel.ts';
 export type {ModelStageLighting} from './lightingModel.ts';
-export {modelPreviewEntity, modelPoseForBinding, MODEL_PREVIEW_CAPABILITIES,
-  MODEL_PREVIEW_QUATERNION_TOLERANCE} from './presentation.ts';
+export {modelPreviewEntity, MODEL_PREVIEW_CAPABILITIES} from './presentation.ts';
+export {modelPoseForBinding, MODEL_PREVIEW_QUATERNION_TOLERANCE} from './placementModel.ts';
+export type {ModelVector, ModelRotation, ModelPresentationPose, ModelPoseBinding} from './placementModel.ts';
 export {MODEL_PREVIEW_WEIGHT_TOLERANCE} from './animationLayerModel.ts';
-export type {ModelPreviewEntity, ModelPresentationPose, ModelPoseBinding} from './presentation.ts';
+export type {ModelPreviewEntity} from './presentation.ts';
 export {ModelStageRefusal, MODEL_STAGE_FAILURE, modelStageFailure} from './refusal.ts';
 export type {ModelStageFailure, ModelStageFailureKind} from './refusal.ts';
 export {MODEL_ANIMATION_LAYER, MODEL_ANIMATION_REFUSAL, modelAnimationLayers} from './animationLayerModel.ts';
 export type {ModelAnimationLayer, ModelAnimationSample} from './animationLayerModel.ts';
-export {MODEL_ACTOR_REFUSAL, MODEL_STAGE_DRIVER, modelPreviewFrame, modelStageActorSet} from './actorModel.ts';
+export {MODEL_ACTOR_ANIMATION, MODEL_ACTOR_REFUSAL, MODEL_STAGE_DRIVER, modelPreviewFrame, modelStageActorSet}
+  from './actorModel.ts';
 export type {ModelPreviewFrame, ModelStageActor, ModelStageActorAnimation, ModelStageActorSet,
   ModelStageActorSnapshot, ModelStageDriver} from './actorModel.ts';
 export type {ModelStageDescription, ModelStageDescriptionPart} from './descriptionModel.ts';
+export {MODEL_STAGE_SIZE} from './sizeModel.ts';
+export type {ModelStageSize} from './sizeModel.ts';
 
 export const MODEL_READY_ATTRIBUTE = 'data-model-ready';
 export const MODEL_REST_POSE = 'rest-pose';
@@ -63,8 +69,15 @@ export const MODEL_STAGE = Object.freeze({
   normalizedHeight: 2, markerRadius: 0.035, markerSegments: 12, jointRadiusRatio: 0.008, jointSegments: 8,
   millisecondsPerSecond: 1000, maxFrameDelta: 0.05,
 });
-export type ModelVector = readonly [number, number, number];
-export type ModelRotation = readonly [number, number, number, number];
+/**
+ * How far the local clock's one presentation time moves in a frame: the elapsed time, capped, or nothing while the
+ * person asks for reduced motion or the page is hidden. Everything that moves with the local clock reads this time.
+ */
+export function modelLocalAdvance(elapsedMilliseconds: number, held: {readonly reducedMotion: boolean;
+  readonly hidden: boolean}) {
+  if (held.reducedMotion || held.hidden) return 0;
+  return Math.min(elapsedMilliseconds / MODEL_STAGE.millisecondsPerSecond, MODEL_STAGE.maxFrameDelta);
+}
 export interface ModelStageAsset {
   id: string;
   path: string;
@@ -87,16 +100,10 @@ export interface ModelStageTheme {
 export interface ModelStageOptions {
   reviewKey?: string;
   clock?: ModelStageClock;
-  normalizeHeight?: number | null;
   centerOnFloor?: boolean;
   floor?: boolean;
   grid?: boolean;
   orbit?: boolean;
-}
-export interface ModelStageTransform {
-  position?: ModelVector;
-  rotationQuaternion?: ModelRotation;
-  scale?: ModelVector;
 }
 export interface ModelStageCamera {
   position: ModelVector;
@@ -147,12 +154,8 @@ export function modelStagePolicy(options: ModelStageOptions = {}) {
   if (clock !== 'local' && clock !== 'external') {
     throw new ModelStageRefusal('Preview clock must be local or external.');
   }
-  const height = options.normalizeHeight === undefined ? MODEL_STAGE.normalizedHeight : options.normalizeHeight;
-  if (height !== null && (!Number.isFinite(height) || height <= 0)) {
-    throw new ModelStageRefusal('Preview height must be positive or null.');
-  }
   return {
-    clock, normalizeHeight: height, centerOnFloor: options.centerOnFloor ?? true,
+    clock, centerOnFloor: options.centerOnFloor ?? true,
     floor: options.floor ?? true, grid: options.grid ?? true, orbit: options.orbit ?? true,
   };
 }

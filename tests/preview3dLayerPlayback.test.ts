@@ -4,7 +4,7 @@ import {describe, it} from 'node:test';
 import {createModelPlayback} from '../src/react/preview3d/playback.ts';
 import {MODEL_ANIMATION_SAMPLES, MODEL_REST_POSE, modelAnimationLayers} from '../src/react/preview3d/model.ts';
 import type {ModelAnimationLayer, ModelAnimationSample} from '../src/react/preview3d/model.ts';
-import {actorAsset, BIND, clipValue, close, layer, sample, type ClipSpec} from './preview3dActorFixture.ts';
+import {actorAsset, BIND, clipValue, close, held, layer, sample, type ClipSpec} from './preview3dActorFixture.ts';
 
 const CLIPS: ClipSpec[] = [{name: 'run', duration: 2}, {name: 'walk', duration: 4}];
 function fixture(clips = CLIPS) {
@@ -20,7 +20,7 @@ describe('engine layer playback', () => {
     play(layer(sample('walk', 1.5)));
     assert.equal(x(), clipValue(1, 1.5));
     const before = pose();
-    for (const delta of [0, 0.016, 1, 600]) playback.update(delta, true);
+    for (const delta of [0, 0.016, 1, 600]) playback.update(delta);
     assert.deepEqual(pose(), before);
     play(layer(sample('walk', 1.5)));
     assert.deepEqual(pose(), before);
@@ -76,7 +76,7 @@ describe('engine layer playback', () => {
 
   it('holds the host selection under [] and hides it while samples play', () => {
     const {playback, play, x} = fixture();
-    playback.prepareAnimation({name: 'walk', playing: false, timeSeconds: 0})();
+    playback.prepareAnimation(held('walk', 0))();
     assert.equal(x(), clipValue(1, 0));
     play(layer(sample('run', 1)));
     assert.equal(x(), clipValue(0, 1));
@@ -88,7 +88,7 @@ describe('engine layer playback', () => {
     const {playback, play, pose} = fixture();
     play();
     const before = pose();
-    assert.throws(() => playback.prepareAnimation({name: 'run', playing: false, timeSeconds: 0}), /drive this model/);
+    assert.throws(() => playback.prepareAnimation(held('run', 0)), /drive this model/);
     assert.deepEqual(pose(), before);
     const {asset} = actorAsset(CLIPS);
     const local = createModelPlayback(asset.scene, asset.animations, 'local', 'p1');

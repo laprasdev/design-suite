@@ -147,10 +147,14 @@ const dispose = createModelStage(host, description, theme, controller => {
 The stage is driven by one `ModelStageDescription` of everything the host decides, applied whole or
 refused: `actors` (a `ModelStageActorSet` of declared actors and the `focus` the camera fits and the
 snapshot reports), `environment` (scenery, or `null`), `camera` (a held `{position, target}`, or `null`
-to fit the focused actor), `lighting`, `display` and `materialMode`. Each actor declares an `id`, its
+to fit the focused actor), `lighting`, `display`, `materialMode` and `size`: the stage's one size rule for every
+actor, `{rule: 'real'}` (each at its file's size, so sizes stay relative) or `{rule: 'normalized', height}`;
+a description that omits any part is refused. Each actor declares an `id`, its
 `asset` (URL, attachment bone names, optional revision and runtime material profile), a `placement`
-(an omitted component is the identity) and an `animation`: a clip `name` or `rest-pose`, whether it is
-`playing` on the local clock, and an optional held `timeSeconds` when it is not. `createModelStage` takes
+(a whole pose: `position`, `rotationQuaternion` and `scale` are all stated; one that omits a component is
+refused, naming the actor and the component) and an `animation` in one of three shapes: `{kind: 'rest'}`,
+`{kind: 'playing', name}` on the local clock, or `{kind: 'held', name, timeSeconds}`. A field of another
+shape is refused, never dropped. `createModelStage` takes
 the first description; `setDescription` applies each later one, keeping every unchanged part: an unchanged
 asset, drawn or still loading, is not reloaded, and a description equal to the applied one changes nothing.
 A description that loads nothing applies or throws at once; one that loads settles when its assets
@@ -166,8 +170,9 @@ the one action: it returns a view the person orbited to the described camera. `s
 focused actor at the top level and every actor under `actors`.
 
 Every refusal is a `ModelStageRefusal`: the stage is exactly as it was. Any other error means the stage
-is unusable. The sixth argument sets the policy: `clock` (`'local'` or `'external'`), `normalizeHeight`
-(`null` retains authored scale), `centerOnFloor`, `floor`, `grid` and `orbit`.
+is unusable. The sixth argument sets the policy: `clock` (`'local'` or `'external'`), `centerOnFloor`, `floor`, `grid`
+and `orbit`. Under the local clock the stage keeps one presentation time; it holds while the person asks for
+reduced motion or the page is hidden, and every playing clip moves only with it.
 
 For the complete view, load `/preview3d/react` when the preview opens and import
 `@looms/bloom-design/preview3d/styles.css`. It composes the existing suite controls and theme
@@ -183,7 +188,7 @@ The selected asset is the focused actor, with the asset's id as its actor id; `a
 others beside it, and `camera` and `environment` complete the description.
 All controls sit above the stage, including Rest Pose, Play/Pause, Surface, Model/Rig/Both and camera reset.
 Each control changes the person's selection, from which the view builds its one description.
-Reduced-motion preferences pause automatic playback; the user can still press Play.
+Under reduced motion the stage's time holds, so nothing plays, Play included; the view adds no hold of its own.
 The component accepts `stageOptions`, `className` and an optional `reviewKey` for existing consumers.
 Its canonical `modelPreviewReview` handle lives on `ModelPreviewElement.STAGE`.
 `MODEL_PREVIEW_TEXT` and `MODEL_PREVIEW_DISPLAY_OPTIONS` from `/preview3d/model` own the
@@ -198,22 +203,25 @@ These temporary inspection modes preserve alpha cutouts, skinning and morphing; 
 remain Lit. Snapshots include `materialMode`, `materialInspectionAvailable` and `emissiveMaterialCount`.
 
 `display: 'rig'` shows bright bone lines and joint markers while hiding the model's renderables;
-`'both'` overlays the rig, and `'model'` restores the asset's authored visibility. Rig frames all bone
+`'both'` overlays the rig, and `'model'` restores the asset's authored visibility. The actor writes each
+renderable's one visible value from its authored value, the display and the engine's last record of the
+renderers it hides, so a display change applies no frame again. Rig frames all bone
 positions; Both frames the union of the mesh and rig; Model keeps the catalog framing. Snapshots include
 `display`, `modelVisible`, `visibleModelMeshes`, `rigVisible`, `boneCount` and `visibleRigJoints`.
 `reviewKey` optionally exposes the controller on the host for browser acceptance checks.
 `onReady` means the first description is shown; it does not signal a connected or running state machine.
 Disposal removes the canvas and review handle, frees renderer resources and suppresses late load callbacks.
 
-Under `clock: 'external'` an actor's animation is a held clip (its first frame, or `timeSeconds` within
-the clip's inclusive duration) or the rest pose; it never plays and never advances from render frames.
-Under the local clock a clip plays, pauses where it is, or holds a time. Times outside the clip are
+Under `clock: 'external'` an actor's animation is a clip held at `timeSeconds` within its inclusive
+duration, or the rest pose; it never plays and never advances from render frames. Under the local clock a
+clip plays or is held at a stated time; the view's Pause holds the clip at the time the stage shows, and
+Play goes on from that time. Times outside the clip are
 refused without changing the pose; the stage does not wrap, clamp or resolve loops.
 
 `ModelPreview.frame` is the runtime input. Omit it for the local diagnostic view; pass `null` to wait
 for runtime data; pass a frame whose entity names the selected asset's id to apply it.
 
-Runtime mode forces an external clock, rest pose and authored scale/placement. It hides the model
+Runtime mode forces an external clock, rest pose, real sizes and authored placement. It hides the model
 picker, animation selection, playback and Surface controls; display modes and camera controls remain.
 Runtime views retain the loaded Lit materials.
 Null or invalid inputs clear pending data and show waiting/error status while retaining the last

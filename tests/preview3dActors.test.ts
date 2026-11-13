@@ -1,14 +1,15 @@
 import assert from 'node:assert/strict';
 import {describe, it} from 'node:test';
-import {applyModelFrame} from '../src/react/preview3d/actor.ts';
-import {MODEL_REST_POSE, MODEL_STAGE_DRIVER, modelStageActorSet} from '../src/react/preview3d/model.ts';
-import {actorContext, BIND, clipValue, declaration, entity, frame, held, layer, makeActor, sample}
-  from './preview3dActorFixture.ts';
+import {applyModelFrame, modelRenderableVisible} from '../src/react/preview3d/actor.ts';
+import {MODEL_REST_POSE, MODEL_STAGE_DRIVER, modelStageActorSet, modelStagePolicy}
+  from '../src/react/preview3d/model.ts';
+import {actorContext, BIND, clipValue, declaration, entity, frame, held, layer, makeActor, playing, REST, sample,
+  STANDING, standingAt} from './preview3dActorFixture.ts';
 
 const CLIPS = [{name: 'run', duration: 2}, {name: 'walk', duration: 4}];
 const pair = () => {
   const {context} = actorContext();
-  return {a: makeActor('a', CLIPS, {}, context), b: makeActor('b', CLIPS, {placement: {position: [5, 0, 0]}}, context)};
+  return {a: makeActor('a', CLIPS, {}, context), b: makeActor('b', CLIPS, {placement: standingAt([5, 0, 0])}, context)};
 };
 
 describe('declared actors under one frame', () => {
@@ -31,17 +32,40 @@ describe('declared actors under one frame', () => {
       pose: {position: [5, 0, 0], rotationQuaternion: [0, 0, 0, 1], scale: [1, 1, 1]}});
     applyModelFrame([a.actor, b.actor], frame(0, entity('a')));
     assert.equal(b.actor.snapshot().driver, MODEL_STAGE_DRIVER.host);
-    b.actor.prepareHost(declaration('b', 'otter', {placement: {position: [6, 0, 0]}}))();
+    b.actor.prepareHost(declaration('b', 'otter', {placement: standingAt([6, 0, 0])}))();
     assert.deepEqual(b.actor.snapshot().pose.position, [6, 0, 0]);
     applyModelFrame([a.actor, b.actor], frame(0.1, entity('b', [], [7, 0, 0])));
     assert.equal(b.actor.snapshot().driver, MODEL_STAGE_DRIVER.engine);
     assert.deepEqual(b.actor.snapshot().pose.position, [7, 0, 0]);
   });
 
-  it('takes a declared placement whole: a component it leaves out returns to the identity', () => {
+  it('writes each renderable\'s one visible value from the authored value, the display and the engine', () => {
+    for (const authored of [true, false]) for (const display of ['model', 'rig', 'both'] as const) {
+      for (const engineHidden of [true, false]) {
+        assert.equal(modelRenderableVisible(authored, display, engineHidden),
+          authored && display !== 'rig' && !engineHidden);
+      }
+    }
+    const {a} = pair(), {context} = actorContext();
+    // Built at its file's size, an actor stands on the floor when the policy asks, before any description sizes it.
+    const centred = makeActor('c', CLIPS, {}, {...context, policy: modelStagePolicy({clock: 'external'})});
+    assert.equal(centred.actor.asset.scene.position.y, 0.5);
+    a.actor.setDisplay('rig');
+    assert.equal(a.body.visible, false);
+    a.actor.setDisplay('both');
+    assert.equal(a.body.visible, true);
+  });
+
+  it('takes a declared placement whole, and refuses one that omits a component, naming the actor and component', () => {
     const {b} = pair();
-    b.actor.prepareHost(declaration('b', 'otter', {placement: {scale: [2, 2, 2]}}))();
+    b.actor.prepareHost(declaration('b', 'otter', {placement: {...STANDING, scale: [2, 2, 2]}}))();
     assert.deepEqual([b.actor.snapshot().pose.position, b.actor.snapshot().pose.scale], [[0, 0, 0], [2, 2, 2]]);
+    for (const component of ['position', 'rotationQuaternion', 'scale'] as const) {
+      const {[component]: omitted, ...partial} = STANDING;
+      assert.ok(omitted);
+      assert.throws(() => modelStageActorSet({focus: 'b', actors: [{...declaration('b'), placement: partial}]}),
+        new RegExp(`^ModelStageRefusal: Actor b placement: the pose omits ${component}`));
+    }
   });
 
   it('refuses a whole frame when one actor\'s clip is unknown, naming that actor and clip, and applies nothing', () => {
@@ -73,7 +97,7 @@ describe('declared actors under one frame', () => {
   });
 
   it('shows a declared held clip until samples play, and again on []', () => {
-    const {a, b} = pair(), still = makeActor('h', CLIPS, {animation: held('walk')});
+    const {a, b} = pair(), still = makeActor('h', CLIPS, {animation: held('walk', 0)});
     assert.equal(still.bone.position.x, clipValue(1, 0));
     assert.equal(still.actor.snapshot().animation, 'walk');
     applyModelFrame([still.actor], frame(0, entity('h', [layer(sample('run', 1))])));
@@ -87,7 +111,7 @@ describe('declared actors under one frame', () => {
 
   it('refuses a clip the file lacks as soon as the asset is built, naming the actor', () => {
     const {context, scene} = actorContext();
-    assert.throws(() => makeActor('h', CLIPS, {animation: held('swim')}, context),
+    assert.throws(() => makeActor('h', CLIPS, {animation: held('swim', 0)}, context),
       /^ModelStageRefusal: Actor h: clip swim/);
     assert.equal(scene.children.length, 0);
   });
@@ -101,22 +125,34 @@ describe('declared actors under one frame', () => {
 });
 
 describe('declared actor sets', () => {
-  const asset = declaration('x').asset, animation = {name: MODEL_REST_POSE, playing: false};
+  const asset = declaration('x').asset, animation = REST;
   const set = (...actors: unknown[]) => ({focus: 'a', actors});
   it('validates the whole set: unique ids, a declared focus, whole placements and animations', () => {
-    const valid = modelStageActorSet(set({id: 'a', asset, placement: {scale: [1, 2, 3]}, animation}));
-    assert.deepEqual(valid.actors[0].placement, {scale: [1, 2, 3]});
-    const a = {id: 'a', asset, placement: {}, animation};
+    const placement = {...STANDING, scale: [1, 2, 3]};
+    const valid = modelStageActorSet(set({id: 'a', asset, placement, animation}));
+    assert.deepEqual(valid.actors[0].placement, placement);
+    const a = {id: 'a', asset, placement: STANDING, animation};
+    for (const shape of [REST, playing('run'), held('run', 0.5)]) {
+      assert.deepEqual(modelStageActorSet(set({...a, animation: shape})).actors[0].animation, shape);
+    }
     const refusals: Array<[unknown, RegExp]> = [
       [set(a, a), /Actor a is declared twice/],
       [{focus: 'z', actors: [a]}, /The focus z names no declared actor/],
       [set(), /non-empty actors/],
-      [set({...a, placement: {scale: [2, 2]}}), /scale must contain 3/],
-      [set({...a, placement: {rotationQuaternion: [0, 0, 0, 2]}}), /unit length/],
-      [set({...a, animation: {name: '', playing: false}}), /Actor a: an animation requires/],
-      [set({...a, animation: {name: 'run', playing: false, timeSeconds: -1}}), /Actor a: an animation requires/],
-      [set({...a, animation: {name: 'run', playing: true, timeSeconds: 1}}), /a held timeSeconds does not play/],
-      [set({id: 'a', asset: {id: 'x'}, placement: {}, animation}), /Actor 0 requires/], [{}, /require a focus/],
+      [set({...a, placement: {...STANDING, scale: [2, 2]}}), /scale must contain 3/],
+      [set({...a, placement: {...STANDING, rotationQuaternion: [0, 0, 0, 2]}}), /unit length/],
+      // The three shapes are the only animations: no shape, a stray field of another shape, a missing clip or time.
+      [set({...a, animation: {name: 'run', playing: false}}), /Actor a: an animation is the rest pose/],
+      [set({...a, animation: {kind: 'paused', name: 'run'}}), /Actor a: an animation is the rest pose/],
+      [set({...a, animation: {...playing('run'), timeSeconds: 1}}),
+        /Actor a: a playing animation does not state timeSeconds/],
+      [set({...a, animation: {...REST, name: 'run'}}), /Actor a: a rest animation does not state name/],
+      [set({...a, animation: {...held('run', 0), playing: false}}), /Actor a: a held animation does not state playing/],
+      [set({...a, animation: playing('')}), /Actor a: a playing animation names a clip/],
+      [set({...a, animation: {kind: 'held', name: 'run'}}), /Actor a: a held animation states a finite nonnegative/],
+      [set({...a, animation: held('run', -1)}), /Actor a: a held animation states a finite nonnegative/],
+      [set({...a, animation: held('run', Infinity)}), /Actor a: a held animation states a finite nonnegative/],
+      [set({id: 'a', asset: {id: 'x'}, placement: STANDING, animation}), /Actor 0 requires/], [{}, /require a focus/],
     ];
     for (const [value, pattern] of refusals) assert.throws(() => modelStageActorSet(value), pattern);
   });

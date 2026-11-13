@@ -6,13 +6,15 @@ import {LoadingIndicator} from '../Pokeball.tsx';
 import {SegmentedControl} from '../SegmentedControl.tsx';
 import {createTheme, themeVariables} from '../../theme.ts';
 import {Typography} from '../../tokens.ts';
-import {MODEL_READY_ATTRIBUTE, MODEL_PREVIEW_REVIEW, MODEL_REST_POSE, ModelPreviewElement as element} from './model.ts';
+import {MODEL_ACTOR_ANIMATION, MODEL_READY_ATTRIBUTE, MODEL_PREVIEW_REVIEW, MODEL_REST_POSE,
+  ModelPreviewElement as element} from './model.ts';
 import type {ModelPreviewAsset, ModelStageOptions, ModelStageTheme, ModelPreviewFrame} from './model.ts';
 import type {ModelStageCamera, ModelEnvironment, ModelStageActor} from './model.ts';
 import {MODEL_PREVIEW_TEXT as copy, MODEL_PREVIEW_DISPLAY_OPTIONS} from './model.ts';
 import {MODEL_PREVIEW_MATERIAL_TEXT as surface, MODEL_PREVIEW_MATERIAL_OPTIONS} from './model.ts';
 import {MODEL_PREVIEW_LIGHTING_TEXT as lighting, MODEL_PREVIEW_LIGHTING_OPTIONS} from './model.ts';
 import {useModelPreview} from './useModelPreview.ts';
+import {modelPreviewClip} from './previewDescription.ts';
 
 export interface ModelPreviewProps {
   assets: readonly ModelPreviewAsset[];
@@ -49,6 +51,8 @@ function PreviewContents({asset, assets, onSelectAsset, theme, reviewKey = MODEL
   ModelPreviewProps & {asset: ModelPreviewAsset}) {
   const view = useModelPreview(asset, theme, reviewKey, stageOptions, frame, {camera, environment}, actors);
   const {selection, choose} = view;
+  const clip = modelPreviewClip(selection.animation);
+  const playing = selection.animation.kind === MODEL_ACTOR_ANIMATION.playing;
   const animations = [{value: MODEL_REST_POSE, label: copy.rest},
     ...asset.animations.filter(clip => clip.name !== MODEL_REST_POSE)
       .map(clip => ({value: clip.name, label: clip.label}))];
@@ -65,8 +69,8 @@ function PreviewContents({asset, assets, onSelectAsset, theme, reviewKey = MODEL
         </label>}
         <label className="model-preview-field">
           <span>{copy.animation}</span>
-          <ListboxSelect field label={copy.animation} value={selection.animation}
-            onChange={animation => choose({animation})}
+          <ListboxSelect field label={copy.animation} value={clip}
+            onChange={view.pick}
             disabled={!view.ready} options={animations}/>
         </label>
       </div>}
@@ -86,8 +90,8 @@ function PreviewContents({asset, assets, onSelectAsset, theme, reviewKey = MODEL
       </div>}
       <ActionBar compact className="model-preview-actions" notice={view.notice} slots={{
         left: !view.external && <Button variant="primary"
-          disabled={!view.ready || selection.animation === MODEL_REST_POSE}
-          onClick={view.togglePlayback}>{selection.playing ? copy.pause : copy.play}</Button>,
+          disabled={!view.ready || clip === MODEL_REST_POSE}
+          onClick={view.togglePlayback}>{playing ? copy.pause : copy.play}</Button>,
         center: <SegmentedControl options={displayOptions} value={selection.display}
           onChange={display => choose({display})}
           ariaLabel={copy.display} disabled={!view.loaded}/>,

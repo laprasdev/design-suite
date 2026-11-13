@@ -33,7 +33,7 @@ function color(target: THREE.Color, baseline: THREE.Color, value?: readonly numb
 // This is the source emission branch with absent mask=white, noise blend=0 and night boost=1;
 // it does not claim the source toon lighting, noise or damage shader has been ported.
 export function createModelRuntimeMaterials(bindings: readonly ModelMaterialBinding[]) {
-  const originals = new Map<THREE.Mesh, {material: THREE.Material | THREE.Material[]; visible: boolean}>();
+  const originals = new Map<THREE.Mesh, THREE.Material | THREE.Material[]>();
   const slots = new Map<string, {binding: ModelMaterialBinding; original: THREE.MeshStandardMaterial;
     material: THREE.MeshStandardMaterial; enabled: {value: boolean}}>();
   let disposed = false;
@@ -53,7 +53,7 @@ export function createModelRuntimeMaterials(bindings: readonly ModelMaterialBind
         original.onBeforeCompile !== THREE.Material.prototype.onBeforeCompile) {
         throw new Error('Runtime material binding requires an unmodified standard material.');
       }
-      originals.set(binding.mesh, {material: binding.mesh.material, visible: binding.mesh.visible});
+      originals.set(binding.mesh, binding.mesh.material);
       const enabled = {value: false};
       slots.set(id, {binding: {...binding}, original, material: tintedMaterial(original, enabled), enabled});
     }
@@ -61,8 +61,10 @@ export function createModelRuntimeMaterials(bindings: readonly ModelMaterialBind
     for (const entry of slots.values()) entry.material.dispose();
     throw error;
   }
-  const restore = () => {
-    for (const [mesh, baseline] of originals) {mesh.material = baseline.material; mesh.visible = baseline.visible;}
+  // Visibility is the actor's to write: restore and commit hand back the meshes the outputs want hidden.
+  const restore = (): ReadonlySet<THREE.Mesh> => {
+    for (const [mesh, material] of originals) mesh.material = material;
+    return new Set();
   };
   const live = () => {if (disposed) throw new Error('Runtime material binding has been disposed.');};
   return {
@@ -81,11 +83,10 @@ export function createModelRuntimeMaterials(bindings: readonly ModelMaterialBind
         updates.set(id, next);
       }
       const preparedAt = revision;
-      return () => {
+      return (): ReadonlySet<THREE.Mesh> => {
         live();
         if (preparedAt !== revision) throw new ModelStageRefusal('Runtime material preparation is stale.');
         restore();
-        for (const [mesh, visible] of visibility) mesh.visible = visible;
         for (const [id, update] of updates) {
           const {binding, material, original, enabled} = slots.get(id)!;
           if (!Object.keys(update.colors).length && !Object.keys(update.floats).length) continue;
@@ -102,9 +103,10 @@ export function createModelRuntimeMaterials(bindings: readonly ModelMaterialBind
           } else binding.mesh.material = material;
         }
         revision++;
+        return new Set([...visibility].flatMap(([mesh, visible]) => visible ? [] : [mesh]));
       };
     },
-    reset() {live(); restore(); revision++;},
+    reset() {live(); const hidden = restore(); revision++; return hidden;},
     dispose() {
       if (disposed) return;
       restore();

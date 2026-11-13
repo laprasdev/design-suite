@@ -1,5 +1,4 @@
 import {useEffect, useLayoutEffect, useRef, useState} from 'react';
-import {reducedMotion, REDUCED_MOTION_QUERY} from '../motion.ts';
 import {createModelStage} from './stage.ts';
 import type {ModelPreviewAsset, ModelStageController, ModelStageOptions, ModelStageTheme} from './model.ts';
 import type {ModelStageCamera, ModelEnvironment} from './model.ts';
@@ -7,8 +6,8 @@ import type {ModelPreviewFrame, ModelStageActor} from './actorModel.ts';
 import type {ModelStageDescription} from './descriptionModel.ts';
 import {createModelFrameInbox, type ModelFrameStatus} from './frameInbox.ts';
 import {createModelDescriptionRequests, modelPreviewDescription, modelPreviewFailure, modelPreviewInitialSelection,
-  modelPreviewNotice, modelPreviewReady, modelPreviewSelection, type ModelPreviewSelection}
-  from './previewDescription.ts';
+  modelPreviewNotice, modelPreviewPick, modelPreviewReady, modelPreviewSelection, modelPreviewToggle,
+  type ModelPreviewSelection} from './previewDescription.ts';
 import {MODEL_STAGE_FAILURE, modelStageFailure, type ModelStageFailure} from './refusal.ts';
 
 type Scene = {camera?: ModelStageCamera | null; environment?: ModelEnvironment | null};
@@ -23,13 +22,12 @@ export function useModelPreview(asset: ModelPreviewAsset, theme: ModelStageTheme
   const [inbox] = useState(createModelFrameInbox);
   const [poseStatus, setPoseStatus] = useState<ModelFrameStatus>('waiting');
   const attachments = JSON.stringify(Object.entries(asset.attachments).sort(([a], [b]) => a.localeCompare(b)));
-  const normalizeHeight = external ? null : options.normalizeHeight;
   const centerOnFloor = external ? false : options.centerOnFloor;
   const host = useRef<HTMLDivElement>(null);
   const controller = useRef<ModelStageController | null>(null);
   const release = useRef<() => void>(() => {});
   const [ready, setReady] = useState(false), [attempt, setAttempt] = useState(0);
-  const [selection, setSelection] = useState(() => modelPreviewInitialSelection(asset, external, reducedMotion()));
+  const [selection, setSelection] = useState(() => modelPreviewInitialSelection(asset, external));
   const selected = useRef(selection);
   const [boneCount, setBoneCount] = useState(0);
   const [materialAvailable, setMaterialAvailable] = useState(false), [emissiveCount, setEmissiveCount] = useState(0);
@@ -87,12 +85,13 @@ export function useModelPreview(asset: ModelPreviewAsset, theme: ModelStageTheme
     selected.current = next;
     setSelection(next);
   };
-  useEffect(() => {
-    const media = window.matchMedia(REDUCED_MOTION_QUERY);
-    const changed = () => {if (media.matches) choose({playing: false});};
-    media.addEventListener('change', changed);
-    return () => media.removeEventListener('change', changed);
-  }, []);
+  // Play or pause, read against the time the stage shows; a refusal goes to the one reader.
+  const toggle = () => {
+    const api = controller.current;
+    if (!api) return;
+    try {choose({animation: modelPreviewToggle(selected.current.animation, api.snapshot().time)});}
+    catch (value) {read(value);}
+  };
   useEffect(() => {
     const node = host.current;
     if (!node) return;
@@ -114,7 +113,7 @@ export function useModelPreview(asset: ModelPreviewAsset, theme: ModelStageTheme
         setEmissiveCount(snapshot.emissiveMaterialCount);
         if (external) pose(inbox.attach(value => api.setFrame(value)));
         setReady(true);
-      }, value => {if (active) read(value, false);}, {...options, normalizeHeight, centerOnFloor,
+      }, value => {if (active) read(value, false);}, {...options, centerOnFloor,
         reviewKey, clock: external ? 'external' : 'local'});
       release.current = dispose;
     } catch (value) {read(value, false);}
@@ -126,7 +125,7 @@ export function useModelPreview(asset: ModelPreviewAsset, theme: ModelStageTheme
       if (release.current === dispose) release.current = () => {};
     };
   }, [asset.id, asset.path, asset.revision, asset.sha256, attachments, reviewKey, attempt, external,
-    normalizeHeight, centerOnFloor,
+    centerOnFloor,
     options.floor, options.grid, options.orbit, theme.colors.stage, theme.colors.text, theme.colors.surface,
     theme.colors.surfaceHi, theme.colors.accent, theme.colors.accentDeep, theme.colors.teal]);
   const retry = () => setAttempt(value => value + 1);
@@ -135,7 +134,8 @@ export function useModelPreview(asset: ModelPreviewAsset, theme: ModelStageTheme
     host, loaded: ready, ready: modelPreviewReady(ready, external, poseStatus, loading),
     error: shown?.kind === MODEL_STAGE_FAILURE.unusable, failure: shown, notice: modelPreviewNotice(shown, retry),
     selection, boneCount, external, poseStatus, materialAvailable, emissiveCount, choose,
-    togglePlayback: () => choose({playing: !selected.current.playing}),
+    pick: (name: string) => choose({animation: modelPreviewPick(selected.current.animation, name)}),
+    togglePlayback: toggle,
     resetCamera() {
       const api = controller.current;
       if (!api) return;

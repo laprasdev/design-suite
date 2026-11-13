@@ -1,7 +1,9 @@
 import * as THREE from 'three';
 import {GLTFLoader, type GLTF} from 'three/addons/loaders/GLTFLoader.js';
 import {MODEL_STAGE as settings} from './model.ts';
-import type {ModelStageAsset, ModelStagePolicy, ModelStageTheme, ModelStageTransform} from './model.ts';
+import type {ModelStageAsset, ModelStagePolicy, ModelStageTheme} from './model.ts';
+import {MODEL_STAGE_SIZE, type ModelStageSize} from './sizeModel.ts';
+import type {ModelPresentationPose} from './placementModel.ts';
 import type {ModelRuntimeMaterialProfile} from './runtimeMaterialModel.ts';
 import {loadModelRuntimeAsset} from './runtimeMaterialBinding.ts';
 
@@ -21,24 +23,33 @@ export function disposeModelObject(object: THREE.Object3D) {
   for (const skeleton of skeletons) skeleton.dispose();
 }
 
+// The asset at its file's own size inside a placement group. `size` applies the stage's size rule over the file's
+// scale, never compounding, stands the model on the floor when the policy asks, and returns the factor it applied.
 export function prepareModelAsset(asset: Pick<GLTF, 'scene'>, policy: ModelStagePolicy) {
-  const height = new THREE.Box3().setFromObject(asset.scene).getSize(new THREE.Vector3()).y;
+  const bounds = new THREE.Box3().setFromObject(asset.scene);
+  const height = bounds.getSize(new THREE.Vector3()).y;
   if (!(height > 0)) throw new Error('The model has no measurable height.');
-  if (policy.normalizeHeight !== null) asset.scene.scale.multiplyScalar(policy.normalizeHeight / height);
-  if (policy.centerOnFloor) {
-    const bounds = new THREE.Box3().setFromObject(asset.scene);
-    const center = bounds.getCenter(new THREE.Vector3());
-    asset.scene.position.sub(new THREE.Vector3(center.x, bounds.min.y, center.z));
-  }
+  const scale = asset.scene.scale.clone(), origin = asset.scene.position.clone();
   const placement = new THREE.Group();
   placement.add(asset.scene);
-  return placement;
+  return {placement, size(rule: ModelStageSize) {
+    const factor = rule.rule === MODEL_STAGE_SIZE.real ? 1 : rule.height / height;
+    asset.scene.scale.copy(scale).multiplyScalar(factor);
+    asset.scene.position.copy(origin);
+    if (policy.centerOnFloor) {
+      // The file's bounds scale about the scene's own origin.
+      const center = bounds.getCenter(new THREE.Vector3()).sub(origin).multiplyScalar(factor).add(origin);
+      const floor = origin.y + (bounds.min.y - origin.y) * factor;
+      asset.scene.position.sub(new THREE.Vector3(center.x, floor, center.z));
+    }
+    return factor;
+  }};
 }
 
-export function applyModelTransform(placement: THREE.Group, value: ModelStageTransform) {
-  if (value.position) placement.position.fromArray(value.position);
-  if (value.rotationQuaternion) placement.quaternion.fromArray(value.rotationQuaternion);
-  if (value.scale) placement.scale.fromArray(value.scale);
+export function applyModelTransform(placement: THREE.Group, value: ModelPresentationPose) {
+  placement.position.fromArray(value.position);
+  placement.quaternion.fromArray(value.rotationQuaternion);
+  placement.scale.fromArray(value.scale);
 }
 
 export function modelAttachments(asset: Pick<GLTF, 'scene'>, character: ModelStageAsset, theme: ModelStageTheme) {

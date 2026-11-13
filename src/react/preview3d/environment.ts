@@ -1,6 +1,6 @@
 import * as THREE from 'three';
-import type {ModelVector, ModelRotation} from './model.ts';
-import {modelPresentationRotation, modelPoseForBinding} from './presentation.ts';
+import {modelPresentationRotation, modelPoseForBinding, type ModelRotation, type ModelVector}
+  from './placementModel.ts';
 import {ModelStageRefusal} from './refusal.ts';
 
 export const MODEL_ENVIRONMENT_GRID = Object.freeze({maximumLines: 1024, elevation: 0.001});

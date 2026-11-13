@@ -5,6 +5,8 @@ export const MODEL_PREVIEW_LIGHTING_OPTIONS = Object.freeze([
   {value: 'light', label: MODEL_PREVIEW_LIGHTING_TEXT.light},
   {value: 'dark', label: MODEL_PREVIEW_LIGHTING_TEXT.dark},
 ] satisfies {value: ModelStageLighting; label: string}[]);
+/** The consumer's own theme, as the stage has always shown it: the view's first choice and the engine's stage. */
+export const MODEL_STAGE_THEME_LIGHTING: ModelStageLighting = 'light';
 // Light is the consumer's theme, as the stage has always shown it. Dark is a night stage of its own: a deep backdrop,
 // a floor that still reads under less light, both lights cooled and held to one share of their strength, and the unlit
 // stage aids (grid, rig, markers) held to another, so a model's emission carries the picture. Exposure is untouched, or

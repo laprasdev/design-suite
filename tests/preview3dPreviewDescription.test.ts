@@ -1,33 +1,46 @@
 import assert from 'node:assert/strict';
 import {describe, it} from 'node:test';
 import {modelStageDescription} from '../src/react/preview3d/descriptionModel.ts';
-import {MODEL_PREVIEW_TEXT, MODEL_REST_POSE, MODEL_STAGE_FAILURE, ModelStageRefusal, modelStageFailure}
+import {MODEL_PREVIEW_TEXT, MODEL_REST_POSE, MODEL_STAGE, MODEL_STAGE_SIZE, MODEL_STAGE_THEME_LIGHTING,
+  MODEL_STAGE_FAILURE,
+  ModelStageRefusal, modelStageFailure}
   from '../src/react/preview3d/model.ts';
 import type {ModelPreviewAsset, ModelStageController} from '../src/react/preview3d/model.ts';
 import {createModelDescriptionRequests, modelPreviewDescription, modelPreviewFailure, modelPreviewInitialSelection,
-  modelPreviewNotice, modelPreviewReady, modelPreviewSelection} from '../src/react/preview3d/previewDescription.ts';
-import {declaration, describing} from './preview3dActorFixture.ts';
+  modelPreviewClip, modelPreviewNotice, modelPreviewPick, modelPreviewReady, modelPreviewToggle}
+  from '../src/react/preview3d/previewDescription.ts';
+import {declaration, describing, held, playing, REST, STANDING} from './preview3dActorFixture.ts';
 
 describe('the view\'s description', () => {
   const asset: ModelPreviewAsset = {id: 'otter', name: 'Otter', path: '/otter.glb', attachments: {},
     idleAnimation: 'run', animations: [{name: 'run', label: 'Run'}]};
   const inputs = {asset, actors: [declaration('ball', 'ball')], external: false};
   it('focuses the selected model beside the consumer\'s actors, and the engine overrides the host choices', () => {
-    const selection = modelPreviewInitialSelection(asset, false, false);
+    const selection = modelPreviewInitialSelection(asset, false);
     const local = modelPreviewDescription(inputs, {...selection, lighting: 'dark', materialMode: 'clay'});
     assert.deepEqual([local.actors.focus, local.actors.actors.map(({id}) => id)], ['otter', ['otter', 'ball']]);
-    assert.deepEqual([local.actors.actors[0].animation, local.lighting, local.camera], [{name: 'run', playing: true},
-      'dark', null]);
+    assert.deepEqual([local.actors.actors[0].animation, local.lighting, local.camera], [playing('run'), 'dark', null]);
+    assert.deepEqual(local.actors.actors[0].placement, STANDING);
     const engine = modelPreviewDescription({...inputs, external: true}, {...selection, materialMode: 'clay'});
     assert.deepEqual([engine.actors.actors[0].animation, engine.materialMode, engine.lighting],
-      [{name: MODEL_REST_POSE, playing: false}, 'lit', 'light']);
-    assert.equal(modelPreviewInitialSelection(asset, false, true).playing, false);
+      [REST, 'lit', MODEL_STAGE_THEME_LIGHTING]);
+    assert.deepEqual([local.size, engine.size],
+      [{rule: MODEL_STAGE_SIZE.normalized, height: MODEL_STAGE.normalizedHeight}, {rule: MODEL_STAGE_SIZE.real}]);
+    assert.equal(modelPreviewInitialSelection(asset, false).lighting, MODEL_STAGE_THEME_LIGHTING);
   });
 
-  it('never plays the rest pose', () => {
-    const playing = modelPreviewInitialSelection(asset, false, false);
-    assert.deepEqual(modelPreviewSelection(playing, {animation: MODEL_REST_POSE}).playing, false);
-    assert.deepEqual(modelPreviewSelection(playing, {display: 'rig'}).playing, true);
+  it('picks a clip that plays on if the last one played and is held at its start if not, and the rest pose', () => {
+    assert.deepEqual(modelPreviewPick(playing('run'), 'walk'), playing('walk'));
+    assert.deepEqual(modelPreviewPick(held('run', 0.4), 'walk'), held('walk', 0));
+    assert.deepEqual(modelPreviewPick(playing('run'), MODEL_REST_POSE), REST);
+    assert.deepEqual([REST, playing('run'), held('walk', 1)].map(modelPreviewClip), [MODEL_REST_POSE, 'run', 'walk']);
+  });
+
+  it('pauses at the time the stage shows, plays on from a hold, and refuses to pause the rest pose or samples', () => {
+    assert.deepEqual(modelPreviewToggle(playing('run'), 0.7), held('run', 0.7));
+    assert.deepEqual(modelPreviewToggle(held('run', 0.7), 0.7), playing('run'));
+    assert.throws(() => modelPreviewToggle(REST, 0), /^ModelStageRefusal: The rest pose neither plays nor pauses/);
+    assert.throws(() => modelPreviewToggle(playing('run'), null), /^ModelStageRefusal: Engine samples drive/);
   });
 
   it('keeps readiness for a description that loads nothing, and hands on the latest refusal only', async () => {

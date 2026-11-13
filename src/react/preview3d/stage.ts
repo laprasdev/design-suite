@@ -1,5 +1,6 @@
 import * as THREE from 'three';
-import {MODEL_STAGE as settings, modelStagePolicy} from './model.ts';
+import {reducedMotion} from '../motion.ts';
+import {modelLocalAdvance, modelStagePolicy} from './model.ts';
 import type {ModelStageController, ModelStageOptions, ModelStageTheme} from './model.ts';
 import {loadModelStageAsset} from './asset.ts';
 import {createModelScene} from './scene.ts';
@@ -37,8 +38,9 @@ export function createModelStage(
   const parts = createModelStageParts(stage);
   let applied: ModelStageDescription | undefined;
   let disposed = false, lastTime = performance.now(), frame = 0;
-  // Under the external clock the presentation time moves only by setFrame.
-  let appliedFrameSeconds = 0, localSeconds = 0;
+  // The stage's one presentation time. Under the external clock only setFrame moves it; under the local clock the
+  // elapsed time does, unless reduced motion or a hidden page holds it. Every clip on the local clock moves with it.
+  let appliedFrameSeconds = 0, presentationSeconds = 0;
   const live = () => {if (disposed) throw new Error(MODEL_STAGE_TEXT.disposed);};
   const current = () => {
     const focused = actors.focused;
@@ -83,13 +85,12 @@ export function createModelStage(
     },
   };
   const animate = (now: number) => {
-    const delta = Math.min((now - lastTime) / settings.millisecondsPerSecond, settings.maxFrameDelta);
+    const previous = presentationSeconds;
+    presentationSeconds = policy.clock === 'external' ? appliedFrameSeconds : presentationSeconds +
+      modelLocalAdvance(now - lastTime, {reducedMotion: reducedMotion(), hidden: document.hidden});
     lastTime = now;
-    localSeconds += delta;
-    // The one place this frame's presentation time is known; time-driven scenery reads it here.
-    const presentationSeconds = policy.clock === 'external' ? appliedFrameSeconds : localSeconds;
     for (const actor of actors.actors) {
-      actor.playback.update(delta, !document.hidden);
+      actor.playback.update(presentationSeconds - previous);
       actor.placement.updateMatrixWorld(true);
       actor.rig.update();
     }

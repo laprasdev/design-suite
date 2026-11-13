@@ -29,20 +29,18 @@ function cleanup(value: ReturnType<typeof fixture>) {
 }
 
 describe('shared rig display', () => {
-  it('hides renderables in Rig and restores authored visibility in Both and Model', () => {
+  it('shows its aids in Rig and Both, keeps the authored visibility, and never writes a renderable\'s own', () => {
     const model = fixture();
     assert.deepEqual(model.rig.snapshot(), {display: 'model', modelVisible: true, visibleModelMeshes: 1,
       rigVisible: false, boneCount: 2, visibleRigJoints: 0, skeletonVisible: false});
+    assert.deepEqual(model.rig.renderables.map(({node, visible}) => [node, visible]),
+      [[model.body, true], [model.hidden, false]]);
     model.rig.setDisplay('rig');
-    assert.equal(model.body.visible, false);
-    assert.equal(model.hidden.visible, false);
-    assert.equal(model.base.visible, true);
-    assert.deepEqual(model.rig.snapshot(), {display: 'rig', modelVisible: false, visibleModelMeshes: 0,
+    assert.deepEqual([model.body.visible, model.hidden.visible], [true, false]);
+    assert.deepEqual(model.rig.snapshot(), {display: 'rig', modelVisible: true, visibleModelMeshes: 1,
       rigVisible: true, boneCount: 2, visibleRigJoints: 2, skeletonVisible: true});
     for (const mode of ['both', 'model'] as const) {
       model.rig.setDisplay(mode);
-      assert.equal(model.body.visible, true);
-      assert.equal(model.hidden.visible, false);
       assert.equal(model.rig.snapshot().rigVisible, mode === 'both');
     }
     cleanup(model);
@@ -55,6 +53,7 @@ describe('shared rig display', () => {
       [new THREE.VectorKeyframeTrack('Tip.position', [0, 1], [0, 8, 0, 0, 12, 0])]);
     mixer.clipAction(clip).play();
     model.rig.setDisplay('rig');
+    model.body.visible = false;
     mixer.update(0.5);
     model.asset.updateMatrixWorld(true);
     model.rig.update();
@@ -64,7 +63,6 @@ describe('shared rig display', () => {
     joints.getMatrixAt(1, matrix);
     assert.equal(model.tip.getWorldPosition(new THREE.Vector3()).y, 10);
     assert.equal(new THREE.Vector3().setFromMatrixPosition(matrix).y, 10);
-    assert.equal(model.body.visible, false);
     mixer.stopAllAction();
     mixer.uncacheRoot(model.asset);
     cleanup(model);

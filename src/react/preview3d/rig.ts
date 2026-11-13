@@ -39,21 +39,25 @@ export function createModelRig(asset: THREE.Object3D, theme: ModelStageTheme,
   joints.renderOrder = 2;
   joints.frustumCulled = false;
   root.add(skeleton, joints);
-  let display: ModelStageDisplay = 'model';
+  let display: ModelStageDisplay = 'model', factor = 1;
+  const unit = new THREE.Quaternion(), scale = new THREE.Vector3(1, 1, 1);
   const position = new THREE.Vector3();
   const matrix = new THREE.Matrix4();
   return {
     root,
+    /** The asset's renderables and their authored visibility; the actor writes their visibility, the rig reads it. */
+    renderables: renderables as readonly {readonly node: THREE.Object3D; readonly visible: boolean}[],
     get display() {return display;},
+    /** The scale the stage's size rule applied to the asset: the joints were sized for the file's own height. */
+    setScale(value: number) {factor = value; scale.setScalar(value);},
     setDisplay(value: ModelStageDisplay) {
       display = value;
-      for (const {node, visible} of renderables) node.visible = value === 'rig' ? false : visible;
       root.visible = value !== 'model';
       for (const {marker} of attachments) marker.visible = root.visible;
     },
     update() {
       bones.forEach((bone, index) => {
-        joints.setMatrixAt(index, matrix.makeTranslation(bone.getWorldPosition(position)));
+        joints.setMatrixAt(index, matrix.compose(bone.getWorldPosition(position), unit, scale));
       });
       joints.instanceMatrix.needsUpdate = true;
       for (const {marker, bone} of attachments) bone.getWorldPosition(marker.position);
@@ -63,7 +67,7 @@ export function createModelRig(asset: THREE.Object3D, theme: ModelStageTheme,
       const bounds = new THREE.Box3();
       if (display === 'both' || !bones.length) bounds.setFromObject(asset);
       for (const bone of bones) bounds.expandByPoint(bone.getWorldPosition(position));
-      return bones.length ? bounds.expandByScalar(radius) : bounds;
+      return bones.length ? bounds.expandByScalar(radius * factor) : bounds;
     },
     snapshot() {
       const visibleModelMeshes = renderables.filter(({node}) =>

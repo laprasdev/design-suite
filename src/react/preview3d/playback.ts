@@ -3,7 +3,7 @@ import {MODEL_ANIMATION_SAMPLES, MODEL_REST_POSE} from './model.ts';
 import type {ModelStageClock} from './model.ts';
 import {ModelStageRefusal} from './refusal.ts';
 import type {ModelAnimationLayer, ModelAnimationSample} from './animationLayerModel.ts';
-import type {ModelStageActorAnimation} from './actorModel.ts';
+import {MODEL_ACTOR_ANIMATION, type ModelStageActorAnimation} from './actorModel.ts';
 import type {ModelStageCommit} from './commit.ts';
 
 interface SampleAction {clipId: string; clip: THREE.AnimationClip; action: THREE.AnimationAction}
@@ -11,7 +11,6 @@ export const MODEL_PLAYBACK_REFUSAL = Object.freeze({
   local: 'Engine animation layers require an external clock.',
   layered: 'Engine animation layers drive this model; the host selection is held.',
   external: (owner: string) => `Actor ${owner}: an external clock cannot play on the local clock.`,
-  rest: (owner: string) => `Actor ${owner}: the rest pose neither plays nor holds a time.`,
   missing: (owner: string, clipId: string) => `Actor ${owner}: clip ${clipId} is not an animation in the model file.`,
   duration: (owner: string, clipId: string) => `Actor ${owner}: clip ${clipId} has no finite, nonnegative duration.`,
   time: (owner: string, clipId: string, time: number, duration: number) =>
@@ -40,13 +39,16 @@ export function createModelPlayback(root: THREE.Object3D, clips: readonly THREE.
     if (time > clip.duration) throw new ModelStageRefusal(refusal.time(owner, clipId, time, clip.duration));
     return clip;
   };
-  const bind = (clip: THREE.AnimationClip | undefined) => {
+  // The rest pose binds no clip; a clip already bound keeps its action and its time.
+  const rest = () => {mixer.stopAllAction(); action = undefined; mixer.update(0);};
+  const keep = (clip: THREE.AnimationClip) => {
+    if (clip === action?.getClip()) return action;
     mixer.stopAllAction();
-    action = clip && mixer.clipAction(clip);
-    action?.reset().play();
-    if (action) action.paused = clock === 'external';
+    const bound = mixer.clipAction(clip).reset().play();
+    bound.paused = clock === 'external';
+    action = bound;
     mixer.update(0);
-    return action;
+    return bound;
   };
   const retire = (entry: SampleAction) => {entry.action.stop(); mixer.uncacheClip(entry.clip);};
   const sampleAction = (sampleId: string, clipId: string, clip: THREE.AnimationClip): SampleAction => {
@@ -60,24 +62,21 @@ export function createModelPlayback(root: THREE.Object3D, clips: readonly THREE.
   const snapshot = () => ({animation: action?.getClip().name ?? MODEL_REST_POSE, time: action?.time ?? 0,
     playing: clock === 'local' && playing});
   return {
-    // The actor's host animation, applied as a change: the clip already bound keeps its time unless one is held.
+    // The actor's host animation, applied as a change: a clip already bound keeps its time unless it is held at one.
     prepareAnimation(value: ModelStageActorAnimation): ModelStageCommit {
       if (layered) throw new ModelStageRefusal(refusal.layered);
-      const {name, playing: plays, timeSeconds} = value;
-      if (name === MODEL_REST_POSE && (plays || timeSeconds !== undefined)) {
-        throw new ModelStageRefusal(refusal.rest(owner));
+      if (value.kind === MODEL_ACTOR_ANIMATION.rest) return () => {rest(); playing = false;};
+      if (value.kind === MODEL_ACTOR_ANIMATION.playing) {
+        if (clock === 'external') throw new ModelStageRefusal(refusal.external(owner));
+        const clip = resolve(value.name);
+        return () => {keep(clip); playing = true;};
       }
-      if (plays && clock === 'external') throw new ModelStageRefusal(refusal.external(owner));
-      const held = clock === 'external' || timeSeconds !== undefined;
-      const clip = name === MODEL_REST_POSE ? undefined : held ? sampled(name, timeSeconds ?? 0) : resolve(name);
+      const clip = sampled(value.name, value.timeSeconds), time = value.timeSeconds;
       return () => {
-        const bound = clip === action?.getClip() ? action : bind(clip);
-        if (bound && timeSeconds !== undefined) {
-          // A zero-delta evaluation samples this inclusive endpoint without loop wrapping or advancing mixer time.
-          bound.time = timeSeconds;
-          mixer.update(0);
-        }
-        playing = plays;
+        // A zero-delta evaluation samples this inclusive endpoint without loop wrapping or advancing mixer time.
+        keep(clip).time = time;
+        mixer.update(0);
+        playing = false;
       };
     },
     // Check every clip and time first; the returned commit sets each sample and evaluates once, never advancing.
@@ -102,8 +101,10 @@ export function createModelPlayback(root: THREE.Object3D, clips: readonly THREE.
         mixer.update(0);
       };
     },
-    update(deltaSeconds: number, visible: boolean) {
-      if (clock === 'local') mixer.update(playing && visible ? deltaSeconds : 0);
+    // The stage's presentation time moved by this much; only a playing clip, which the local clock alone allows,
+    // moves with it.
+    update(advanceSeconds: number) {
+      if (playing) mixer.update(advanceSeconds);
     },
     snapshot,
     // While samples play no single clip or time describes the pose; the applied samples do.

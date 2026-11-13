@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import * as THREE from 'three';
-import {MODEL_PREVIEW_QUATERNION_TOLERANCE} from '../src/react/preview3d/presentation.ts';
+import {MODEL_PREVIEW_QUATERNION_TOLERANCE} from '../src/react/preview3d/model.ts';
 import {createModelEnvironment, modelEnvironment, MODEL_ENVIRONMENT_GRID}
   from '../src/react/preview3d/environment.ts';
 

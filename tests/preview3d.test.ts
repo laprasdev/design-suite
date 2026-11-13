@@ -4,6 +4,10 @@ import * as THREE from 'three';
 import {MODEL_REST_POSE, MODEL_STAGE, modelStagePolicy} from '../src/react/preview3d/model.ts';
 import {applyModelTransform, disposeModelObject, prepareModelAsset} from '../src/react/preview3d/asset.ts';
 import {createModelFraming} from '../src/react/preview3d/camera.ts';
+import {MODEL_STAGE_SIZE} from '../src/react/preview3d/sizeModel.ts';
+
+const REAL = {rule: MODEL_STAGE_SIZE.real} as const;
+const normalized = (height: number) => ({rule: MODEL_STAGE_SIZE.normalized, height} as const);
 
 const assetBox = () => {
   const scene = new THREE.Group();
@@ -19,19 +23,16 @@ describe('shared model presentation', () => {
     assert.equal(MODEL_REST_POSE, 'rest-pose');
     assert.equal(MODEL_STAGE.normalizedHeight, 2);
     const defaults = modelStagePolicy();
-    assert.deepEqual(defaults, {clock: 'local', normalizeHeight: 2,
-      centerOnFloor: true, floor: true, grid: true, orbit: true});
+    assert.deepEqual(defaults, {clock: 'local', centerOnFloor: true, floor: true, grid: true, orbit: true});
     for (const flag of ['centerOnFloor', 'floor', 'grid', 'orbit']) {
       assert.deepEqual(modelStagePolicy({[flag]: false}), {...defaults, [flag]: false});
-    }
-    for (const height of [0, -1, NaN, Infinity]) {
-      assert.throws(() => modelStagePolicy({normalizeHeight: height}), /positive or null/);
     }
   });
 
   it('preserves authored scale and position when both framing transformations are disabled', () => {
     const asset = assetBox();
-    const placement = prepareModelAsset(asset, modelStagePolicy({normalizeHeight: null, centerOnFloor: false}));
+    const {placement, size} = prepareModelAsset(asset, modelStagePolicy({centerOnFloor: false}));
+    assert.equal(size(REAL), 1);
     assert.equal(placement.children[0], asset.scene);
     assert.deepEqual(asset.scene.scale.toArray(), [2, 2, 2]);
     assert.deepEqual(asset.scene.position.toArray(), [8, 3, -2]);
@@ -41,7 +42,8 @@ describe('shared model presentation', () => {
 
   it('normalizes height independently of placement and applies commands to a separate wrapper', () => {
     const asset = assetBox();
-    const placement = prepareModelAsset(asset, modelStagePolicy({normalizeHeight: 4, centerOnFloor: false}));
+    const {placement, size} = prepareModelAsset(asset, modelStagePolicy({centerOnFloor: false}));
+    assert.equal(size(normalized(4)), 0.5);
     assert.equal(boundsOf(placement).getSize(new THREE.Vector3()).y, 4);
     assert.deepEqual(asset.scene.position.toArray(), [8, 3, -2]);
     const authoredScale = asset.scene.scale.clone();
@@ -56,11 +58,29 @@ describe('shared model presentation', () => {
 
   it('can center an asset on the floor without changing its authored scale', () => {
     const asset = assetBox();
-    const placement = prepareModelAsset(asset, modelStagePolicy({normalizeHeight: null}));
+    const {placement, size} = prepareModelAsset(asset, modelStagePolicy({}));
+    size(REAL);
     const bounds = boundsOf(placement);
     assert.equal(bounds.min.y, 0);
     assert.deepEqual(bounds.getCenter(new THREE.Vector3()).toArray(), [0, 4, 0]);
     assert.deepEqual(asset.scene.scale.toArray(), [2, 2, 2]);
+    disposeModelObject(placement);
+  });
+
+  it('applies the stage\'s size rule over the file\'s own scale, never compounding, and keeps it on the floor', () => {
+    const asset = assetBox();
+    const {placement, size} = prepareModelAsset(asset, modelStagePolicy({}));
+    const read = () => {
+      const bounds = boundsOf(placement);
+      return [bounds.getSize(new THREE.Vector3()).y, bounds.min.y, ...bounds.getCenter(new THREE.Vector3()).toArray()];
+    };
+    size(normalized(2));
+    const once = read();
+    assert.deepEqual(once, [2, 0, 0, 1, 0]);
+    size(normalized(5)); size(REAL); size(normalized(2));
+    assert.deepEqual(read(), once);
+    size(REAL);
+    assert.deepEqual([read()[0], asset.scene.scale.toArray()], [8, [2, 2, 2]]);
     disposeModelObject(placement);
   });
 

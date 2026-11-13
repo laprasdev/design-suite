@@ -3,7 +3,8 @@
 import * as THREE from 'three';
 import type {GLTF} from 'three/addons/loaders/GLTFLoader.js';
 import {createModelActor, type ModelActorContext} from '../src/react/preview3d/actor.ts';
-import {MODEL_ANIMATION_LAYER, MODEL_REST_POSE, modelStagePolicy, type ModelStageActor, type ModelStageClock}
+import {MODEL_ACTOR_ANIMATION, MODEL_ANIMATION_LAYER, MODEL_STAGE_SIZE, MODEL_STAGE_THEME_LIGHTING, modelStagePolicy,
+  type ModelStageActor, type ModelStageClock}
   from '../src/react/preview3d/model.ts';
 
 export const BONE = 'tip';
@@ -28,7 +29,7 @@ export function actorAsset(clips: readonly ClipSpec[], skeleton = true) {
 export function actorContext(clock: ModelStageClock = 'external') {
   const scene = new THREE.Scene();
   const context: ModelActorContext = {
-    policy: modelStagePolicy({clock, normalizeHeight: null, centerOnFloor: false}), scene,
+    policy: modelStagePolicy({clock, centerOnFloor: false}), scene,
     theme: {colors: {stage: '#000', text: '#fff', surface: '#111', surfaceHi: '#222', accent: '#f00',
       accentDeep: '#800', teal: '#0ff'}},
     lighting: {attach: () => () => undefined}, rendered: () => undefined,
@@ -36,10 +37,15 @@ export function actorContext(clock: ModelStageClock = 'external') {
   return {context, scene};
 }
 
-export const REST = Object.freeze({name: MODEL_REST_POSE, playing: false});
-export const held = (name: string, timeSeconds = 0) => ({name, playing: false, timeSeconds});
+export const REST = Object.freeze({kind: MODEL_ACTOR_ANIMATION.rest});
+export const held = (name: string, timeSeconds: number) => ({kind: MODEL_ACTOR_ANIMATION.held, name, timeSeconds});
+export const playing = (name: string) => ({kind: MODEL_ACTOR_ANIMATION.playing, name});
+// The identity, stated whole as every placement is.
+export const STANDING = Object.freeze({position: [0, 0, 0], rotationQuaternion: [0, 0, 0, 1],
+  scale: [1, 1, 1]} as const);
+export const standingAt = (position: readonly [number, number, number]) => ({...STANDING, position});
 export const declaration = (id: string, modelId = 'otter', extra: Partial<ModelStageActor> = {}): ModelStageActor =>
-  ({id, asset: {id: modelId, path: `${modelId}.glb`, attachments: {}}, placement: {}, animation: REST, ...extra});
+  ({id, asset: {id: modelId, path: `${modelId}.glb`, attachments: {}}, placement: STANDING, animation: REST, ...extra});
 
 export function makeActor(id: string, clips: readonly ClipSpec[], extra: Partial<ModelStageActor> = {},
   context = actorContext().context) {
@@ -60,4 +66,5 @@ export const close = (actual: number, expected: number, tolerance = 1e-6) =>
 // A whole stage description with one declared actor a; a test overrides the parts it is about.
 export const describing = (changes: Record<string, unknown> = {}) => ({
   actors: {focus: 'a', actors: [declaration('a')]}, environment: null, camera: null,
-  lighting: 'light', display: 'model', materialMode: 'lit', ...changes});
+  lighting: MODEL_STAGE_THEME_LIGHTING, display: 'model', materialMode: 'lit', size: {rule: MODEL_STAGE_SIZE.real},
+  ...changes});

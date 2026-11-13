@@ -1,18 +1,19 @@
 import type {ActionBarNotice} from '../ActionBar.tsx';
-import {MODEL_PREVIEW_TEXT, MODEL_REST_POSE} from './model.ts';
+import {MODEL_PREVIEW_TEXT, MODEL_REST_POSE, MODEL_STAGE} from './model.ts';
 import type {ModelPreviewAsset, ModelStageCamera, ModelStageController, ModelStageDisplay} from './model.ts';
-import type {ModelStageActor} from './actorModel.ts';
+import {MODEL_ACTOR_ANIMATION, type ModelStageActor, type ModelStageActorAnimation} from './actorModel.ts';
+import type {ModelPresentationPose} from './placementModel.ts';
 import type {ModelStageDescription} from './descriptionModel.ts';
+import {MODEL_STAGE_SIZE, type ModelStageSize} from './sizeModel.ts';
 import type {ModelEnvironment} from './environment.ts';
-import type {ModelStageLighting} from './lightingModel.ts';
+import {MODEL_STAGE_THEME_LIGHTING, type ModelStageLighting} from './lightingModel.ts';
 import type {ModelStageMaterialMode} from './materialModel.ts';
 import type {ModelFrameStatus} from './frameInbox.ts';
-import {MODEL_STAGE_FAILURE, type ModelStageFailure} from './refusal.ts';
+import {MODEL_STAGE_FAILURE, ModelStageRefusal, type ModelStageFailure} from './refusal.ts';
 
 /** The person's choices in the view. */
 export interface ModelPreviewSelection {
-  readonly animation: string;
-  readonly playing: boolean;
+  readonly animation: ModelStageActorAnimation;
   readonly display: ModelStageDisplay;
   readonly materialMode: ModelStageMaterialMode;
   readonly lighting: ModelStageLighting;
@@ -27,36 +28,64 @@ export interface ModelPreviewInputs {
   readonly external: boolean;
 }
 
-// The lighting model exports no default of its own: the stage's theme lighting is named here, once, for the view's
-// first choice and for the engine-driven stage. Every other lighting value comes from the model's own options.
-const THEME_LIGHTING: ModelStageLighting = 'light';
 const AUTHORED_SURFACE: ModelStageMaterialMode = 'lit';
+// The local view shows each model at the catalog's one height; the engine's stage keeps the file's real sizes.
+const CATALOG_SIZE: ModelStageSize = Object.freeze({rule: MODEL_STAGE_SIZE.normalized,
+  height: MODEL_STAGE.normalizedHeight});
+const REAL_SIZE: ModelStageSize = Object.freeze({rule: MODEL_STAGE_SIZE.real});
+// The selected model stands at the stage's origin, upright and at its own scale: stated whole, like every placement.
+const FOCUSED_PLACEMENT: ModelPresentationPose = Object.freeze({position: [0, 0, 0], rotationQuaternion: [0, 0, 0, 1],
+  scale: [1, 1, 1]} as const);
 
-export const modelPreviewInitialSelection = (asset: ModelPreviewAsset, external: boolean,
-  reducedMotion: boolean): ModelPreviewSelection => Object.freeze({
-  animation: external ? MODEL_REST_POSE : asset.idleAnimation,
-  playing: !external && asset.idleAnimation !== MODEL_REST_POSE && !reducedMotion,
-  display: 'model', materialMode: AUTHORED_SURFACE, lighting: THEME_LIGHTING,
+const REST: ModelStageActorAnimation = Object.freeze({kind: MODEL_ACTOR_ANIMATION.rest});
+export const MODEL_PREVIEW_SELECTION_REFUSAL = Object.freeze({
+  rest: 'The rest pose neither plays nor pauses.',
+  untimed: 'Engine samples drive the pose: there is no clip time to hold.',
 });
 
-/** A change to the selection; the rest pose never plays. */
-export function modelPreviewSelection(previous: ModelPreviewSelection,
-  change: Partial<ModelPreviewSelection>): ModelPreviewSelection {
-  const next = {...previous, ...change};
-  return Object.freeze(next.animation === MODEL_REST_POSE ? {...next, playing: false} : next);
+// The idle clip plays from the start; under reduced motion the stage's one time holds it, so the view holds nothing.
+export const modelPreviewInitialSelection = (asset: ModelPreviewAsset, external: boolean): ModelPreviewSelection =>
+  Object.freeze({
+    animation: external || asset.idleAnimation === MODEL_REST_POSE ? REST :
+      {kind: MODEL_ACTOR_ANIMATION.playing, name: asset.idleAnimation},
+    display: 'model', materialMode: AUTHORED_SURFACE, lighting: MODEL_STAGE_THEME_LIGHTING,
+  });
+
+/** A change to the selection. */
+export const modelPreviewSelection = (previous: ModelPreviewSelection,
+  change: Partial<ModelPreviewSelection>): ModelPreviewSelection => Object.freeze({...previous, ...change});
+
+/** The clip the picker shows: a clip's name, or the rest pose. */
+export const modelPreviewClip = (value: ModelStageActorAnimation) =>
+  value.kind === MODEL_ACTOR_ANIMATION.rest ? MODEL_REST_POSE : value.name;
+
+/** A clip picked from the list: it plays if the previous one played, and is otherwise held at its start. */
+export function modelPreviewPick(previous: ModelStageActorAnimation, name: string): ModelStageActorAnimation {
+  if (name === MODEL_REST_POSE) return REST;
+  return previous.kind === MODEL_ACTOR_ANIMATION.playing ? {kind: MODEL_ACTOR_ANIMATION.playing, name} :
+    {kind: MODEL_ACTOR_ANIMATION.held, name, timeSeconds: 0};
+}
+
+/** Play or pause: a pause holds the clip at the time the stage shows, which the caller reads from its snapshot. */
+export function modelPreviewToggle(value: ModelStageActorAnimation, shownSeconds: number | null):
+  ModelStageActorAnimation {
+  if (value.kind === MODEL_ACTOR_ANIMATION.rest) throw new ModelStageRefusal(MODEL_PREVIEW_SELECTION_REFUSAL.rest);
+  if (value.kind === MODEL_ACTOR_ANIMATION.held) return {kind: MODEL_ACTOR_ANIMATION.playing, name: value.name};
+  if (shownSeconds === null) throw new ModelStageRefusal(MODEL_PREVIEW_SELECTION_REFUSAL.untimed);
+  return {kind: MODEL_ACTOR_ANIMATION.held, name: value.name, timeSeconds: shownSeconds};
 }
 
 /** The one description the view sends: the selected model is the focused actor, beside the consumer's actors. */
 export function modelPreviewDescription(inputs: ModelPreviewInputs,
   selection: ModelPreviewSelection): ModelStageDescription {
   const {asset, external} = inputs;
-  const animation = external ? {name: MODEL_REST_POSE, playing: false} :
-    {name: selection.animation, playing: selection.playing};
+  const animation = external ? REST : selection.animation;
   return {
-    actors: {focus: asset.id, actors: [{id: asset.id, asset, placement: {}, animation}, ...inputs.actors]},
+    actors: {focus: asset.id,
+      actors: [{id: asset.id, asset, placement: FOCUSED_PLACEMENT, animation}, ...inputs.actors]},
     environment: inputs.environment ?? null, camera: inputs.camera ?? null,
-    lighting: external ? THEME_LIGHTING : selection.lighting, display: selection.display,
-    materialMode: external ? AUTHORED_SURFACE : selection.materialMode,
+    lighting: external ? MODEL_STAGE_THEME_LIGHTING : selection.lighting, display: selection.display,
+    materialMode: external ? AUTHORED_SURFACE : selection.materialMode, size: external ? REAL_SIZE : CATALOG_SIZE,
   };
 }
 

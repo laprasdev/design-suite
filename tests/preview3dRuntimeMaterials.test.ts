@@ -79,10 +79,15 @@ test('multi-slot renderers retain their array and require consistent visibility'
   mesh.visible = false;
   const materials = createModelRuntimeMaterials([0, 1].map(slot => ({rendererId, slot, mesh})));
   assert.throws(() => materials.prepare([output({visible: false}), output({slot: 1})]), /visibility/);
-  materials.prepare([output({floats: {[channel.emissionStrength]: .4}}),
+  const shown = materials.prepare([output({floats: {[channel.emissionStrength]: .4}}),
     output({slot: 1, floats: {[channel.emissionStrength]: .6}})])();
   assert.notEqual(mesh.material[0], original[0]); assert.notEqual(mesh.material[1], original[1]);
-  materials.reset(); assert.equal(mesh.material, original); assert.equal(mesh.visible, false);
+  assert.deepEqual([...shown], []);
+  // The outputs' visibility is handed back as data; the mesh's own visibility belongs to its actor.
+  const hidden = materials.prepare([output({visible: false}), output({slot: 1, visible: false})])();
+  assert.deepEqual([[...hidden], mesh.visible], [[mesh], false]);
+  mesh.visible = true;
+  assert.deepEqual([[...materials.reset()], mesh.material, mesh.visible], [[], original, true]);
   materials.dispose();
 });
 test('sparse color arrays cannot replace a previously accepted material', () => {

@@ -1,27 +1,29 @@
-import type {ModelRotation, ModelStageAsset, ModelStageTransform, ModelVector} from './model.ts';
-import type {ModelPreviewEntity} from './presentation.ts';
-import {MODEL_PREVIEW_ENTITY_REFUSAL, modelPresentationRotation, modelPresentationVector, modelPreviewEntity}
-  from './presentation.ts';
+import type {ModelStageAsset} from './model.ts';
+import {modelPresentationPose, type ModelPresentationPose} from './placementModel.ts';
+import {MODEL_PREVIEW_ENTITY_REFUSAL, modelPreviewEntity, type ModelPreviewEntity} from './presentation.ts';
 import type {ModelAnimationSample} from './animationLayerModel.ts';
 import {modelRuntimeMaterialProfile} from './runtimeMaterialModel.ts';
 import {ModelStageRefusal} from './refusal.ts';
 
 // Actor ids are the host's. A frame's entities are keyed by actor id and the host owns the mapping from an engine's
 // entity ids to them. Two actors may share one asset, so an actor's id is never taken from its asset.
-/** An actor's host animation: what it plays while no engine frame drives it. */
-export interface ModelStageActorAnimation {
-  /** An animation in the asset's file, or MODEL_REST_POSE. */
-  readonly name: string;
-  /** Advances on the stage's local clock. */
-  readonly playing: boolean;
-  /** Holds the clip at this time in seconds; only while not playing. Omitted, the clock keeps the clip's time. */
-  readonly timeSeconds?: number;
-}
+export const MODEL_ACTOR_ANIMATION = Object.freeze({rest: 'rest', playing: 'playing', held: 'held'} as const);
+/**
+ * An actor's host animation, what it shows while no engine frame drives it, in one of three whole shapes: the rest
+ * pose; a clip in the asset's file playing on the stage's local clock; or a clip held at a stated time in seconds.
+ */
+export type ModelStageActorAnimation =
+  | {readonly kind: typeof MODEL_ACTOR_ANIMATION.rest}
+  | {readonly kind: typeof MODEL_ACTOR_ANIMATION.playing; readonly name: string}
+  | {readonly kind: typeof MODEL_ACTOR_ANIMATION.held; readonly name: string; readonly timeSeconds: number};
+// The fields each shape states, and nothing else: a field of another shape is refused, never dropped.
+const ANIMATION_FIELDS: Readonly<Record<ModelStageActorAnimation['kind'], readonly string[]>> = Object.freeze({
+  rest: ['kind'], playing: ['kind', 'name'], held: ['kind', 'name', 'timeSeconds']});
 export interface ModelStageActor {
   readonly id: string;
   readonly asset: ModelStageAsset;
-  /** Where the host stands the actor; a component it leaves out is the identity. */
-  readonly placement: ModelStageTransform;
+  /** Where the host stands the actor, whole: position, rotation and scale are all stated. */
+  readonly placement: ModelPresentationPose;
   readonly animation: ModelStageActorAnimation;
 }
 /** Every actor on the stage, and the one the camera fits and the snapshot's top level reports. */
@@ -40,8 +42,7 @@ export interface ModelStageActorSnapshot {
   readonly id: string;
   readonly modelId: string;
   readonly driver: ModelStageDriver;
-  readonly pose: {readonly position: ModelVector; readonly rotationQuaternion: ModelRotation;
-    readonly scale: ModelVector};
+  readonly pose: ModelPresentationPose;
   readonly animation: string;
   readonly samples: readonly ModelAnimationSample[];
 }
@@ -49,9 +50,11 @@ export const MODEL_ACTOR_REFUSAL = Object.freeze({
   set: 'Declared actors require a focus and a non-empty actors array.',
   actor: (index: number) => `Actor ${index} requires an id, an asset with an id, path and attachments, ` +
     'a placement and an animation.',
-  animation: (id: string) => `Actor ${id}: an animation requires a name, a playing flag and, when held, ` +
-    'a finite nonnegative timeSeconds.',
-  heldPlaying: (id: string) => `Actor ${id}: a held timeSeconds does not play.`,
+  animation: (id: string) => `Actor ${id}: an animation is the rest pose, a clip playing, or a clip held at a time; ` +
+    `its kind is one of ${Object.values(MODEL_ACTOR_ANIMATION).join(', ')}.`,
+  field: (id: string, kind: string, field: string) => `Actor ${id}: a ${kind} animation does not state ${field}.`,
+  clip: (id: string, kind: string) => `Actor ${id}: a ${kind} animation names a clip.`,
+  time: (id: string) => `Actor ${id}: a held animation states a finite nonnegative timeSeconds.`,
   repeated: (id: string) => `Actor ${id} is declared twice.`,
   focus: (id: string) => `The focus ${id} names no declared actor.`,
   frame: 'A frame requires a finite nonnegative simulationTimeSeconds and an entities array.',
@@ -66,22 +69,18 @@ const object = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
 const named = (value: unknown): value is string => typeof value === 'string' && value.length > 0;
 
-function placement(value: Record<string, unknown>): ModelStageTransform {
-  return Object.freeze({
-    ...(value.position !== undefined && {position: modelPresentationVector(value.position, 'position')}),
-    ...(value.rotationQuaternion !== undefined &&
-      {rotationQuaternion: modelPresentationRotation(value.rotationQuaternion)}),
-    ...(value.scale !== undefined && {scale: modelPresentationVector(value.scale, 'scale')}),
-  });
-}
 function animation(value: unknown, id: string): ModelStageActorAnimation {
-  const time = object(value) ? value.timeSeconds : undefined;
-  if (!object(value) || !named(value.name) || typeof value.playing !== 'boolean' || (time !== undefined &&
-    (typeof time !== 'number' || !Number.isFinite(time) || time < 0))) {
-    throw new ModelStageRefusal(refusal.animation(id));
-  }
-  if (time !== undefined && value.playing) throw new ModelStageRefusal(refusal.heldPlaying(id));
-  return Object.freeze({name: value.name, playing: value.playing, ...(time !== undefined && {timeSeconds: time})});
+  const kind = object(value) ? value.kind : undefined;
+  const shape = Object.values(MODEL_ACTOR_ANIMATION).find(candidate => candidate === kind);
+  if (!object(value) || !shape) throw new ModelStageRefusal(refusal.animation(id));
+  const stray = Object.keys(value).find(field => !ANIMATION_FIELDS[shape].includes(field));
+  if (stray) throw new ModelStageRefusal(refusal.field(id, shape, stray));
+  if (shape === MODEL_ACTOR_ANIMATION.rest) return Object.freeze({kind: shape});
+  if (!named(value.name)) throw new ModelStageRefusal(refusal.clip(id, shape));
+  if (shape === MODEL_ACTOR_ANIMATION.playing) return Object.freeze({kind: shape, name: value.name});
+  const time = value.timeSeconds;
+  if (typeof time !== 'number' || !Number.isFinite(time) || time < 0) throw new ModelStageRefusal(refusal.time(id));
+  return Object.freeze({kind: shape, name: value.name, timeSeconds: time});
 }
 function actor(value: unknown, index: number): ModelStageActor {
   if (!object(value) || !named(value.id) || !object(value.asset) || !named(value.asset.id) ||
@@ -89,7 +88,7 @@ function actor(value: unknown, index: number): ModelStageActor {
     throw new ModelStageRefusal(refusal.actor(index));
   }
   const asset = value.asset as unknown as ModelStageAsset;
-  return Object.freeze({id: value.id, placement: placement(value.placement),
+  return Object.freeze({id: value.id, placement: modelPresentationPose(value.placement, `Actor ${value.id} placement`),
     asset: Object.freeze({...asset, attachments: Object.freeze({...asset.attachments})}),
     animation: animation(value.animation, value.id)});
 }

@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import type {GLTF} from 'three/addons/loaders/GLTFLoader.js';
-import type {ModelStagePolicy, ModelStageTheme, ModelStageTransform} from './model.ts';
+import type {ModelStageDisplay, ModelStagePolicy, ModelStageTheme} from './model.ts';
+import {MODEL_STAGE_SIZE, type ModelStageSize} from './sizeModel.ts';
 import {applyModelTransform, disposeModelObject, modelAttachments, prepareModelAsset} from './asset.ts';
 import {createModelRig} from './rig.ts';
 import {createModelPlayback} from './playback.ts';
@@ -21,9 +22,9 @@ export interface ModelActorContext {
   readonly rendered: (mesh: THREE.Mesh) => void;
 }
 export const MODEL_ACTOR_TEXT = Object.freeze({unlit: 'Runtime presentation requires lit materials.'});
-// A declared placement is whole: a component it leaves out is the identity, not the previous value.
-const IDENTITY_PLACEMENT = Object.freeze({position: [0, 0, 0], rotationQuaternion: [0, 0, 0, 1],
-  scale: [1, 1, 1]} as const satisfies ModelStageTransform);
+/** A renderable's one visible value: authored, not hidden by the Rig display, and not hidden by the engine. */
+export const modelRenderableVisible = (authored: boolean, display: ModelStageDisplay, engineHidden: boolean) =>
+  authored && display !== 'rig' && !engineHidden;
 
 // One loaded model and every owner it composes. Every actor is built alike; its declaration is applied through the
 // same prepare a later declaration uses.
@@ -33,7 +34,7 @@ export function createModelActor(asset: GLTF, declaration: ModelStageActor, cont
   try {
     acquired.push(() => {asset.scene.parent?.removeFromParent(); disposeModelObject(asset.scene);});
     const profile = modelRuntimeAssetProfile(declaration);
-    const placement = prepareModelAsset(asset, context.policy);
+    const {placement, size: sized} = prepareModelAsset(asset, context.policy);
     const markers = modelAttachments(asset, source, context.theme);
     acquired.push(() => markers.forEach(({marker}) => {marker.removeFromParent(); disposeModelObject(marker);}));
     asset.scene.traverse(node => {if (node instanceof THREE.Mesh) node.onAfterRender = () => context.rendered(node);});
@@ -47,13 +48,24 @@ export function createModelActor(asset: GLTF, declaration: ModelStageActor, cont
     const playback = createModelPlayback(asset.scene, asset.animations, context.policy.clock, id);
     acquired.push(() => playback.dispose());
     let current = declaration, driver: ModelStageDriver = MODEL_STAGE_DRIVER.host;
-    let presentation: ModelPreviewEntity | undefined;
+    // Built at its file's own size; the description's size rule applies with the rest of its stage-wide parts.
+    let size: ModelStageSize = Object.freeze({rule: MODEL_STAGE_SIZE.real});
+    const setSize = (value: ModelStageSize) => {rig.setScale(sized(value)); size = value;};
+    setSize(size);
+    // The engine's last record of the renderers it hides; before any frame it hides none.
+    let engineHidden: ReadonlySet<THREE.Object3D> = new Set();
+    // The one writer of a renderable's visibility, from the person's display and the engine's record.
+    const showRenderables = () => {
+      for (const {node, visible} of rig.renderables) {
+        node.visible = modelRenderableVisible(visible, rig.display, engineHidden.has(node));
+      }
+    };
     // The host state of a declaration: where the actor stands and what it plays.
     const prepareHost = (next: ModelStageActor): ModelStageCommit => {
       const animation = playback.prepareAnimation(next.animation);
       return () => {
         animation();
-        applyModelTransform(placement, {...IDENTITY_PLACEMENT, ...next.placement});
+        applyModelTransform(placement, next.placement);
         current = next;
       };
     };
@@ -63,18 +75,22 @@ export function createModelActor(asset: GLTF, declaration: ModelStageActor, cont
       id, asset, placement, markers, rig, playback, materials, prepareHost,
       get declaration() {return current;},
       get driver() {return driver;},
-      get presentation() {return presentation;},
+      setDisplay(value: ModelStageDisplay) {rig.setDisplay(value); showRenderables();},
+      get size() {return size;},
+      setSize,
       // Everything that can refuse runs here; the returned commit only applies.
       prepare(entity: ModelPreviewEntity): ModelStageCommit {
         if (materials.snapshot().materialMode !== 'lit') throw new ModelStageRefusal(MODEL_ACTOR_TEXT.unlit);
         return prepareWhole([
-          ...(runtimeMaterials ? [() => runtimeMaterials.prepare(entity.materials)] : []),
+          ...(runtimeMaterials ? [() => {
+            const commit = runtimeMaterials.prepare(entity.materials);
+            return () => {engineHidden = commit();};
+          }] : []),
           () => playback.prepareLayers(entity.animationLayers),
           modelStageCommit(() => {
             applyModelTransform(placement, entity.pose);
-            presentation = entity;
             driver = MODEL_STAGE_DRIVER.engine;
-            if (rig.display === 'rig') rig.setDisplay('rig');
+            showRenderables();
           }),
         ]);
       },

@@ -2,8 +2,10 @@ import assert from 'node:assert/strict';
 import {describe, it} from 'node:test';
 import * as THREE from 'three';
 import {createModelPlayback} from '../src/react/preview3d/playback.ts';
-import {MODEL_REST_POSE, modelStagePolicy, type ModelStageClock} from '../src/react/preview3d/model.ts';
+import {MODEL_REST_POSE, MODEL_STAGE, modelLocalAdvance, modelStagePolicy, type ModelStageClock}
+  from '../src/react/preview3d/model.ts';
 import type {ModelStageActorAnimation} from '../src/react/preview3d/model.ts';
+import {held as heldClip, playing, REST} from './preview3dActorFixture.ts';
 
 function fixture(clock: ModelStageClock = 'local') {
   const root = new THREE.Group(), bone = new THREE.Bone();
@@ -22,7 +24,7 @@ function fixture(clock: ModelStageClock = 'local') {
     position: bone.position.toArray(), rotation: bone.quaternion.toArray()});
   return {root, bone, playback, apply, evidence};
 }
-const held = (timeSeconds: number, name = 'motion') => ({name, playing: false, timeSeconds});
+const held = (timeSeconds: number, name = 'motion') => heldClip(name, timeSeconds);
 const close = (actual: number, expected: number) => assert.ok(Math.abs(actual - expected) < 1e-7);
 
 describe('an actor\'s host animation', () => {
@@ -51,9 +53,7 @@ describe('an actor\'s host animation', () => {
     const refusals: Array<[ModelStageActorAnimation, RegExp]> = [
       [held(2.001), /^ModelStageRefusal: Actor p1: clip motion time 2.001 lies outside \[0, 2\]/],
       [held(0, 'missing'), /^ModelStageRefusal: Actor p1: clip missing is not an animation/],
-      [{name: 'invalid', playing: false}, /^ModelStageRefusal: Actor p1: clip invalid has no finite/],
-      [{name: MODEL_REST_POSE, playing: false, timeSeconds: 0}, /rest pose neither plays nor holds a time/],
-      [{name: MODEL_REST_POSE, playing: true}, /rest pose neither plays nor holds a time/],
+      [held(0, 'invalid'), /^ModelStageRefusal: Actor p1: clip invalid has no finite/],
     ];
     for (const [value, pattern] of refusals) {
       assert.throws(() => apply(value), pattern);
@@ -61,32 +61,27 @@ describe('an actor\'s host animation', () => {
     }
   });
 
-  it('never advances from render/focus updates and refuses local playback under the external clock', () => {
+  it('never advances from the stage\'s time and refuses local playback under the external clock', () => {
     const {apply, playback, evidence} = fixture('external');
     apply(held(0.75));
     const before = evidence();
-    assert.throws(() => apply({name: 'motion', playing: true}), /external clock cannot play/);
-    for (const visible of [true, false, true]) {
-      for (const delta of [0, 0.016, 1, 600]) playback.update(delta, visible);
-      assert.deepEqual(evidence(), before);
-    }
+    assert.throws(() => apply(playing('motion')), /external clock cannot play/);
+    for (const delta of [0, 0.016, 1, 600]) playback.update(delta);
+    assert.deepEqual(evidence(), before);
     assert.equal(playback.snapshot().playing, false);
   });
 
-  it('plays on the local clock, pauses where it is, holds a time, and keeps hidden tabs still', () => {
+  it('plays on the local clock, pauses at a stated time, holds it, and plays on from it', () => {
     const {bone, apply, playback, evidence} = fixture();
-    apply({name: 'motion', playing: true});
-    playback.update(0.4, true);
+    apply(playing('motion'));
+    playback.update(0.4);
     close(bone.position.x, 1.6);
-    const before = evidence();
-    playback.update(60, false);
-    assert.deepEqual(evidence(), before);
-    apply({name: 'motion', playing: false});
-    playback.update(60, true);
+    apply(held(0.4));
+    playback.update(0.25);
     close(playback.snapshot().time, 0.4);
     close(bone.position.x, 1.6);
-    apply({name: 'motion', playing: true});
-    playback.update(1.9, true);
+    apply(playing('motion'));
+    playback.update(1.9);
     close(playback.snapshot().time, 0.3);
     close(bone.position.x, 1.2);
     apply(held(1));
@@ -96,7 +91,7 @@ describe('an actor\'s host animation', () => {
   it('restores the authored rest pose without inventing a sample', () => {
     const {bone, apply, evidence} = fixture('external');
     apply(held(1));
-    apply({name: MODEL_REST_POSE, playing: false});
+    apply(REST);
     assert.deepEqual(bone.position.toArray(), [2, 3, 4]);
     assert.equal(evidence().animation, MODEL_REST_POSE);
   });
@@ -105,12 +100,22 @@ describe('an actor\'s host animation', () => {
     const root = new THREE.Group();
     const clip = new THREE.AnimationClip('still', 0, [new THREE.VectorKeyframeTrack('.position', [0], [3, 2, 1])]);
     const playback = createModelPlayback(root, [clip], 'external', 'p1');
-    playback.prepareAnimation({name: 'still', playing: false, timeSeconds: 0})();
+    playback.prepareAnimation(heldClip('still', 0))();
     assert.deepEqual(root.position.toArray(), [3, 2, 1]);
     assert.equal(playback.snapshot().time, 0);
-    assert.throws(() => playback.prepareAnimation({name: 'still', playing: false, timeSeconds: Number.EPSILON}),
+    assert.throws(() => playback.prepareAnimation(heldClip('still', Number.EPSILON)),
       /lies outside/);
   });
+
+  it('moves the local clock\'s one time by the capped elapsed time, and holds it under reduced motion or a hidden page',
+    () => {
+      const moving = {reducedMotion: false, hidden: false};
+      assert.equal(modelLocalAdvance(16, moving), 0.016);
+      assert.equal(modelLocalAdvance(10_000, moving), MODEL_STAGE.maxFrameDelta);
+      for (const held of [{...moving, reducedMotion: true}, {...moving, hidden: true}]) {
+        assert.equal(modelLocalAdvance(16, held), 0);
+      }
+    });
 
   it('defaults the stage policy to local and accepts only the declared clock owners', () => {
     assert.equal(modelStagePolicy().clock, 'local');
