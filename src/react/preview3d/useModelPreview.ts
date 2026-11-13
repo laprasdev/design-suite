@@ -1,119 +1,95 @@
 import {useEffect, useLayoutEffect, useRef, useState} from 'react';
 import {reducedMotion, REDUCED_MOTION_QUERY} from '../motion.ts';
 import {createModelStage} from './stage.ts';
-import {MODEL_REST_POSE} from './model.ts';
-import type {ModelPreviewAsset, ModelStageController, ModelStageDisplay, ModelStageOptions} from './model.ts';
-import type {ModelStageTheme, ModelStageMaterialMode, ModelStageLighting} from './model.ts';
+import type {ModelPreviewAsset, ModelStageController, ModelStageOptions, ModelStageTheme} from './model.ts';
 import type {ModelStageCamera, ModelEnvironment} from './model.ts';
-import {createModelPresentationInbox, modelPreviewCamera} from './presentation.ts';
-import {modelEnvironment} from './environment.ts';
-import type {ModelPreviewPresentation, ModelPresentationStatus} from './presentation.ts';
-import type {ModelStageActor} from './actorModel.ts';
-import {createModelActorReplacement, modelPreviewReady} from './actorReplacement.ts';
+import type {ModelPreviewFrame, ModelStageActor} from './actorModel.ts';
+import type {ModelStageDescription} from './descriptionModel.ts';
+import {createModelFrameInbox, type ModelFrameStatus} from './frameInbox.ts';
+import {createModelDescriptionRequests, modelPreviewDescription, modelPreviewFailure, modelPreviewInitialSelection,
+  modelPreviewNotice, modelPreviewReady, modelPreviewSelection, type ModelPreviewSelection}
+  from './previewDescription.ts';
 import {MODEL_STAGE_FAILURE, modelStageFailure, type ModelStageFailure} from './refusal.ts';
 
 type Scene = {camera?: ModelStageCamera | null; environment?: ModelEnvironment | null};
-function prepareScene(scene: Scene): Scene {
-  return Object.freeze({camera: scene.camera == null ? scene.camera : modelPreviewCamera(scene.camera),
-    environment: scene.environment == null ? scene.environment : modelEnvironment(scene.environment)});
-}
-function applyScene(api: ModelStageController, scene: Scene, previous?: Scene) {
-  if (scene.environment !== undefined && (!previous ||
-    JSON.stringify(scene.environment) !== JSON.stringify(previous.environment))) api.setEnvironment(scene.environment);
-  if (scene.camera !== undefined) {
-    if (scene.camera) api.setCamera(scene.camera);
-    else api.resetCamera();
-  }
-}
-
 const NO_ACTORS: readonly ModelStageActor[] = Object.freeze([]);
+const key = (value: ModelStageDescription) => JSON.stringify(value);
+
+// The view model: one selection state, one description built from it and the props, one failure reader.
 export function useModelPreview(asset: ModelPreviewAsset, theme: ModelStageTheme,
-  reviewKey: string, options: Omit<ModelStageOptions, 'reviewKey' | 'clock' | 'actors'> = {},
-  presentation?: ModelPreviewPresentation | null,
-  scene: Scene = {}, actors: readonly ModelStageActor[] = NO_ACTORS) {
-  const external = presentation !== undefined;
-  const [inbox] = useState(() => createModelPresentationInbox(asset.id, asset.runtimeMaterials));
-  const [poseStatus, setPoseStatus] = useState<ModelPresentationStatus>('waiting');
+  reviewKey: string, options: Omit<ModelStageOptions, 'reviewKey' | 'clock'> = {},
+  frame?: ModelPreviewFrame | null, scene: Scene = {}, actors: readonly ModelStageActor[] = NO_ACTORS) {
+  const external = frame !== undefined;
+  const [inbox] = useState(createModelFrameInbox);
+  const [poseStatus, setPoseStatus] = useState<ModelFrameStatus>('waiting');
   const attachments = JSON.stringify(Object.entries(asset.attachments).sort(([a], [b]) => a.localeCompare(b)));
   const normalizeHeight = external ? null : options.normalizeHeight;
   const centerOnFloor = external ? false : options.centerOnFloor;
   const host = useRef<HTMLDivElement>(null);
   const controller = useRef<ModelStageController | null>(null);
   const release = useRef<() => void>(() => {});
-  const [ready, setReady] = useState(false), [error, setError] = useState(false), [attempt, setAttempt] = useState(0);
-  const [animation, setAnimation] = useState(external ? MODEL_REST_POSE : asset.idleAnimation);
-  const [playing, setPlaying] = useState(() =>
-    !external && asset.idleAnimation !== MODEL_REST_POSE && !reducedMotion());
-  const [display, setDisplay] = useState<ModelStageDisplay>('model');
+  const [ready, setReady] = useState(false), [attempt, setAttempt] = useState(0);
+  const [selection, setSelection] = useState(() => modelPreviewInitialSelection(asset, external, reducedMotion()));
+  const selected = useRef(selection);
   const [boneCount, setBoneCount] = useState(0);
-  const [materialMode, setMaterialMode] = useState<ModelStageMaterialMode>('lit');
   const [materialAvailable, setMaterialAvailable] = useState(false), [emissiveCount, setEmissiveCount] = useState(0);
-  const [lighting, setLighting] = useState<ModelStageLighting>('light');
-  const selected = useRef({animation, playing, display, materialMode, lighting});
-  const latestScene = useRef<Scene>({});
+  // A refused request and the frame's own failure are kept apart: accepting one never clears the other.
   const [failure, setFailure] = useState<ModelStageFailure | null>(null);
-  const [actorsPending, setActorsPending] = useState(false);
+  const [frameFailure, setFrameFailure] = useState<ModelStageFailure | null>(null);
+  const [loading, setLoading] = useState(false);
+  const inputs = useRef({asset, actors, external, ...scene});
+  inputs.current = {asset, actors, external, ...scene};
+  const describe = (value: ModelPreviewSelection) => modelPreviewDescription(inputs.current, value);
+  const description = describe(selection), described = key(description);
+  const latest = useRef(description), staged = useRef(described);
   // Whether a created stage is there to keep when a request is refused.
   const usable = useRef(true);
   // The one place a failure is read, decided by its kind: a refusal leaves the stage as it was and is recorded;
   // anything else, or any failure with no stage to keep (creation, onError), fails the stage and is recorded too.
-  const read = (value: unknown, stageKept = usable.current) => {
+  const read = (value: unknown, stageKept = usable.current, record = setFailure) => {
     const next = modelStageFailure(value, stageKept);
-    setFailure(next);
+    record(next);
     if (next.kind === MODEL_STAGE_FAILURE.unusable) failed();
   };
   const settled = () => setFailure(value => value?.kind === MODEL_STAGE_FAILURE.refused ? null : value);
-  const request = (run: () => void) => {
-    try {run(); settled(); return true;}
-    catch (value) {read(value); return false;}
-  };
-  const pose = (status: ModelPresentationStatus) => {
+  const pose = (status: ModelFrameStatus) => {
     setPoseStatus(status);
-    if (status === 'error') read(inbox.failure);
-    else settled();
+    if (status === 'error') read(inbox.failure, usable.current, setFrameFailure);
+    else setFrameFailure(null);
   };
-  const [replacement] = useState(() => createModelActorReplacement(setActorsPending, value => read(value)));
-  // The set the stage holds or is loading; a change while it loads is sent once the stage is ready.
-  // Compared by value, as attachments and the environment are: a parent's new array of the same actors is no change.
-  const actorsKey = JSON.stringify(actors);
-  const latestActors = useRef(actors), stagedActors = useRef(actorsKey);
+  const [requests] = useState(() => createModelDescriptionRequests(setLoading, value => read(value)));
+  const send = (api: ModelStageController, value: ModelStageDescription) => {
+    if (!requests.request(api, value)) return false;
+    staged.current = key(value);
+    settled();
+    return true;
+  };
+  // A change of the props sends the description again; one equal by value is no change.
   useLayoutEffect(() => {
-    latestActors.current = actors;
-    if (!controller.current || stagedActors.current === actorsKey) return;
-    stagedActors.current = actorsKey;
-    replacement.request(controller.current, actors);
-  }, [actorsKey, replacement]);
+    latest.current = description;
+    if (controller.current && staged.current !== described) send(controller.current, description);
+  }, [described]);
   useLayoutEffect(() => {
-    if (external) pose(inbox.receive(presentation));
-  }, [external, inbox, presentation]);
+    if (external) pose(inbox.receive(frame, latest.current.actors.actors));
+  }, [external, inbox, frame]);
   useEffect(() => () => inbox.clear(), [inbox]);
   function failed() {
     usable.current = false;
     controller.current = null;
     setReady(false);
-    setError(true);
     inbox.detach();
     release.current();
   }
-  const command = (run: (api: ModelStageController) => void) => {
-    const api = controller.current;
-    return api ? request(() => run(api)) : false;
-  };
-  useLayoutEffect(() => {
-    request(() => {
-      const accepted = prepareScene(scene);
-      if (controller.current) applyScene(controller.current, accepted, latestScene.current);
-      latestScene.current = accepted;
-    });
-  }, [scene.camera, scene.environment]);
-  const changePlaying = (value: boolean) => {
-    if (controller.current && !command(api => api.setPlaying(value))) return;
-    selected.current.playing = value;
-    setPlaying(value);
+  // A choice is kept only when the stage took it, or when there is no stage yet to take it.
+  const choose = (change: Partial<ModelPreviewSelection>) => {
+    const next = modelPreviewSelection(selected.current, change), api = controller.current;
+    if (api && !send(api, describe(next))) return;
+    selected.current = next;
+    setSelection(next);
   };
   useEffect(() => {
     const media = window.matchMedia(REDUCED_MOTION_QUERY);
-    const changed = () => {if (media.matches) changePlaying(false);};
+    const changed = () => {if (media.matches) choose({playing: false});};
     media.addEventListener('change', changed);
     return () => media.removeEventListener('change', changed);
   }, []);
@@ -122,33 +98,24 @@ export function useModelPreview(asset: ModelPreviewAsset, theme: ModelStageTheme
     if (!node) return;
     let active = true, dispose = () => {};
     setReady(false);
-    setError(false);
-    stagedActors.current = JSON.stringify(latestActors.current);
     usable.current = true;
     setFailure(null);
-    setActorsPending(false);
+    setFrameFailure(null);
+    setLoading(false);
+    staged.current = key(latest.current);
     try {
-      dispose = createModelStage(node, asset, theme, api => {
+      dispose = createModelStage(node, latest.current, theme, api => {
         if (!active) return;
         controller.current = api;
-        api.setAnimation(external ? MODEL_REST_POSE : selected.current.animation);
-        api.setPlaying(external ? false : selected.current.playing);
-        api.setDisplay(selected.current.display);
-        api.setMaterialMode(external ? 'lit' : selected.current.materialMode);
-        api.setLighting(external ? 'light' : selected.current.lighting);
+        if (staged.current !== key(latest.current)) send(api, latest.current);
         const snapshot = api.snapshot();
         setBoneCount(snapshot.boneCount);
         setMaterialAvailable(snapshot.materialInspectionAvailable);
         setEmissiveCount(snapshot.emissiveMaterialCount);
-        applyScene(api, latestScene.current);
-        if (stagedActors.current !== JSON.stringify(latestActors.current)) {
-          stagedActors.current = JSON.stringify(latestActors.current);
-          replacement.request(api, latestActors.current);
-        }
-        if (external) pose(inbox.attach(value => api.setPresentation(value)));
+        if (external) pose(inbox.attach(value => api.setFrame(value)));
         setReady(true);
       }, value => {if (active) read(value, false);}, {...options, normalizeHeight, centerOnFloor,
-        reviewKey, clock: external ? 'external' : 'local', actors: latestActors.current});
+        reviewKey, clock: external ? 'external' : 'local'});
       release.current = dispose;
     } catch (value) {read(value, false);}
     return () => {
@@ -162,37 +129,18 @@ export function useModelPreview(asset: ModelPreviewAsset, theme: ModelStageTheme
     normalizeHeight, centerOnFloor,
     options.floor, options.grid, options.orbit, theme.colors.stage, theme.colors.text, theme.colors.surface,
     theme.colors.surfaceHi, theme.colors.accent, theme.colors.accentDeep, theme.colors.teal]);
+  const retry = () => setAttempt(value => value + 1);
+  const shown = modelPreviewFailure(failure, frameFailure);
   return {
-    host, loaded: ready, ready: modelPreviewReady(ready, external, poseStatus, actorsPending),
-    error, failure, animation, playing, display, boneCount, external, poseStatus,
-    materialMode, materialAvailable, emissiveCount, lighting,
-    chooseAnimation(value: string) {
-      if (external) return;
-      if (!command(api => api.setAnimation(value))) return;
-      selected.current.animation = value;
-      setAnimation(value);
-      if (value === MODEL_REST_POSE) changePlaying(false);
-    },
-    chooseDisplay(value: ModelStageDisplay) {
-      if (!command(api => api.setDisplay(value))) return;
-      selected.current.display = value;
-      setDisplay(value);
-    },
-    chooseMaterialMode(value: ModelStageMaterialMode) {
-      if (external || !command(api => api.setMaterialMode(value))) return;
-      selected.current.materialMode = value;
-      setMaterialMode(value);
-    },
-    chooseLighting(value: ModelStageLighting) {
-      if (external || !command(api => api.setLighting(value))) return;
-      selected.current.lighting = value;
-      setLighting(value);
-    },
-    togglePlayback: () => {if (!external) changePlaying(!playing);},
+    host, loaded: ready, ready: modelPreviewReady(ready, external, poseStatus, loading),
+    error: shown?.kind === MODEL_STAGE_FAILURE.unusable, failure: shown, notice: modelPreviewNotice(shown, retry),
+    selection, boneCount, external, poseStatus, materialAvailable, emissiveCount, choose,
+    togglePlayback: () => choose({playing: !selected.current.playing}),
     resetCamera() {
-      const camera = latestScene.current.camera;
-      command(api => camera ? api.setCamera(camera) : api.resetCamera());
+      const api = controller.current;
+      if (!api) return;
+      try {api.resetCamera(); settled();} catch (value) {read(value);}
     },
-    retry: () => setAttempt(value => value + 1),
+    retry,
   };
 }

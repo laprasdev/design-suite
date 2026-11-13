@@ -1,21 +1,8 @@
 import * as THREE from 'three';
 import {GLTFLoader, type GLTF} from 'three/addons/loaders/GLTFLoader.js';
-import type {ModelStageAsset} from './model.ts';
 import {createModelRuntimeMaterials} from './runtimeMaterials.ts';
 import {modelRuntimeMaterialProfile} from './runtimeMaterialModel.ts';
 import type {ModelRuntimeMaterialProfile} from './runtimeMaterialModel.ts';
-
-export function modelRuntimeAssetProfile(character: ModelStageAsset) {
-  if (!character.runtimeMaterials) return undefined;
-  const profile = modelRuntimeMaterialProfile(character.runtimeMaterials);
-  if (profile.asset.id !== character.id || profile.asset.revision !== character.revision) {
-    throw new Error('The runtime material profile belongs to another asset or revision.');
-  }
-  if (character.sha256 !== undefined && character.sha256 !== profile.asset.sha256) {
-    throw new Error('The runtime material profile does not match the source descriptor SHA-256.');
-  }
-  return profile;
-}
 
 export async function loadModelRuntimeAsset(path: string, profile: ModelRuntimeMaterialProfile,
   signal: AbortSignal): Promise<GLTF> {

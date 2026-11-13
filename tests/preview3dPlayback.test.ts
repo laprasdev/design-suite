@@ -3,6 +3,7 @@ import {describe, it} from 'node:test';
 import * as THREE from 'three';
 import {createModelPlayback} from '../src/react/preview3d/playback.ts';
 import {MODEL_REST_POSE, modelStagePolicy, type ModelStageClock} from '../src/react/preview3d/model.ts';
+import type {ModelStageActorAnimation} from '../src/react/preview3d/model.ts';
 
 function fixture(clock: ModelStageClock = 'local') {
   const root = new THREE.Group(), bone = new THREE.Bone();
@@ -15,109 +16,100 @@ function fixture(clock: ModelStageClock = 'local') {
   ]);
   const invalid = new THREE.AnimationClip('invalid', 1, []);
   invalid.duration = Infinity;
-  const playback = createModelPlayback(root, [clip, invalid], clock);
+  const playback = createModelPlayback(root, [clip, invalid], clock, 'p1');
+  const apply = (value: ModelStageActorAnimation) => playback.prepareAnimation(value)();
   const evidence = () => ({...playback.snapshot(),
     position: bone.position.toArray(), rotation: bone.quaternion.toArray()});
-  return {root, bone, playback, evidence};
+  return {root, bone, playback, apply, evidence};
 }
+const held = (timeSeconds: number, name = 'motion') => ({name, playing: false, timeSeconds});
 const close = (actual: number, expected: number) => assert.ok(Math.abs(actual - expected) < 1e-7);
 
-describe('model clip clock ownership', () => {
+describe('an actor\'s host animation', () => {
   it('samples an inclusive endpoint, repeats it and seeks backward without loop wrapping', () => {
-    const {bone, playback, evidence} = fixture('external');
-    playback.setAnimation('motion');
-    playback.setAnimationTime(2);
+    const {bone, playback, apply, evidence} = fixture('external');
+    apply(held(2));
     assert.deepEqual(playback.snapshot(), {animation: 'motion', time: 2, playing: false});
     assert.deepEqual(bone.position.toArray(), [10, 0, 0]);
     assert.deepEqual(bone.quaternion.toArray(), [0, 1, 0, 0]);
     const endpoint = evidence();
-    playback.setAnimationTime(2);
+    apply(held(2));
     assert.deepEqual(evidence(), endpoint);
-    playback.setAnimationTime(0.25);
+    apply(held(0.25));
     assert.equal(bone.position.x, 1);
     assert.equal(playback.snapshot().time, 0.25);
-    playback.setAnimationTime(0);
+    apply(held(0));
     assert.deepEqual(bone.position.toArray(), [0, 0, 0]);
     assert.deepEqual(bone.quaternion.toArray(), [0, 0, 0, 1]);
     playback.dispose();
   });
 
-  it('rejects invalid times and invalid bindings without changing the sampled time or pose', () => {
-    const {playback, evidence} = fixture('external');
-    playback.setAnimation('motion');
-    playback.setAnimationTime(1.25);
+  it('refuses a time past the clip, an unknown clip or an endless one, naming the actor, and changes nothing', () => {
+    const {apply, evidence} = fixture('external');
+    apply(held(1.25));
     const before = evidence();
-    for (const time of [NaN, Infinity, -Infinity, -0.001, 2.001]) {
-      assert.throws(() => playback.setAnimationTime(time), /finite and within/);
+    const refusals: Array<[ModelStageActorAnimation, RegExp]> = [
+      [held(2.001), /^ModelStageRefusal: Actor p1: clip motion time 2.001 lies outside \[0, 2\]/],
+      [held(0, 'missing'), /^ModelStageRefusal: Actor p1: clip missing is not an animation/],
+      [{name: 'invalid', playing: false}, /^ModelStageRefusal: Actor p1: clip invalid has no finite/],
+      [{name: MODEL_REST_POSE, playing: false, timeSeconds: 0}, /rest pose neither plays nor holds a time/],
+      [{name: MODEL_REST_POSE, playing: true}, /rest pose neither plays nor holds a time/],
+    ];
+    for (const [value, pattern] of refusals) {
+      assert.throws(() => apply(value), pattern);
       assert.deepEqual(evidence(), before);
     }
-    assert.throws(() => playback.setAnimation('missing'), /Missing animation/);
-    assert.deepEqual(evidence(), before);
-    assert.throws(() => playback.setAnimation('invalid'), /finite, nonnegative duration/);
-    assert.deepEqual(evidence(), before);
-    playback.dispose();
   });
 
-  it('never advances from render/focus updates and refuses local playback in external mode', () => {
-    const {playback, evidence} = fixture('external');
-    playback.setAnimation('motion');
-    playback.setAnimationTime(0.75);
+  it('never advances from render/focus updates and refuses local playback under the external clock', () => {
+    const {apply, playback, evidence} = fixture('external');
+    apply(held(0.75));
     const before = evidence();
-    assert.throws(() => playback.setPlaying(true), /external clock/);
-    playback.setPlaying(false);
+    assert.throws(() => apply({name: 'motion', playing: true}), /external clock cannot play/);
     for (const visible of [true, false, true]) {
       for (const delta of [0, 0.016, 1, 600]) playback.update(delta, visible);
       assert.deepEqual(evidence(), before);
     }
     assert.equal(playback.snapshot().playing, false);
-    playback.dispose();
   });
 
-  it('keeps local diagnostic playback, pause, hidden-tab behavior and looping isolated', () => {
-    const {bone, playback, evidence} = fixture();
-    playback.setAnimation('motion');
-    playback.setPlaying(true);
+  it('plays on the local clock, pauses where it is, holds a time, and keeps hidden tabs still', () => {
+    const {bone, apply, playback, evidence} = fixture();
+    apply({name: 'motion', playing: true});
     playback.update(0.4, true);
     close(bone.position.x, 1.6);
     const before = evidence();
-    assert.throws(() => playback.setAnimationTime(1), /local preview clock/);
-    assert.deepEqual(evidence(), before);
     playback.update(60, false);
     assert.deepEqual(evidence(), before);
-    playback.setPlaying(false);
+    apply({name: 'motion', playing: false});
     playback.update(60, true);
     close(playback.snapshot().time, 0.4);
     close(bone.position.x, 1.6);
-    playback.setPlaying(true);
+    apply({name: 'motion', playing: true});
     playback.update(1.9, true);
     close(playback.snapshot().time, 0.3);
     close(bone.position.x, 1.2);
-    playback.dispose();
+    apply(held(1));
+    assert.deepEqual([bone.position.x, playback.snapshot().playing], [4, false]);
   });
 
-  it('requires a bound clip and restores the authored rest pose without inventing a sample', () => {
-    const {bone, playback, evidence} = fixture('external');
-    assert.throws(() => playback.setAnimationTime(0), /Select an animation/);
-    playback.setAnimation('motion');
-    playback.setAnimationTime(1);
-    playback.setAnimation(MODEL_REST_POSE);
+  it('restores the authored rest pose without inventing a sample', () => {
+    const {bone, apply, evidence} = fixture('external');
+    apply(held(1));
+    apply({name: MODEL_REST_POSE, playing: false});
     assert.deepEqual(bone.position.toArray(), [2, 3, 4]);
-    const rest = evidence();
-    assert.throws(() => playback.setAnimationTime(0), /Select an animation/);
-    assert.deepEqual(evidence(), rest);
-    playback.dispose();
+    assert.equal(evidence().animation, MODEL_REST_POSE);
   });
 
   it('supports the sole endpoint of a zero-duration clip', () => {
     const root = new THREE.Group();
     const clip = new THREE.AnimationClip('still', 0, [new THREE.VectorKeyframeTrack('.position', [0], [3, 2, 1])]);
-    const playback = createModelPlayback(root, [clip], 'external');
-    playback.setAnimation('still');
-    playback.setAnimationTime(0);
+    const playback = createModelPlayback(root, [clip], 'external', 'p1');
+    playback.prepareAnimation({name: 'still', playing: false, timeSeconds: 0})();
     assert.deepEqual(root.position.toArray(), [3, 2, 1]);
     assert.equal(playback.snapshot().time, 0);
-    assert.throws(() => playback.setAnimationTime(Number.EPSILON), /finite and within/);
-    playback.dispose();
+    assert.throws(() => playback.prepareAnimation({name: 'still', playing: false, timeSeconds: Number.EPSILON}),
+      /lies outside/);
   });
 
   it('defaults the stage policy to local and accepts only the declared clock owners', () => {

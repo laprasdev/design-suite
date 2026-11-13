@@ -2,11 +2,11 @@ import assert from 'node:assert/strict';
 import {describe, it} from 'node:test';
 import type {GLTF} from 'three/addons/loaders/GLTFLoader.js';
 import {applyModelFrame, createModelActor} from '../src/react/preview3d/actor.ts';
-import {createModelActorSet} from '../src/react/preview3d/actorSet.ts';
-import {createModelActorReplacement, modelPreviewReady} from '../src/react/preview3d/actorReplacement.ts';
-import {MODEL_STAGE_FAILURE, ModelStageRefusal, modelStageFailure} from '../src/react/preview3d/model.ts';
+import {createModelActorSet, type ModelActorStaging} from '../src/react/preview3d/actorSet.ts';
+import {prepareWhole} from '../src/react/preview3d/commit.ts';
+import {ModelStageRefusal} from '../src/react/preview3d/model.ts';
 import type {ModelStageActor} from '../src/react/preview3d/model.ts';
-import {actorAsset, actorContext, declaration, entity, frame} from './preview3dActorFixture.ts';
+import {actorAsset, actorContext, declaration, entity, frame, held} from './preview3dActorFixture.ts';
 
 // Each load waits until the test settles it; disposal is observed on the loaded body's geometry.
 function harness() {
@@ -19,143 +19,141 @@ function harness() {
     loads.push({id: value.id, disposed: () => disposed,
       settle: fail => fail ? reject(new Error(`load ${value.id} failed`)) : resolve(asset)});
   });
-  const set = createModelActorSet('otter', load, (asset, value) => createModelActor(asset, value, context));
+  const set = createModelActorSet(load, (asset, value) => createModelActor(asset, value, context));
+  const show = (staged: ModelActorStaging) => prepareWhole([staged.prepare])();
+  const replace = (...actors: ModelStageActor[]) => set.replace({focus: actors[0]?.id ?? 'none', actors}, show);
   const loading = (id: string) => loads.filter(entry => entry.id === id).at(-1)!;
-  return {set, scene, loads, loading};
+  return {set, scene, loads, loading, replace};
 }
 const at = (id: string, x = 0, extra: Partial<ModelStageActor> = {}) =>
   declaration(id, 'otter', {placement: {position: [x, 0, 0]}, ...extra});
+const ids = (actors: readonly {id: string}[]) => actors.map(actor => actor.id);
 
 describe('replacing the declared actors', () => {
   it('keeps an unchanged actor at its new placement, loads the new one and disposes the removed one', async () => {
-    const {set, loads, loading} = harness();
-    const first = set.replace([at('a'), at('b')]);
+    const {set, loads, loading, replace} = harness();
+    const first = replace(at('a'), at('b'));
     assert.equal(set.pending, true);
     loading('a').settle(); loading('b').settle();
     await first;
     const [a] = set.actors;
-    const second = set.replace([at('a', 4), at('c')]);
-    assert.deepEqual(loads.map(({id}) => id), ['a', 'b', 'c']);
-    assert.deepEqual(set.actors.map(actor => actor.id), ['a', 'b']);
+    const second = replace(at('a', 4), at('c'));
+    assert.deepEqual(ids(loads), ['a', 'b', 'c']);
+    assert.deepEqual(ids(set.actors), ['a', 'b']);
     loading('c').settle();
     await second;
     assert.equal(set.pending, false);
-    assert.deepEqual(set.actors.map(actor => actor.id), ['a', 'c']);
+    assert.deepEqual(ids(set.actors), ['a', 'c']);
     assert.equal(set.actors[0], a);
     assert.deepEqual(a.snapshot().pose.position, [4, 0, 0]);
     assert.equal(loading('b').disposed(), true);
     assert.equal(loading('a').disposed(), false);
   });
 
-  it('leaves the previous set drawn when a load fails, rejects, and disposes what the attempt loaded', async () => {
-    const {set, scene, loading} = harness();
-    const first = set.replace([at('a')]);
+  it('applies a set that loads nothing at once, and a set that changes nothing changes nothing', async () => {
+    const {set, loading, replace} = harness();
+    const first = replace(at('a'));
+    loading('a').settle();
+    await first;
+    const [a] = set.actors;
+    let prepared = 0;
+    const prepareHost = a.prepareHost;
+    a.prepareHost = value => {prepared++; return prepareHost(value);};
+    void replace(at('a'));
+    assert.equal(prepared, 0);
+    void replace(at('a', 0, {animation: held('run', 0.5)}));
+    assert.deepEqual([prepared, set.pending, a.snapshot().animation], [1, false, 'run']);
+  });
+
+  it('does not restart a load in flight when the next set keeps that actor', async () => {
+    const {set, loads, loading, replace} = harness();
+    const earlier = replace(at('a'));
+    const later = replace(at('a'));
+    assert.deepEqual(ids(loads), ['a']);
+    loading('a').settle();
+    await Promise.all([earlier, later]);
+    assert.deepEqual([ids(set.actors), loading('a').disposed(), set.pending], [['a'], false, false]);
+  });
+
+  it('lets a refused set supersede nothing: the load in flight still lands and pending clears', async () => {
+    const {set, loads, loading, replace} = harness();
+    const first = replace(at('a'));
+    loading('a').settle();
+    await first;
+    const adding = replace(at('a'), at('b'));
+    assert.throws(() => replace(at('a', 0, {animation: held('swim')})), /^ModelStageRefusal: Actor a: clip swim/);
+    loading('b').settle();
+    await adding;
+    assert.deepEqual([ids(loads), ids(set.actors), loading('b').disposed(), set.pending],
+      [['a', 'b'], ['a', 'b'], false, false]);
+  });
+
+  it('leaves the previous set drawn when a load fails, refusing, and disposes what the attempt loaded', async () => {
+    const {set, scene, loading, replace} = harness();
+    const first = replace(at('a'));
     loading('a').settle();
     await first;
     const drawn = scene.children.length;
-    const failing = set.replace([at('b'), at('c')]);
+    const failing = replace(at('b'), at('c'));
     loading('b').settle(); loading('c').settle(true);
     await assert.rejects(failing, (error: unknown) =>
       error instanceof ModelStageRefusal && /not replaced: load c failed/.test(error.message));
-    assert.deepEqual(set.actors.map(actor => actor.id), ['a']);
+    assert.deepEqual(ids(set.actors), ['a']);
     assert.equal(scene.children.length, drawn);
     assert.equal(loading('b').disposed(), true);
     assert.equal(set.pending, false);
   });
 
-  it('rejects an asset that loads but cannot be built, keeping the previous set', async () => {
-    const {set, loading} = harness();
-    const failing = set.replace([at('h', 0, {heldAnimation: 'swim'})]);
+  it('fails the first set as it is: with no previous set there is nothing a refusal could keep', async () => {
+    const {loading, replace} = harness();
+    const failing = replace(at('a'));
+    loading('a').settle(true);
+    await assert.rejects(failing, (error: unknown) => !(error instanceof ModelStageRefusal) &&
+      /load a failed/.test(String(error)));
+  });
+
+  it('rejects an asset that loads but cannot be built, and turns a loader that throws into a rejection', async () => {
+    const {set, loading, replace} = harness();
+    const failing = replace(at('h', 0, {animation: held('swim')}));
     loading('h').settle();
     await assert.rejects(failing, /Actor h: clip swim/);
     assert.deepEqual(set.actors, []);
-  });
-
-  it('turns a loader that throws at once into a rejection, ending the attempt', async () => {
     const {context} = actorContext();
-    const set = createModelActorSet('otter', () => {throw new Error('bad profile');},
+    const throwing = createModelActorSet(() => {throw new Error('bad profile');},
       (asset, value) => createModelActor(asset, value, context));
-    await assert.rejects(set.replace([at('a')]), /bad profile/);
-    assert.equal(set.pending, false);
-    assert.deepEqual(set.actors, []);
+    await assert.rejects(throwing.replace({focus: 'a', actors: [at('a')]}, () => undefined), /bad profile/);
+    assert.equal(throwing.pending, false);
   });
 
   it('lets the later of two overlapping calls win and disposes the earlier attempt\'s arrivals', async () => {
-    const {set, loads, loading} = harness();
-    const earlier = set.replace([at('a')]), later = set.replace([at('b')]);
+    const {set, loads, loading, replace} = harness();
+    const earlier = replace(at('a')), later = replace(at('b'));
     const early = loads[0];
     loading('b').settle();
     await later;
     early.settle();
     await earlier;
-    assert.deepEqual(set.actors.map(actor => actor.id), ['b']);
+    await Promise.resolve();
+    assert.deepEqual(ids(set.actors), ['b']);
     assert.equal(early.disposed(), true);
     assert.equal(set.pending, false);
   });
 
-  it('refuses at once while an actor is engine-driven, and refuses an invalid set before loading', async () => {
-    const {set, loads, loading} = harness();
-    const first = set.replace([at('a')]);
-    loading('a').settle();
-    await first;
-    assert.throws(() => set.replace([at('a'), at('a')]), /declared twice/);
-    applyModelFrame(set.actors, frame(0, entity('a')));
-    assert.throws(() => set.replace([]), /^ModelStageRefusal: Actor a is engine-driven/);
-    assert.equal(loads.length, 1);
-    assert.deepEqual(set.actors.map(actor => actor.id), ['a']);
-  });
-});
-
-describe('the view side of a replacement', () => {
-  const states = () => {
-    const pending: boolean[] = [], failures: unknown[] = [];
-    return {pending, failures,
-      replacement: createModelActorReplacement(value => pending.push(value), error => failures.push(error))};
-  };
-  it('drops readiness in flight, restores it after the swap, and hands a rejection on', async () => {
-    const {pending, failures, replacement} = states();
-    let settle: (fail: boolean) => void = () => undefined;
-    const refusal = new ModelStageRefusal('no');
-    const api = {setActors: () => new Promise<void>((resolve, reject) =>
-      {settle = fail => fail ? reject(refusal) : resolve();})};
-    replacement.request(api, []);
-    assert.equal(modelPreviewReady(true, false, 'waiting', pending.at(-1) === true), false);
-    settle(false);
-    await Promise.resolve();
-    assert.deepEqual([pending, failures], [[true, false], []]);
-    assert.equal(modelPreviewReady(true, false, 'waiting', pending.at(-1) === true), true);
-    replacement.request(api, []);
-    settle(true);
-    await Promise.resolve();
-    assert.deepEqual([pending.at(-1), failures], [false, [refusal]]);
-  });
-
-  it('reports only the latest call, and passes a synchronous refusal on without a pending state', async () => {
-    const {pending, failures, replacement} = states();
-    const settles: Array<() => void> = [];
-    const api = {setActors: () => new Promise<void>(resolve => {settles.push(resolve);})};
-    replacement.request(api, []);
-    replacement.request(api, []);
-    settles[0]();
-    await Promise.resolve();
-    assert.deepEqual(pending, [true, true]);
-    settles[1]();
-    await Promise.resolve();
-    assert.deepEqual(pending, [true, true, false]);
-    const refusal = new ModelStageRefusal('engine-driven');
-    replacement.request({setActors: () => {throw refusal;}}, []);
-    assert.deepEqual([pending.length, failures], [3, [refusal]]);
-  });
-});
-
-describe('the one failure model', () => {
-  it('keeps a stage on a refusal, and fails it on anything else or when there is no stage to keep', () => {
-    assert.deepEqual(modelStageFailure(new ModelStageRefusal('no frame'), true),
-      {kind: MODEL_STAGE_FAILURE.refused, message: 'no frame'});
-    assert.deepEqual(modelStageFailure(new Error('broken'), true),
-      {kind: MODEL_STAGE_FAILURE.unusable, message: 'broken'});
-    assert.deepEqual(modelStageFailure(new ModelStageRefusal('no frame'), false).kind, MODEL_STAGE_FAILURE.unusable);
-    assert.deepEqual(modelStageFailure('thrown text', true),
-      {kind: MODEL_STAGE_FAILURE.unusable, message: 'thrown text'});
-  });
+  it('refuses a set that changes, replaces or removes an engine-driven actor, and lets every other actor change',
+    async () => {
+      const {set, loading, replace} = harness();
+      const first = replace(at('a'), at('b'));
+      loading('a').settle(); loading('b').settle();
+      await first;
+      applyModelFrame(set.actors, frame(0, entity('a')));
+      const engineDriven = /^ModelStageRefusal: Actor a is engine-driven/;
+      assert.throws(() => replace(at('a', 3), at('b')), engineDriven);
+      assert.throws(() => replace(at('b')), engineDriven);
+      const replacing = replace(declaration('a', 'heron'), at('b'));
+      loading('a').settle();
+      await assert.rejects(replacing, engineDriven);
+      assert.deepEqual(set.actors[1].snapshot().pose.position, [0, 0, 0]);
+      void replace(at('a'), at('b', 6));
+      assert.deepEqual(set.actors[1].snapshot().pose.position, [6, 0, 0]);
+    });
 });

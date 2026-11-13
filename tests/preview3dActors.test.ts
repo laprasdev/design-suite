@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import {describe, it} from 'node:test';
 import {applyModelFrame} from '../src/react/preview3d/actor.ts';
-import {MODEL_REST_POSE, MODEL_STAGE_DRIVER, modelStageActors} from '../src/react/preview3d/model.ts';
-import {actorContext, BIND, clipValue, entity, frame, layer, makeActor, sample, declaration}
+import {MODEL_REST_POSE, MODEL_STAGE_DRIVER, modelStageActorSet} from '../src/react/preview3d/model.ts';
+import {actorContext, BIND, clipValue, declaration, entity, frame, held, layer, makeActor, sample}
   from './preview3dActorFixture.ts';
 
 const CLIPS = [{name: 'run', duration: 2}, {name: 'walk', duration: 4}];
@@ -24,18 +24,24 @@ describe('declared actors under one frame', () => {
     assert.deepEqual([a.actor.snapshot().pose.position, b.actor.snapshot().pose.position], [[1, 0, 0], [9, 0, 0]]);
   });
 
-  it('keeps an actor at its host placement until a record names it, then draws the record and refuses the host', () => {
+  it('keeps an actor at its declared placement until a record names it, then draws the record', () => {
     const {a, b} = pair();
     assert.deepEqual(b.actor.snapshot(), {id: 'b', modelId: 'otter', driver: MODEL_STAGE_DRIVER.host,
-      held: MODEL_REST_POSE, samples: [],
+      animation: MODEL_REST_POSE, samples: [],
       pose: {position: [5, 0, 0], rotationQuaternion: [0, 0, 0, 1], scale: [1, 1, 1]}});
     applyModelFrame([a.actor, b.actor], frame(0, entity('a')));
     assert.equal(b.actor.snapshot().driver, MODEL_STAGE_DRIVER.host);
-    b.actor.setPlacement({position: [6, 0, 0]});
+    b.actor.prepareHost(declaration('b', 'otter', {placement: {position: [6, 0, 0]}}))();
+    assert.deepEqual(b.actor.snapshot().pose.position, [6, 0, 0]);
     applyModelFrame([a.actor, b.actor], frame(0.1, entity('b', [], [7, 0, 0])));
     assert.equal(b.actor.snapshot().driver, MODEL_STAGE_DRIVER.engine);
-    assert.throws(() => b.actor.setPlacement({position: [8, 0, 0]}), /^ModelStageRefusal: Actor b is engine-driven/);
     assert.deepEqual(b.actor.snapshot().pose.position, [7, 0, 0]);
+  });
+
+  it('takes a declared placement whole: a component it leaves out returns to the identity', () => {
+    const {b} = pair();
+    b.actor.prepareHost(declaration('b', 'otter', {placement: {scale: [2, 2, 2]}}))();
+    assert.deepEqual([b.actor.snapshot().pose.position, b.actor.snapshot().pose.scale], [[0, 0, 0], [2, 2, 2]]);
   });
 
   it('refuses a whole frame when one actor\'s clip is unknown, naming that actor and clip, and applies nothing', () => {
@@ -55,9 +61,10 @@ describe('declared actors under one frame', () => {
       [frame(0, named, entity('ghost')), /Frame entity ghost names no declared actor/],
       [frame(0, named, named), /Frame entity a appears twice/],
       [{...frame(0, named), removedEntities: [{entityId: 'b'}]}, /removedEntities must be empty/],
-      [frame(0, named, entity('b', [], [0, 0, 0], 'heron')), /modelId must match/],
+      [frame(0, named, entity('b', [], [0, 0, 0], 'heron')), /Entity b: modelId must match the declared model otter/],
       [frame(-1, named), /simulationTimeSeconds/],
       [frame(0, {...named, partPoses: [{}]}), /partPoses/],
+      [frame(0, {...named, entityId: ''}), /requires an entityId/],
     ];
     for (const [value, pattern] of refusals) {
       assert.throws(() => applyModelFrame([a.actor, b.actor], value), pattern);
@@ -65,22 +72,22 @@ describe('declared actors under one frame', () => {
     }
   });
 
-  it('shows a declared held clip at its first frame until samples play, and again on []', () => {
-    const {a, b} = pair(), held = makeActor('h', CLIPS, {heldAnimation: 'walk'});
-    assert.equal(held.bone.position.x, clipValue(1, 0));
-    assert.equal(held.actor.snapshot().held, 'walk');
-    applyModelFrame([held.actor], frame(0, entity('h', [layer(sample('run', 1))])));
-    assert.equal(held.bone.position.x, clipValue(0, 1));
-    applyModelFrame([held.actor], frame(0.1, entity('h')));
-    assert.equal(held.bone.position.x, clipValue(1, 0));
+  it('shows a declared held clip until samples play, and again on []', () => {
+    const {a, b} = pair(), still = makeActor('h', CLIPS, {animation: held('walk')});
+    assert.equal(still.bone.position.x, clipValue(1, 0));
+    assert.equal(still.actor.snapshot().animation, 'walk');
+    applyModelFrame([still.actor], frame(0, entity('h', [layer(sample('run', 1))])));
+    assert.equal(still.bone.position.x, clipValue(0, 1));
+    applyModelFrame([still.actor], frame(0.1, entity('h')));
+    assert.equal(still.bone.position.x, clipValue(1, 0));
     applyModelFrame([a.actor, b.actor], frame(0, entity('a', [layer(sample('run', 1))])));
     applyModelFrame([a.actor, b.actor], frame(0.1, entity('a')));
     assert.deepEqual(a.bone.position.toArray(), [...BIND]);
   });
 
-  it('refuses a held clip the file lacks as soon as the asset loads, naming the actor', () => {
+  it('refuses a clip the file lacks as soon as the asset is built, naming the actor', () => {
     const {context, scene} = actorContext();
-    assert.throws(() => makeActor('h', CLIPS, {heldAnimation: 'swim'}, context),
+    assert.throws(() => makeActor('h', CLIPS, {animation: held('swim')}, context),
       /^ModelStageRefusal: Actor h: clip swim/);
     assert.equal(scene.children.length, 0);
   });
@@ -94,18 +101,23 @@ describe('declared actors under one frame', () => {
 });
 
 describe('declared actor sets', () => {
-  const asset = declaration('x').asset;
-  it('validates the whole set: unique ids apart from the character and whole placements', () => {
-    const valid = modelStageActors([{id: 'a', asset, placement: {scale: [1, 2, 3]}}], 'otter');
-    assert.deepEqual(valid[0].placement, {scale: [1, 2, 3]});
+  const asset = declaration('x').asset, animation = {name: MODEL_REST_POSE, playing: false};
+  const set = (...actors: unknown[]) => ({focus: 'a', actors});
+  it('validates the whole set: unique ids, a declared focus, whole placements and animations', () => {
+    const valid = modelStageActorSet(set({id: 'a', asset, placement: {scale: [1, 2, 3]}, animation}));
+    assert.deepEqual(valid.actors[0].placement, {scale: [1, 2, 3]});
+    const a = {id: 'a', asset, placement: {}, animation};
     const refusals: Array<[unknown, RegExp]> = [
-      [[{id: 'a', asset, placement: {}}, {id: 'a', asset, placement: {}}], /Actor a is declared twice/],
-      [[{id: 'otter', asset, placement: {}}], /repeats the stage's own character/],
-      [[{id: 'a', asset, placement: {scale: [2, 2]}}], /scale must contain 3/],
-      [[{id: 'a', asset, placement: {rotationQuaternion: [0, 0, 0, 2]}}], /unit length/],
-      [[{id: 'a', asset, placement: {}, heldAnimation: ''}], /heldAnimation must name a clip/],
-      [[{id: 'a', asset: {id: 'x'}, placement: {}}], /Actor 0 requires/], [{}, /must be an array/],
+      [set(a, a), /Actor a is declared twice/],
+      [{focus: 'z', actors: [a]}, /The focus z names no declared actor/],
+      [set(), /non-empty actors/],
+      [set({...a, placement: {scale: [2, 2]}}), /scale must contain 3/],
+      [set({...a, placement: {rotationQuaternion: [0, 0, 0, 2]}}), /unit length/],
+      [set({...a, animation: {name: '', playing: false}}), /Actor a: an animation requires/],
+      [set({...a, animation: {name: 'run', playing: false, timeSeconds: -1}}), /Actor a: an animation requires/],
+      [set({...a, animation: {name: 'run', playing: true, timeSeconds: 1}}), /a held timeSeconds does not play/],
+      [set({id: 'a', asset: {id: 'x'}, placement: {}, animation}), /Actor 0 requires/], [{}, /require a focus/],
     ];
-    for (const [value, pattern] of refusals) assert.throws(() => modelStageActors(value, 'otter'), pattern);
+    for (const [value, pattern] of refusals) assert.throws(() => modelStageActorSet(value), pattern);
   });
 });

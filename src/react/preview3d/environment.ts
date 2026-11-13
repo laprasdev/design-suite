@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import type {ModelVector, ModelRotation} from './model.ts';
 import {modelPresentationRotation, modelPoseForBinding} from './presentation.ts';
+import {ModelStageRefusal} from './refusal.ts';
 
 export const MODEL_ENVIRONMENT_GRID = Object.freeze({maximumLines: 1024, elevation: 0.001});
 export interface ModelEnvironmentBox {
@@ -21,7 +22,7 @@ const object = (value: unknown): value is Record<string, unknown> =>
 function numbers(value: unknown, length: number): number[] {
   const copy = Array.isArray(value) ? Array.from(value) : [];
   if (copy.length !== length || !copy.every(Number.isFinite)) {
-    throw new Error('Environment coordinates must contain finite numbers.');
+    throw new ModelStageRefusal('Environment coordinates must contain finite numbers.');
   }
   return copy;
 }
@@ -30,31 +31,35 @@ function vector(value: unknown): ModelVector {
 }
 function dimensions(value: unknown, length: number) {
   const result = numbers(value, length);
-  if (result.some(number => number <= 0)) throw new Error('Environment dimensions must be positive.');
+  if (result.some(number => number <= 0)) throw new ModelStageRefusal('Environment dimensions must be positive.');
   return result;
 }
 function tint(value: unknown): ModelVector {
   const result = vector(value);
-  if (result.some(number => number < 0 || number > 1)) throw new Error('Environment colors must be sRGB in [0, 1].');
+  if (result.some(number => number < 0 || number > 1)) {
+    throw new ModelStageRefusal('Environment colors must be sRGB in [0, 1].');
+  }
   return result;
 }
 function grid(value: unknown, size: readonly number[]) {
   if (value === undefined) return undefined;
   if (!object(value) || typeof value.spacing !== 'number' || !Number.isFinite(value.spacing) || value.spacing <= 0) {
-    throw new Error('Environment grid spacing must be positive and finite.');
+    throw new ModelStageRefusal('Environment grid spacing must be positive and finite.');
   }
   const spacing = value.spacing;
   const count = size.reduce((total, dimension) => total + Math.floor(dimension / spacing) + 1, 0);
-  if (count > MODEL_ENVIRONMENT_GRID.maximumLines) throw new Error('Environment grid has too many lines.');
+  if (count > MODEL_ENVIRONMENT_GRID.maximumLines) throw new ModelStageRefusal('Environment grid has too many lines.');
   return Object.freeze({spacing, color: tint(value.color)});
 }
 export function modelEnvironment(value: unknown): ModelEnvironment {
   if (!object(value) || typeof value.reflectZ !== 'boolean' || !Array.isArray(value.boxes) ||
-    (value.plane !== null && !object(value.plane))) throw new Error('A complete preview environment is required.');
+    (value.plane !== null && !object(value.plane))) {
+    throw new ModelStageRefusal('A complete preview environment is required.');
+  }
   const ids = new Set<string>();
   const boxes = Array.from(value.boxes, box => {
     if (!object(box) || typeof box.id !== 'string' || !box.id || ids.has(box.id)) {
-      throw new Error('Environment boxes require unique IDs.');
+      throw new ModelStageRefusal('Environment boxes require unique IDs.');
     }
     ids.add(box.id);
     return Object.freeze({id: box.id, position: vector(box.position), color: tint(box.color),

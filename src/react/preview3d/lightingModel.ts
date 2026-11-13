@@ -1,3 +1,4 @@
+import {ModelStageRefusal} from './refusal.ts';
 export type ModelStageLighting = 'light' | 'dark';
 export const MODEL_PREVIEW_LIGHTING_TEXT = Object.freeze({label: 'Lighting', light: 'Light', dark: 'Dark'});
 export const MODEL_PREVIEW_LIGHTING_OPTIONS = Object.freeze([
@@ -13,6 +14,6 @@ export const MODEL_STAGE_DARK = Object.freeze({
 });
 export function modelStageLighting(value: unknown): ModelStageLighting {
   const option = MODEL_PREVIEW_LIGHTING_OPTIONS.find(item => item.value === value);
-  if (!option) throw new Error('Unknown stage lighting.');
+  if (!option) throw new ModelStageRefusal('Unknown stage lighting.');
   return option.value;
 }

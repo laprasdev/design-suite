@@ -3,7 +3,7 @@
 import * as THREE from 'three';
 import type {GLTF} from 'three/addons/loaders/GLTFLoader.js';
 import {createModelActor, type ModelActorContext} from '../src/react/preview3d/actor.ts';
-import {MODEL_ANIMATION_LAYER, modelStagePolicy, type ModelStageActor, type ModelStageClock}
+import {MODEL_ANIMATION_LAYER, MODEL_REST_POSE, modelStagePolicy, type ModelStageActor, type ModelStageClock}
   from '../src/react/preview3d/model.ts';
 
 export const BONE = 'tip';
@@ -36,8 +36,10 @@ export function actorContext(clock: ModelStageClock = 'external') {
   return {context, scene};
 }
 
+export const REST = Object.freeze({name: MODEL_REST_POSE, playing: false});
+export const held = (name: string, timeSeconds = 0) => ({name, playing: false, timeSeconds});
 export const declaration = (id: string, modelId = 'otter', extra: Partial<ModelStageActor> = {}): ModelStageActor =>
-  ({id, asset: {id: modelId, path: `${modelId}.glb`, attachments: {}}, placement: {}, ...extra});
+  ({id, asset: {id: modelId, path: `${modelId}.glb`, attachments: {}}, placement: {}, animation: REST, ...extra});
 
 export function makeActor(id: string, clips: readonly ClipSpec[], extra: Partial<ModelStageActor> = {},
   context = actorContext().context) {
@@ -55,3 +57,7 @@ export const entity = (entityId: string, animationLayers: unknown[] = [], positi
 export const frame = (simulationTimeSeconds: number, ...entities: unknown[]) => ({simulationTimeSeconds, entities});
 export const close = (actual: number, expected: number, tolerance = 1e-6) =>
   {if (Math.abs(actual - expected) > tolerance) throw new Error(`Expected ${expected}, read ${actual}.`);};
+// A whole stage description with one declared actor a; a test overrides the parts it is about.
+export const describing = (changes: Record<string, unknown> = {}) => ({
+  actors: {focus: 'a', actors: [declaration('a')]}, environment: null, camera: null,
+  lighting: 'light', display: 'model', materialMode: 'lit', ...changes});

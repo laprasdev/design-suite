@@ -2,6 +2,7 @@ import * as THREE from 'three';
 
 import {MODEL_RUNTIME_MATERIAL, modelMaterialOutput} from './runtimeMaterialModel.ts';
 import type {ModelMaterialOutput} from './runtimeMaterialModel.ts';
+import {ModelStageRefusal} from './refusal.ts';
 export {MODEL_RUNTIME_MATERIAL} from './runtimeMaterialModel.ts';
 export type {ModelMaterialOutput} from './runtimeMaterialModel.ts';
 export interface ModelMaterialBinding {
@@ -67,14 +68,14 @@ export function createModelRuntimeMaterials(bindings: readonly ModelMaterialBind
   return {
     prepare(values: unknown) {
       live();
-      if (!Array.isArray(values)) throw new Error('Runtime materials must be an array.');
+      if (!Array.isArray(values)) throw new ModelStageRefusal('Runtime materials must be an array.');
       const updates = new Map<string, ModelMaterialOutput>();
       const visibility = new Map<THREE.Mesh, boolean>();
       for (const value of values) {
         const next = modelMaterialOutput(value), id = key(next.rendererId, next.slot), entry = slots.get(id);
-        if (!entry || updates.has(id)) throw new Error('Unknown or repeated runtime renderer/slot.');
+        if (!entry || updates.has(id)) throw new ModelStageRefusal('Unknown or repeated runtime renderer/slot.');
         if (visibility.has(entry.binding.mesh) && visibility.get(entry.binding.mesh) !== next.visible) {
-          throw new Error('Slots of one renderer must agree on visibility.');
+          throw new ModelStageRefusal('Slots of one renderer must agree on visibility.');
         }
         visibility.set(entry.binding.mesh, next.visible);
         updates.set(id, next);
@@ -82,7 +83,7 @@ export function createModelRuntimeMaterials(bindings: readonly ModelMaterialBind
       const preparedAt = revision;
       return () => {
         live();
-        if (preparedAt !== revision) throw new Error('Runtime material preparation is stale.');
+        if (preparedAt !== revision) throw new ModelStageRefusal('Runtime material preparation is stale.');
         restore();
         for (const [mesh, visible] of visibility) mesh.visible = visible;
         for (const [id, update] of updates) {

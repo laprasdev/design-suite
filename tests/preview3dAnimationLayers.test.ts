@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import {describe, it} from 'node:test';
-import {MODEL_ANIMATION_LAYER, modelAnimationLayers, modelPreviewPresentation} from '../src/react/preview3d/model.ts';
-import {createModelPresentationInbox} from '../src/react/preview3d/presentation.ts';
+import {MODEL_ANIMATION_LAYER, modelAnimationLayers, modelPreviewEntity} from '../src/react/preview3d/model.ts';
+import {createModelFrameInbox} from '../src/react/preview3d/frameInbox.ts';
+import {declaration} from './preview3dActorFixture.ts';
 import {ModelStageRefusal} from '../src/react/preview3d/model.ts';
 
 const sample = (clipId = 'run', weight = 1, timeSeconds = 0.5, sampleId = `base/${clipId}#0`) =>
@@ -65,24 +66,28 @@ describe('engine animation layers', () => {
     }
   });
 
-  it('validates layers on a presentation, naming the actor given or else the selected model', () => {
-    const input = (animationLayers: unknown) => ({modelId: 'otter', animationLayers, partPoses: [], materials: [],
+  it('validates layers on a frame entity, naming that entity', () => {
+    const input = (animationLayers: unknown, entityId = 'otter') => ({entityId, modelId: 'otter', animationLayers,
+      partPoses: [], materials: [],
       pose: {position: [0, 0, 0], rotationQuaternion: [0, 0, 0, 1], scale: [1, 1, 1]}});
-    assert.deepEqual(modelPreviewPresentation(input([layer()]), 'otter').animationLayers, [layer()]);
-    assert.throws(() => modelPreviewPresentation(input([layer([sample()], {maskId: 'm'})]), 'otter'),
+    assert.deepEqual(modelPreviewEntity(input([layer()]), 'otter').animationLayers, [layer()]);
+    assert.throws(() => modelPreviewEntity(input([layer([sample()], {maskId: 'm'})]), 'otter'),
       /^ModelStageRefusal: Actor otter: layer base \(clips run\)/);
-    assert.throws(() => modelPreviewPresentation(input([layer([sample()], {maskId: 'm'})]), 'otter', undefined, 'p2'),
+    assert.throws(() => modelPreviewEntity(input([layer([sample()], {maskId: 'm'})], 'p2'), 'otter'),
       /^ModelStageRefusal: Actor p2: /);
-    assert.throws(() => modelPreviewPresentation({...input([]), partPoses: [{}]}, 'otter'), /partPoses/);
+    assert.throws(() => modelPreviewEntity({...input([]), partPoses: [{}]}, 'otter'), /partPoses/);
     const missing: Record<string, unknown> = input([]);
     delete missing.animationLayers;
-    assert.throws(() => modelPreviewPresentation(missing, 'otter'), /animationLayers must be an array/);
+    assert.throws(() => modelPreviewEntity(missing, 'otter'), /animationLayers must be an array/);
   });
 
-  it('keeps what failed on the inbox, bound, until the next accepted presentation', () => {
-    const input = (animationLayers: unknown) => ({modelId: 'otter', animationLayers, partPoses: [], materials: [],
-      pose: {position: [0, 0, 0], rotationQuaternion: [0, 0, 0, 1], scale: [1, 1, 1]}});
-    const inbox = createModelPresentationInbox('otter');
+  it('keeps what failed on the inbox, bound, until the next accepted frame', () => {
+    const input = (animationLayers: unknown) => ({simulationTimeSeconds: 0, entities: [{entityId: 'otter',
+      modelId: 'otter', animationLayers, partPoses: [], materials: [],
+      pose: {position: [0, 0, 0], rotationQuaternion: [0, 0, 0, 1], scale: [1, 1, 1]}}]});
+    const frameInbox = createModelFrameInbox(), actors = [declaration('otter')];
+    const inbox = {...frameInbox, receive: (value: unknown) => frameInbox.receive(value, actors),
+      get failure() {return frameInbox.failure;}};
     const failure = () => inbox.failure;
     const message = () => {const value = failure(); return value instanceof Error ? value.message : value;};
     assert.equal(failure(), undefined);

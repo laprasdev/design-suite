@@ -1,11 +1,12 @@
 import type {ModelRotation, ModelVector} from './model.ts';
 import {ModelStageRefusal} from './refusal.ts';
-import {modelMaterialOutputs, modelRuntimeMaterialProfile} from './runtimeMaterialModel.ts';
+import {modelMaterialOutputs} from './runtimeMaterialModel.ts';
 import type {ModelMaterialOutput, ModelRuntimeMaterialProfile} from './runtimeMaterialModel.ts';
 import {modelAnimationLayers} from './animationLayerModel.ts';
 import type {ModelAnimationLayer} from './animationLayerModel.ts';
 
 export const MODEL_PREVIEW_QUATERNION_TOLERANCE = 1e-4;
+export const MODEL_PREVIEW_ENTITY_REFUSAL = Object.freeze({entity: 'Every frame entity requires an entityId.'});
 export const MODEL_PREVIEW_CAPABILITIES = Object.freeze({
   pose: true, animationLayers: true, partPoses: false, materials: false,
 });
@@ -14,7 +15,9 @@ export interface ModelPresentationPose {
   readonly rotationQuaternion: ModelRotation;
   readonly scale: ModelVector;
 }
-export interface ModelPreviewPresentation {
+// One entity of an engine frame: the actor it names and every channel the engine published for it.
+export interface ModelPreviewEntity {
+  readonly entityId: string;
   readonly modelId: string;
   readonly pose: ModelPresentationPose;
   readonly animationLayers: readonly ModelAnimationLayer[];
@@ -25,7 +28,6 @@ export interface ModelPoseBinding {
   readonly reflectZ: boolean;
   readonly rotationQuaternion: ModelRotation;
 }
-export type ModelPresentationStatus = 'waiting' | 'pending' | 'ready' | 'error';
 const object = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
 function numbers(value: unknown, count: number, name: string): number[] {
@@ -53,17 +55,21 @@ function pose(value: unknown): ModelPresentationPose {
     scale: modelPresentationVector(value.scale, 'scale')});
 }
 
-// Validate every channel before any pose is applied. Accepted values never retain caller-owned arrays.
-export function modelPreviewPresentation(value: unknown, selectedId: string,
-  materials?: ModelRuntimeMaterialProfile, owner?: string): ModelPreviewPresentation {
-  if (!object(value) || typeof value.modelId !== 'string' || value.modelId !== selectedId) {
-    throw new ModelStageRefusal('Runtime modelId must match the selected model.');
+// Validate every channel before any pose is applied; refusals name the entity. Accepted values never retain
+// caller-owned arrays.
+export function modelPreviewEntity(value: unknown, modelId: string,
+  materials?: ModelRuntimeMaterialProfile): ModelPreviewEntity {
+  if (!object(value) || typeof value.entityId !== 'string' || !value.entityId) {
+    throw new ModelStageRefusal(MODEL_PREVIEW_ENTITY_REFUSAL.entity);
+  }
+  if (typeof value.modelId !== 'string' || value.modelId !== modelId) {
+    throw new ModelStageRefusal(`Entity ${value.entityId}: modelId must match the declared model ${modelId}.`);
   }
   if (!Array.isArray(value.partPoses) || value.partPoses.length !== 0) {
     throw new ModelStageRefusal('partPoses must be an explicitly empty array for this preview.');
   }
-  return Object.freeze({modelId: value.modelId, pose: pose(value.pose),
-    animationLayers: modelAnimationLayers(value.animationLayers, owner ?? selectedId), partPoses: Object.freeze([]),
+  return Object.freeze({entityId: value.entityId, modelId: value.modelId, pose: pose(value.pose),
+    animationLayers: modelAnimationLayers(value.animationLayers, value.entityId), partPoses: Object.freeze([]),
     materials: modelMaterialOutputs(value.materials, materials)});
 }
 
@@ -96,43 +102,4 @@ export function modelPoseForBinding(value: ModelPresentationPose, binding: Model
     rotationQuaternion: Object.freeze(result.map(component => component / length)) as unknown as ModelRotation,
     scale: source.scale,
   });
-}
-
-// A loaded instance consumes only its latest validated input; publication/session policy belongs to its host.
-export function createModelPresentationInbox(modelId: string, materials?: ModelRuntimeMaterialProfile) {
-  let profile: ModelRuntimeMaterialProfile | undefined, invalidProfile: unknown;
-  try {profile = materials ? modelRuntimeMaterialProfile(materials) : undefined;}
-  catch (error) {invalidProfile = error;}
-  let pending: ModelPreviewPresentation | null = null;
-  let apply: ((value: ModelPreviewPresentation) => void) | null = null;
-  let status: ModelPresentationStatus = 'waiting';
-  // What failed while the status is 'error', for the host to read by its kind; cleared by the next accepted one.
-  let failure: unknown;
-  const refuse = (error: unknown) => {
-    pending = null; status = 'error'; failure = error;
-    return status;
-  };
-  const applyPending = () => {
-    if (!pending) return status;
-    try {
-      apply?.(pending);
-      status = apply ? 'ready' : 'pending';
-      failure = undefined;
-    } catch (error) {refuse(error);}
-    return status;
-  };
-  return {
-    get status() {return status;},
-    get failure() {return failure;},
-    receive(value: unknown): ModelPresentationStatus {
-      if (invalidProfile !== undefined) return refuse(invalidProfile);
-      if (value === null) {pending = null; status = 'waiting'; failure = undefined; return status;}
-      try {pending = modelPreviewPresentation(value, modelId, profile);}
-      catch (error) {return refuse(error);}
-      return applyPending();
-    },
-    attach(consume: (value: ModelPreviewPresentation) => void) {apply = consume; return applyPending();},
-    detach() {apply = null; if (pending) status = 'pending';},
-    clear() {pending = null; apply = null; status = 'waiting'; failure = undefined;},
-  };
 }

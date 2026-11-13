@@ -76,7 +76,7 @@ describe('engine layer playback', () => {
 
   it('holds the host selection under [] and hides it while samples play', () => {
     const {playback, play, x} = fixture();
-    playback.setAnimation('walk');
+    playback.prepareAnimation({name: 'walk', playing: false, timeSeconds: 0})();
     assert.equal(x(), clipValue(1, 0));
     play(layer(sample('run', 1)));
     assert.equal(x(), clipValue(0, 1));
@@ -88,8 +88,7 @@ describe('engine layer playback', () => {
     const {playback, play, pose} = fixture();
     play();
     const before = pose();
-    assert.throws(() => playback.setAnimation('run'), /drive this model/);
-    assert.throws(() => playback.setAnimationTime(0), /drive this model/);
+    assert.throws(() => playback.prepareAnimation({name: 'run', playing: false, timeSeconds: 0}), /drive this model/);
     assert.deepEqual(pose(), before);
     const {asset} = actorAsset(CLIPS);
     const local = createModelPlayback(asset.scene, asset.animations, 'local', 'p1');

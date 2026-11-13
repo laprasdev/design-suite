@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import {MODEL_PREVIEW_MATERIAL_SETTINGS as settings, modelStageMaterialMode} from './materialModel.ts';
 import type {ModelStageMaterialMode} from './materialModel.ts';
+import {ModelStageRefusal} from './refusal.ts';
 
 const COLOR_FRAGMENT = '#include <color_fragment>';
 const OUTPUT_FRAGMENT = '#include <opaque_fragment>';
@@ -56,12 +57,12 @@ export function createModelMaterialInspection(root: THREE.Object3D) {
     setMode(value: ModelStageMaterialMode) {
       const next = modelStageMaterialMode(value);
       if (disposed) throw new Error('Material inspection has been disposed.');
-      if (next !== 'lit' && !available) throw new Error('This model does not support material inspection.');
+      if (next !== 'lit' && !available) throw new ModelStageRefusal('This model does not support material inspection.');
       if (next === mode) return;
       const replacements = new Map<THREE.Material, THREE.MeshStandardMaterial>();
       try {
         if (next !== 'lit') for (const original of originals) {
-          if (!supported(original)) throw new Error('This model does not support material inspection.');
+          if (!supported(original)) throw new ModelStageRefusal('This model does not support material inspection.');
           replacements.set(original, inspectionMaterial(original, next));
         }
       } catch (error) {

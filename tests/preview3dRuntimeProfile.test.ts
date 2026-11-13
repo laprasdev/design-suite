@@ -4,9 +4,11 @@ import * as THREE from 'three';
 import type {GLTF} from 'three/addons/loaders/GLTFLoader.js';
 import {MODEL_RUNTIME_MATERIAL as channel, modelRuntimeMaterialProfile}
   from '../src/react/preview3d/runtimeMaterialModel.ts';
-import {bindModelRuntimeMaterials, modelRuntimeAssetProfile}
-  from '../src/react/preview3d/runtimeMaterialBinding.ts';
-import {createModelPresentationInbox, modelPreviewCamera} from '../src/react/preview3d/presentation.ts';
+import {bindModelRuntimeMaterials} from '../src/react/preview3d/runtimeMaterialBinding.ts';
+import {modelPreviewCamera} from '../src/react/preview3d/presentation.ts';
+import {modelRuntimeAssetProfile} from '../src/react/preview3d/actorModel.ts';
+import {createModelFrameInbox} from '../src/react/preview3d/frameInbox.ts';
+import {MODEL_REST_POSE} from '../src/react/preview3d/model.ts';
 
 const rendererId = 'body';
 const profile = () => ({asset: {id: 'otter', revision: 'tested', sha256: '1'.repeat(64)},
@@ -15,7 +17,16 @@ const profile = () => ({asset: {id: 'otter', revision: 'tested', sha256: '1'.rep
   renderers: [{rendererId, nodeIndex: 65, meshIndex: 0, primitiveIndex: 0, slot: 0}]});
 const material = () => ({rendererId, slot: 0, visible: true, colors: {},
   floats: {[channel.emissionStrength]: 2.8}});
-const frame = () => ({modelId: 'otter', pose: {position: [1, 2, 3], rotationQuaternion: [0, 0, 0, 1],
+// The one declared actor otter, whose asset carries the profile, and an inbox of one-entity frames for it.
+const actor = (runtimeMaterials: unknown = profile()) => ({id: 'otter', placement: {},
+  animation: {name: MODEL_REST_POSE, playing: false}, asset: {id: 'otter', revision: 'tested', path: '/otter.glb',
+    attachments: {}, sha256: '1'.repeat(64), runtimeMaterials: runtimeMaterials as ReturnType<typeof profile>}});
+const createInbox = (runtimeMaterials?: unknown) => {
+  const inbox = createModelFrameInbox(), actors = [actor(runtimeMaterials)];
+  return {attach: inbox.attach, receive: (value: ReturnType<typeof frame>) =>
+    inbox.receive({simulationTimeSeconds: 0, entities: [value]}, actors)};
+};
+const frame = () => ({entityId: 'otter', modelId: 'otter', pose: {position: [1, 2, 3], rotationQuaternion: [0, 0, 0, 1],
   scale: [1, 1, 1]}, materials: [material()], animationLayers: [], partPoses: []});
 
 test('requires explicit shader simplifications and rejects incomplete, ambiguous or unsupported bindings', () => {
@@ -29,7 +40,7 @@ test('requires explicit shader simplifications and rejects incomplete, ambiguous
   assert.throws(() => modelRuntimeMaterialProfile(duplicate), /Duplicate/);
 });
 test('the full-frame inbox refuses a material fault before delivering any new pose', () => {
-  const inbox = createModelPresentationInbox('otter', profile());
+  const inbox = createInbox();
   const delivered: unknown[] = [];
   inbox.attach(value => delivered.push(value));
   assert.equal(inbox.receive(frame()), 'ready');
@@ -67,13 +78,15 @@ test('camera data is finite, nondegenerate and independent of caller arrays', ()
 test('runtime profiles bind exact source identity and freeze caller-owned data', () => {
   const value = profile(), asset = {id: 'otter', revision: 'tested', path: '/otter.glb', attachments: {},
     sha256: value.asset.sha256, runtimeMaterials: value};
-  const accepted = modelRuntimeAssetProfile(asset)!;
+  const accepted = modelRuntimeAssetProfile({id: 'otter', placement: {}, animation: actor().animation, asset})!;
   value.asset.id = 'different'; value.renderers[0].slot = 1;
   assert.equal(accepted.asset.id, 'otter'); assert.equal(accepted.renderers[0].slot, 0);
   for (const change of [{id: 'different'}, {revision: 'different'}, {sha256: '0'.repeat(64)}]) {
-    assert.throws(() => modelRuntimeAssetProfile({...asset, runtimeMaterials: profile(), ...change}), /another|SHA/);
+    const changed = {...actor(), asset: {...asset, runtimeMaterials: profile(), ...change}};
+    assert.throws(() => modelRuntimeAssetProfile(changed),
+      /^ModelStageRefusal: Actor otter: the runtime material profile (belongs to another|does not match)/);
   }
-  const inbox = createModelPresentationInbox('otter', profile());
+  const inbox = createInbox();
   assert.equal(inbox.receive(frame()), 'pending');
   const malformed = profile(); malformed.asset.sha256 = 'unverified';
   assert.throws(() => modelRuntimeMaterialProfile(malformed), /SHA/);
@@ -81,7 +94,7 @@ test('runtime profiles bind exact source identity and freeze caller-owned data',
 test('sparse renderer lists and material outputs are rejected before a frame is delivered', () => {
   const sparse = profile(); sparse.renderers = new Array(1);
   assert.throws(() => modelRuntimeMaterialProfile(sparse), /bindings/);
-  const inbox = createModelPresentationInbox('otter', profile());
+  const inbox = createInbox();
   let delivered = 0; inbox.attach(() => delivered++);
   assert.equal(inbox.receive({...frame(), materials: new Array(1)}), 'error');
   assert.equal(delivered, 0);

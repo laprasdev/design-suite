@@ -4,8 +4,8 @@ import type {ModelStageMaterialMode} from './materialModel.ts';
 import type {ModelStageLighting} from './lightingModel.ts';
 import type {ModelRuntimeMaterialProfile} from './runtimeMaterialModel.ts';
 import type {ModelEnvironment} from './environment.ts';
-import type {ModelPreviewPresentation} from './presentation.ts';
-import type {ModelPreviewFrame, ModelStageActor, ModelStageActorSnapshot} from './actorModel.ts';
+import type {ModelPreviewFrame, ModelStageActorSnapshot} from './actorModel.ts';
+import type {ModelStageDescription} from './descriptionModel.ts';
 export {MODEL_RUNTIME_MATERIAL, modelRuntimeMaterialProfile} from './runtimeMaterialModel.ts';
 export type {ModelRuntimeMaterialProfile, ModelMaterialOutput, ModelRendererBinding} from './runtimeMaterialModel.ts';
 export type {ModelEnvironment, ModelEnvironmentBox} from './environment.ts';
@@ -13,17 +13,18 @@ export {MODEL_PREVIEW_MATERIAL_TEXT, MODEL_PREVIEW_MATERIAL_OPTIONS} from './mat
 export type {ModelStageMaterialMode} from './materialModel.ts';
 export {MODEL_PREVIEW_LIGHTING_TEXT, MODEL_PREVIEW_LIGHTING_OPTIONS} from './lightingModel.ts';
 export type {ModelStageLighting} from './lightingModel.ts';
-export {modelPreviewPresentation, modelPoseForBinding, MODEL_PREVIEW_CAPABILITIES,
+export {modelPreviewEntity, modelPoseForBinding, MODEL_PREVIEW_CAPABILITIES,
   MODEL_PREVIEW_QUATERNION_TOLERANCE} from './presentation.ts';
 export {MODEL_PREVIEW_WEIGHT_TOLERANCE} from './animationLayerModel.ts';
-export type {ModelPreviewPresentation, ModelPresentationPose, ModelPoseBinding} from './presentation.ts';
+export type {ModelPreviewEntity, ModelPresentationPose, ModelPoseBinding} from './presentation.ts';
 export {ModelStageRefusal, MODEL_STAGE_FAILURE, modelStageFailure} from './refusal.ts';
 export type {ModelStageFailure, ModelStageFailureKind} from './refusal.ts';
 export {MODEL_ANIMATION_LAYER, MODEL_ANIMATION_REFUSAL, modelAnimationLayers} from './animationLayerModel.ts';
 export type {ModelAnimationLayer, ModelAnimationSample} from './animationLayerModel.ts';
-export {MODEL_ACTOR_REFUSAL, MODEL_STAGE_DRIVER, modelPreviewFrame, modelStageActors} from './actorModel.ts';
-export type {ModelPreviewEntity, ModelPreviewFrame, ModelStageActor, ModelStageActorSnapshot,
-  ModelStageDriver} from './actorModel.ts';
+export {MODEL_ACTOR_REFUSAL, MODEL_STAGE_DRIVER, modelPreviewFrame, modelStageActorSet} from './actorModel.ts';
+export type {ModelPreviewFrame, ModelStageActor, ModelStageActorAnimation, ModelStageActorSet,
+  ModelStageActorSnapshot, ModelStageDriver} from './actorModel.ts';
+export type {ModelStageDescription, ModelStageDescriptionPart} from './descriptionModel.ts';
 
 export const MODEL_READY_ATTRIBUTE = 'data-model-ready';
 export const MODEL_REST_POSE = 'rest-pose';
@@ -37,10 +38,9 @@ export type ModelStageClock = 'local' | 'external';
 export const MODEL_PREVIEW_TEXT = Object.freeze({
   model: 'Model', modelSearch: 'models', animation: 'Animation', display: 'Display',
   play: 'Play', pause: 'Pause', rest: 'Rest Pose', reset: 'Reset Camera', rig: 'Rig', both: 'Both',
-  loading: 'Loading model…', failed: 'The model could not be loaded.', retry: 'Retry',
+  loading: 'Loading model…', retry: 'Retry',
   unavailable: 'No model is available.', orbit: 'Drag to orbit. Scroll or pinch to zoom.',
-  runtimeWaiting: 'Waiting for a runtime pose…', runtimeInvalid: 'The runtime pose could not be shown.',
-  sceneInvalid: 'The scene update could not be shown.',
+  runtimeWaiting: 'Waiting for a runtime pose…', refused: 'Not applied', stopped: 'Preview stopped',
   runtimeReady: (name: string) => `${name} runtime pose ready`,
   ready: (name: string) => `${name} ready`, canvas: (name: string) => `${name} animation viewer`,
 });
@@ -49,6 +49,11 @@ export const MODEL_PREVIEW_DISPLAY_OPTIONS = Object.freeze([
   {value: 'rig', label: MODEL_PREVIEW_TEXT.rig},
   {value: 'both', label: MODEL_PREVIEW_TEXT.both},
 ] satisfies {value: ModelStageDisplay; label: string}[]);
+export function modelStageDisplay(value: unknown): ModelStageDisplay {
+  const option = MODEL_PREVIEW_DISPLAY_OPTIONS.find(item => item.value === value);
+  if (!option) throw new ModelStageRefusal('Unknown stage display.');
+  return option.value;
+}
 
 export const MODEL_STAGE = Object.freeze({
   pixelRatioLimit: 2, fieldOfView: 38, nearPlane: 0.01, farPlane: 100,
@@ -87,8 +92,6 @@ export interface ModelStageOptions {
   floor?: boolean;
   grid?: boolean;
   orbit?: boolean;
-  /** Declared actors beside the character, loaded with it; `setActors` replaces them later. */
-  actors?: readonly ModelStageActor[];
 }
 export interface ModelStageTransform {
   position?: ModelVector;
@@ -126,25 +129,16 @@ export interface ModelStageSnapshot {
   actorsPending: boolean;
 }
 export interface ModelStageController {
-  setAnimation(name: string): void;
-  setAnimationTime(timeSeconds: number): void;
-  setPlaying(value: boolean): void;
-  setSkeleton(value: boolean): void;
-  setDisplay(value: ModelStageDisplay): void;
-  setMaterialMode(value: ModelStageMaterialMode): void;
-  setLighting(value: ModelStageLighting): void;
-  setTransform(value: ModelStageTransform): void;
-  setPresentation(value: ModelPreviewPresentation): void;
+  /**
+   * Applies the whole description of what is on the stage, keeping every unchanged part (an unchanged asset is not
+   * reloaded), whole or refused. Throws at once for an invalid description, and for any refusal when nothing needs
+   * loading. Otherwise the promise settles when the loads arrive, or when a later description supersedes it; it
+   * rejects when they cannot be shown, and the previous description then stands.
+   */
+  setDescription(value: ModelStageDescription): Promise<void>;
   /** Applies one host-built frame to every actor it names, or refuses it whole before anything changes. */
   setFrame(value: ModelPreviewFrame): void;
-  /**
-   * Replaces the declared actors, keeping unchanged ones. Throws at once for an invalid set or while any actor is
-   * engine-driven. The promise resolves on the swap or when a later call supersedes it, and rejects when an asset
-   * could not be shown; the previous set then stays drawn.
-   */
-  setActors(value: readonly ModelStageActor[]): Promise<void>;
-  setEnvironment(value: ModelEnvironment | null): void;
-  setCamera(value: ModelStageCamera): void;
+  /** An action, not state: returns a view the person orbited to the described camera, a held pose or a fresh fit. */
   resetCamera(): void;
   snapshot(): ModelStageSnapshot;
 }

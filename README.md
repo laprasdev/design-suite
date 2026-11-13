@@ -138,22 +138,36 @@ The package root and `/react` do not import it. Use `/preview3d/model` for eager
 
 ```ts
 const {createModelStage} = await import('@looms/bloom-design/preview3d');
-const dispose = createModelStage(host, {id, path, attachments}, theme, controller => {
-  controller.setAnimation(clipName);
-  controller.setPlaying(true);
+const dispose = createModelStage(host, description, theme, controller => {
+  controller.setDescription({...description, lighting: 'dark'});
 }, showError);
 // Call dispose when the view closes; it is safe to call more than once.
 ```
 
-Supply an asset URL, attachment bone names and theme colors. The default policy preserves the
-player catalog's two-unit height, floor centering, lighting, floor, grid and orbit camera.
-The sixth argument changes these independently: `normalizeHeight: null` retains authored scale;
-`centerOnFloor: false` retains authored placement; `floor`, `grid` and `orbit` each accept `false`.
-`setTransform` applies position, quaternion and scale to a presentation wrapper without changing
-the asset's authored or normalized transform. `setCamera({position, target})` holds an external
-camera, with orbit disabled, until `resetCamera()` returns to automatic framing.
+The stage is driven by one `ModelStageDescription` of everything the host decides, applied whole or
+refused: `actors` (a `ModelStageActorSet` of declared actors and the `focus` the camera fits and the
+snapshot reports), `environment` (scenery, or `null`), `camera` (a held `{position, target}`, or `null`
+to fit the focused actor), `lighting`, `display` and `materialMode`. Each actor declares an `id`, its
+`asset` (URL, attachment bone names, optional revision and runtime material profile), a `placement`
+(an omitted component is the identity) and an `animation`: a clip `name` or `rest-pose`, whether it is
+`playing` on the local clock, and an optional held `timeSeconds` when it is not. `createModelStage` takes
+the first description; `setDescription` applies each later one, keeping every unchanged part: an unchanged
+asset, drawn or still loading, is not reloaded, and a description equal to the applied one changes nothing.
+A description that loads nothing applies or throws at once; one that loads settles when its assets
+arrive, rejecting with the previous description still shown, and a later description supersedes it.
+Adding an actor, a scene or a kind of scenery is data in the description, never a new method.
 
-For engine-owned single-clip timing, pass `clock: 'external'` to `createModelStage`, bind a clip with `setAnimation`, then call `setAnimationTime` with resolved clip-local seconds. The sampler accepts the exact duration endpoint and backward/repeated samples; it rejects invalid times without changing the pose. External mode never advances from render time and refuses local Play. Layer blending, masks and material publication still require the runtime binding contract. The standalone `ModelPreview` retains its local clock.
+The engine's side is one `ModelPreviewFrame`: `setFrame({simulationTimeSeconds, entities})` applies every
+entity, each naming a declared actor id, or refuses the whole frame before anything changes. An entity
+carries `modelId`, a full `pose`, `animationLayers`, `partPoses: []` and `materials`;
+`modelPreviewEntity(value, modelId)` validates and deep-copies one. A description may not change,
+replace or remove an actor a frame has driven; every other part of it still applies. `resetCamera()` is
+the one action: it returns a view the person orbited to the described camera. `snapshot()` reports the
+focused actor at the top level and every actor under `actors`.
+
+Every refusal is a `ModelStageRefusal`: the stage is exactly as it was. Any other error means the stage
+is unusable. The sixth argument sets the policy: `clock` (`'local'` or `'external'`), `normalizeHeight`
+(`null` retains authored scale), `centerOnFloor`, `floor`, `grid` and `orbit`.
 
 For the complete view, load `/preview3d/react` when the preview opens and import
 `@looms/bloom-design/preview3d/styles.css`. It composes the existing suite controls and theme
@@ -165,58 +179,46 @@ variables; use the standard `app-root` host that the suite controls share.
 
 Each supplied `ModelPreviewAsset` has `id`, `name`, `path`, `idleAnimation`, `animations`
 (`name` and `label`) and `attachments`. A single asset needs no `onSelectAsset` handler.
+The selected asset is the focused actor, with the asset's id as its actor id; `actors` declares
+others beside it, and `camera` and `environment` complete the description.
 All controls sit above the stage, including Rest Pose, Play/Pause, Surface, Model/Rig/Both and camera reset.
+Each control changes the person's selection, from which the view builds its one description.
 Reduced-motion preferences pause automatic playback; the user can still press Play.
 The component accepts `stageOptions`, `className` and an optional `reviewKey` for existing consumers.
 Its canonical `modelPreviewReview` handle lives on `ModelPreviewElement.STAGE`.
 `MODEL_PREVIEW_TEXT` and `MODEL_PREVIEW_DISPLAY_OPTIONS` from `/preview3d/model` own the
-labels and mode choices used by the view and consumer browser checks.
+labels and mode choices used by the view and consumer browser checks. A failure is shown only
+through the suite's `ActionBar` notice (`ActionNotice` without chrome): "Not applied" for a refusal
+and "Preview stopped", with Retry, for an unusable stage; the failure's own message is the detail.
 
-The diagnostic Surface control selects Lit, Clay, Color or Emission. Lit preserves the loaded
+The diagnostic Surface choice selects Lit, Clay, Color or Emission. Lit preserves the loaded
 materials; Clay removes surface detail to inspect shape; Color shows unlit base color; Emission
 shows the authored emissive channel. A model with no configured emission reports “No emission”.
-Bloom is not implemented. These temporary inspection modes preserve alpha cutouts, skinning and
-morphing; they do not publish or sample runtime materials. Unsupported shaders remain Lit.
-`setMaterialMode` exposes the same inspection command. Snapshots include `materialMode`,
-`materialInspectionAvailable` and `emissiveMaterialCount`; `/preview3d/model` exports the
-`MODEL_PREVIEW_MATERIAL_TEXT` and `MODEL_PREVIEW_MATERIAL_OPTIONS` used by the controls.
+These temporary inspection modes preserve alpha cutouts, skinning and morphing; unsupported shaders
+remain Lit. Snapshots include `materialMode`, `materialInspectionAvailable` and `emissiveMaterialCount`.
 
-The controller exposes clip selection, playback, display mode and a diagnostic snapshot.
-`setDisplay('rig')` shows bright bone lines and joint markers while hiding the model's renderables;
-`'both'` overlays the rig, and `'model'` restores the asset's authored visibility. `setSkeleton`
-remains compatible as a shortcut to Both/Model. Rig frames all bone positions; Both frames
-the union of the mesh and rig; Model keeps the catalog framing. Snapshots include `display`, `modelVisible`, `visibleModelMeshes`,
-`rigVisible`, `boneCount` and `visibleRigJoints` alongside the original animation evidence.
-`reviewKey` optionally exposes that controller on the host for browser acceptance checks.
-`onReady` means the GLB is loaded; it does not signal a connected or running state machine.
+`display: 'rig'` shows bright bone lines and joint markers while hiding the model's renderables;
+`'both'` overlays the rig, and `'model'` restores the asset's authored visibility. Rig frames all bone
+positions; Both frames the union of the mesh and rig; Model keeps the catalog framing. Snapshots include
+`display`, `modelVisible`, `visibleModelMeshes`, `rigVisible`, `boneCount` and `visibleRigJoints`.
+`reviewKey` optionally exposes the controller on the host for browser acceptance checks.
+`onReady` means the first description is shown; it does not signal a connected or running state machine.
 Disposal removes the canvas and review handle, frees renderer resources and suppresses late load callbacks.
 
-The stage defaults to `clock: 'local'` for diagnostic playback. An external caller can select
-`clock: 'external'`, bind one clip with `setAnimation(name)`, then call `setAnimationTime(timeSeconds)`
-with an already resolved, absolute time within that clip. The valid interval includes both zero
-and the clip duration; repeated samples and backward seeks are supported. Invalid, negative or
-out-of-range times throw without changing the pose or sampled time. This input is not simulation
-time, and the stage does not wrap, clamp or resolve loops.
+Under `clock: 'external'` an actor's animation is a held clip (its first frame, or `timeSeconds` within
+the clip's inclusive duration) or the rest pose; it never plays and never advances from render frames.
+Under the local clock a clip plays, pauses where it is, or holds a time. Times outside the clip are
+refused without changing the pose; the stage does not wrap, clamp or resolve loops.
 
-External stages reject `setPlaying(true)`, report `playing: false` and never advance from render
-frames or focus changes. Local stages reject `setAnimationTime`. `ModelPreview` controls its own clock;
-its `stageOptions` exclude `clock`. This primitive samples one
-bound clip and does not implement locomotion blending, animation layers or material publication.
-
-`ModelPreview.presentation` is a bounded pose-only runtime input. Omit it for the local diagnostic
-view; pass `null` to wait for runtime data; pass `{modelId, pose, animationLayers: [], partPoses: [],
-materials: []}` to apply a pose. All three empty arrays are required. The validator rejects any
-nonempty unsupported channel before applying the pose. `modelId` must match `selectedId`, and the
-full pose must contain finite `position`, `rotationQuaternion` and `scale` tuples. Quaternion
-length must differ from one by no more than `MODEL_PREVIEW_QUATERNION_TOLERANCE` (`1e-4`).
-`modelPreviewPresentation(value, selectedId)` validates and deep-copies the accepted input.
+`ModelPreview.frame` is the runtime input. Omit it for the local diagnostic view; pass `null` to wait
+for runtime data; pass a frame whose entity names the selected asset's id to apply it.
 
 Runtime mode forces an external clock, rest pose and authored scale/placement. It hides the model
 picker, animation selection, playback and Surface controls; display modes and camera controls remain.
 Runtime views retain the loaded Lit materials.
 Null or invalid inputs clear pending data and show waiting/error status while retaining the last
 valid visible pose. A later valid pose recovers without reloading. A loading GLB receives only the
-latest validated matching input. Fresh presentation objects do not reload the asset. Asset id,
+latest validated matching input. Fresh frame objects do not reload the asset. Asset id,
 path, optional `revision` and attachment bindings identify an instance; changing any invalidates
 it, as does switching between local and runtime modes. Change `revision` when the same URL's
 contents or pose-alignment binding changes.
@@ -225,12 +227,12 @@ contents or pose-alignment binding changes.
 enter and leave in metres. Optional Z reflection maps position to `[x,y,-z]` and rotation to
 `[-x,-y,z,w]`, then postmultiplies the declared local model-alignment quaternion. The composed
 rotation is normalized to remove accepted norm/roundoff drift; scale values are unchanged.
-`MODEL_PREVIEW_CAPABILITIES` advertises pose support and no animation-layer, part-pose or material
+`MODEL_PREVIEW_CAPABILITIES` advertises pose and animation-layer support and no part-pose or material
 support. The host owns session, epoch, publication, generation and binding-revision guards;
 this surface does not interpret a runtime frame or evaluate gameplay.
 
-Consumers own asset catalogs, character selection, UI and the bridge from runtime output to these
-presentation commands. The state-machine engine evaluates states; this renderer does not.
+Consumers own asset catalogs, character selection, UI and the bridge from runtime output to the
+description and the frame. The state-machine engine evaluates states; this renderer does not.
 Native Unity previews keep their camera adapter to the same runtime contract.
 
 ## Verify
