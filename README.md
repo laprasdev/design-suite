@@ -172,7 +172,10 @@ exactly its fields: one it omits or one it does not have is refused by its path 
   each exactly once, checked against the loaded file), each entry `{kind: 'file'}` or a record `{kind, values}` of a
   surface kind the stage was given (`kinds`, a creation option: each kind's declaration, `[]` for none). A record
   is drawn by its kind's web program (one shared material per record, compiled before the description is shown; a
-  kind is lit by three's standard model or unlit, may move its vertices, and may read a file's own attributes);
+  kind is lit by three's standard model or unlit, may move its vertices within a declared reach that its renderer's
+  culling bounds grow by, may read a file's own attributes, its shading normal, view direction and position in the
+  model's own space and the look's light, may write its normal and its light response, may be cut out at a declared
+  threshold the stage sharpens, and may include shared GLSL by path and SHA-256);
   an engine frame's material values are taken only on a parameter the renderer's kind declares. A record's
   `values` give every parameter of its kind one of `{color: [r, g, b, a]}`, `{vector: [...]}`, `{float}`,
   `{keyword}` or `{texture}`, a texture being `{path, sha256, wrap: [u, v], scale: [u, v], offset: [u, v]}` (a PNG,
@@ -187,12 +190,15 @@ exactly its fields: one it omits or one it does not have is refused by its path 
   consumer's theme) and `.dark`; `MODEL_STAGE_THEME_LIGHTING` is `{time: 'light', times: []}`. A look states
   `backdrop`, `key` `{color, strength, direction}`, `ambient` `{sky, ground, strength}`, `shadow`, `night` (0 to 1),
   `aids` `{floor, share}`, `fog` (`{near, far, height}` or `null`), `toneCurve` (`'aces-filmic'` or `null`) and
-  `glow` (`{threshold, strength, radius}` with `radius` from 0 to 1, or `null`); colours are sRGB triples in [0, 1],
-  and under glow the scene is drawn once in linear light, the bloom added, then the curve and the display encoding
-  applied once (the stage's floor, grid and rigs are drawn after, neither bloomed nor curved). The types and
+  `glow` (`{threshold, strength, radius}` with `radius` from 0 to 1, or `null`); colours are sRGB triples in [0, 1].
+  Everything the look colours, the backdrop included, passes through its curve. Under glow the scene is drawn once in
+  linear light, the bloom (blurred by tapered Gaussians, so a bright emitter's halo is round) added, then the curve
+  and the display encoding applied once (the stage's floor, grid and rigs are drawn after, neither bloomed nor
+  curved). The types and
   `modelStageLighting`, which checks a lighting as the stage does, come from `/preview3d/model`, with
   `modelStageDescription`, which checks a whole description, and `modelFrameScope` and `modelPreviewFrame`, which
-  check a frame against it. The theme's `stage`, `text` and `surface` must be `#rrggbb`.
+  check a frame against it. The theme's `stage`, `text` and `surface` must be `#rrggbb`, and its `stage` a colour the
+  built-in times' ACES curve can show: their backdrop is stated as the colour that curve draws as it.
 - `display` (`'model'`, `'rig'`, `'both'`) and `surfaceMode` (`'lit'`, `'clay'`, `'color'`, `'emission'`).
 - `size`: `{rule: 'real'}` (each actor at its file's size) or `{rule: 'normalized', height}`; `origin`: `'file'`
   (the file's own origin, as an engine places it) or `'centred'` (centred over the placement, standing on it).

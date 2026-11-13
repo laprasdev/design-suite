@@ -28,6 +28,15 @@ fragmentShader: 'uniform sampler2D modelSceneColor;\nuniform sampler2D modelScen
   '  #include <colorspace_fragment>\n}'});
 // The samples of the glow's target: the canvas's own antialiasing, kept for the one draw of the scene.
 const SAMPLES = 4;
+/**
+ * The weights of one of the bloom's blur levels, its taps 0 to radius - 1: a Gaussian whose radius is three standard
+ * deviations, so it falls to nothing at its last tap. three r180's UnrealBloomPass weighs its taps with a standard
+ * deviation equal to the radius and stops there, so its last tap still weighs 0.6 of its first: a near-flat kernel cut
+ * off hard, which, blurred across and then down, is a square. At the game's emission (55 to 83) those squares were the
+ * halos' outlines (measured, step E3: diagonal against axis 1.09 to 1.13, round with these weights, 1.0).
+ */
+export const modelGlowKernel = (radius: number) =>
+  Array.from({length: radius}, (_, tap) => Math.exp(-0.5 * (tap * 3 / radius) ** 2));
 
 /** One glow's resources at a drawing-buffer size: its values are written by `set`, its sizes by `resize`. */
 export function createModelGlow({Bloom, Quad}: ModelGlowPasses, size: THREE.Vector2) {
@@ -40,6 +49,9 @@ export function createModelGlow({Bloom, Quad}: ModelGlowPasses, size: THREE.Vect
   const bloom = new Bloom(size, 0, 0, 0);
   bloom.renderToScreen = true;
   bloom.blendMaterial.visible = false;
+  for (const blur of bloom.separableBlurMaterials) {
+    blur.uniforms.gaussianCoefficients.value = modelGlowKernel(Number(blur.defines.KERNEL_RADIUS));
+  }
   const material = new THREE.ShaderMaterial({...OUTPUT, depthFunc: THREE.AlwaysDepth,
     uniforms: {modelSceneColor: {value: target.texture}, modelSceneDepth: {value: depth},
       modelBloom: {value: bloom.renderTargetsHorizontal[0].texture}}});
