@@ -6,7 +6,7 @@ import {applyModelTransform, disposeModelObject, modelObjectBounds, modelParts, 
   from './asset.ts';
 import {createModelRig} from './rig.ts';
 import {createModelPlayback} from './playback.ts';
-import {createModelMaterialInspection} from './materials.ts';
+import {createModelMaterialInspection, type ModelSurfaceModes} from './materials.ts';
 import {bindModelRuntimeMaterials} from './runtimeMaterialBinding.ts';
 import {MODEL_STAGE_DRIVER, modelPreviewFrame, modelRuntimeAssetProfile} from './actorModel.ts';
 import type {ModelStageActor, ModelStageActorSnapshot, ModelStageDriver} from './actorModel.ts';
@@ -24,6 +24,8 @@ export interface ModelActorContext {
   readonly scene: THREE.Object3D;
   readonly lighting: {attach(objects: readonly THREE.Object3D[]): () => void};
   readonly fog: ModelShaderChange;
+  /** The stage's Surface mode, which every model material takes. */
+  readonly surfaceModes: Pick<ModelSurfaceModes, 'change' | 'mode'>;
   readonly rendered: (mesh: THREE.Mesh) => void;
 }
 /** How an actor's model sits in its placement: the stage's size rule and origin. */
@@ -45,9 +47,8 @@ export function createModelActor(asset: GLTF, declaration: ModelStageActor, cont
     const points = modelParts(asset, context.theme);
     acquired.push(() => points.forEach(({marker}) => {marker.removeFromParent(); disposeModelObject(marker);}));
     asset.scene.traverse(node => {if (node instanceof THREE.Mesh) node.onAfterRender = () => context.rendered(node);});
-    extendModelMaterials(asset.scene, [context.fog]);
+    extendModelMaterials(asset.scene, [context.fog, context.surfaceModes.change]);
     const materials = createModelMaterialInspection(asset.scene);
-    acquired.push(() => materials.dispose());
     const runtimeMaterials = profile ? bindModelRuntimeMaterials(asset, profile) : undefined;
     if (runtimeMaterials) acquired.push(() => runtimeMaterials.dispose());
     const rig = createModelRig(asset.scene, context.theme, points);
@@ -94,7 +95,7 @@ export function createModelActor(asset: GLTF, declaration: ModelStageActor, cont
       bounds: () => rig.display === 'model' ? modelObjectBounds(placement) : rig.bounds(),
       // Everything that can refuse runs here; the returned commit only applies.
       prepare(entity: ModelPreviewEntity): ModelStageCommit {
-        if (materials.snapshot().materialMode !== 'lit') throw new ModelStageRefusal(MODEL_ACTOR_TEXT.unlit);
+        if (context.surfaceModes.mode !== 'lit') throw new ModelStageRefusal(MODEL_ACTOR_TEXT.unlit);
         return prepareWhole([
           ...(runtimeMaterials ? [() => {
             const commit = runtimeMaterials.prepare(entity.materials);

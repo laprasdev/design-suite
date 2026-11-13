@@ -101,7 +101,8 @@ describe('the stage\'s fog', () => {
     const {actor} = makeActor('a', [{name: 'run', duration: 1}]);
     actor.asset.scene.traverse(node => {
       if (node instanceof THREE.Mesh) for (const material of [node.material].flat()) {
-        assert.deepEqual(modelMaterialChanges(material).map(({key}) => key), ['model-stage-fog']);
+        assert.deepEqual(modelMaterialChanges(material).map(({key}) => key),
+          ['model-stage-fog', 'model-surface-mode:lit']);
       }
     });
     for (const aid of [actor.rig.root, ...actor.points.map(({marker}) => marker)]) aid.traverse(node => {

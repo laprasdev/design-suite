@@ -3,6 +3,8 @@ import {describe, it} from 'node:test';
 import * as THREE from 'three';
 import {createModelFog} from '../src/react/preview3d/fog.ts';
 const FOG = createModelFog(new THREE.Scene()).change;
+const MODES = () => createModelSurfaceModes();
+import {createModelSurfaceModes} from '../src/react/preview3d/materials.ts';
 import {MODEL_STAGE_COMMIT_TEXT, prepareWhole} from '../src/react/preview3d/commit.ts';
 import {modelStageDescription, modelStageDescriptionChanges, modelStageRefit}
   from '../src/react/preview3d/descriptionModel.ts';
@@ -125,6 +127,7 @@ describe('the stage-wide parts', () => {
   const surface = () => {
     const calls: string[] = [];
     const parts = createModelStageParts({scene: new THREE.Scene(), fog: {change: FOG}, kinds: new Map(),
+      modes: MODES(),
       lighting: {load: () => [], prepare: value => () => {calls.push(value.time);}},
       frame: (framing: ModelStageFraming, orbit: boolean) => calls.push(`${framing.kind} ${orbit}`)});
     return {calls, parts};
@@ -142,6 +145,7 @@ describe('the stage-wide parts', () => {
   it('refuses a lighting while preparing, so a refused time leaves every other part unapplied', () => {
     const calls: string[] = [];
     const parts = createModelStageParts({scene: new THREE.Scene(), fog: {change: FOG}, kinds: new Map(),
+      modes: MODES(),
       lighting: {load: () => [],
         prepare: () => {throw new ModelStageRefusal('Time t: look.glow: glow needs half-float render targets.');}},
     frame: (framing: ModelStageFraming) => calls.push(framing.kind)});
@@ -191,6 +195,6 @@ describe('the stage-wide parts', () => {
     const clay = modelStageDescription(describing({materialMode: 'clay'}));
     assert.throws(() => prepareWhole(parts.prepares(clay, modelStageDescriptionChanges(applied, clay), [a, b])),
       /requires lit materials/);
-    assert.deepEqual([a, b].map(actor => actor.materials.snapshot().materialMode), ['lit', 'lit']);
+    assert.equal(context.surfaceModes.mode, 'lit');
   });
 });

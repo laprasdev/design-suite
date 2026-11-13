@@ -4,7 +4,10 @@ import {test} from 'node:test';
 import * as THREE from 'three';
 import {createModelEnvironment} from '../src/react/preview3d/environment.ts';
 import {createModelRuntimeMaterials} from '../src/react/preview3d/runtimeMaterials.ts';
-import {createModelMaterialInspection} from '../src/react/preview3d/materials.ts';
+import {createModelSurfaceModes} from '../src/react/preview3d/materials.ts';
+import {createModelStageParts} from '../src/react/preview3d/stageParts.ts';
+import {prepareWhole} from '../src/react/preview3d/commit.ts';
+import type {ModelActor} from '../src/react/preview3d/actor.ts';
 import {createModelLighting} from '../src/react/preview3d/lighting.ts';
 import {modelStageBuiltInTimes} from '../src/react/preview3d/lightingModel.ts';
 import {createModelStage} from '../src/react/preview3d/stage.ts';
@@ -38,23 +41,18 @@ test('runtimeMaterials.ts: an unknown renderer is a refusal and installs no mate
   materials.dispose();
 });
 
-test('materials.ts: inspection of an unsupported model is a refusal and replaces no material', () => {
-  const original = new THREE.MeshBasicMaterial(), mesh = new THREE.Mesh(new THREE.BoxGeometry(), original);
-  const root = new THREE.Group();
-  root.add(mesh);
-  const inspection = createModelMaterialInspection(root);
-  refused(() => inspection.setMode('clay'), /does not support material inspection/);
-  assert.equal(mesh.material, original);
-  assert.equal(inspection.snapshot().materialMode, 'lit');
-});
-
-test('materialModel.ts: an unknown inspection mode is a refusal and leaves the mode', () => {
-  const original = new THREE.MeshStandardMaterial(), mesh = new THREE.Mesh(new THREE.BoxGeometry(), original);
-  const root = new THREE.Group();
-  root.add(mesh);
-  const inspection = createModelMaterialInspection(root);
-  refused(() => inspection.setMode('xray' as never), /Unknown material inspection mode/);
-  assert.equal(mesh.material, original);
+test('stageParts.ts: a Surface mode an actor cannot show is a refusal and leaves the mode', () => {
+  const modes = createModelSurfaceModes();
+  const parts = createModelStageParts({scene: new THREE.Scene(), fog: createModelFog(new THREE.Scene()),
+    kinds: new Map(), modes, lighting: {load: () => [], prepare: () => () => undefined}, frame: () => undefined});
+  const clay = modelStageDescription(describing({materialMode: 'clay'}));
+  const actor = {id: 'plain', driver: 'host', rig: {display: clay.display}, sizing: {size: clay.size,
+    origin: clay.origin}, materials: {available: false, emissiveMaterialCount: 0,
+    refresh: () => assert.fail('nothing recompiles')}} as unknown as ModelActor;
+  refused(() => prepareWhole(parts.prepares(clay, new Set(['materialMode']), [actor])),
+    /Actor plain does not support material inspection/);
+  assert.equal(modes.mode, 'lit');
+  refused(() => modelStageDescription(describing({materialMode: 'xray'})), /Unknown material inspection mode/);
 });
 
 test('lightingModel.ts: an unknown time is a refusal and leaves the light', () => {

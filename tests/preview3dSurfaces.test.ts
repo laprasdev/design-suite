@@ -6,6 +6,7 @@ import {MODEL_FILE_ENTRY, modelSurfaceRecordsFit, modelSurfaceSets} from '../src
 import {modelFileRenderers, modelSurfaceSetCovers} from '../src/react/preview3d/renderers.ts';
 import {modelStageDescription, modelStageDescriptionChanges} from '../src/react/preview3d/descriptionModel.ts';
 import {createModelStageParts} from '../src/react/preview3d/stageParts.ts';
+import {createModelSurfaceModes} from '../src/react/preview3d/materials.ts';
 import {createModelFog} from '../src/react/preview3d/fog.ts';
 import {ModelStageRefusal} from '../src/react/preview3d/refusal.ts';
 import {modelStagePolicy} from '../src/react/preview3d/model.ts';
@@ -116,7 +117,8 @@ describe('surface kinds, records and sets', () => {
     const associated = {...asset, parser: {associations: new Map([[body, {nodes: 0, meshes: 0, primitives: 0}]])}};
     const actor = createModelActor(associated as never, declaration('a', 'otter',
       {surfaces: {kind: 'set', set: 'own'}}), actorContext().context);
-    const parts = createModelStageParts({scene: new THREE.Scene(), kinds: kinds(), frame: () => undefined,
+    const parts = createModelStageParts({scene: new THREE.Scene(), kinds: kinds(), modes: createModelSurfaceModes(),
+      frame: () => undefined,
       lighting: {load: () => [], prepare: () => () => undefined}, fog: createModelFog(new THREE.Scene())});
     const describedWith = (set: object) => modelStageDescription(describing({surfaceSets: {own: set},
       actors: {focus: 'a', actors: [actor.declaration]}}));
@@ -134,7 +136,8 @@ describe('surface kinds, records and sets', () => {
       declaration('a', 'otter', {surfaces: {kind: 'set', set: 'tinted'}})]}})),
     /Actor a.surfaces.set names surface set tinted; the description's sets are none/);
     const next = modelStageDescription(describing({surfaceSets: {tinted: {[RENDERER]: RECORD}}}));
-    const parts = createModelStageParts({scene: new THREE.Scene(), kinds: kinds(), frame: () => undefined,
+    const parts = createModelStageParts({scene: new THREE.Scene(), kinds: kinds(), modes: createModelSurfaceModes(),
+      frame: () => undefined,
       lighting: {load: () => [], prepare: () => () => undefined}, fog: createModelFog(new THREE.Scene())});
     refused(() => parts.prepares(next, modelStageDescriptionChanges(undefined, next), []).map(prepare => prepare()),
       new RegExp(`Surface set tinted, renderer ${RENDERER}: the stage cannot draw kind test-pulse yet`));

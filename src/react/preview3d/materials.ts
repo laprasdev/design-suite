@@ -1,85 +1,98 @@
 import * as THREE from 'three';
-import {MODEL_PREVIEW_MATERIAL_SETTINGS as settings, modelStageMaterialMode} from './materialModel.ts';
-import type {ModelStageMaterialMode} from './materialModel.ts';
-import {ModelStageRefusal} from './refusal.ts';
-import {extendModelMaterial, modelMaterialOwned, modelShaderChunk} from './shading.ts';
+import {MODEL_PREVIEW_MATERIAL_OPTIONS, MODEL_PREVIEW_MATERIAL_SETTINGS as settings, type ModelStageMaterialMode}
+  from './materialModel.ts';
+import {modelMaterialOwned, modelShaderChunk, modelShaderUniforms, type ModelShader, type ModelShaderChange,
+  type ModelShaderReplace} from './shading.ts';
 
-const CHUNK = Object.freeze({color: 'color_fragment', output: 'opaque_fragment'});
-function clay(material: THREE.MeshStandardMaterial) {
-  material.color.setHex(settings.clayColor);
-  material.roughness = settings.roughness;
-  material.metalness = settings.metalness;
-  material.normalMap = material.bumpMap = material.displacementMap = null;
-  material.roughnessMap = material.metalnessMap = material.aoMap = material.lightMap = null;
-  material.envMap = material.emissiveMap = null;
-  material.emissive.setRGB(0, 0, 0);
-  if (material instanceof THREE.MeshPhysicalMaterial) {
-    material.clearcoat = material.transmission = material.sheen = material.iridescence = material.anisotropy = 0;
-    material.specularIntensity = 0;
-  }
-}
-function inspectionMaterial(original: THREE.MeshStandardMaterial, mode: ModelStageMaterialMode) {
-  const material = original.clone();
-  if (mode === 'clay') clay(material);
-  if (mode === 'color') material.toneMapped = false;
-  material.fog = false;
-  // Keep the original map/vertex alpha path, including cutouts. Only replace the inspected RGB channel.
-  return extendModelMaterial(material, [{key: `model-material-inspection:${mode}`, apply: (shader, replace) => {
-    shader.fragmentShader = mode === 'clay' ? replace(shader.fragmentShader, CHUNK.color,
-      `${modelShaderChunk(CHUNK.color)}\ndiffuseColor.rgb = diffuse;`) : replace(shader.fragmentShader, CHUNK.output,
-      `outgoingLight = ${mode === 'emission' ? 'totalEmissiveRadiance' : 'diffuseColor.rgb'};\n` +
-      modelShaderChunk(CHUNK.output));
-  }}]);
-}
-function supported(material: THREE.Material): material is THREE.MeshStandardMaterial {
-  return material instanceof THREE.MeshStandardMaterial && modelMaterialOwned(material);
-}
+// The Surface modes, as one change to the program of every model material the stage draws: the same material in
+// every mode, never a copy, so whatever draws a renderer (the file's material, a kind's) shows the same modes. The mode
+// is part of the program's key, so each mode compiles once per material and a mode change recompiles nothing it
+// compiled before. Lit changes nothing. The other three show one term of the material without fog: Clay its shape in
+// a neutral colour and finish (no texture but the base colour's alpha, no emission, none of the physical extras),
+// Color its base colour untoned, Emission its emission.
+const CHUNK = Object.freeze({color: 'color_fragment', colorDeclarations: 'color_pars_fragment',
+  roughness: 'roughnessmap_fragment', metalness: 'metalnessmap_fragment', emission: 'emissivemap_fragment',
+  physical: 'lights_physical_fragment', output: 'opaque_fragment', toneMapping: 'tonemapping_fragment'});
+const CLAY_UNIFORM = 'modelSurfaceClay';
+// What Clay leaves out, as the program's own switches: every map but the base colour's (its alpha keeps cut-outs), the
+// environment, and the physical extras. three compares none of these per frame, so they hold for the mode's program.
+const CLAY_OFF = Object.freeze(['envMap', 'envMapMode', 'envMapCubeUVHeight', 'aoMap', 'lightMap', 'bumpMap',
+  'normalMap', 'normalMapObjectSpace', 'normalMapTangentSpace', 'displacementMap', 'emissiveMap', 'metalnessMap',
+  'roughnessMap', 'anisotropy', 'anisotropyMap', 'clearcoat', 'clearcoatMap', 'clearcoatNormalMap',
+  'clearcoatRoughnessMap', 'iridescence', 'iridescenceMap', 'iridescenceThicknessMap', 'sheen', 'sheenColorMap',
+  'sheenRoughnessMap', 'transmission', 'transmissionMap', 'thicknessMap'] as const);
+const float = (value: number) => Number.isInteger(value) ? `${value}.0` : `${value}`;
+// A physical material's specular intensity held at 0, as three's own lights_physical_fragment computes it with 0.
+const CLAY_SPECULAR = `
+#if defined( IOR ) && defined( USE_SPECULAR )
+  material.specularF90 = mix( 0.0, 1.0, metalnessFactor );
+  material.specularColor = mix( min( pow2( ( material.ior - 1.0 ) / ( material.ior + 1.0 ) ) * specularColorFactor,
+    vec3( 1.0 ) ) * 0.0, diffuseColor.rgb, metalnessFactor );
+#endif`;
+const after = (replace: ModelShaderReplace, source: string, chunk: string, lines: string) =>
+  replace(source, chunk, `${modelShaderChunk(chunk)}\n${lines}`);
 
-// Overrides belong to this loaded model instance. Textures and geometry remain owned by its original materials/scene.
-export function createModelMaterialInspection(root: THREE.Object3D) {
-  const meshes: {mesh: THREE.Mesh; material: THREE.Material | THREE.Material[]}[] = [];
-  root.traverse(node => {if (node instanceof THREE.Mesh) meshes.push({mesh: node, material: node.material});});
-  const originals = [...new Set(meshes.flatMap(({material}) => Array.isArray(material) ? material : [material]))];
-  const available = originals.length > 0 && originals.every(supported);
-  const emissiveMaterialCount = originals.filter(material => supported(material) && material.emissiveIntensity > 0 &&
-    Math.max(material.emissive.r, material.emissive.g, material.emissive.b) > 0).length;
+function clay(shader: ModelShader, replace: ModelShaderReplace, color: {value: THREE.Color}) {
+  for (const name of CLAY_OFF) Reflect.set(shader, name, false);
+  shader.uniforms[CLAY_UNIFORM] = color;
+  let source = after(replace, shader.fragmentShader, CHUNK.colorDeclarations,
+    modelShaderUniforms({[CLAY_UNIFORM]: 'vec3'}));
+  source = after(replace, source, CHUNK.color, `diffuseColor.rgb = ${CLAY_UNIFORM};`);
+  source = after(replace, source, CHUNK.roughness, `roughnessFactor = ${float(settings.roughness)};`);
+  source = after(replace, source, CHUNK.metalness, `metalnessFactor = ${float(settings.metalness)};`);
+  source = after(replace, source, CHUNK.emission, 'totalEmissiveRadiance = vec3( 0.0 );');
+  // Standard and physical programs both include this chunk; only a physical one defines IOR and USE_SPECULAR.
+  shader.fragmentShader = after(replace, source, CHUNK.physical, CLAY_SPECULAR);
+}
+// The term a mode shows, written as the frame's light just before three's output.
+const shown = (replace: ModelShaderReplace, source: string, term: string) =>
+  replace(source, CHUNK.output, `outgoingLight = ${term};\n${modelShaderChunk(CHUNK.output)}`);
+
+/** The stage's one Surface mode, for every model material: the change each is extended with, and the mode in force. */
+// Each mode's name in the program key, made once.
+const KEYS = Object.freeze(Object.fromEntries(MODEL_PREVIEW_MATERIAL_OPTIONS.map(({value}) =>
+  [value, `model-surface-mode:${value}`])) as Record<ModelStageMaterialMode, string>);
+
+export function createModelSurfaceModes() {
   let mode: ModelStageMaterialMode = 'lit';
-  let clones = new Map<THREE.Material, THREE.MeshStandardMaterial>();
-  let disposed = false;
-  const restore = () => {for (const entry of meshes) entry.mesh.material = entry.material;};
-  return {
-    setMode(value: ModelStageMaterialMode) {
-      const next = modelStageMaterialMode(value);
-      if (disposed) throw new Error('Material inspection has been disposed.');
-      if (next !== 'lit' && !available) throw new ModelStageRefusal('This model does not support material inspection.');
-      if (next === mode) return;
-      const replacements = new Map<THREE.Material, THREE.MeshStandardMaterial>();
-      try {
-        if (next !== 'lit') for (const original of originals) {
-          if (!supported(original)) throw new ModelStageRefusal('This model does not support material inspection.');
-          replacements.set(original, inspectionMaterial(original, next));
-        }
-      } catch (error) {
-        for (const material of replacements.values()) material.dispose();
-        throw error;
+  const clayColor = {value: new THREE.Color().setHex(settings.clayColor)};
+  const change: ModelShaderChange = {
+    get key() {return KEYS[mode];},
+    apply(shader, replace) {
+      if (mode === 'lit') return;
+      shader.fog = false;
+      if (mode === 'clay') return clay(shader, replace, clayColor);
+      if (mode === 'emission') {
+        shader.fragmentShader = shown(replace, shader.fragmentShader, 'totalEmissiveRadiance');
+        return;
       }
-      restore();
-      if (next !== 'lit') for (const {mesh, material} of meshes) {
-        const replacement = (original: THREE.Material) => replacements.get(original)!;
-        mesh.material = Array.isArray(material) ? material.map(replacement) : replacement(material);
-      }
-      for (const material of clones.values()) material.dispose();
-      clones = replacements;
-      mode = next;
-    },
-    snapshot: () => ({materialMode: mode, materialInspectionAvailable: available, emissiveMaterialCount}),
-    dispose() {
-      if (disposed) return;
-      disposed = true;
-      restore();
-      for (const material of clones.values()) material.dispose();
-      clones.clear();
-      mode = 'lit';
+      // Color shows the base colour as stated: the frame's tone curve is left out of this mode's program.
+      shader.fragmentShader = replace(shown(replace, shader.fragmentShader, 'diffuseColor.rgb'), CHUNK.toneMapping, '');
     },
   };
+  return {change, get mode() {return mode;}, set(value: ModelStageMaterialMode) {mode = value;}};
 }
+export type ModelSurfaceModes = ReturnType<typeof createModelSurfaceModes>;
+
+/**
+ * What one model's own materials allow and hold: whether every one can show the modes (a standard material whose
+ * program only the stage changed), how many emit, and the one way to have them compile the mode in force.
+ */
+export function createModelMaterialInspection(root: THREE.Object3D) {
+  const originals = new Set<THREE.Material>();
+  root.traverse(node => {
+    if (node instanceof THREE.Mesh) for (const material of [node.material].flat()) originals.add(material);
+  });
+  const supported = (material: THREE.Material): material is THREE.MeshStandardMaterial =>
+    material instanceof THREE.MeshStandardMaterial && modelMaterialOwned(material);
+  const available = originals.size > 0 && [...originals].every(supported);
+  const emits = (material: THREE.MeshStandardMaterial) => material.emissiveIntensity > 0 &&
+    Math.max(material.emissive.r, material.emissive.g, material.emissive.b) > 0;
+  const emissiveMaterialCount = [...originals].filter(material => supported(material) && emits(material)).length;
+  return {
+    available, emissiveMaterialCount,
+    /** The mode changed: every one of the model's materials takes its program for it on its next draw. */
+    refresh() {for (const material of originals) material.needsUpdate = true;},
+  };
+}
+export type ModelMaterialInspection = ReturnType<typeof createModelMaterialInspection>;

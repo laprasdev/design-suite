@@ -7,7 +7,8 @@ import * as THREE from 'three';
 export type ModelShader = THREE.WebGLProgramParametersWithUniforms;
 /** One of three's chunks in a shader's source replaced: `chunk` is its name, as `fog_fragment`. */
 export type ModelShaderReplace = (source: string, chunk: string, replacement: string) => string;
-/** One change to a material's program: its name in the program's cache key, and the change itself. */
+/** One change to a material's program: its name in the program's cache key (read at each lookup, so a change whose
+ * program depends on a state names that state), and the change itself. */
 export interface ModelShaderChange {
   readonly key: string;
   apply(shader: ModelShader, replace: ModelShaderReplace): void;
@@ -36,11 +37,23 @@ function replaceChunk(key: string): ModelShaderReplace {
 }
 
 export function extendModelMaterial<T extends THREE.Material>(material: T, changes: readonly ModelShaderChange[]): T {
-  const key = changes.map(change => change.key).join(' ');
   material.onBeforeCompile = shader => {
     for (const change of changes) change.apply(shader, replaceChunk(change.key));
   };
-  material.customProgramCacheKey = () => key;
+  // three asks for the key at every program lookup (with glow, for every material twice a frame), so the joined key
+  // is held and rebuilt only when one of its changes names another state; asking allocates nothing.
+  const keys = changes.map(change => change.key);
+  let key = keys.join(' ');
+  material.customProgramCacheKey = () => {
+    let moved = false;
+    for (let index = 0; index < changes.length; index++) {
+      if (changes[index].key === keys[index]) continue;
+      keys[index] = changes[index].key;
+      moved = true;
+    }
+    if (moved) key = keys.join(' ');
+    return key;
+  };
   extended.set(material, Object.freeze([...changes]));
   return material;
 }

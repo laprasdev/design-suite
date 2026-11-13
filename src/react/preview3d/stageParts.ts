@@ -12,6 +12,7 @@ import type {ModelShaderChange} from './shading.ts';
 import {MODEL_ACTOR_SURFACES, modelSurfaceRecordsFit} from './surfaceModel.ts';
 import type {ModelSurfaceKind} from './surfaceKindModel.ts';
 import {modelSurfaceSetCovers} from './renderers.ts';
+import type {ModelSurfaceModes} from './materials.ts';
 
 export const MODEL_STAGE_PART_TEXT = Object.freeze({
   inspection: (id: string) => `Actor ${id} does not support material inspection.`,
@@ -27,6 +28,8 @@ export interface ModelStageSurface {
   readonly fog: {readonly change: ModelShaderChange};
   /** The surface kinds the stage was given, by id. */
   readonly kinds: ReadonlyMap<string, ModelSurfaceKind>;
+  /** The stage's one Surface mode, which every actor shows. */
+  readonly modes: Pick<ModelSurfaceModes, 'mode' | 'set'>;
   frame(framing: ModelStageFraming, orbit: boolean): void;
 }
 
@@ -47,17 +50,21 @@ export function createModelStageParts(surface: ModelStageSurface) {
     const changing = actors.filter(actor => JSON.stringify(actor.sizing) !== JSON.stringify(value));
     return changing.length ? [modelStageCommit(() => {for (const actor of changing) actor.setSizing(value);})] : [];
   };
+  // The Surface mode is the stage's, shown by every actor alike. A mode other than Lit is refused while an engine
+  // drives an actor, and for any actor whose materials cannot show it, including one the description adds.
   const materialMode = (next: ModelStageDescription, actors: readonly ModelActor[]): ModelStagePrepare[] => {
-    const changing = actors.filter(actor => actor.materials.snapshot().materialMode !== next.materialMode);
-    if (!changing.length) return [];
+    if (next.materialMode === 'lit' && surface.modes.mode === 'lit') return [];
     return [() => {
       if (next.materialMode !== 'lit' && actors.some(actor => actor.driver === MODEL_STAGE_DRIVER.engine)) {
         throw new ModelStageRefusal(MODEL_ACTOR_TEXT.unlit);
       }
-      const lacking = next.materialMode === 'lit' ? undefined :
-        changing.find(actor => !actor.materials.snapshot().materialInspectionAvailable);
+      const lacking = next.materialMode === 'lit' ? undefined : actors.find(actor => !actor.materials.available);
       if (lacking) throw new ModelStageRefusal(MODEL_STAGE_PART_TEXT.inspection(lacking.id));
-      return () => {for (const actor of changing) actor.materials.setMode(next.materialMode);};
+      return () => {
+        if (surface.modes.mode === next.materialMode) return;
+        surface.modes.set(next.materialMode);
+        for (const actor of actors) actor.materials.refresh();
+      };
     }];
   };
   // Every record fits its kind, and every actor drawn from a set has exactly its file's renderers in it. Until the

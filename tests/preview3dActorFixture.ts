@@ -2,6 +2,7 @@
 // clip k at time t reads clipValue(k, t), which makes every blended value predictable.
 import * as THREE from 'three';
 import {createModelFog} from '../src/react/preview3d/fog.ts';
+import {createModelSurfaceModes} from '../src/react/preview3d/materials.ts';
 import type {GLTF} from 'three/addons/loaders/GLTFLoader.js';
 import {createModelActor, type ModelActorContext} from '../src/react/preview3d/actor.ts';
 import {MODEL_ACTOR_ANIMATION, MODEL_ANIMATION_LAYER, MODEL_STAGE_FRAMING, MODEL_STAGE_ORIGIN, MODEL_STAGE_SIZE,
@@ -44,7 +45,7 @@ export function actorContext(clock: ModelStageClock = 'external') {
     theme: {colors: {stage: '#000', text: '#fff', surface: '#111', surfaceHi: '#222', accent: '#f00',
       accentDeep: '#800', teal: '#0ff'}},
     lighting: {attach: () => () => undefined}, rendered: () => undefined,
-    fog: createModelFog(scene).change,
+    fog: createModelFog(scene).change, surfaceModes: createModelSurfaceModes(),
   };
   return {context, scene};
 }

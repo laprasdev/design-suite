@@ -12,6 +12,7 @@ import {modelStageDescription, modelStageDescriptionChanges, modelStageFramed, m
   from './descriptionModel.ts';
 import type {ModelStageDescription} from './descriptionModel.ts';
 import {createModelStageParts} from './stageParts.ts';
+import {createModelSurfaceModes} from './materials.ts';
 import {prepareWhole} from './commit.ts';
 import {ModelStageRefusal} from './refusal.ts';
 
@@ -34,12 +35,14 @@ export function createModelStage(
   const policy = modelStagePolicy(options);
   const stage = createModelScene(host, theme, policy);
   const renderedMeshes = new Set<string>();
+  const modes = createModelSurfaceModes();
   const context = {policy, theme, scene: stage.scene, lighting: stage.lighting, fog: stage.fog.change,
+    surfaceModes: modes,
     rendered: (mesh: THREE.Mesh) => {renderedMeshes.add(mesh.uuid);}};
   const load = (declaration: ModelStageActor, signal: AbortSignal) =>
     loadModelStageAsset(declaration.asset.path, modelRuntimeAssetProfile(declaration), signal);
   const actors = createModelActorSet(load, (asset, declaration) => createModelActor(asset, declaration, context));
-  const parts = createModelStageParts({...stage, kinds: policy.kinds});
+  const parts = createModelStageParts({...stage, kinds: policy.kinds, modes});
   let applied: ModelStageDescription | undefined;
   let disposed = false, frame = 0;
   // The stage's one presentation time. Under the external clock only setFrame moves it; under the local clock the
@@ -95,7 +98,9 @@ export function createModelStage(
       const {animation, time, playing} = model.playback.review();
       const held: ModelStageHold | null = policy.clock === 'external' ? null : hold();
       return {
-        id: model.id, animation, time, playing, hold: held, ...model.rig.snapshot(), ...model.materials.snapshot(),
+        id: model.id, animation, time, playing, hold: held, ...model.rig.snapshot(),
+        materialMode: modes.mode, materialInspectionAvailable: model.materials.available,
+        emissiveMaterialCount: model.materials.emissiveMaterialCount,
         lighting: stage.lighting.time,
         parts: points,
         poses, triangles: stage.triangles(), renderedModelMeshes: renderedMeshes.size,
