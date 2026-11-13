@@ -1,5 +1,6 @@
 import {element} from '../elementContract.ts';
 import type {ModelStageMaterialMode} from './materialModel.ts';
+import type {ModelStageLighting} from './lightingModel.ts';
 import type {ModelRuntimeMaterialProfile} from './runtimeMaterialModel.ts';
 import type {ModelEnvironment} from './environment.ts';
 import type {ModelPreviewPresentation} from './presentation.ts';
@@ -8,6 +9,8 @@ export type {ModelRuntimeMaterialProfile, ModelMaterialOutput, ModelRendererBind
 export type {ModelEnvironment, ModelEnvironmentBox} from './environment.ts';
 export {MODEL_PREVIEW_MATERIAL_TEXT, MODEL_PREVIEW_MATERIAL_OPTIONS} from './materialModel.ts';
 export type {ModelStageMaterialMode} from './materialModel.ts';
+export {MODEL_PREVIEW_LIGHTING_TEXT, MODEL_PREVIEW_LIGHTING_OPTIONS} from './lightingModel.ts';
+export type {ModelStageLighting} from './lightingModel.ts';
 export {modelPreviewPresentation, modelPoseForBinding, MODEL_PREVIEW_CAPABILITIES,
   MODEL_PREVIEW_QUATERNION_TOLERANCE} from './presentation.ts';
 export type {ModelPreviewPresentation, ModelPresentationPose, ModelPoseBinding} from './presentation.ts';
@@ -98,6 +101,7 @@ export interface ModelStageSnapshot {
   materialMode: ModelStageMaterialMode;
   materialInspectionAvailable: boolean;
   emissiveMaterialCount: number;
+  lighting: ModelStageLighting;
   attachmentPositions: Record<string, ModelVector>;
   attachmentProjections: Record<string, ModelVector>;
   poses: Record<string, ModelRotation>;
@@ -112,6 +116,7 @@ export interface ModelStageController {
   setSkeleton(value: boolean): void;
   setDisplay(value: ModelStageDisplay): void;
   setMaterialMode(value: ModelStageMaterialMode): void;
+  setLighting(value: ModelStageLighting): void;
   setTransform(value: ModelStageTransform): void;
   setPresentation(value: ModelPreviewPresentation): void;
   setEnvironment(value: ModelEnvironment | null): void;

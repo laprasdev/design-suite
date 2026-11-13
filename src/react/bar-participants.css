@@ -1,4 +1,5 @@
 .bar-participants {
+ --participant-fade:var(--bar-participant-fade,min(24%,calc(var(--header-control) * 3)));
  --participant-glow:calc(var(--field-gap) / 3);
  --participant-chat-clearance:calc(var(--field-gap) / 2);
  /* Logical dimensions come from the field observer: container units apply CSS
@@ -52,7 +53,11 @@
 .bar-participant-message strong { display:block;font-weight:bolder; }
 .bar-participant-message span { display:block;margin-top:calc(var(--field-gap) / 3);color:var(--text); }
 .bar-participant-group { grid-row:1; }
-.bar-participant-grass { position:absolute;inset-inline:0;bottom:0;width:100%;height:calc(var(--line-width) * 6);overflow:visible;pointer-events:none; }
+.bar-participant-grass {
+ --grass-fade:linear-gradient(to right,transparent,#000 var(--participant-fade),#000 calc(100% - var(--participant-fade)),transparent);
+ position:absolute;inset-inline:0;bottom:0;width:100%;height:calc(var(--line-width) * 6);overflow:visible;pointer-events:none;
+ -webkit-mask-image:var(--grass-fade);mask-image:var(--grass-fade);
+}
 .bar-participant-blade { transform:skewX(var(--participant-grass-bend,0deg));transition:transform var(--participant-space-time) ease-out;fill:color-mix(in srgb,var(--grass),var(--text) calc(var(--grass-variant) * 3%));opacity:calc(.46 + var(--grass-variant) * .05); }
 .bar-participant-blade path { animation:participant-grass-sway calc(3s + var(--grass-variant) * .4s) ease-in-out infinite alternate;animation-delay:calc(var(--grass-variant) * -.7s); }
 @keyframes participant-grass-sway { from { transform:skewX(-5deg); } to { transform:skewX(7deg); } }

@@ -11,6 +11,7 @@ import type {ModelPreviewAsset, ModelStageOptions, ModelStageTheme, ModelPreview
 import type {ModelStageCamera, ModelEnvironment} from './model.ts';
 import {MODEL_PREVIEW_TEXT as copy, MODEL_PREVIEW_DISPLAY_OPTIONS} from './model.ts';
 import {MODEL_PREVIEW_MATERIAL_TEXT as surface, MODEL_PREVIEW_MATERIAL_OPTIONS} from './model.ts';
+import {MODEL_PREVIEW_LIGHTING_TEXT as lighting, MODEL_PREVIEW_LIGHTING_OPTIONS} from './model.ts';
 import {useModelPreview} from './useModelPreview.ts';
 
 export interface ModelPreviewProps {
@@ -37,6 +38,9 @@ function previewTheme(theme: ModelStageTheme): CSSProperties {
   return {...variables, ...colors};
 }
 
+// Each field takes a share of its row equal to its option count, so every segment in the row is one width.
+const share = (options: readonly unknown[]) => ({'--field-share': options.length}) as CSSProperties;
+
 function PreviewContents({asset, assets, onSelectAsset, theme, reviewKey = MODEL_PREVIEW_REVIEW,
   stageOptions, presentation, camera, environment, chrome = true, stageOverlay}:
   ModelPreviewProps & {asset: ModelPreviewAsset}) {
@@ -61,12 +65,19 @@ function PreviewContents({asset, assets, onSelectAsset, theme, reviewKey = MODEL
             disabled={!view.ready} options={animations}/>
         </label>
       </div>}
-      {!view.external && <div className="model-preview-field">
-        <span>{surface.label}</span>
-        <SegmentedControl options={MODEL_PREVIEW_MATERIAL_OPTIONS} value={view.materialMode}
-          onChange={view.chooseMaterialMode} ariaLabel={surface.label} fit
-          disabled={!view.ready || !view.materialAvailable}/>
-        {view.ready && !view.materialAvailable && <span role="status">{surface.unavailable}</span>}
+      {!view.external && <div className="model-preview-fields">
+        <div className="model-preview-field model-preview-choice" style={share(MODEL_PREVIEW_MATERIAL_OPTIONS)}>
+          <span>{surface.label}</span>
+          <SegmentedControl options={MODEL_PREVIEW_MATERIAL_OPTIONS} value={view.materialMode}
+            onChange={view.chooseMaterialMode} ariaLabel={surface.label} fit
+            disabled={!view.ready || !view.materialAvailable}/>
+          {view.ready && !view.materialAvailable && <span role="status">{surface.unavailable}</span>}
+        </div>
+        <div className="model-preview-field model-preview-choice" style={share(MODEL_PREVIEW_LIGHTING_OPTIONS)}>
+          <span>{lighting.label}</span>
+          <SegmentedControl options={MODEL_PREVIEW_LIGHTING_OPTIONS} value={view.lighting}
+            onChange={view.chooseLighting} ariaLabel={lighting.label} fit disabled={!view.ready}/>
+        </div>
       </div>}
       <ActionBar compact className="model-preview-actions" slots={{
         left: !view.external && <Button variant="primary" disabled={!view.ready || view.animation === MODEL_REST_POSE}

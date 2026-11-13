@@ -9,10 +9,6 @@ import { useTooltipSafe } from './TooltipContext.tsx';
 import {HoverDetail} from '../../../react/HoverDetail.tsx';
 import {SelectionMark} from '../../../react/SelectionMark.tsx';
 
-// =====================================================
-// UNIFIED BOOLEAN COMPONENT
-// Replaces: BasicBoolean, LightUpBoolean, PinkBoolean, OscillatingBoolean
-// =====================================================
 
 type BooleanSize = 'xs' | 'sm' | 'md' | 'lg';
 type BooleanColor = 'primary' | 'secondary' | 'green' | 'cyan' | 'pink';
@@ -33,7 +29,6 @@ export interface BooleanProps {
   disabled?: boolean;
 }
 
-// Size mappings — lazily evaluated to avoid circular-init TDZ
 let _sizeMap: Record<BooleanSize, number> | null = null;
 function getSizeMap(): Record<BooleanSize, number> {
   return _sizeMap ??= { xs: D.sizes.booleanMicro, sm: D.sizes.booleanSmall, md: D.sizes.booleanMedium, lg: D.sizes.booleanLarge };
@@ -42,20 +37,27 @@ function getSizeMap(): Record<BooleanSize, number> {
 export interface SettingBooleanProps {
   form: typeof BooleanForm.SETTING;
   value: boolean;
-  onChange(value: boolean): void;
+  onChange?(value: boolean): void;
   label: string;
   detail?: React.ReactNode;
+  iconOnly?: boolean;
+  title?: string;
   disabled?: boolean;
   className?: string;
 }
-function SettingBoolean({value,onChange,label,detail,disabled=false,className=''}: SettingBooleanProps) {
-  const content=<><SelectionMark selected={value}/><strong>{label}</strong></>;
-  const props={className:`setting-option ${className}`,disabled};
-  return detail?<HoverDetail {...props} interactive panelRole="tooltip" triggerProps={{'aria-pressed':value}} label={label} content={detail} onActivate={()=>onChange(!value)}>{content}</HoverDetail>:<button type="button" {...props} aria-pressed={value} onClick={()=>onChange(!value)}>{content}</button>;
+function SettingBoolean({value,onChange,label,detail,iconOnly=false,title,disabled=false,className=''}: SettingBooleanProps) {
+  const content=<><SelectionMark selected={value}/>{!iconOnly&&<strong>{label}</strong>}</>;
+  const props={className:`${iconOnly?'bd-check':'setting-option'} ${className}`,disabled,title};
+  const activate=onChange ? ()=>onChange(!value) : undefined;
+  return detail?<HoverDetail {...props} interactive panelRole="tooltip" triggerProps={{'aria-pressed':value}}
+    label={label} content={detail} onActivate={activate}>{content}</HoverDetail>:
+    <button type="button" {...props} role={iconOnly?'checkbox':undefined} aria-label={label}
+      aria-checked={iconOnly?value:undefined} aria-pressed={iconOnly?undefined:value} onClick={activate}>{content}</button>;
 }
 export function Boolean(props: BooleanProps|SettingBooleanProps|SwitchBooleanProps) {
- if('form' in props&&props.form===BooleanForm.SWITCH) return <SwitchBoolean {...props}/>;
-  return 'form' in props&&props.form===BooleanForm.SETTING?<SettingBoolean {...props}/>:<CellBoolean {...props as BooleanProps}/>;
+  if(props.form===BooleanForm.SWITCH) return <SwitchBoolean {...props}/>;
+  if(props.form===BooleanForm.SETTING) return <SettingBoolean {...props}/>;
+  return <CellBoolean {...props}/>;
 }
 
 function CellBoolean({
@@ -156,9 +158,6 @@ function CellBoolean({
   );
 }
 
-// =====================================================
-// CONVENIENCE EXPORTS for backwards compatibility
-// =====================================================
 
 export function LightUpBoolean(props: Omit<BooleanProps, 'color' | 'variant'>) {
   return <Boolean {...props} color="primary" variant="standard" />;

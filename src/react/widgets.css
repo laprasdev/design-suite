@@ -4,10 +4,10 @@
    ============================================================================ */
 
 /* ---- accents (AccentKind) ---- */
-.bd-label { font-family:var(--font-chrome,inherit); letter-spacing:normal; }
+.bd-label { font-family:var(--font-chrome,inherit); letter-spacing:var(--label-tracking,normal);text-transform:var(--label-case,none); }
 .bd-label--name {
-  font-size: var(--label-name-size, 9px); font-weight: 700; letter-spacing: 0.05em;
-  text-transform: uppercase; color: var(--color-dim, #82828e);
+  font-size: var(--label-name-size, 12px); font-weight: 700; letter-spacing: 0.05em;
+  text-transform: uppercase; color: var(--button-color,var(--color-dim, #82828e));
 }
 .bd-label--value {
   font-size: var(--label-value-size,var(--type-control,12px)); font-weight: 700; color: var(--color-text, #f0f0f3);
@@ -16,14 +16,14 @@
 /* Button/label text — one source for action typography. Labels read in Title
    Case exactly as written; nothing is forced into capitals. */
 .bd-label--action {
-  font-size: var(--label-action-size, 12px); font-weight: 700; color: inherit;
+  font-size: var(--label-action-size, 12px); font-weight: var(--label-action-weight,700); color: inherit;
 }
 
 /* ---- Button (composes Label) ---- */
 .bd-btn {
   font-family: inherit;
   display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-  padding: var(--button-padding-block,8px) var(--button-padding-inline,16px); border:var(--line-width, 1px) solid transparent; border-radius: var(--r-sm, 9px); cursor: pointer;
+  min-width:var(--button-min-width,0);padding: var(--button-padding-block,8px) var(--button-padding-inline,16px); border:var(--line-width, 1px) solid transparent; border-radius: var(--r-sm, 9px); cursor: pointer;
   transition: filter 0.15s, background 0.15s, border-color 0.15s, color 0.15s;
 }
 .bd-btn > .bd-label { color: inherit; }
@@ -41,7 +41,7 @@
 .bd-btn--accent { background: transparent; border: 0; color: var(--color-accent, #c4678f); }
 .bd-btn--accent:hover { filter: brightness(1.15); }
 /* Text-only action: no surface, full-strength text. Pair with `glow` for a call to action. */
-.bd-btn--text { background: transparent; border: 0; padding: 4px 0; border-radius: 0; color: var(--color-text, #f0f0f3); }
+.bd-btn--text { background: transparent; border: 0; padding:var(--button-padding-block,4px) var(--button-padding-inline,0); border-radius: 0; color: var(--color-text, #f0f0f3); }
 .bd-btn--text:hover { filter: brightness(1.15); }
 /* Quiet text action: dim until hovered, then the accent. */
 .bd-btn--subtle { background: transparent; border: 0; padding: 4px 0; border-radius: 0; color: var(--color-dim, #82828e); }
@@ -121,18 +121,7 @@
 .bd-piprow[data-form="compact"] > .bd-pip { flex: none; width: 8px; }
 
 /* ---- ViewStack (modal that pushes/pops views) ---- */
-.bd-vs-backdrop {
-  position: fixed; inset: 0; z-index: 120;
-  display: flex; align-items: flex-start; justify-content: center;
-  padding: calc(9vh / var(--css-zoom, 1)) 22px 22px; background: rgba(0, 0, 0, 0.62); backdrop-filter: blur(2px);
-}
-.bd-vs-modal {
-  width: 100%; max-width: 380px; max-height: calc(82vh / var(--css-zoom, 1));
-  display: flex; flex-direction: column; overflow: hidden;
-  background: var(--color-surface, #15151a); border: 1px solid rgba(255, 255, 255, 0.11);
-  border-radius: var(--radius-card, 14px);
-  box-shadow: 0 30px 70px rgba(0, 0, 0, 0.7), inset 0 1px 0 var(--color-bevel, rgba(255, 255, 255, 0.05));
-}
+.bd-vs-modal { display:flex;flex-direction:column;overflow:hidden; }
 .bd-vs-view {
   min-height: 0; overflow-y: auto;
   animation: bd-vs-in 0.17s ease; transition: opacity 0.17s ease;
@@ -226,3 +215,32 @@
 }
 .bd-cycle[data-variant=text] .bd-cycle-val {color:inherit; font:inherit; letter-spacing:inherit;}
 .bd-cycle[data-variant=text]:disabled {cursor:default; opacity:.6;}
+
+.bd-btn--navigation {font-family:var(--navigation-font,inherit);font-size:var(--navigation-size,var(--type-caption,12px));font-weight:700;letter-spacing:var(--tracking-caps,.1em);text-transform:uppercase;width:100%;justify-content:space-between;gap:8px;padding:var(--navigation-padding,6px 8px);background:transparent;border:0;color:var(--navigation-color,var(--text));text-align:left;}
+.bd-btn--navigation:is(:hover,[aria-current=true]) {color:var(--pink);}
+.bd-btn--navigation:focus-visible {outline:var(--line-width) solid var(--pink);outline-offset:-1px;}
+
+.bd-check {flex:none;display:grid;padding:0;background:none;border:0;border-radius:var(--r-sm);cursor:pointer;}
+.bd-check:disabled {cursor:default;opacity:.5;}
+.bd-check:focus-visible {outline:var(--line-width) solid var(--pink);outline-offset:2px;}
+.bd-check .selection-mark {position:relative;transition:border-color .4s ease,background-color .4s ease;}
+.bd-check .selection-mark[data-selected=false] {border-color:var(--check-color,var(--line));}
+.bd-check .selection-mark::after {content:var(--check-content,none);position:absolute;inset:var(--check-inset,3px);border-radius:1px;background:var(--check-fill);background-size:6px 6px;}
+
+.bd-label[data-label-form=pill] {font-size:var(--type-caption,12px);letter-spacing:.06em;text-transform:uppercase;color:var(--dim);border:var(--line-width) solid var(--line);border-radius:999px;padding:1px 7px;}
+.bd-label[data-label-form=pill][data-on=true] {color:var(--pink);border-color:var(--pink);}
+.bd-glyph[data-glyph-form=dot] {flex:none;display:inline-block;border-radius:50%;background:var(--signal-color,var(--faint));box-shadow:var(--signal-glow,none);}
+@media (prefers-reduced-motion:no-preference) {
+ .bd-glyph[data-pulse] {animation:bd-signal-pulse var(--signal-duration,2.4s) ease-in-out infinite;}
+ .bd-check .selection-mark {animation:var(--check-animation,none);}
+ .bd-check .selection-mark::after {animation:var(--check-fill-animation,none);}
+}
+@keyframes bd-signal-pulse {
+ 0%,100% {opacity:1;box-shadow:0 0 0 0 color-mix(in srgb,var(--signal-color) 60%,transparent);}
+ 65% {opacity:var(--signal-low,1);box-shadow:0 0 0 var(--signal-spread,4px) transparent;}
+}
+@keyframes bd-signal-stream {to {background-position:6px 0;}}
+@keyframes bd-surface-pulse {0%,100% {box-shadow:inset 0 0 0 0 transparent;} 50% {box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--signal-color) 60%,transparent);}}
+
+.bd-caret[data-labelled] {display:flex;align-items:center;gap:6px;width:100%;height:auto;padding:2px var(--field-gap);font:inherit;text-align:left;text-transform:inherit;letter-spacing:inherit;}
+.bd-caret[data-labelled] svg {flex:none;}

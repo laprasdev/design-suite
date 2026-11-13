@@ -1,6 +1,10 @@
 .bd-text-input:not(.bd-module-text) {
-  color:var(--text);background:var(--bg);border:var(--line-width) solid var(--line);
-  border-radius:var(--r-sm);padding:var(--field-gap);font:inherit;font-size:var(--type-control);
+  color:var(--text);background:var(--text-field-background,var(--bg));border:var(--line-width) solid var(--line);
+  border-radius:var(--r-sm);padding:var(--text-field-padding,var(--field-gap));font:inherit;font-size:var(--text-field-size,var(--type-control));
 }
+.bd-text-input[data-autosize] { field-sizing:content; }
+.bd-text-input::placeholder { color:var(--dim); }
 .bd-text-input:not(.bd-module-text):focus-visible { outline:var(--focus-width,2px) solid var(--pink);outline-offset:2px; }
 .bd-text-input:not(.bd-module-text):disabled { color:var(--dim); }
+.bd-text-input[data-form=underline] { background:transparent;border-color:transparent;border-bottom-color:var(--line);border-radius:0;box-shadow:none;padding-inline:0; }
+.bd-text-input[data-form=underline]:focus-visible { outline:none;border-bottom-color:var(--pink); }

@@ -14,3 +14,5 @@ jobs:
       - run: npm run check:graph
       - run: node --test tests/group-outlet-position.test.ts
       - run: npm run check:forms
+      - run: npm run check:sky
+      - run: node --test tests/headerSky.test.ts tests/lunarPhase.test.ts

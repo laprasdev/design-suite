@@ -3,7 +3,7 @@ import {reducedMotion, REDUCED_MOTION_QUERY} from '../motion.ts';
 import {createModelStage} from './stage.ts';
 import {MODEL_REST_POSE} from './model.ts';
 import type {ModelPreviewAsset, ModelStageController, ModelStageDisplay, ModelStageOptions} from './model.ts';
-import type {ModelStageTheme, ModelStageMaterialMode} from './model.ts';
+import type {ModelStageTheme, ModelStageMaterialMode, ModelStageLighting} from './model.ts';
 import type {ModelStageCamera, ModelEnvironment} from './model.ts';
 import {createModelPresentationInbox, modelPreviewCamera} from './presentation.ts';
 import {modelEnvironment} from './environment.ts';
@@ -44,7 +44,8 @@ export function useModelPreview(asset: ModelPreviewAsset, theme: ModelStageTheme
   const [boneCount, setBoneCount] = useState(0);
   const [materialMode, setMaterialMode] = useState<ModelStageMaterialMode>('lit');
   const [materialAvailable, setMaterialAvailable] = useState(false), [emissiveCount, setEmissiveCount] = useState(0);
-  const selected = useRef({animation, playing, display, materialMode});
+  const [lighting, setLighting] = useState<ModelStageLighting>('light');
+  const selected = useRef({animation, playing, display, materialMode, lighting});
   const latestScene = useRef<Scene>({});
   const [sceneError, setSceneError] = useState(false);
   useLayoutEffect(() => {
@@ -96,6 +97,7 @@ export function useModelPreview(asset: ModelPreviewAsset, theme: ModelStageTheme
         api.setPlaying(external ? false : selected.current.playing);
         api.setDisplay(selected.current.display);
         api.setMaterialMode(external ? 'lit' : selected.current.materialMode);
+        api.setLighting(external ? 'light' : selected.current.lighting);
         const snapshot = api.snapshot();
         setBoneCount(snapshot.boneCount);
         setMaterialAvailable(snapshot.materialInspectionAvailable);
@@ -121,7 +123,7 @@ export function useModelPreview(asset: ModelPreviewAsset, theme: ModelStageTheme
   return {
     host, loaded: ready, ready: ready && (!external || poseStatus === 'ready'),
     error, sceneError, animation, playing, display, boneCount, external, poseStatus,
-    materialMode, materialAvailable, emissiveCount,
+    materialMode, materialAvailable, emissiveCount, lighting,
     chooseAnimation(value: string) {
       if (external) return;
       if (!command(api => api.setAnimation(value))) return;
@@ -138,6 +140,11 @@ export function useModelPreview(asset: ModelPreviewAsset, theme: ModelStageTheme
       if (external || !command(api => api.setMaterialMode(value))) return;
       selected.current.materialMode = value;
       setMaterialMode(value);
+    },
+    chooseLighting(value: ModelStageLighting) {
+      if (external || !command(api => api.setLighting(value))) return;
+      selected.current.lighting = value;
+      setLighting(value);
     },
     togglePlayback: () => {if (!external) changePlaying(!playing);},
     resetCamera() {

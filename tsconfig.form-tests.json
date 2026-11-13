@@ -1,11 +1,14 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "types": ["node"]
+    "types": [
+      "node"
+    ]
   },
   "include": [
     "src",
     "tests/photos.test.ts",
-    "tests/pipRowForm.test.ts"
+    "tests/pipRowForm.test.ts",
+    "tests/loading.test.ts"
   ]
 }

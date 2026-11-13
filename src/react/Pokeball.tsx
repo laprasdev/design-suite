@@ -1,4 +1,5 @@
 import type {CSSProperties,ReactNode,SVGProps} from 'react';
+import {Label} from './accents.tsx';
 import {GlowParticles} from './GlowParticles.tsx';
 import {GlowParticleElement,LoadingElement} from './loadingElements.ts';
 
@@ -45,13 +46,13 @@ export function PokeballSpinner({size,fit=false}: {size?: number,fit?: boolean})
 // Loading where it happens: inside a widget or beside the thing that's coming.
 interface IndicatorProps {children?: ReactNode,className?: string,size?: number,textReady?: boolean}
 export function LoadingIndicator({
- children='loading',
+ children='LOADING',
  className='',size=28,textReady=true,
 }: IndicatorProps) {
  return <span className={`${LoadingElement.INDICATOR.className} ${className}`}
   role="status" data-text-ready={textReady}>
   <PokeballSpinner size={size}/>
-  <span className={LoadingElement.LABEL.className}>{children}</span>
+  <Label kind="action" className={LoadingElement.LABEL.className}>{children}</Label>
  </span>;
 }
 
