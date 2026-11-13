@@ -35,4 +35,11 @@ describe('the view\'s times', () => {
     }
   });
 
+  it('catches only the stage\'s refusal: any other error escapes, and nothing held is shown in its place', () => {
+    // A host whose lighting fails to read is a defect, not a description the stage refuses.
+    const defect = new TypeError('the host\'s lighting cannot be read');
+    const broken = {get time(): string {throw defect;}, times: []};
+    assert.throws(() => modelPreviewTimes(broken, host), (error: unknown) => error === defect);
+  });
+
 });
