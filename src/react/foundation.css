@@ -10,3 +10,17 @@
 :where(:root) { --segment-padding-block:3px;--segment-padding-inline:10px; }
 /* One select chrome: its caret sits as far in from the right as its text sits from the left. */
 .app-root { --select-inset:12px;--select-caret:4px; }
+/* Code, from theme tokens only: a chip for a span and a block for a fence, in one skin. A chip's line height is 1, so
+   another face can't grow the line it sits on. Its case, tracking and weight are its own, so in an uppercase tracked
+   head it reads as the identifier it is; inside `strong` it takes the emphasis weight, since the writer asked for it. */
+:is(code,pre) {
+ border:var(--line-width) solid var(--line);border-radius:var(--r-sm);background:var(--code-wash);color:var(--text);
+ font-family:var(--font-code);font-size:var(--type-code);
+}
+code {
+ padding:.1em .3em;font-weight:normal;line-height:1;letter-spacing:normal;text-transform:none;
+ -webkit-box-decoration-break:clone;box-decoration-break:clone;
+}
+strong code { font-weight:inherit; }
+pre { padding:.75em 1em;line-height:var(--leading-code); }
+pre code { padding:0;border:0;border-radius:0;background:none;line-height:inherit; }

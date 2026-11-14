@@ -56,6 +56,8 @@ import '@looms/bloom-design/react/styles.css';
 
 `createTheme` returns data without touching the document, and `applyTheme` writes it to CSS variables. `src/synth` holds the web synth's controls, which read their colors through `StyleProvider`.
 
+The stylesheet also draws every `code` and `pre` it reaches, in `src/react/foundation.css`: one skin for a chip and a block, from the theme's `codeWash`, line, small radius and code type. A chip keeps its own case, tracking and weight inside a head, and takes the weight of a `strong` around it. Hosts place code and never restyle it.
+
 ## Entrypoints
 
 | Import | Contents |
