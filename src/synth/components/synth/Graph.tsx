@@ -1,10 +1,11 @@
 import React, { useRef, useEffect } from 'react';
-import { useStyle } from '../../StyleContext.tsx';
-import { getColorScheme, mapLegacyColor, hexToRgba, getGridSpacing, type GridDistance, type ColorType } from '../../../color.ts';
+import { useStyle, type StyleTheme } from '../../StyleContext.tsx';
+import { getColorScheme, hexToRgba, getGridSpacing, resolveColorType, type AnyColor, type GridDistance }
+  from '../../../color.ts';
 import { D, F, C, O, Borders, T } from '../../design/index.ts';
 import {GraphForm, type GraphFormValue} from './graphForm.ts';
 
-export type GraphColor = 'primary' | 'secondary' | 'tertiary' | 'cyan' | 'pink' | 'green';
+export type GraphColor = AnyColor;
 export type GraphVariant = GraphFormValue | 'waveform';
 
 export interface WaveformPoint {
@@ -20,12 +21,8 @@ export interface WaveformShape {
 // =====================================================
 // COLOR SCHEME HELPER
 // =====================================================
-function getGraphColors(color: GraphColor, style: ReturnType<typeof useStyle>['getEffectiveStyle'] extends () => infer R ? R : never) {
-  const colorType: ColorType = ['primary', 'secondary', 'tertiary'].includes(color)
-    ? color as ColorType
-    : mapLegacyColor(color as 'cyan' | 'pink' | 'green');
-
-  const scheme = getColorScheme(colorType, style);
+function getGraphColors(color: GraphColor, style: StyleTheme) {
+  const scheme = getColorScheme(resolveColorType(color), style);
 
   return {
     line: scheme.main,
@@ -38,6 +35,8 @@ function getGraphColors(color: GraphColor, style: ReturnType<typeof useStyle>['g
     background: hexToRgba(scheme.main, O.faint)
   };
 }
+
+type GraphColors = ReturnType<typeof getGraphColors>;
 
 // =====================================================
 // WAVEFORM BACKGROUND - Container with grid
@@ -208,7 +207,7 @@ export function WaveformBackground({
 }
 
 // =====================================================
-// BIPOLAR GRAPH (PositiveNegativeGraph)
+// WAVEFORM GRAPHS - one canvas, drawn in either range
 // =====================================================
 export interface BipolarGraphProps {
   data: WaveformPoint[];
@@ -221,102 +220,6 @@ export interface BipolarGraphProps {
   onDataChange?: (data: WaveformPoint[]) => void;
 }
 
-export function BipolarGraph({
-  data,
-  width = 300,
-  height = 150,
-  color = 'pink',
-  className = '',
-  showNodes = false
-}: BipolarGraphProps) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const { getEffectiveStyle } = useStyle();
-  const style = getEffectiveStyle();
-  const colorScheme = getGraphColors(color, style);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    canvas.width = width;
-    canvas.height = height;
-    ctx.clearRect(0, 0, width, height);
-
-    // Draw center line (y=0)
-    ctx.strokeStyle = hexToRgba(style.primaryColor, O.inactive);
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(0, height / 2);
-    ctx.lineTo(width, height / 2);
-    ctx.stroke();
-
-    if (data.length < 2) return;
-
-    const sortedData = [...data].sort((a, b) => a.x - b.x);
-
-    const toCanvasX = (x: number) => x * width;
-    const toCanvasY = (y: number) => height / 2 - (y * height / 2);
-
-    // Draw filled area
-    ctx.beginPath();
-    ctx.moveTo(toCanvasX(sortedData[0].x), height / 2);
-    sortedData.forEach(point => {
-      ctx.lineTo(toCanvasX(point.x), toCanvasY(point.y));
-    });
-    ctx.lineTo(toCanvasX(sortedData[sortedData.length - 1].x), height / 2);
-    ctx.closePath();
-
-    const gradient = ctx.createLinearGradient(0, 0, 0, height);
-    gradient.addColorStop(0, colorScheme.gradient1);
-    gradient.addColorStop(0.5, colorScheme.gradient2);
-    gradient.addColorStop(1, colorScheme.gradient1);
-
-    ctx.fillStyle = gradient;
-    ctx.fill();
-
-    // Draw waveform line with glow
-    ctx.strokeStyle = colorScheme.line;
-    ctx.lineWidth = 2;
-    ctx.shadowBlur = 8;
-    ctx.shadowColor = colorScheme.glow;
-    ctx.beginPath();
-    ctx.moveTo(toCanvasX(sortedData[0].x), toCanvasY(sortedData[0].y));
-    sortedData.forEach(point => {
-      ctx.lineTo(toCanvasX(point.x), toCanvasY(point.y));
-    });
-    ctx.stroke();
-    ctx.shadowBlur = 0;
-
-    // Draw nodes
-    if (showNodes) {
-      sortedData.forEach(point => {
-        ctx.fillStyle = colorScheme.node;
-        ctx.shadowBlur = 4;
-        ctx.shadowColor = colorScheme.glow;
-        ctx.beginPath();
-        ctx.arc(toCanvasX(point.x), toCanvasY(point.y), 4, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.shadowBlur = 0;
-      });
-    }
-  }, [data, width, height, colorScheme, showNodes, style]);
-
-  return (
-    <div className={className} style={{ position: 'relative', width, height }}>
-      <canvas
-        ref={canvasRef}
-        style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
-      />
-    </div>
-  );
-}
-
-// =====================================================
-// UNIPOLAR GRAPH
-// =====================================================
 export interface UnipolarGraphProps {
   data: WaveformPoint[];
   width?: number;
@@ -327,15 +230,36 @@ export interface UnipolarGraphProps {
   backgroundWaveform?: WaveformPoint[];
 }
 
-export function UnipolarGraph({
-  data,
-  width = 300,
-  height = 120,
-  color = 'cyan',
-  className = '',
-  showNodes = false,
-  backgroundWaveform
-}: UnipolarGraphProps) {
+/**
+ * How each range lays a waveform on its canvas: the lowest value (the highest is 1), the inset above and below, whether
+ * the canvas draws its own zero line, and the fill's gradient from top to bottom; and the height and color its own
+ * graph is drawn at unless told.
+ */
+const WAVEFORM_RANGE: Readonly<Record<GraphFormValue, {
+  least: number; inset: number; zeroLine: boolean; fill: readonly (keyof GraphColors)[];
+  height: number; color: GraphColor;
+}>> = Object.freeze({
+  [GraphForm.BIPOLAR]: { least: -1, inset: 0, zeroLine: true, fill: ['gradient1', 'gradient2', 'gradient1'],
+    height: 150, color: 'pink' },
+  [GraphForm.UNIPOLAR]: { least: 0, inset: 4, zeroLine: false, fill: ['gradient1', 'gradient2'],
+    height: 120, color: 'cyan' },
+});
+
+interface WaveformCanvasProps {
+  range: GraphFormValue;
+  data: WaveformPoint[];
+  width: number;
+  height: number;
+  color: GraphColor;
+  className: string;
+  showNodes: boolean;
+  backgroundWaveform?: WaveformPoint[];
+}
+
+const byX = (points: WaveformPoint[]) => [...points].sort((a, b) => a.x - b.x);
+
+function WaveformCanvas({ range, data, width, height, color, className, showNodes, backgroundWaveform }:
+  WaveformCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { getEffectiveStyle } = useStyle();
   const style = getEffectiveStyle();
@@ -352,42 +276,47 @@ export function UnipolarGraph({
     canvas.height = height;
     ctx.clearRect(0, 0, width, height);
 
-    const padding = 4;
-    const drawHeight = height - (padding * 2);
-
+    const { least, inset, zeroLine, fill } = WAVEFORM_RANGE[range];
     const toCanvasX = (x: number) => x * width;
-    const toCanvasY = (y: number) => height - padding - (y * drawHeight);
+    const toCanvasY = (y: number) => height - inset - (y - least) / (1 - least) * (height - inset * 2);
+    const zero = toCanvasY(0);
+    const trace = (points: WaveformPoint[]) => {
+      ctx.beginPath();
+      ctx.moveTo(toCanvasX(points[0].x), toCanvasY(points[0].y));
+      points.forEach(point => ctx.lineTo(toCanvasX(point.x), toCanvasY(point.y)));
+    };
 
-    // Draw background waveform
+    if (zeroLine) {
+      ctx.strokeStyle = hexToRgba(style.primaryColor, O.inactive);
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(0, zero);
+      ctx.lineTo(width, zero);
+      ctx.stroke();
+    }
+
     if (backgroundWaveform && backgroundWaveform.length >= 2) {
-      const sortedBg = [...backgroundWaveform].sort((a, b) => a.x - b.x);
-
       ctx.strokeStyle = colorScheme.background;
       ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.moveTo(toCanvasX(sortedBg[0].x), toCanvasY(sortedBg[0].y));
-      sortedBg.forEach(point => {
-        ctx.lineTo(toCanvasX(point.x), toCanvasY(point.y));
-      });
+      trace(byX(backgroundWaveform));
       ctx.stroke();
     }
 
     if (data.length < 2) return;
 
-    const sortedData = [...data].sort((a, b) => a.x - b.x);
+    const sortedData = byX(data);
 
-    // Draw filled area with gradient
+    // Draw filled area, closed along the zero line
     ctx.beginPath();
-    ctx.moveTo(toCanvasX(sortedData[0].x), height - padding);
+    ctx.moveTo(toCanvasX(sortedData[0].x), zero);
     sortedData.forEach(point => {
       ctx.lineTo(toCanvasX(point.x), toCanvasY(point.y));
     });
-    ctx.lineTo(toCanvasX(sortedData[sortedData.length - 1].x), height - padding);
+    ctx.lineTo(toCanvasX(sortedData[sortedData.length - 1].x), zero);
     ctx.closePath();
 
-    const gradient = ctx.createLinearGradient(0, padding, 0, height - padding);
-    gradient.addColorStop(0, colorScheme.gradient1);
-    gradient.addColorStop(1, colorScheme.gradient2);
+    const gradient = ctx.createLinearGradient(0, inset, 0, height - inset);
+    fill.forEach((stop, index) => gradient.addColorStop(index / (fill.length - 1), colorScheme[stop]));
 
     ctx.fillStyle = gradient;
     ctx.fill();
@@ -397,11 +326,7 @@ export function UnipolarGraph({
     ctx.lineWidth = 2;
     ctx.shadowBlur = 8;
     ctx.shadowColor = colorScheme.glow;
-    ctx.beginPath();
-    ctx.moveTo(toCanvasX(sortedData[0].x), toCanvasY(sortedData[0].y));
-    sortedData.forEach(point => {
-      ctx.lineTo(toCanvasX(point.x), toCanvasY(point.y));
-    });
+    trace(sortedData);
     ctx.stroke();
     ctx.shadowBlur = 0;
 
@@ -417,7 +342,7 @@ export function UnipolarGraph({
         ctx.shadowBlur = 0;
       });
     }
-  }, [data, backgroundWaveform, width, height, colorScheme, showNodes]);
+  }, [range, data, backgroundWaveform, width, height, colorScheme, showNodes, style]);
 
   return (
     <div className={className} style={{ position: 'relative', width, height }}>
@@ -428,6 +353,19 @@ export function UnipolarGraph({
     </div>
   );
 }
+
+/** One range's own graph: its waveform canvas, at the range's height and color unless told. */
+function rangeGraph(range: GraphFormValue) {
+  const own = WAVEFORM_RANGE[range];
+  return function RangeGraph({ data, width = 300, height = own.height, color = own.color, className = '',
+    showNodes = false, backgroundWaveform }: BipolarGraphProps & UnipolarGraphProps) {
+    return <WaveformCanvas range={range} data={data} width={width} height={height} color={color}
+      className={className} showNodes={showNodes} backgroundWaveform={backgroundWaveform} />;
+  };
+}
+
+export const BipolarGraph = rangeGraph(GraphForm.BIPOLAR);
+export const UnipolarGraph = rangeGraph(GraphForm.UNIPOLAR);
 
 // =====================================================
 // WAVEFORM ENUM - Waveform shape selector
@@ -450,11 +388,7 @@ export function WaveformEnum({
   const { getEffectiveStyle } = useStyle();
   const style = getEffectiveStyle();
 
-  const colorType: ColorType = ['primary', 'secondary', 'tertiary'].includes(color)
-    ? color as ColorType
-    : mapLegacyColor(color as 'cyan' | 'pink' | 'green');
-
-  const scheme = getColorScheme(colorType, style);
+  const scheme = getColorScheme(resolveColorType(color), style);
   const unselectedColor = hexToRgba(scheme.main, O.low);
   const glowColor = hexToRgba(scheme.main, O.medium);
 
@@ -544,24 +478,8 @@ export function Graph({
   showGrid = true,
   backgroundWaveform
 }: GraphProps) {
-  const graphContent = variant === GraphForm.BIPOLAR ? (
-    <BipolarGraph
-      data={data}
-      width={width}
-      height={height}
-      color={color}
-      showNodes={showNodes}
-    />
-  ) : (
-    <UnipolarGraph
-      data={data}
-      width={width}
-      height={height}
-      color={color}
-      showNodes={showNodes}
-      backgroundWaveform={backgroundWaveform}
-    />
-  );
+  const graphContent = <WaveformCanvas range={variant} data={data} width={width} height={height} color={color}
+    className="" showNodes={showNodes} backgroundWaveform={backgroundWaveform} />;
 
   if (showGrid) {
     return (
