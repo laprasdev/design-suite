@@ -3,7 +3,8 @@
 // Extracted from Knob.tsx, used by: Knob, MiniKnob, RangeKnob, Boolean, etc.
 // =====================================================
 
-import { useState, useRef, useCallback, useEffect, useMemo, createContext, useContext } from 'react';
+import { useState, useRef, useCallback, useMemo, createContext, useContext } from 'react';
+import { useDragSession } from '../../../../react/useDragSession.ts';
 
 export const ControlGestureContext = createContext<{ beginGesture: () => void; endGesture: () => void } | null>(null);
 
@@ -106,24 +107,8 @@ export function useControlBehavior(
     handleMouseUp();
   }, [onChange, handleMouseUp]);
 
-  const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    if (e.key === 'Escape') cancelDrag();
-    else if (e.key === 'Enter' || e.key === 'Tab') handleMouseUp();
-  }, [cancelDrag, handleMouseUp]);
-
-  useEffect(() => {
-    if (!isDragging) return;
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mouseup', handleMouseUp);
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('blur', handleMouseUp);
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('blur', handleMouseUp);
-    };
-  }, [isDragging, handleMouseMove, handleMouseUp, handleKeyDown]);
+  useDragSession(isDragging,
+    { move: handleMouseMove, end: handleMouseUp, cancel: cancelDrag, lostFocus: handleMouseUp });
 
   return { isDragging, isHovered, setIsHovered, handleMouseDown, handlePointerDown };
 }

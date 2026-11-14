@@ -1,6 +1,8 @@
 import {OptionsEnum} from '../../../react/inputs/OptionsEnum.tsx';
 export {OptionsEnum};
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef, type RefObject } from 'react';
+import {Modal} from '../../../react/Modal.tsx';
+import {ModalPlacement} from '../../../react/modalElements.ts';
 import { useStyle } from '../../StyleContext.tsx';
 import { getColorScheme, mapLegacyColor, getInsetShadow, hexToRgba, type ColorType } from '../../../color.ts';
 import { D, F, C, O, P, T, TransitionKeys, Borders, SIZES, applyCasing } from '../../design/index.ts';
@@ -329,7 +331,7 @@ interface FloatingGridPickerProps<T> {
   options: EnumOption<T>[];
   value: T;
   scheme: ReturnType<typeof getColorScheme>;
-  style: ReturnType<typeof useStyle>['getEffectiveStyle'] extends () => infer R ? R : never;
+  anchor: RefObject<HTMLDivElement | null>;
   onSelect: (value: T) => void;
   onDismiss: () => void;
 }
@@ -357,12 +359,13 @@ function GridCell<T>({ option, isSelected, scheme, onSelect }: {
   );
 }
 
-function FloatingGridPicker<T>({ options, value, scheme, style, onSelect, onDismiss }: FloatingGridPickerProps<T>) {
+// An anchored Modal above its control: Escape at the control or in the grid, or a press outside both, dismisses it.
+// Its own presses stay off the control's long press.
+function FloatingGridPicker<T>({ options, value, scheme, anchor, onSelect, onDismiss }: FloatingGridPickerProps<T>) {
   const cols = getGridColumns(options.length);
   return (
-    <>
-      <div style={{ position: P.fixed as 'fixed', inset: 0, zIndex: 999 }} onClick={onDismiss} />
-      <div role="dialog" onMouseDown={event => event.stopPropagation()} onMouseUp={event => event.stopPropagation()} style={{
+    <Modal open placement={ModalPlacement.ANCHORED} anchor={anchor} onClose={onDismiss}
+      onMouseDown={event => event.stopPropagation()} onMouseUp={event => event.stopPropagation()} style={{
         position: P.absolute as 'absolute',
         bottom: '100%',
         left: 0,
@@ -371,17 +374,11 @@ function FloatingGridPicker<T>({ options, value, scheme, style, onSelect, onDism
         gridTemplateColumns: `repeat(${cols}, 1fr)`,
         gap: D.spacing.microGap,
         padding: D.spacing.tightGap,
-        background: style.borderColor,
-        border: `1px solid ${style.cutoutBorder}`,
-        borderRadius: D.radius.button,
-        boxShadow: getInsetShadow('medium'),
-        zIndex: 1000
       }}>
-        {options.map((opt, i) => (
-          <GridCell key={i} option={opt} isSelected={opt.value === value} scheme={scheme} onSelect={onSelect} />
-        ))}
-      </div>
-    </>
+      {options.map((opt, i) => (
+        <GridCell key={i} option={opt} isSelected={opt.value === value} scheme={scheme} onSelect={onSelect} />
+      ))}
+    </Modal>
   );
 }
 
@@ -426,6 +423,7 @@ function CyclingEnumRenderer<T>({ options, value, onChange, scheme, style, size,
   const [isHovered, setIsHovered] = useState(false);
   const [isPressed, setIsPressed] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const root = useRef<HTMLDivElement>(null);
   const { setTooltip } = useTooltipSafe();
 
   const currentIndex = options.findIndex(opt => opt.value === value);
@@ -461,13 +459,12 @@ function CyclingEnumRenderer<T>({ options, value, onChange, scheme, style, size,
     : (isHovered ? `0 0 6px ${scheme.glow}` : 'none');
 
   return (
-    <div style={{ position: P.relative as 'relative' }}
+    <div ref={root} style={{ position: P.relative as 'relative' }}
       {...bind}
       onMouseEnter={() => { setIsHovered(true); setTooltip(currentOption.tooltip ?? currentOption.label ?? null); }}
       onMouseLeave={() => { setIsHovered(false); setTooltip(null); bind.onMouseLeave(); }}
       onFocus={() => setTooltip(currentOption.tooltip ?? currentOption.label ?? null)}
       onBlur={() => setTooltip(null)}
-      onKeyDown={event => { if (event.key === 'Escape') setPickerOpen(false); }}
     >
       <CyclingButton
         option={currentOption} onCycle={cycleNext} onOpen={openPicker} expanded={pickerOpen}
@@ -486,7 +483,7 @@ function CyclingEnumRenderer<T>({ options, value, onChange, scheme, style, size,
         }}
       />
       {pickerOpen && (
-        <FloatingGridPicker options={options} value={value} scheme={scheme} style={style}
+        <FloatingGridPicker options={options} value={value} scheme={scheme} anchor={root}
           onSelect={handlePickerSelect} onDismiss={() => setPickerOpen(false)} />
       )}
     </div>

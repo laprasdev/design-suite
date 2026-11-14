@@ -1,5 +1,6 @@
 import {RangeKnobArc} from '../../../../react/inputs/RangeKnobArc.tsx';
 import {KnobFace} from '../../../../react/KnobFace.tsx';
+import {useDragSession} from '../../../../react/useDragSession.ts';
 import {skinForm, knobSkinConfig} from '../../../../skinForms.ts';
 import {SkinKind} from '../../../../skinKinds.ts';
 import {KnobForm} from '../../../design/constants/KnobConfig.ts';
@@ -219,25 +220,8 @@ export function DualTickRangeKnob({
     else onMaxChange(dragStartValue.current);
     setActiveTick(null); gesture.end();
   }, [activeTick, onMinChange, onMaxChange, gesture]);
-
-  const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    if (e.key === 'Escape') cancelDrag();
-    else if (e.key === 'Enter' || e.key === 'Tab') handleMouseUp();
-  }, [cancelDrag]);
-
-  React.useEffect(() => {
-    if (!activeTick) return;
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mouseup', handleMouseUp);
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('blur', handleMouseUp);
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('blur', handleMouseUp);
-    };
-  }, [activeTick, handleMouseMove, handleMouseUp, handleKeyDown]);
+  useDragSession(activeTick !== null,
+    { move: handleMouseMove, end: handleMouseUp, cancel: cancelDrag, lostFocus: handleMouseUp });
 
   // Render a draggable tick indicator
   const renderTick = (normalized: number, type: 'min' | 'max') => {

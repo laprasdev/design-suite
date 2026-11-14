@@ -93,7 +93,7 @@ export function NodeGraph<N extends GraphNode>({
 }: NodeGraphProps<N>) {
   const { ref, scale } = useFitScale(width, fit);
   const marqueeKey = onTiesChange ? "altKey" : "shiftKey";
-  const { surface, marquee, nodeProps, groupProps, surfaceProps } = useNodeMoving(
+  const { surface, marquee, selection, nodeProps, groupProps, surfaceProps } = useNodeMoving(
     nodes, width, moves, onMovesChange, marqueeKey, groups);
   const { nodes: shown, groups: moved } = movedGraph(nodes, groups, moves);
   const frames = groupFrames(moved, shown);
@@ -116,7 +116,7 @@ export function NodeGraph<N extends GraphNode>({
         <GraphWires surface={surface} width={width} height={height} nodes={shown} edges={edges}
           groups={groupOutputs ? frames : undefined} showPorts={showPorts} ties={ties}
           onTiesChange={onTiesChange} interactionSurface={interactionSurface}
-          outlets={outlets} onOutletsChange={onOutletsChange} />
+          outlets={outlets} onOutletsChange={onOutletsChange} nodeSelection={selection} />
 
         {children}
 

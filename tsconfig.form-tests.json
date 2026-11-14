@@ -11,6 +11,9 @@
     "tests/pipRowForm.test.ts",
     "tests/loading.test.ts",
     "tests/playerRing.test.ts",
-    "tests/modalEscape.test.ts"
+    "tests/modalDismissal.test.ts",
+    "tests/modalPress.test.ts",
+    "tests/escapeOrder.test.ts",
+    "tests/pageInputOwners.test.ts"
   ]
 }

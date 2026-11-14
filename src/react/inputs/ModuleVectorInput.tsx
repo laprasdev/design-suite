@@ -1,4 +1,5 @@
-import React, {useEffect, useState} from 'react';
+import React, {useState} from 'react';
+import {useDragSession} from '../useDragSession.ts';
 import {useStyle} from '../../synth/StyleContext.tsx';
 import {skinForm} from '../../skinForms.ts';
 import {SkinKind, VectorSkinForm} from '../../skinKinds.ts';
@@ -17,11 +18,9 @@ function AxisInput({label, value, onChange, disabled, bounds}: {
   label: string; value: number; onChange(value: number): void; disabled?: boolean; bounds?: Bounds;
 }) {
   const [held, setHeld] = useState<Bounds | null>(null), range = held ?? bounds;
-  useEffect(() => {
-    const release = () => setHeld(null);
-    window.addEventListener('mouseup', release); window.addEventListener('blur', release);
-    return () => {window.removeEventListener('mouseup', release); window.removeEventListener('blur', release);};
-  }, []);
+  // The range holds while the knob's press lasts, wherever it is released.
+  const release = () => setHeld(null);
+  useDragSession(held !== null, {end: release, cancel: release, lostFocus: release});
   const input = <ModuleNumberInput fill ariaLabel={label} value={value} onChange={onChange} disabled={disabled}/>;
   if (!range) return input;
   return <div onMouseDownCapture={() => setHeld(bounds ?? null)}>

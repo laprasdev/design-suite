@@ -45,6 +45,8 @@ export interface WireLink {
   label: string;
 }
 
+/** A graph's node selection as its wires see it: whether a move or marquee of the nodes is under way, and its clear. */
+export interface NodeSelection { underWay(): boolean; clear(): void }
 export const graphEdgeId = (edge: GraphEdge): string => edge.id ?? JSON.stringify([edge.from, edge.to]);
 
 /** Apply the same placement to frames, cards, hit testing and wire routing. */
