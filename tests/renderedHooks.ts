@@ -2,7 +2,9 @@
 // runs a hook against the Component rendering it: state and refs last across renders, and an effect runs when the
 // component commits, if its deps changed, after the cleanup of its last run; a memo is made again when its deps
 // change, and a context reads its default, as a scene renders no providers. As in React, a parent renders before the
-// components it renders, and they commit before it.
+// components it renders, and they commit before it. Two things are simpler than React: a state setter changes the
+// value for the next render but schedules none, so a scene renders again itself (`rendered`); and useLayoutEffect is
+// useEffect, where React runs every layout effect before any passive one (Modal's one layout effect does not mind).
 const RENDERING='renderingComponent';
 export const STATEFUL_HOOKS=`const rendering = () => globalThis.${RENDERING};
 export const useState = initial => rendering().state(initial);
