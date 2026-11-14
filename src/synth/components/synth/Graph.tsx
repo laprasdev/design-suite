@@ -210,17 +210,7 @@ export function WaveformBackground({
 // =====================================================
 // WAVEFORM GRAPHS - one canvas, drawn in either range
 // =====================================================
-export interface BipolarGraphProps {
-  data: WaveformPoint[];
-  width?: number;
-  height?: number;
-  color?: GraphColor;
-  className?: string;
-  showNodes?: boolean;
-  interactive?: boolean;
-  onDataChange?: (data: WaveformPoint[]) => void;
-}
-
+/** A range's graph: its waveform, and the size, color, nodes and background waveform it is drawn with. */
 export interface UnipolarGraphProps {
   data: WaveformPoint[];
   width?: number;
@@ -230,6 +220,8 @@ export interface UnipolarGraphProps {
   showNodes?: boolean;
   backgroundWaveform?: WaveformPoint[];
 }
+/** The bipolar graph takes the same props: both ranges draw one waveform canvas. */
+export type BipolarGraphProps = UnipolarGraphProps;
 
 /**
  * How each range lays a waveform on its canvas: the lowest value (the highest is 1), the inset above and below, whether
@@ -359,7 +351,7 @@ function WaveformCanvas({ range, data, width, height, color, className, showNode
 function rangeGraph(range: GraphFormValue) {
   const own = WAVEFORM_RANGE[range];
   return function RangeGraph({ data, width = 300, height = own.height, color = own.color, className = '',
-    showNodes = false, backgroundWaveform }: BipolarGraphProps & UnipolarGraphProps) {
+    showNodes = false, backgroundWaveform }: UnipolarGraphProps) {
     return <WaveformCanvas range={range} data={data} width={width} height={height} color={color}
       className={className} showNodes={showNodes} backgroundWaveform={backgroundWaveform} />;
   };
