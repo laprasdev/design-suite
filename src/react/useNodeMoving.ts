@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { useEscapeCancel } from "./controlCancel.ts";
-import { isPanKeyHeld } from "./panKey.ts";
+import { isPanKeyHeld } from "./pageKeys.ts";
 import { movedGraph, type GraphNode, type GraphGroup, type NodeMoves } from "./nodeGraphTypes.ts";
 export type { NodeMove, NodeMoves } from "./nodeGraphTypes.ts";
 

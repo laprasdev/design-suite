@@ -2,6 +2,7 @@
 // A cancel that takes the key marks it handled and stops it: a Modal around the control stays open (Modal dismissal
 // stops a handled key without closing), and nothing outside the control acts on it as well.
 import {useEffect,useRef} from 'react';
+import {PageKey,onPageKey} from './pageKeys.ts';
 
 const CANCEL_KEY='Escape';
 interface Key {readonly key: string; preventDefault(): void; stopPropagation(): void}
@@ -12,14 +13,10 @@ export function cancelsOnEscape(event: Key,cancel: ()=>boolean) {
  event.preventDefault();event.stopPropagation();
  return true;
 }
-// For an operation that Escape cancels wherever the focus is: listens on the window while the control is mounted, so
-// a render during the same key's dispatch cannot drop the listener. `cancel` is read when the key arrives.
+// For an operation that Escape cancels wherever the focus is: hears the page's keys (pageKeys) while the control is
+// mounted, so a render during the same key's dispatch cannot drop the listener. `cancel` is read when the key arrives.
 export function useEscapeCancel(cancel: ()=>boolean) {
  const latest=useRef(cancel);
  latest.current=cancel;
- useEffect(()=>{
-  const key=(event: KeyboardEvent)=>void cancelsOnEscape(event,()=>latest.current());
-  window.addEventListener('keydown',key);
-  return()=>window.removeEventListener('keydown',key);
- },[]);
+ useEffect(()=>onPageKey(PageKey.DOWN,event=>void cancelsOnEscape(event,()=>latest.current())),[]);
 }

@@ -1,9 +1,10 @@
 // A drag from its press to its end as the window hears it, owned here for every control that drags: while it lasts,
 // each move moves it, a release anywhere or the window losing focus ends it, Enter or Tab ends it where it is, and
-// Escape cancels it (controlCancel). The control says whether a drag is under way and what each of these does; the
-// latest of them is read when its event arrives.
+// Escape cancels it (controlCancel), each key heard as the page's (pageKeys). The control says whether a drag is under
+// way and what each of these does; the latest of them is read when its event arrives.
 import {useEffect,useRef} from 'react';
 import {cancelsOnEscape} from './controlCancel.ts';
+import {PageKey,onPageKey} from './pageKeys.ts';
 
 const ENDS_DRAG: ReadonlySet<string>=new Set(['Enter','Tab']);
 export interface DragSession {
@@ -21,11 +22,11 @@ export function useDragSession(active: boolean,session: DragSession) {
   const key=(event: KeyboardEvent)=>{
    if(!cancelsOnEscape(event,()=>{latest.current.cancel();return true;})&&ENDS_DRAG.has(event.key))end();
   };
-  window.addEventListener('mousemove',move);window.addEventListener('mouseup',end);
-  window.addEventListener('keydown',key);window.addEventListener('blur',end);
+  window.addEventListener('mousemove',move);window.addEventListener('mouseup',end);window.addEventListener('blur',end);
+  const stopHearing=onPageKey(PageKey.DOWN,key);
   return()=>{
    window.removeEventListener('mousemove',move);window.removeEventListener('mouseup',end);
-   window.removeEventListener('keydown',key);window.removeEventListener('blur',end);
+   window.removeEventListener('blur',end);stopHearing();
   };
  },[active]);
 }

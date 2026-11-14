@@ -1,6 +1,7 @@
 // What listens for keys and presses on the page itself (the document, the window or the global object), and what names
 // Escape, read from the source. Each such concept has one owner and nothing else listens for it, so a second copy, a
-// popover closing itself or a control cancelling its own drag, fails here. ThemeMoon is the one Shift reveal there is.
+// popover closing itself or a control cancelling its own drag, fails here. What reads a key on the page, from Space
+// held to pan to Escape cancelling a drag, hears it through pageKeys.
 import assert from 'node:assert/strict';
 import {readFileSync,readdirSync} from 'node:fs';
 import {join} from 'node:path';
@@ -10,10 +11,8 @@ import {SUITE_ROOT} from './bundled.ts';
 const MODAL_DISMISSAL='src/react/modalDismissal.ts',CONTROL_CANCEL='src/react/controlCancel.ts';
 const OWNERS: Readonly<Record<string,string>>={
  'how an open Modal is dismissed':MODAL_DISMISSAL,
- 'Escape cancelling what a control is in the middle of':CONTROL_CANCEL,
  'a drag from its press to its end':'src/react/useDragSession.ts',
- 'Space held to pan a canvas':'src/react/panKey.ts',
- 'Shift over the moon revealing the theme swatches':'src/react/sky/ThemeMoon.tsx',
+ 'a key going down or up on the page':'src/react/pageKeys.ts',
 };
 const NAMES_ESCAPE=/['"]Escape['"]/;
 const LISTENS_ON_THE_PAGE=new RegExp(String.raw`(?<![\w.])(?:(?:document|window|globalThis)\.)?addEventListener\(\s*`

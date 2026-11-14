@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type RefObject } from "react";
 import { useEscapeCancel } from "./controlCancel.ts";
 import { nearestGroupOutlet } from "./groupOutlets.ts";
-import { isPanKeyHeld } from "./panKey.ts";
+import { isPanKeyHeld } from "./pageKeys.ts";
 import { snapTie } from "./wireGeometry.ts";
 import { collectWires, sampleWires, type SweepWire } from "./wireSweep.ts";
 import {GRAPH_NODE_ATTRIBUTE, GRAPH_WIRE_ATTRIBUTE,

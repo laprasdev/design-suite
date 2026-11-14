@@ -163,14 +163,17 @@ opened sees every Escape. A dismissible viewport `Modal` also closes on its back
 content may supply its own actions.
 
 The page's own keys and presses have one owner for each thing they do: `modalDismissal.ts`
-(how an open `Modal` is dismissed), `controlCancel.ts` (Escape cancelling what a control
-is in the middle of, a drag, a move, a gesture or an edit, and marking the key handled so
-a `Modal` around the control stays open), `useDragSession.ts` (a drag from its press to
-its end), `panKey.ts` (Space held to pan a canvas) and `ThemeMoon` (Shift over the moon
-revealing the theme swatches). `check:forms` reads `src` and fails if any other file
-listens on the document, the window or the global object for a key going down, up or
-pressed, a pointer, mouse or touch press or release, or a click, or if any file but the
-first two names Escape. It reads listeners on the page itself, not on an element.
+(how an open `Modal` is dismissed), `useDragSession.ts` (a drag from its press to its end)
+and `pageKeys.ts` (a key going down or up on the page, heard by what is not focused).
+Everything else that reads a key on the page hears it through `pageKeys.ts`: Space held to
+pan a canvas, which a Space typed into a field does not hold; a drag session's keys;
+`ThemeMoon`'s Shift over the moon and its idle reset; and `controlCancel.ts`, which alone
+with `modalDismissal.ts` names Escape: Escape cancelling what a control is in the middle
+of, a drag, a move, a gesture or an edit, and marking the key handled so a `Modal` around
+the control stays open. `check:forms` reads `src` and fails if any other file listens on
+the document, the window or the global object for a key going down, up or pressed, a
+pointer, mouse or touch press or release, or a click, or if any file but those two names
+Escape. It reads listeners on the page itself, not on an element.
 `HoverDetail` keeps a document `dragstart` listener that keeps details from opening while
 a drag lasts, which is about opening, not dismissal; it also closes a hover detail when
 the pointer leaves or focus moves away. `ThemeMoon`'s swatches close on idle and have no
