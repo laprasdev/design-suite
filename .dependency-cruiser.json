@@ -2,7 +2,7 @@
   "forbidden": [
     {
       "name": "no-circular",
-      "comment": "No circular imports of any kind, type-only and lazy import() included. When modules import each other, directly or through others, the need they share moves to a leaf file they all import.",
+      "comment": "No circular imports of any kind, type-only, JSDoc and lazy import() included. When modules import each other, directly or through others, the need they share moves to a leaf file they all import. detectJSDocImports runs the TypeScript compiler as the parser, which follows type-only and JSDoc imports alike.",
       "severity": "error",
       "from": {},
       "to": {
@@ -11,7 +11,6 @@
     }
   ],
   "options": {
-    "tsPreCompilationDeps": true,
     "detectJSDocImports": true,
     "tsConfig": {
       "fileName": "tsconfig.json"
@@ -20,7 +19,7 @@
       "path": "node_modules"
     },
     "exclude": {
-      "path": "^(node_modules|dist|\\.local)/"
+      "path": "(^|/)node_modules/|^(dist|\\.local)/"
     }
   }
 }

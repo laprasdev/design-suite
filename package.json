@@ -116,14 +116,16 @@
   "scripts": {
     "build": "node scripts/build.mjs",
     "prepare": "npm run build",
-    "check": "tsc -p . && tsc -p tsconfig.review-gate.json && node scripts/size-gate.mjs && npm run check:cycles && npm run check:duplication",
-    "check:cycles": "npx --yes --package=dependency-cruiser@18.7.1 --package=typescript@6.0.3 -- depcruise --config .dependency-cruiser.json --output-type err .",
-    "check:duplication": "npx --yes jscpd@5.4.2 --config .jscpd.json .",
-    "test": "node --test tests/*.test.ts",
+    "check": "npm run gate-tools && tsc -p . && node scripts/size-gate.mjs && npm run check:cycles && npm run check:duplication",
+    "check:cycles": "node scripts/cycle-gate.ts",
+    "check:duplication": "scripts/gateTools/node_modules/.bin/jscpd --config .jscpd.json .",
+    "gate-tools": "npm ci --prefix scripts/gateTools --no-audit --no-fund --loglevel=error",
+    "test": "npm run gate-tools && node --test tests/*.test.ts",
     "check:graph": "tsc -p tsconfig.graph-tests.json",
     "check:preview3d": "tsc -p tsconfig.preview3d-tests.json",
     "check:forms": "tsc -p tsconfig.form-tests.json && node --test tests/photos.test.ts tests/pipRowForm.test.ts tests/loading.test.ts tests/playerRing.test.ts tests/modalEscape.test.ts",
-    "check:sky": "tsc -p tsconfig.sky-tests.json"
+    "check:sky": "tsc -p tsconfig.sky-tests.json",
+    "check:gates": "tsc -p tsconfig.gate-tests.json"
   },
   "devDependencies": {
     "@types/react": "^18.3.31",

@@ -1,0 +1,18 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": [
+      "node"
+    ],
+    "allowJs": true
+  },
+  "include": [
+    "scripts/cycle-gate.ts",
+    "scripts/reviewGate",
+    "tests/cycleGate.test.ts",
+    "tests/duplicationGate.test.ts",
+    "tests/gateFixture.ts",
+    "tests/reviewGate.test.ts",
+    "tests/withoutTypeScript.ts"
+  ]
+}
