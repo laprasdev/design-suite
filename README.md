@@ -248,6 +248,171 @@ A point a host attaches to is an empty node named `PART-<name>` under the bone i
 reports each by `<name>` with its world `position` and `rotationQuaternion`; Rig and Both draw a marker on it.
 Rig draws the joints a skinned vertex is weighted to, and the fit in Rig and Both follows what is drawn.
 
+### Surface kinds
+
+A surface kind is how a host draws a renderer with a program of its own instead of the file's material. This is for
+whoever writes one; the stage's code is not needed. The declaration's type is `ModelSurfaceKind` and its validator
+`modelSurfaceKind`; records are `ModelSurfaceValue` and `ModelSurfaceTexture`. All come from `/preview3d/model`. The
+stage's own test kind, `tests/preview3dToonKind.glsl`, is a toon ramp written against this contract.
+
+#### The declaration
+
+A kind is one exported constant of the kind's own repository, host-neutral except for `webProgram`, the web stage's
+program (another host brings its own program for the same kind id):
+
+```ts
+export const TOON_SURFACE: ModelSurfaceKind = {
+  id: 'example-toon',                 // anything but 'file', the file's own material
+  parameters: {                       // keyed by the source shader's reference names, exactly
+    _Color: {type: 'color', space: 'srgb', hdr: false},
+    _EmissionColor: {type: 'color', space: 'srgb', hdr: true},
+    MainTex: {type: 'texture', space: 'srgb'},
+    _Speed_XY: {type: 'vector', size: 2},
+    _EMISSION: {type: 'keyword'},
+    _Rim: {type: 'float'},
+  },
+  inert: {_Rim: 0},                   // a declared float drawn only at this value; another is refused by name
+  attributes: ['uv', 'normal'],       // three's 'uv', 'color', 'normal', 'position'; a file's own is {name, size}
+  light: 'unlit',                     // 'standard' (three's lit model) or 'unlit' (the kind lights itself)
+  coverage: 'opaque',                 // 'blended', 'cutout', {cutout: '<declared float>'} or {cutout: 0.5}
+  side: 'double', fog: true,
+  displacement: null,                 // or {reach: '<declared float>'}: the kind moves vertices
+  webProgram: {path: '<url of the .glsl>', sha256: '<64 lowercase hex>',
+    includes: [{path: '<url of shared .glsl>', sha256: '<hex>'}]},  // optional: shared GLSL placed ahead of it
+};
+```
+
+- **Parameters** are one vocabulary. A record states each of them and no other. An engine value is taken only under
+  the same name, on a colour or float parameter of the same type; a name the frame leaves out shows the record's value.
+  A name is a GLSL name: a letter or underscore, then letters, digits and underscores, never two underscores in a row.
+  Leave out any source property the port does not read (a record that states it is refused); one it reads only at one
+  value goes in `inert`.
+- **Colours.** `srgb` colours are decoded to linear per channel (HDR channels above 1 by the same curve) and alpha is
+  carried as stated; `linear` colours are used as stored; `hdr: false` keeps [0, 1]. Engine values follow the same rule.
+- **Attributes.** Declare only what the program reads; nothing undeclared is added to it. A file's own attribute (a
+  glTF custom attribute `_DEPTH`, which three names `_depth`) is `{name, size}` with 1 to 4 numbers a vertex.
+- **Textures.** A record names each by `{path, sha256, wrap: [u, v], scale, offset}` (a PNG, JPEG or WebP; another
+  format is refused where the record is read), or `{constant: 'white' | 'black'}` for an empty slot. Orientation is
+  glTF's (`flipY` false). A kind never reads an image embedded in the model file.
+- **Shared GLSL.** `webProgram.includes` lists GLSL files the kind's repository owns, each by path and SHA-256. They are
+  read with the program, once, and placed ahead of it in the order listed, so one formula is written once. A file
+  listed twice is refused; one whose bytes are not its digest refuses the description, naming the file.
+
+The stage owns side, coverage, fog, the program cache key and every value a uniform holds, never the kind's code.
+
+#### The program
+
+The file is GLSL text, no JavaScript. It defines one function, which the stage places before three's `main`, with
+everything it may read declared ahead of it:
+
+```glsl
+// Called once, just before three's <emissivemap_fragment>: after the base colour, alpha and normal chunks, before
+// any light is computed. `diffuse` arrives white and opaque (times the vertex colour when 'color' is declared),
+// `emissive` black. Write what the surface is; three's lighting, fog, tone curve and output run after it.
+void kindSurface( inout vec4 diffuse, inout vec3 emissive ) { ... }
+```
+
+- A lit kind (`light: 'standard'`) is built on three's standard program. Its diffuse is lit at roughness 1 and
+  metalness 0 unless it writes its light response: `kindOcclusion` (scales the ambient), `kindRoughness` and
+  `kindMetalness` arrive at 1, 1 and 0 and exist only in a program that names one of them. With `'normal'` declared it
+  may write `kindNormal` (world space, unit), and three lights the surface with it. From a tangent-space normal map:
+  `kindNormal = kindNormalFromTangentSpace( mapNormal, uv )`, with `mapNormal` the map decoded to [-1, 1] (its xy
+  scaled by a strength) and `uv` the uv it was sampled at; the map is a `linear` texture parameter. The tangent frame
+  is three's own, from derivatives; a file's own tangents are not read.
+- An unlit kind (`light: 'unlit'`) is built on three's basic program. What is drawn is `diffuse.rgb` plus `emissive`;
+  no light of three's reaches it, while fog, the tone curve and output still apply. It lights itself from the look's
+  light by the shared names below: a toon ramp reads `dot( kindNormal, stageKeyDirection )` through its steps.
+- `emissive` may exceed 1: what is above the look's glow threshold glows.
+- Coverage uses alpha: `blended` blends it and writes no depth, `opaque` ignores it, plain `cutout` writes it as
+  coverage as it is. A threshold (`{cutout: '_Cutoff'}` or a number) cuts the surface there: the stage sharpens the
+  alpha once, `kindCoverage(alpha, threshold)`, as URP's AlphaClip under alpha to coverage (SharpenAlphaStrict, a
+  one-pixel ramp across the threshold; at 0 or below, the surface whole). Write the alpha the source computes and do
+  not sharpen it yourself.
+- Do not write `gl_FragColor`, declare uniforms of your own, or clone or replace three's chunks.
+- The Surface modes act on the same material: Clay replaces colour and emission after `kindSurface`, Color shows
+  `diffuse` untoned, Emission shows `emissive`. An unlit kind is drawn as it is in every mode, and its mesh makes the
+  modes unavailable, as any unlit material does.
+
+**A kind that moves vertices** (`displacement: {reach}`) also defines, in the same file:
+
+```glsl
+// Called once a vertex, after three's morphs and skinning, before projection. `world` is the vertex's world
+// position (metres, Y up); return its offset in world space. The stage takes the offset to the object's space
+// through the inverse of its world transform (model, instance and batch matrices), so projection, fog and the
+// world position follow the moved vertex. Normals do not move.
+vec3 kindDisplacement( vec3 world ) { ... }
+```
+
+- It may read its argument, the parameter accessors, `stageDecorativeSeconds` and the other shared values, and a file's
+  own attribute. Decorative time holds under reduced motion and on a hidden page, so a swaying kind holds still with it.
+- A wind graph that adds noise of the world position (with wind direction times speed times time) to the world
+  position and then transforms World to Object maps exactly: the world position is the argument, time is
+  `stageDecorativeSeconds`, and the stage performs the World to Object step. A graph that adds one noise value to all
+  three axes returns `vec3(n)`.
+- The file is compiled into both stages. In the vertex stage `KIND_VERTEX_STAGE` is defined: put what only a fragment
+  stage has (`fwidth`, `dFdx`, `dFdy`, `gl_FrontFacing`, `discard`), or the whole `kindSurface`, inside
+  `#ifndef KIND_VERTEX_STAGE ... #endif`. Everything else must compile in both stages from what both declare.
+- `reach` names the declared float that bounds the offset's length, in metres; below 0 it is refused. The stage grows
+  the renderer's culling bounds by the reach in force (the record's, or the engine's for that tick), in world metres
+  whatever the renderer's scale. The reach bounds the length: `vec3(n)` is up to 1.73 times `n` long. An offset longer
+  than the reach can be culled while part of it is in view. The camera's fit reads the undisplaced model.
+
+**What the GLSL may read.**
+
+- `surfaceParameter<name>()` for each declared parameter, named as declared (`surfaceParameter_Color()`): the value in
+  force, the record's or the engine's for this draw. A colour is a `vec4` (decoded as above), a vector a `vec2` to
+  `vec4`, a float a `float`, a keyword a `bool`. A texture's is a lookup, `vec4 surfaceParameterMainTex( vec2 uv )`,
+  that applies the record's scale and offset. For a texture also `vec4 surfaceTiling<name>()` (scale in xy, offset in
+  zw, Unity's `_ST` layout in glTF's uv space) and `vec4 surfaceSample<name>( vec2 uv )` (the texture at a uv as
+  given), so a port that samples every map at one map's tiling does exactly that.
+- `vUv` with `'uv'` declared; `vColor` with `'color'`; a file's own attribute as `surfaceAttribute<name>` in both stages
+  (`surfaceAttribute_depth`: a `float` for size 1, `vec2` to `vec4` above).
+- With `'normal'` (fragment stage only): `kindNormal`, the shading normal after three's double-sided flip, and
+  `kindViewDirection`, toward the camera; both unit, in world space (metres, Y up). A Fresnel term is
+  `pow( 1.0 - saturate( dot( kindNormal, kindViewDirection ) ), power )`.
+- With `'position'` (fragment stage only): `kindObjectPosition`, the fragment's position in the space the model file
+  states the mesh in (glTF: right-handed, Y up, metres), before the node's, an instance's or a batch's transform and
+  after morphs, skinning and displacement. It is a source engine's object space only through the converter's axis
+  change.
+- The look's light, for any kind: `stageKeyDirection` (unit, toward the key, world space), `stageKeyColor` (linear
+  colour times strength), `stageAmbientSky` and `stageAmbientGround` (linear colours times strength; the sky is +Y) and
+  `stageShadow` (the time's shadow colour, linear). These are the values three hands its own lit programs. Three's
+  diffuse divides by pi (`RECIPROCAL_PI`, as `BRDF_Lambert`); a ramp meant to match a lit kind does the same. The
+  stage has exactly two lights, the key `directionalLights[0]` and the ambient `hemisphereLights[0]`.
+- `stageDecorativeSeconds`, decorative time on either clock, never for gameplay (what the game decides arrives as an
+  engine value), and `stageNight`, 0 by day and 1 by night.
+
+Names a kind must not declare: anything starting `surfaceParameter`, `surfaceValues`, `surfaceTexture`,
+`surfaceAttribute`, `surfaceTiling`, `surfaceSample` or `stageNumbers`; `stageDecorativeSeconds`, `stageNight`,
+`stageShadow`, `stageKeyDirection`, `stageKeyColor`, `stageAmbientSky`, `stageAmbientGround`; `kindSurface` and
+`kindDisplacement` beyond its one definition of each; `kindEmissive`, `kindWorld`, `kindObjectToWorld`, `kindNormal`,
+`kindViewDirection`, `kindObjectPosition`, `kindViewNormal`, `kindNormalFromTangentSpace`, `kindOcclusion`,
+`kindRoughness`, `kindMetalness`, `kindCoverage`, `KIND_VERTEX_STAGE`; a file attribute's own name; and three's names.
+
+The stage does not yet state an engine-to-stage space convention, so a kind cannot yet sample world space in its
+source engine's basis.
+
+#### Refusals
+
+| Where | Refused |
+|---|---|
+| Declaration | A missing or stray field; an unknown option; a parameter name that is not a GLSL name; an `inert` entry, `reach` or threshold that names no declared float; a threshold outside [0, 1]; an include listed twice; a bad hash. |
+| Stage creation | A three attribute other than `'uv'`, `'color'`, `'normal'` and `'position'` (a file's own states `{name, size}`). |
+| Record, before anything loads | An unknown kind; a parameter missing or stray; a value of the wrong type or size; a non-HDR colour outside [0, 1]; an inert value not met; a reach below 0; a texture format the stage does not decode. |
+| Actor | A set the description lacks; a surface set together with `asset.runtimeMaterials`. |
+| Staged load | A program, include or texture that cannot be read or decoded, named by path and SHA-256. |
+| Staged build | A set that leaves out a renderer of the file or names one it lacks; a record on a renderer of lines or points; an attribute the mesh lacks or holds at another size; a mesh without normals under `'normal'`; a program that fails to compile or link, with the compiler's log. Each names the actor, renderer and kind, and refuses the description: the one in force stays drawn. |
+| Frame | A value on a renderer the actor's surfaces do not list or that draws the file's material, under a name the kind does not declare with that type, or one the record's rule refuses; a slot other than 0. |
+
+#### How the stage draws a kind
+
+- One material per record (the kind and its values), compiled the first time a renderer needs it, shared by every
+  renderer and actor with that record, freed once none draws with it. A changed record is another material, compiled in
+  the staged build; no model is reloaded.
+- An engine value is per draw: each renderer holds its own values and hands them to the shared material just before it
+  is drawn, so many actors of one record are one material and one program.
+- A kind's material counts as one that emits, since its program decides its emission.
+
 ### ModelPreview
 
 ```tsx
