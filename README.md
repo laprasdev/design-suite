@@ -130,8 +130,21 @@ caller; an anchored panel has no backdrop. `HoverDetail` composes the anchored p
 for its tooltip or dialog content. Every placement keeps the same surface and the module
 radius token. `MODAL_PLACEMENT_ATTRIBUTE` carries the placement on the panel and its
 frame for styling and browser checks, and `panelRef` exposes the panel for measurement
-or focus. A dismissible `Modal` closes on Escape in every placement, and a viewport one
-also on its backdrop; content may supply its own actions.
+or focus.
+
+Escape goes to one receiver and stops there: the innermost open `Modal` that receives it,
+which closes if it is dismissible. A contained or anchored panel receives Escape only while
+focus is inside it, and the topmost viewport `Modal` receives every other one. A key that a
+control inside the receiver has already handled (its default prevented) stops there without
+closing it.
+
+The topmost viewport `Modal` takes an Escape aimed outside it in the window's capture phase,
+before the document or any element sees it. A receiver holding the focus takes the key in its
+panel's React handler: React handlers around it and the document's and window's bubbling
+listeners never see it, but the document's capture listeners and native listeners on the
+elements between the focus and the application root already have. A window capture listener
+added before the first `Modal` opened sees every Escape. A dismissible viewport `Modal` also
+closes on its backdrop; content may supply its own actions.
 
 Give a `Modal` a `title` and it lays its children out on one grid: the title, which
 names the dialog, then each `ModalRow` (a label and its control on two shared columns,

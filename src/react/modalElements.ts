@@ -11,3 +11,4 @@ export const MODAL_TITLED_ATTRIBUTE='data-titled';
 export const MODAL_ROW_LABELLED_ATTRIBUTE='data-labelled';
 export const MODAL_PLACEMENT_ATTRIBUTE='data-modal-placement';
 export const ModalPlacement=Object.freeze({VIEWPORT:'viewport',CONTAINED:'contained',ANCHORED:'anchored'} as const);
+export type ModalPlacementValue=(typeof ModalPlacement)[keyof typeof ModalPlacement];

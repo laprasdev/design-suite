@@ -6,7 +6,9 @@ import {LayoutDimensions} from '../layout.ts';
 import {KEPT_ROOM_ATTRIBUTE,SCROLL_STEP_PX,keptRoom,modalGrowthLimit} from './modalRoom.ts';
 import { cssRect } from './cssZoom.ts';
 import { ModalLayout, type ModalTitleProps } from './ModalLayout.tsx';
-import { MODAL_TITLED_ATTRIBUTE, MODAL_PLACEMENT_ATTRIBUTE, ModalPlacement } from './modalElements.ts';
+import { ModalElement, MODAL_TITLED_ATTRIBUTE, MODAL_PLACEMENT_ATTRIBUTE, ModalPlacement,
+  type ModalPlacementValue } from './modalElements.ts';
+import { useModalEscape } from './modalEscape.ts';
 const FADE_MS = 200;
 
 /* Keep a node mounted through its fade-out, returning [mounted, visible].
@@ -171,7 +173,7 @@ export type ModalProps = ModalTitleProps & Omit<HTMLAttributes<HTMLDivElement>, 
   keepRoomFor?: string;
   className?: string;
   children: ReactNode;
-  placement?: (typeof ModalPlacement)[keyof typeof ModalPlacement];
+  placement?: ModalPlacementValue;
   panelRef?: RefObject<HTMLDivElement>;
 };
 export function Modal({
@@ -189,6 +191,7 @@ export function Modal({
   onCloseRef.current = onClose;
   const close = () => onCloseRef.current?.();
   const interactive = dismissible;
+  const escapeKey = useModalEscape(dialog, {open: open && mounted, placement, dismissible, onClose: onCloseRef});
   // An ancestor scroll container can itself be a tab stop even when every
   // sibling outside the dialog is inert. Keep both Tab directions in the dialog.
   const containFocus = (event: ReactKeyboardEvent) => {
@@ -200,13 +203,6 @@ export function Modal({
       (event.shiftKey ? last : first)?.focus();
     }
   };
-
-  useEffect(() => {
-    if (!open || !interactive) return;
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && close();
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open, interactive, viewport]);
 
   useEffect(() => {
     const node = dialog.current, area = backdrop.current;
@@ -224,16 +220,17 @@ export function Modal({
       event.target.closest('button,a,input,textarea,select,label,summary,[role=button]');
     if (!event.defaultPrevented && interactive && dismissOnContent && !control) close();
   };
-  const panel = <div {...attributes} ref={dialog} className={`sd-modal${className ? " " + className : ""}`}
+  const panel = <div {...attributes} ref={dialog}
+    className={`${ModalElement.PANEL.className}${className ? " " + className : ""}`}
     style={{'--sd-modal-radius':`${LayoutDimensions.radius.module}px`,...style}}
     role={role} data-modal-form={form} aria-modal={viewport && role === 'dialog' ? true : undefined} data-dismissible={interactive}
     {...{[MODAL_TITLED_ATTRIBUTE]: title !== undefined, [MODAL_PLACEMENT_ATTRIBUTE]: placement}}
     aria-label={ariaLabel ?? title} aria-labelledby={labelledBy} tabIndex={tabIndex ?? (blocking ? -1 : undefined)}
     onClick={clickPanel} onPointerDownCapture={viewport ? hold : undefined}
     onKeyDownCapture={viewport ? hold : undefined} onClickCapture={viewport ? opened : undefined}
-    onKeyDown={event => { containFocus(event); onKeyDown?.(event); }}>
+    onKeyDown={event => { containFocus(event); onKeyDown?.(event); escapeKey(event); }}>
     {title === undefined ? children : <ModalLayout title={title} actions={actions}>{children}</ModalLayout>}
   </div>;
-  return anchored ? panel : <div ref={backdrop} className={`sd-modal-bg${visible ? " sd-in" : ""}`}
+  return anchored ? panel : <div ref={backdrop} className={`${ModalElement.FRAME.className}${visible ? " sd-in" : ""}`}
     {...{[MODAL_PLACEMENT_ATTRIBUTE]: placement}} onClick={interactive ? close : undefined}>{panel}</div>;
 }

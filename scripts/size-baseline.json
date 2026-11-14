@@ -11,7 +11,7 @@
     "src/react/HeaderIconButton.tsx": {"lines":12,"longLines":3,"importLines":1},
     "src/react/HoverDetail.tsx": {"lines":57,"longLines":14,"importLines":4},
     "src/react/ListboxSelect.tsx": {"lines":90,"longLines":18,"importLines":8},
-    "src/react/Modal.tsx": {"lines":239,"longLines":18,"importLines":7},
+    "src/react/Modal.tsx": {"lines":236,"longLines":18,"importLines":9},
     "src/react/Photos.tsx": {"lines":52,"longLines":1,"importLines":1},
     "src/react/PlayerIcon.tsx": {"lines":139,"longLines":6,"importLines":2},
     "src/react/SearchField.tsx": {"lines":16,"longLines":2,"importLines":2},
