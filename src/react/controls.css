@@ -23,7 +23,8 @@
   background-size:var(--select-caret) var(--select-caret);background-repeat:no-repeat;
 }
 .app-root .listbox-select[data-shows-value] { text-align:left; }
-.listbox-select-popover { position:fixed;z-index:var(--popover-layer);box-sizing:border-box;display:flex;flex-direction:column;width:max-content;min-width:var(--anchor-width);max-width:calc(100vw / var(--css-zoom,1) - 16px);margin:0;padding:4px;list-style:none;border:var(--line-width) solid var(--line);border-radius:var(--r-sm);background:var(--card);box-shadow:0 12px 36px #0009;color:var(--text);font-family:var(--font-chrome,inherit);font-size:var(--type-control,12px);line-height:1.4; }
+/* An anchored Modal on its trigger: Modal draws the surface and places the layer; the list lays out inside it. */
+.listbox-select-popover { display:flex;flex-direction:column;min-width:var(--anchor-width);margin:0;padding:4px;list-style:none;color:var(--text);font-family:var(--font-chrome,inherit);font-size:var(--type-control,12px);line-height:1.4; }
 .listbox-select-list { margin:0;padding:0;list-style:none;min-height:0;overflow:auto;overscroll-behavior:contain; }
 .listbox-select-popover>.search-field { flex:none;box-sizing:border-box;width:100%;min-width:0;max-width:100%;}
 .listbox-select-option { padding:7px 10px;border-radius:calc(var(--r-sm) / 2);white-space:nowrap;cursor:pointer; }

@@ -1,4 +1,6 @@
 import {Button} from './Button.tsx';
+import {Modal} from './Modal.tsx';
+import {ModalPlacement} from './modalElements.ts';
 import {Label} from './accents.tsx';
 import {ApplicationElement} from './applicationElements.ts';
 import {useEffect,useId,useLayoutEffect,useRef,useState,type KeyboardEvent,type ReactNode} from 'react';
@@ -16,7 +18,8 @@ import {LISTBOX_MOVES,LISTBOX_OPENS,typesText,typeahead,searching,typeaheadMatch
 // `children` draw the chosen option inside the field (a portrait beside a name). It follows the
 // select-only combobox pattern (listboxNavigation): focus stays on the trigger;
 // arrows, Home and End move through the options, typing jumps to a label, Enter
-// or Space chooses and Escape or Tab closes. A click chooses; a press elsewhere closes.
+// or Space chooses and Tab closes. A click chooses. The popover is an anchored
+// Modal on the trigger, which closes it on Escape and on a press elsewhere.
 // `searchSubject` adds a search over the labels.
 export interface ListboxOption<V> {
  value: V;
@@ -67,7 +70,6 @@ export function ListboxSelect<V extends string|number>({options,value,onChange,l
   e.preventDefault();show(LISTBOX_OPENS[e.key](start,shown.length));
  };
  const openKey=(e: KeyboardEvent)=>{
-  if(e.key==='Escape'){e.preventDefault();e.stopPropagation();setOpen(false);setQuery('');trigger.current?.focus();return;}
   if(e.key==='Tab'){trigger.current?.focus();setOpen(false);setQuery('');return;}
   if(LISTBOX_MOVES[e.key]&&(!searchSubject||['ArrowUp','ArrowDown'].includes(e.key))){e.preventDefault();setActive(LISTBOX_MOVES[e.key](active,shown.length));return;}
   if(!searchSubject&&typesText(e)&&(e.key!==' '||searching(search.current,Date.now()))){e.preventDefault();const found=find(e.key,active);if(found!==undefined)setActive(found);return;}
@@ -75,12 +77,6 @@ export function ListboxSelect<V extends string|number>({options,value,onChange,l
   if(e.key==='Enter'||!searchSubject&&e.key===' '){e.preventDefault();choose(active);}
  };
  useEffect(()=>{if(disabled)setOpen(false);},[disabled]);
- // A press anywhere but the trigger or the list closes it.
- useEffect(()=>{
-  if(!open)return;
-  const close=(e: PointerEvent)=>{const target=e.target instanceof Node?e.target:null;if(!trigger.current?.contains(target)&&!panel.current?.contains(target))setOpen(false);};
-  document.addEventListener('pointerdown',close);return()=>document.removeEventListener('pointerdown',close);
- },[open]);
  // Clicking a button does not focus it in every browser. Keep keyboard events
  // on the combobox, or its search input, without moving the anchored viewport.
  useLayoutEffect(()=>{if(open)(searchSubject?input:trigger).current?.focus({preventScroll:true});},[open,searchSubject]);
@@ -89,7 +85,9 @@ export function ListboxSelect<V extends string|number>({options,value,onChange,l
   <button ref={trigger} type="button" role="combobox" className={`${ListboxElement.TRIGGER.className}${className?` ${className}`:''}`} data-shows-value={children===undefined||field||undefined}
    aria-label={label} title={title} aria-haspopup="listbox" aria-expanded={open} aria-controls={open?listId:undefined} aria-activedescendant={open&&!searchSubject&&shown.length?optionId(active):undefined}
    disabled={disabled} onClick={()=>open?setOpen(false):show(start)} onKeyDown={open?openKey:closedKey}>{triggerContent}</button>
-  {open&&createPortal(<div ref={panel} className={ListboxElement.POPOVER.className} data-icon-only={iconOnly||undefined} style={position}>
+  {open&&createPortal(<Modal open placement={ModalPlacement.ANCHORED} anchor={trigger} onClose={()=>{setOpen(false);setQuery('');}}
+   panelRef={panel} role="presentation" className={ListboxElement.POPOVER.className} data-icon-only={iconOnly||undefined}
+   style={position}>
    {searchSubject&&<SearchField density="compact" size={searchSize} style={searchSize?{width:`calc(${searchSize}ch + 2 * var(--field-gap))`}:undefined} ref={input} subject={searchSubject} value={query} onChange={value=>{setQuery(value);setActive(0);}} role="combobox" aria-expanded="true" aria-controls={listId} aria-activedescendant={shown.length?optionId(active):undefined} onKeyDown={openKey}/>}
    <ul ref={list} id={listId} role="listbox" aria-label={label} className={ListboxElement.LIST.className}>
     {shown.map((option,index)=><li key={option.value} id={optionId(index)} role="option" aria-label={option.label} title={option.title??(iconOnly?option.label:undefined)} aria-selected={option.value===value} data-active={index===active||undefined} className={ListboxElement.OPTION.className}
@@ -98,6 +96,6 @@ export function ListboxSelect<V extends string|number>({options,value,onChange,l
    {onCreate&&query.trim()&&!options.some(option=>option.label.toLocaleLowerCase()===query.trim().toLocaleLowerCase())&&
     <Button onClick={create}>Create {query.trim()}</Button>}
    {!shown.length&&!onCreate&&<span role="status">{searchCopy.empty}</span>}
-  </div>,trigger.current?.closest(ApplicationElement.ROOT.selector)??document.body)}
+  </Modal>,trigger.current?.closest(ApplicationElement.ROOT.selector)??document.body)}
  </>;
 }
