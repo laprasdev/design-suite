@@ -20,6 +20,7 @@ export { ModalRow, type ModalRowProps, type ModalTitleProps } from './ModalLayou
 export { ModalElement, ModalPlacement, MODAL_TITLED_ATTRIBUTE, MODAL_ROW_LABELLED_ATTRIBUTE } from './modalElements.ts';
 export { PlayerIcon, PlayerStatusRings, type PlayerIconProps, type PhotoRing, type StatusRing, type RingSegment,
   type Hand, type ActiveHand } from './PlayerIcon.tsx';
+export { PlayerIconElement, PlayerIconSideElement, type PlayerIconSide } from './playerIconElements.ts';
 export { focusableControls } from './focusable.ts';
 export { KEPT_ROOM_ATTRIBUTE, SCROLL_STEP_PX, modalGrowthLimit } from './modalRoom.ts';
 export { element, type ElementContract } from './elementContract.ts';

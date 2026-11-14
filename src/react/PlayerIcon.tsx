@@ -8,14 +8,17 @@
 
 import type { CSSProperties, MouseEvent, ReactNode } from 'react';
 import { PHI } from '../layout.ts';
+import { PlayerIconElement, PlayerIconSideElement, type PlayerIconSide } from './playerIconElements.ts';
 
 const RING = { size: 120, radius: 56, stroke: 6 };
 const STATUS_STROKE = RING.stroke * PHI;
 const RING_GAP = RING.stroke / PHI;
-const clamp01 = (n: number) => Math.max(0, Math.min(1, n));
-// A hand the player bats/throws from (S: both), and which one is active.
-export type Hand = 'L' | 'R' | 'S';
-export type ActiveHand = 'L' | 'R';
+// The hand that is active, on its side of the photo, and the hands the player bats/throws from (S: both).
+export type ActiveHand = PlayerIconSide;
+export type Hand = ActiveHand | 'S';
+// A part on one side of the photo carries its own class and its side's.
+const sidedClass = (part: keyof typeof PlayerIconSideElement, side: PlayerIconSide) =>
+  `${PlayerIconElement[part].className} ${PlayerIconSideElement[part][side].className}`;
 interface HandDotsProps {
   hand: Hand;
   activeHand?: ActiveHand | null;
@@ -29,7 +32,7 @@ function HandDots({ hand, activeHand, handBonus = 0, handBonusLabel }: HandDotsP
   const right = hand === "R" || hand === "S";
   return (
     <>
-      {([['L',left],['R',right]] as const).filter(([,visible])=>visible).map(([side])=><span key={side} className={`sd-pi-dot sd-pi-dot-${side.toLowerCase()}`} data-active={activeHand?activeHand===side:undefined} title={activeHand===side?`${side==='L'?'Left':'Right'} hand active${handBonus?` · +${handBonus} ${handBonusLabel||''}`:''}`:undefined}>{activeHand===side&&handBonus>0&&<b className="sd-pi-hand-bonus" aria-label={`+${handBonus} ${handBonusLabel||'handedness bonus'}`}>+{handBonus}</b>}</span>)}
+      {([['L',left],['R',right]] as const).filter(([,visible])=>visible).map(([side])=><span key={side} className={sidedClass('DOT', side)} data-active={activeHand?activeHand===side:undefined} title={activeHand===side?`${side==='L'?'Left':'Right'} hand active${handBonus?` · +${handBonus} ${handBonusLabel||''}`:''}`:undefined}>{activeHand===side&&handBonus>0&&<b className={PlayerIconElement.HAND_BONUS.className} aria-label={`+${handBonus} ${handBonusLabel||'handedness bonus'}`}>+{handBonus}</b>}</span>)}
     </>
   );
 }
@@ -45,6 +48,15 @@ export interface RingSegment {
   opacity?: number;
   glow?: boolean;
 }
+const clamp01 = (n: number) => Math.max(0, Math.min(1, n));
+// An arc's ends, in turns after the top; its end can pass a full turn.
+const arcStart = (arc: RingSegment) => clamp01(arc.start ?? 0);
+const arcEnd = (arc: RingSegment) => arcStart(arc) + clamp01(arc.pct);
+// Ends that differ by whole turns are one point of the ring, to within the rounding of the fractions a host adds to
+// place them: 8 units in the last place of a turn between 1 and 2, the largest an end reaches, each 2⁻⁵²
+// (Number.EPSILON).
+const TURN_ROUNDING = 8 * Number.EPSILON;
+const sameTurn = (a: number, b: number) => Math.abs(a - b - Math.round(a - b)) < TURN_ROUNDING;
 interface RingArcProps {
   pct: number;
   color?: string;
@@ -58,18 +70,31 @@ interface RingArcProps {
 function RingArc({ pct, color, start = 0, segments, radius = RING.radius, stroke = RING.stroke, status = false, label }: RingArcProps) {
   const R = radius, center = RING.size / 2;
   const arcs: readonly RingSegment[] = (segments || [{ start, pct }]).filter((arc) => arc.pct > 0);
-  const point = (turn: number) => [center + R * Math.cos(turn * 2 * Math.PI), center + R * Math.sin(turn * 2 * Math.PI)];
+  const point = (turn: number): [number, number] =>
+    [center + R * Math.cos(turn * 2 * Math.PI), center + R * Math.sin(turn * 2 * Math.PI)];
   // Actual arc paths avoid dashed-circle/filter fragments when a small ring is
   // rotated or scaled by the field. Two half-arcs also represent a full circle.
   const path = (arc: RingSegment) => {
-    const start = clamp01(arc.start ?? 0), length = clamp01(arc.pct);
-    return `M${point(start)} A${R} ${R} 0 0 1 ${point(start + length / 2)} A${R} ${R} 0 0 1 ${point(start + length)}`;
+    const from = arcStart(arc), to = arcEnd(arc);
+    return `M${point(from)} A${R} ${R} 0 0 1 ${point((from + to) / 2)} A${R} ${R} 0 0 1 ${point(to)}`;
   };
+  // Arcs end flush, so adjoining segments never overlap their colours; an end no arc continues
+  // is rounded. A full turn continues itself. This serves a single progress arc and a segmented ring.
+  const exposedEnds = (arc: RingSegment) => [
+    {turn: arcStart(arc), joined: arcs.some(other => sameTurn(arcStart(arc), arcEnd(other)))},
+    {turn: arcEnd(arc), joined: arcs.some(other => sameTurn(arcEnd(arc), arcStart(other)))},
+  ].filter(end => !end.joined).map(end => point(end.turn));
   return (
-    <svg className={`sd-pi-ring${status ? ' sd-pi-status-ring' : ''}`} viewBox={`0 0 ${RING.size} ${RING.size}`} aria-hidden={label ? undefined : true} role={label ? 'img' : undefined} aria-label={label} style={{ color }}>
+    <svg className={`${PlayerIconElement.RING.className}${status ? ` ${PlayerIconElement.STATUS_RING.className}` : ''}`} viewBox={`0 0 ${RING.size} ${RING.size}`} aria-hidden={label ? undefined : true} role={label ? 'img' : undefined} aria-label={label} style={{ color }}>
       {label && <title>{label}</title>}
-      {arcs.map((arc, i) => <path key={i} className="sd-pi-ring-fg" data-segment={!!segments} data-glow={!!arc.glow} d={path(arc)}
-        style={{ stroke: color, strokeWidth: stroke, strokeOpacity: arc.opacity ?? 1 }} />)}
+      {/* One layer an arc: its opacity and glow apply once to the stroke and its round ends together. */}
+      {arcs.map((arc, i) =>
+        <g key={i} className={PlayerIconElement.ARC.className} data-glow={!!arc.glow} opacity={arc.opacity ?? 1}>
+          <path className={PlayerIconElement.STROKE.className} d={path(arc)}
+            style={{ stroke: color, strokeWidth: stroke }} />
+          {exposedEnds(arc).map(([x, y], end) => <circle key={end} className={PlayerIconElement.CAP.className}
+            cx={x} cy={y} r={stroke / 2} style={{ fill: color }} />)}
+        </g>)}
     </svg>
   );
 }
@@ -119,16 +144,17 @@ export interface PlayerIconProps {
   className?: string;
 }
 export function PlayerIcon({ photo, badge, size = 40, tone, ring, statusRings = [], hand, activeHand, handBonus, handBonusLabel, topLeft, topRight, selected, faded, bare, title, onTap, className = "" }: PlayerIconProps) {
-  const cls = ["sd-pi", onTap && "sd-pi-btn", selected && "sd-pi-sel", faded && "sd-pi-faded", bare && "sd-pi-bare", className]
-    .filter(Boolean).join(" ");
+  const cls = [PlayerIconElement.ROOT.className, onTap && PlayerIconElement.BUTTON.className,
+    selected && PlayerIconElement.SELECTED.className, faded && PlayerIconElement.FADED.className,
+    bare && PlayerIconElement.BARE.className, className].filter(Boolean).join(" ");
   const inner = (
     <>
-      <span className="sd-pi-photo">{photo}</span>
+      <span className={PlayerIconElement.PHOTO.className}>{photo}</span>
       {ring && <RingArc pct={ring.pct ?? 1} start={ring.start} color={ring.color} segments={ring.segments} />}
       <PlayerStatusRings rings={statusRings} />
       {hand && <HandDots hand={hand} activeHand={activeHand} handBonus={handBonus} handBonusLabel={handBonusLabel}/>}
-      {topLeft != null && <span className="sd-pi-acc sd-pi-acc-l">{topLeft}</span>}
-      {topRight != null && <span className="sd-pi-acc sd-pi-acc-r">{topRight}</span>}
+      {topLeft != null && <span className={sidedClass('ACCENT', 'L')}>{topLeft}</span>}
+      {topRight != null && <span className={sidedClass('ACCENT', 'R')}>{topRight}</span>}
       {badge}
     </>
   );

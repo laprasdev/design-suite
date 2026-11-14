@@ -9,6 +9,7 @@
     "src",
     "tests/photos.test.ts",
     "tests/pipRowForm.test.ts",
-    "tests/loading.test.ts"
+    "tests/loading.test.ts",
+    "tests/playerRing.test.ts"
   ]
 }

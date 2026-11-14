@@ -133,7 +133,7 @@
 .sd-pi-ring-fg {
   fill: none; stroke: var(--pi-accent); stroke-linecap: butt;
 }
-/* Segments tile end to end; a glowing one lights in its own color. */
+/* Segments tile end to end and caps round the ends no arc continues; a glowing arc lights in its own color. */
 .sd-pi-ring-cap { fill:var(--pi-accent); }
-.sd-pi-ring-fg[data-glow=true],.sd-pi-ring-cap[data-glow=true] { filter: drop-shadow(0 0 2.5px currentColor); }
+.sd-pi-ring-arc[data-glow=true] { filter: drop-shadow(0 0 2.5px currentColor); }
 
