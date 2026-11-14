@@ -1,15 +1,16 @@
-// The scene the Modal dismissal tests play in: real Modals rendered once, open, with every effect run at once (their
-// hooks replaced), over the few parts of the DOM the router reads: which elements hold a node, the panels' order in
-// the document, and the focused element. The controls that cancel on Escape run in it too. Each scene has a fresh
-// bundle and window, so no Modal or control of another stays open. The window hears an event in its capture phase,
-// then React's handlers see it, then the window hears it in its bubble phase, each only if nothing has stopped it.
+// The scene the Modal dismissal tests play in: real Modals rendered once, open, as Components (renderedHooks.ts), over
+// the few parts of the DOM the router reads: which elements hold a node, the panels' order in the document, and the
+// focused element. The controls that cancel on Escape run in it too, and a graph's node moves and wire gestures, which
+// also read pointer capture and a box. Each scene has a fresh bundle and window, so no Modal or control of another
+// stays open. The window hears an event in its capture phase, then React's handlers see it, then the window hears it
+// in its bubble phase, each only if nothing has stopped it.
 import assert from 'node:assert/strict';
 import {ModalElement,type ModalPlacementValue} from '../src/react/modalElements.ts';
+import type {NodeSelection} from '../src/react/nodeGraphTypes.ts';
 import {bundled,replacedHooks} from './bundled.ts';
+import {Component,STATEFUL_HOOKS,rendered} from './renderedHooks.ts';
 
-const OPEN_AT_ONCE=`export const useState = initial => [typeof initial === 'function' ? initial() : initial, () => {}];
-export const useRef = current => ({current});
-export const useEffect = effect => { effect(); }, useLayoutEffect = effect => { effect(); };`;
+export const BOX_PX=100;
 const ESCAPE='Escape';
 
 class FakeNode extends EventTarget {
@@ -29,6 +30,15 @@ export class FakeElement extends FakeNode {
   return false;
  }
  focus() {Object.assign(document,{activeElement:this});}
+ readonly #held=new Set<number>();
+ setPointerCapture(pointer: number) {this.#held.add(pointer);}
+ hasPointerCapture(pointer: number) {return this.#held.has(pointer);}
+ releasePointerCapture(pointer: number) {this.#held.delete(pointer);}
+ // No element around it is a button, a link or the like.
+ closest() {return null;}
+ // Nor does it hold wire paths to sweep.
+ querySelectorAll() {return [];}
+ getBoundingClientRect() {return {left:0,top:0,width:BOX_PX,height:BOX_PX};}
  compareDocumentPosition(other: FakeElement) {
   return other.order>this.order?FakeNode.DOCUMENT_POSITION_FOLLOWING:FakeNode.DOCUMENT_POSITION_PRECEDING;
  }
@@ -45,7 +55,27 @@ interface ModalProps {
  open: boolean; onClose(): void; placement: ModalPlacementValue; panelRef: {current: FakeElement};
  anchor?: {current: FakeElement}; group?: string; dismissible?: boolean; onKeyDown?(event: KeyPress): void;
 }
-interface SceneModule extends Controls {Modal(props: ModalProps & {children?: unknown}): Rendered|null}
+// A press on an element, as a graph hook reads it.
+export interface Press {
+ readonly button: number; readonly shiftKey: boolean; readonly pointerId: number; readonly clientX: number;
+ readonly clientY: number; readonly target: FakeElement; readonly currentTarget: FakeElement;
+ stopPropagation(): void; preventDefault(): void;
+}
+export interface Tie {readonly id: string; readonly x: number; readonly y: number; readonly edges: readonly string[]}
+// The hooks of controls that drag: a graph's node moves and wire gestures, and a knob.
+interface DragHooks {
+ useNodeMoving(nodes: readonly {id: string; x: number; y: number; w: number; h: number}[],width: number,moves: object,
+  onMovesChange: (moves: object)=>void): {surface: {current: FakeElement|null}; selection: NodeSelection;
+  nodeProps(id: string): {'data-selected'?: boolean; onPointerDown(press: Press): void;
+   onPointerUp(press: Press): void}};
+ useWireGestures(surface: {current: FakeElement},width: number,links: readonly {id: string}[],ties: readonly Tie[],
+  onChange: (ties: readonly Tie[])=>void,onCollect: ()=>void,interactionSurface: undefined,outlets: object,
+  onOutletsChange: undefined,nodeSelection: NodeSelection|undefined): {
+  selected: readonly string[]; select(id: string,add: boolean): void; startTie(press: Press,tie: Tie): void};
+ useControlBehavior(value: number,onChange: (value: number)=>void,options: {min: number; max: number}): {
+  isDragging: boolean; handleMouseDown(press: Press): void};
+}
+interface SceneModule extends Controls,DragHooks {Modal(props: ModalProps & {children?: unknown}): Rendered|null}
 type Controls=typeof import('../src/react/controlCancel.ts')&typeof import('../src/react/useDragSession.ts');
 type ListenerOptions=boolean|AddEventListenerOptions|undefined;
 const inCapture=(options: ListenerOptions)=>typeof options==='boolean'?options:!!options?.capture;
@@ -77,19 +107,28 @@ export async function scene() {
  Object.assign(globalThis,{window:pageWindow,document:new EventTarget(),Node:FakeNode,Element:FakeElement,
   requestAnimationFrame:()=>0});
  const {module,dispose}=await bundled<SceneModule>(['src/react/Modal.tsx','src/react/controlCancel.ts',
-  'src/react/useDragSession.ts'],[replacedHooks(OPEN_AT_ONCE)]);
+  'src/react/useDragSession.ts','src/react/useNodeMoving.ts','src/react/useWireGestures.ts',
+  'src/synth/components/synth/base/useControlBehavior.ts'],
+  [replacedHooks(STATEFUL_HOOKS)]);
  const closed: string[]=[];
+ // A component rendered and committed once.
+ const mount=<Out>(hooks: ()=>Out)=>{
+  const component=new Component(hooks);
+  rendered(component);
+  return component;
+ };
  const open=(name: string,holder: FakeElement,placement: ModalPlacementValue,props: Partial<ModalProps>={})=>
-  keyed(module.Modal({open:true,onClose:()=>closed.push(name),placement,panelRef:{current:holder},...props}));
- const controls: Controls=module;
- return {open,closed,controls,dispose};
+  keyed(mount(()=>module.Modal({open:true,onClose:()=>closed.push(name),placement,panelRef:{current:holder},
+   ...props})).now);
+ const controls: Controls&DragHooks=module;
+ return {open,closed,controls,mount,dispose};
 }
 export type Opener=Awaited<ReturnType<typeof scene>>['open'];
-// An event of the type at the target, as the page makes it.
-function made(type: string,target: FakeElement|null,key?: string) {
+// An event of the type at the target, carrying the fields, as the page makes it.
+function made(type: string,target: FakeElement|null,fields: object) {
  const event=new Event(type,{cancelable:true});
- if(key)Object.defineProperty(event,'key',{value:key});
- if(target)Object.defineProperty(event,'target',{value:target});
+ for(const [field,value] of Object.entries(target?{...fields,target}:fields))
+  Object.defineProperty(event,field,{value});
  return event;
 }
 // The window hears the event in one phase unless it has been stopped, and says whether it has been.
@@ -101,19 +140,29 @@ const hear=(event: Event,phase: EventTarget)=>{
 // given elements around the target, innermost first, as React passes a key up through them, then the window's bubble
 // listeners, until one stops it. Says whether one did.
 export function press(target: FakeElement|null,around: readonly Rendered[]) {
- const event=made('keydown',target,ESCAPE);
+ const event=made('keydown',target,{key:ESCAPE});
  const key: KeyPress={key:ESCAPE,target,get defaultPrevented() {return event.defaultPrevented;},
   preventDefault() {event.preventDefault();},stopPropagation() {event.stopPropagation();}};
  hear(event,pageWindow.capture);
  for(const element of around)if(!event.cancelBubble)element.props.onKeyDown?.(key);
  return hear(event,pageWindow.bubble);
 }
-const pressed=(type: string,target: FakeElement)=>{
- const event=made(type,target);
+// An event of the type at the target (none: at the window itself) that only the window hears.
+const windowHears=(type: string,target: FakeElement|null,fields: object)=>{
+ const event=made(type,target,fields);
  hear(event,pageWindow.capture);hear(event,pageWindow.bubble);
 };
-export const pressAt=(target: FakeElement)=>pressed('pointerdown',target);
-export const dragFrom=(target: FakeElement)=>pressed('dragstart',target);
+export const pressAt=(target: FakeElement)=>windowHears('pointerdown',target,{});
+export const windowBlurs=()=>windowHears('blur',null,{});
+export const mouseMoves=(fields: {readonly clientY: number; readonly buttons: number})=>
+ windowHears('mousemove',null,fields);
+// A pointer event of the type on the element, as the element's own listeners hear it; says whether one took it.
+export function pointerOn(element: FakeElement,type: string,fields: object) {
+ const event=made(type,element,fields);
+ element.dispatchEvent(event);
+ return event.defaultPrevented;
+}
+export const dragFrom=(target: FakeElement)=>windowHears('dragstart',target,{});
 
 interface Escaped {readonly closes: string; readonly stopped: boolean; readonly stops: boolean}
 // Each focus in a scene of its own: `act` opens the Modals and presses Escape with that focus. Only the Modal it
