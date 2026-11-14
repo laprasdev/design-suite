@@ -1,5 +1,6 @@
 import {BooleanForm} from './synth/components/synth/booleanForm.ts';
 import {IncrementerForm} from './synth/components/synth/incrementerForm.ts';
+import {SliderForm} from './react/inputs/sliderForm.ts';
 
 /** The kinds a skin chooses a form for. A consumer's own kinds are named beside its own catalog. */
 export const SkinKind = {
@@ -22,7 +23,7 @@ export function containerFormOf(id: string): ContainerFormValue {
   return form;
 }
 export const KnobSkinForm = {CUTOUT: 'cutout', MINIMAL: 'minimal', FINE: 'fine', LINE: 'line', TICKS: 'ticks'} as const;
-export const SliderSkinForm = {MINIMAL: 'minimal', LINE: 'line', TRACK: 'track', SETTING: 'setting'} as const;
+export const SliderSkinForm = {MINIMAL: 'minimal', LINE: 'line', TRACK: 'track', SETTING: SliderForm.SETTING} as const;
 export type SliderSkinFormValue = typeof SliderSkinForm[keyof typeof SliderSkinForm];
 export const RangeSkinForm = {TRACK: 'track', DIAL: 'dial'} as const;
 export const YesNoSkinForm = {DOT: 'dot', ...BooleanForm} as const;

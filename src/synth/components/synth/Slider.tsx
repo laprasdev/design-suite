@@ -1,6 +1,5 @@
 import {SettingSlider, SkinRangeSlider, type SettingSliderProps} from '../../../react/inputs/SettingSlider.tsx';
 import {SliderForm} from '../../../react/inputs/sliderForm.ts';
-export {SliderForm};
 import {skinFormOrDefault} from '../../../skinForms.ts';
 import {SkinDefault, SliderSkinForm as SkinSliderForm} from '../../../skinKinds.ts';
 import {ModulationTracks} from '../../../react/inputs/ModulationTracks.tsx';

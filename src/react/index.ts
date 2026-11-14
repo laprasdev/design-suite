@@ -52,7 +52,8 @@ export { PARTICIPANT_GRASS, PARTICIPANT_GRASS_BEND } from './participantGrass.ts
 export { ListboxElement } from './listboxSelectElements.ts';
 export { SettingElement, METER_VALUE_ATTRIBUTE, METER_FIXED_ATTRIBUTE } from './settingElements.ts';
 export { Boolean, BooleanForm } from '../synth/components/synth/Boolean.tsx';
-export { Slider, SliderForm } from '../synth/components/synth/Slider.tsx';
+export { Slider } from '../synth/components/synth/Slider.tsx';
+export { SliderForm } from './inputs/sliderForm.ts';
 export type {SliderProgressProps, SliderProgressSegment} from './inputs/SliderProgress.tsx';
 export { PhaseGlyph, type PhaseGlyphValue } from '../synth/components/synth/PhaseGlyph.tsx';
 export {ModulationDisplay, ModulationRoot, RangeEnd, type ControlModulator}
