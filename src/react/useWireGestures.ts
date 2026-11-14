@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type RefObject } from "react";
-import { EscapeCancel, useEscapeCancel } from "./controlCancel.ts";
+import { useEscapeCancel } from "./controlCancel.ts";
+import { KeyMoment } from "./pageKeys.ts";
 import { nearestGroupOutlet } from "./groupOutlets.ts";
 import { isPanKeyHeld } from "./panKey.ts";
 import { useDragSession } from "./useDragSession.ts";
@@ -35,7 +36,7 @@ export function useWireGestures(
   const shown = selected.filter(id => links.some(link => link.id === id));
   // Escape clears the selected wires once every Modal and focused control has let it pass, and takes the key only when
   // there were any.
-  useEscapeCancel(EscapeCancel.SELECTION, () => {
+  useEscapeCancel(KeyMoment.PAGE_AFTER_FOCUS, () => {
     if (!shown.length) return false;
     setSelected([]); return true;
   });

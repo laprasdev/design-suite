@@ -152,8 +152,8 @@ anchored `Modal`'s region, or a drag starting anywhere, dismisses it if it is di
 and the press goes on to what it lands on.
 
 The window hears presses and drags in its capture phase, and Escape there too, as a key on
-the page (`pageKeys.ts`) heard `SECOND`: after what is under way, which may have handled it
-(`controlCancel.ts`), and before the document or any element. The topmost viewport `Modal`
+the page (`pageKeys.ts`) heard by what is open over the content: after what is under way,
+which may have handled it (`controlCancel.ts`), and before the document or any element. The topmost viewport `Modal`
 takes an Escape aimed outside it, and an anchored `Modal` one at its anchor, there, and
 stops it before the document or any element sees it; the topmost anchored `Modal` takes an
 Escape no region holds there too, without stopping it. A receiver holding the focus in its
@@ -167,16 +167,18 @@ supply its own actions.
 A key on the page has one owner, `pageKeys.ts`: a key going down or up, heard by what is
 not focused, and the order it is heard in. Each press on the page has the owner of what it
 does: `modalDismissal.ts` (how an open `Modal` is dismissed) and `useDragSession.ts` (a
-drag from its press to its end). A listener hears the key at a moment: `FIRST` and then
-`SECOND` in the window's capture phase, before anything on the page, or `LAST` in its
-bubble phase, after everything on the page that let the key pass. Everything else that
-reads a key on the page hears it through `pageKeys.ts`: a drag session's keys, `FIRST`; a
-`Modal`'s Escape, `SECOND`; Space held to pan a canvas (`panKey.ts`), which a Space typed
-into a field does not hold, and `ThemeMoon`'s Shift over the moon and its idle reset, `LAST`. Only
-`modalDismissal.ts` and `controlCancel.ts` name Escape. `controlCancel.ts` cancels what is
-under way, a drag, a move or a gesture, `FIRST`, and marks the key handled so a `Modal`
-around it stays open. It clears a selection `LAST`, so a dialog over the selection closes,
-or a focused control cancels its own edit, first, and the selection stays. `check:forms`
+drag from its press to its end). A listener hears the key at a moment named for what
+hears there: what is under way, then what is open over the content, in the window's capture
+phase, before anything on the page; then the page after focus, in its bubble phase, once
+everything on the page has let the key pass. Everything else that reads a key on the page
+hears it through `pageKeys.ts`: a drag session's keys, as what is under way; a `Modal`'s
+Escape, as what is open over the content; Space held to pan a canvas (`panKey.ts`), which a
+Space typed into a field does not hold, and `ThemeMoon`'s Shift over the moon and its idle
+reset, with the page after focus. Only `modalDismissal.ts` and `controlCancel.ts` name
+Escape. `controlCancel.ts` cancels what is under way, a drag, a move or a gesture, before
+any `Modal`, and marks the key handled so a `Modal` around it stays open. It clears a
+selection with the page after focus, so a dialog over the selection closes, or a focused
+control cancels its own edit, first, and the selection stays. `check:forms`
 reads the `addEventListener` calls in `src` that name their event literally, on the
 document, its body or root element, the window or the global object (`globalThis` or
 `self`). It fails if any file but `pageKeys.ts` listens there for a key going down, up or

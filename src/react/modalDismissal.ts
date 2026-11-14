@@ -7,8 +7,9 @@
 // Modal receives an Escape that no region holds, wherever the focus is, and lets the key go on to the focused control:
 // content shown on hover closes on Escape without moving pointer or focus (WCAG 1.4.13), and a control still cancels
 // what it was doing. The receiver closes if it is dismissible; a key that a control inside its panel has already
-// handled (its default prevented) stops at the receiver without closing it. Escape is heard as the page's (pageKeys),
-// SECOND: after what is under way, which may have handled it, and before anything on the page.
+// handled (its default prevented) stops at the receiver without closing it. Escape is heard as a key on the page
+// (pageKeys) by what is open over the content: after what is under way, which may have handled it, and before
+// anything on the page.
 // A press outside an anchored Modal's region, or a drag starting anywhere, dismisses it if it is dismissible, and the
 // press goes on to what it lands on. Opening an anchored Modal of a group dismisses the others of that group.
 // Dismissed with focus in its panel, which would be lost with it, an anchored Modal hands focus back to its anchor.
@@ -87,7 +88,7 @@ function pressOutside(event: PointerEvent) {
 const dragStarts=()=>dismissAnchored(()=>false);
 let stopHearingEscape: ()=>void;
 function listen() {
- stopHearingEscape=onPageKey(PageKey.DOWN,KeyMoment.SECOND,captureEscape);
+ stopHearingEscape=onPageKey(PageKey.DOWN,KeyMoment.OPEN_OVER_CONTENT,captureEscape);
  window.addEventListener('pointerdown',pressOutside,true);window.addEventListener('dragstart',dragStarts,true);
 }
 function stopListening() {

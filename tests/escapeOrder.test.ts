@@ -1,16 +1,18 @@
 // Which of the things Escape does goes first. What is under way hears it first, and a Modal around it stays open; then
-// a Modal, then the focused control; a selection hears it last, once every Modal and focused control has let it pass.
+// what is open over the content, then the focused control; a selection hears it with the page after focus, once every
+// Modal and focused control has let it pass.
 // The scenes run over tests/modalScene.ts.
 import assert from 'node:assert/strict';
 import {describe,it} from 'node:test';
 import {ModalPlacement} from '../src/react/modalElements.ts';
+import {KeyMoment} from '../src/react/pageKeys.ts';
 import {FakeElement,inside,page,panel,press,scene,type Rendered} from './modalScene.ts';
 
 type Controls=Awaited<ReturnType<typeof scene>>['controls'];
 // A selection on the page that Escape clears, as a graph's nodes or wires.
 function selection(controls: Controls) {
  const held={selected:true};
- controls.useEscapeCancel(controls.EscapeCancel.SELECTION,()=>{
+ controls.useEscapeCancel(KeyMoment.PAGE_AFTER_FOCUS,()=>{
   if(!held.selected)return false;
   held.selected=false;return true;
  });
@@ -33,7 +35,7 @@ describe('Escape',()=>{
    try {
     let cancelled=0;
     // Mounted with the dialog's content, whose effects run before the dialog's own.
-    if(gesture==='node move')controls.useEscapeCancel(controls.EscapeCancel.UNDER_WAY,()=>{cancelled++;return true;});
+    if(gesture==='node move')controls.useEscapeCancel(KeyMoment.UNDER_WAY,()=>{cancelled++;return true;});
     else controls.useDragSession(true,{end:()=>{},cancel:()=>{cancelled++;}});
     const dialogPanel=panel(page,1),dialog=open('dialog',dialogPanel,ModalPlacement.VIEWPORT);
     press(focus==='the dialog'?inside(dialogPanel):null,[dialog]);
@@ -48,7 +50,7 @@ describe('Escape',()=>{
    const {open,closed,controls,dispose}=await scene();
    try {
     let cancelled=0;
-    const underWay=()=>controls.useEscapeCancel(controls.EscapeCancel.UNDER_WAY,()=>{cancelled++;return true;});
+    const underWay=()=>controls.useEscapeCancel(KeyMoment.UNDER_WAY,()=>{cancelled++;return true;});
     if(first==='what is under way')underWay();
     open('dialog',panel(page,1),ModalPlacement.VIEWPORT);
     // With nothing on the page reading keys before the dialog opened, a reader mounting inside it later.

@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
-import { EscapeCancel, useEscapeCancel } from "./controlCancel.ts";
+import { useEscapeCancel } from "./controlCancel.ts";
+import { KeyMoment } from "./pageKeys.ts";
 import { isPanKeyHeld } from "./panKey.ts";
 import { movedGraph, type GraphNode, type GraphGroup, type NodeMoves } from "./nodeGraphTypes.ts";
 export type { NodeMove, NodeMoves } from "./nodeGraphTypes.ts";
@@ -50,11 +51,11 @@ export function useNodeMoving<N extends GraphNode>(
   };
   // Escape cancels a move or a marquee under way, and the selection with it, before any Modal around the graph sees the
   // key; with nothing under way it clears the selection, once every Modal and focused control has let the key pass.
-  useEscapeCancel(EscapeCancel.UNDER_WAY, () => {
+  useEscapeCancel(KeyMoment.UNDER_WAY, () => {
     if (!gesture.current) return false;
     cancel(); setSelected(new Set()); return true;
   });
-  useEscapeCancel(EscapeCancel.SELECTION, () => {
+  useEscapeCancel(KeyMoment.PAGE_AFTER_FOCUS, () => {
     if (!selected.size) return false;
     setSelected(new Set()); return true;
   });

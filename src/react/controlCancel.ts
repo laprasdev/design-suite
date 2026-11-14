@@ -14,15 +14,14 @@ export function cancelsOnEscape(event: Key,cancel: ()=>boolean) {
  event.preventDefault();event.stopPropagation();
  return true;
 }
-// What Escape cancels wherever the focus is, and so when it hears the key (pageKeys). What is under way, a drag, a move
-// or a gesture, hears it first, before any Modal or focused control. A selection hears it last, once every Modal and
-// focused control has let it pass, so Escape closes a dialog over it, or cancels a focused control's edit, first.
-export const EscapeCancel=Object.freeze({UNDER_WAY:KeyMoment.FIRST,SELECTION:KeyMoment.LAST} as const);
-export type EscapeCancelValue=(typeof EscapeCancel)[keyof typeof EscapeCancel];
-// Hears Escape while the control is mounted, so a render during the same key's dispatch cannot drop the listener.
-// `cancel` is read when the key arrives.
-export function useEscapeCancel(cancelled: EscapeCancelValue,cancel: ()=>boolean) {
+// For an operation that Escape cancels wherever the focus is, heard at its moment (pageKeys): what is under way, a
+// drag, a move or a gesture, before any Modal or focused control; a selection with the page after focus, once every
+// Modal and focused control has let the key pass, so Escape closes a dialog over it, or cancels a focused control's
+// edit, first. Hears Escape while the control is mounted, so a render during the same key's dispatch cannot drop the
+// listener. `cancel` is read when the key arrives.
+export function useEscapeCancel(moment: typeof KeyMoment.UNDER_WAY|typeof KeyMoment.PAGE_AFTER_FOCUS,
+ cancel: ()=>boolean) {
  const latest=useRef(cancel);
  latest.current=cancel;
- useEffect(()=>onPageKey(PageKey.DOWN,cancelled,event=>void cancelsOnEscape(event,()=>latest.current())),[cancelled]);
+ useEffect(()=>onPageKey(PageKey.DOWN,moment,event=>void cancelsOnEscape(event,()=>latest.current())),[moment]);
 }

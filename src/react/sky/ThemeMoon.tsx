@@ -72,7 +72,7 @@ export function ThemeMoon({skins, skin, onSkin, fan, onOpen}: ThemeMoonProps) {
     const enter = (e: PointerEvent) => { if (e.shiftKey) setOpen(true); };
     node.addEventListener('pointerenter', enter);
     node.addEventListener('pointerdown', idle);
-    const stopHearing = onPageKey(PageKey.DOWN, KeyMoment.LAST, key);
+    const stopHearing = onPageKey(PageKey.DOWN, KeyMoment.PAGE_AFTER_FOCUS, key);
     if (open) idle();
     return () => {
       clearTimeout(timer);

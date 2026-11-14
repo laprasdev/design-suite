@@ -9,8 +9,9 @@ const typing = (target: EventTarget | null) => target instanceof Element && !!ta
 export function isPanKeyHeld() {
  if (!listening && typeof window !== 'undefined') {
   listening = true;
-  onPageKey(PageKey.DOWN, KeyMoment.LAST, e => { if (e.key === PAN_KEY && !typing(e.target)) held = true; });
-  onPageKey(PageKey.UP, KeyMoment.LAST, e => { if (e.key === PAN_KEY) held = false; });
+  onPageKey(PageKey.DOWN, KeyMoment.PAGE_AFTER_FOCUS,
+   e => { if (e.key === PAN_KEY && !typing(e.target)) held = true; });
+  onPageKey(PageKey.UP, KeyMoment.PAGE_AFTER_FOCUS, e => { if (e.key === PAN_KEY) held = false; });
   window.addEventListener('blur', () => { held = false; });
  }
  return held;
