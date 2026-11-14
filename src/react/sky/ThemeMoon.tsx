@@ -1,6 +1,6 @@
 import {Button} from '../Button.tsx';
 import {SegmentedControl, ICON_SEGMENT_VARIANT} from '../SegmentedControl.tsx';
-import {PageKey, onPageKey} from '../pageKeys.ts';
+import {KeyMoment, PageKey, onPageKey} from '../pageKeys.ts';
 // The theme, behind the moon crossing the header's sky. The moon is tonight's: its real phase, lit on the side the sun
 // is. Press it, or hold Shift over it, and a swatch for each skin comes out toward the open side of the sky: the
 // skin's colours
@@ -72,7 +72,7 @@ export function ThemeMoon({skins, skin, onSkin, fan, onOpen}: ThemeMoonProps) {
     const enter = (e: PointerEvent) => { if (e.shiftKey) setOpen(true); };
     node.addEventListener('pointerenter', enter);
     node.addEventListener('pointerdown', idle);
-    const stopHearing = onPageKey(PageKey.DOWN, key);
+    const stopHearing = onPageKey(PageKey.DOWN, KeyMoment.LAST, key);
     if (open) idle();
     return () => {
       clearTimeout(timer);

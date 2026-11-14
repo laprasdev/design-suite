@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type RefObject } from "react";
-import { useEscapeCancel } from "./controlCancel.ts";
+import { EscapeCancel, useEscapeCancel } from "./controlCancel.ts";
 import { nearestGroupOutlet } from "./groupOutlets.ts";
 import { isPanKeyHeld } from "./pageKeys.ts";
 import { useDragSession } from "./useDragSession.ts";
@@ -33,8 +33,9 @@ export function useWireGestures(
   useDragSession(dragging, { end: () => finishGesture.current?.(false), cancel: () => finishGesture.current?.(true) });
   useEffect(() => () => finishGesture.current?.(true), []);
   const shown = selected.filter(id => links.some(link => link.id === id));
-  // Escape clears the selected wires, and takes the key only when there were any.
-  useEscapeCancel(() => {
+  // Escape clears the selected wires once every Modal and focused control has let it pass, and takes the key only when
+  // there were any.
+  useEscapeCancel(EscapeCancel.SELECTION, () => {
     if (!shown.length) return false;
     setSelected([]); return true;
   });

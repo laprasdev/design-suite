@@ -164,19 +164,23 @@ content may supply its own actions.
 
 The page's own keys and presses have one owner for each thing they do: `modalDismissal.ts`
 (how an open `Modal` is dismissed), `useDragSession.ts` (a drag from its press to its end)
-and `pageKeys.ts` (a key going down or up on the page, heard by what is not focused).
-Everything else that reads a key on the page hears it through `pageKeys.ts`: Space held to
-pan a canvas, which a Space typed into a field does not hold; a drag session's keys;
-`ThemeMoon`'s Shift over the moon and its idle reset; and `controlCancel.ts`, which alone
-with `modalDismissal.ts` names Escape: Escape cancelling what a control is in the middle
-of, a drag, a move, a gesture or an edit, and marking the key handled so a `Modal` around
-the control stays open. `check:forms` reads the `addEventListener` calls in `src` that
-name their event literally, and fails if a file other than the three owners listens on the
-document, its body or root element, the window or the global object (`globalThis` or
-`self`) for a key going down, up or pressed, a pointer, mouse or touch press or release, a
-click, a double or auxiliary click, or a context menu. It also fails if any file but those
-two names Escape. It does not see a listener on an element, an event named by a variable
-or an `on…` property.
+and `pageKeys.ts` (a key going down or up on the page, heard by what is not focused, and
+the order it is heard in). A listener hears the key at a moment: `FIRST` and then `SECOND`
+in the window's capture phase, before anything on the page, or `LAST` in its bubble phase,
+after everything on the page that let the key pass. Everything else that reads a key on
+the page hears it through `pageKeys.ts`: a drag session's keys, `FIRST`; Space held to pan
+a canvas, which a Space typed into a field does not hold, and `ThemeMoon`'s Shift over the
+moon and its idle reset, `LAST`; and `controlCancel.ts`, which alone with
+`modalDismissal.ts` names Escape. Escape cancels what is under way, a drag, a move or a
+gesture, `FIRST`, and marks the key handled so a `Modal` around it stays open. It clears a
+selection `LAST`, so a dialog over the selection closes, or a focused control cancels its
+own edit, first, and the selection stays. `check:forms` reads the `addEventListener` calls
+in `src` that name their event literally, and fails if a file other than the three owners
+listens on the document, its body or root element, the window or the global object
+(`globalThis` or `self`) for a key going down, up or pressed, a pointer, mouse or touch
+press or release, a click, a double or auxiliary click, or a context menu. It also fails if
+any file but those two names Escape. It does not see a listener on an element, an event
+named by a variable or an `on…` property.
 `HoverDetail` keeps a document `dragstart` listener that keeps details from opening while
 a drag lasts, which is about opening, not dismissal; it also closes a hover detail when
 the pointer leaves or focus moves away. `ThemeMoon`'s swatches close on idle and have no
