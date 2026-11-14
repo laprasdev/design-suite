@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type RefObject } from "react";
 import { useEscapeCancel } from "./controlCancel.ts";
 import { nearestGroupOutlet } from "./groupOutlets.ts";
 import { isPanKeyHeld } from "./pageKeys.ts";
+import { useDragSession } from "./useDragSession.ts";
 import { snapTie } from "./wireGeometry.ts";
 import { collectWires, sampleWires, type SweepWire } from "./wireSweep.ts";
 import {GRAPH_NODE_ATTRIBUTE, GRAPH_WIRE_ATTRIBUTE,
@@ -23,18 +24,20 @@ export function useWireGestures(
 ) {
   const [selected, setSelected] = useState<readonly string[]>([]);
   const [sweep, setSweep] = useState<readonly GraphPoint[]>([]);
+  const [dragging, setDragging] = useState(false);
   const gesture = useRef<Gesture | null>(null), suppressClick = useRef(false);
-  const cancelGesture = useRef<(() => void) | null>(null);
+  // Ends the gesture under way where it is, or cancels it; set while the surface listens.
+  const finishGesture = useRef<((cancelled: boolean) => void) | null>(null);
+  const begin = (next: Gesture) => { gesture.current = next; setDragging(true); };
+  // A gesture is a drag: the drag session ends or cancels it, and unmounting cancels it.
+  useDragSession(dragging, { end: () => finishGesture.current?.(false), cancel: () => finishGesture.current?.(true) });
+  useEffect(() => () => finishGesture.current?.(true), []);
+  const shown = selected.filter(id => links.some(link => link.id === id));
+  // Escape clears the selected wires, and takes the key only when there were any.
   useEscapeCancel(() => {
-    const cancel = cancelGesture.current;
-    if (!cancel) return false;
-    cancel(); return true;
+    if (!shown.length) return false;
+    setSelected([]); return true;
   });
-  useEffect(() => {
-    const cancel = () => cancelGesture.current?.();
-    window.addEventListener("blur", cancel);
-    return () => { cancel(); window.removeEventListener("blur", cancel); };
-  }, []);
   const point = (event: { clientX: number; clientY: number }): GraphPoint => {
     const box = surface.current!.getBoundingClientRect(), scale = width / box.width;
     return { x: (event.clientX - box.left) * scale, y: (event.clientY - box.top) * scale };
@@ -49,11 +52,11 @@ export function useWireGestures(
       event.preventDefault(); event.stopImmediatePropagation();
       element.setPointerCapture(event.pointerId);
       const at = point(event);
-      gesture.current = { kind: "collect", pointer: event.pointerId, capture: element, start: at, before: ties,
+      begin({ kind: "collect", pointer: event.pointerId, capture: element, start: at, before: ties,
         hit: (event.target as Element).closest<SVGElement>(".bd-edge-hit")
           ?.getAttribute(GRAPH_WIRE_ATTRIBUTE) ?? undefined,
         screen: { x: event.clientX, y: event.clientY }, moved: false, points: [at],
-        wires: sampleWires(element), picked: new Set() };
+        wires: sampleWires(element), picked: new Set() });
     };
     const collect = (current: Extract<Gesture, { kind: "collect" }>, event: PointerEvent) => {
       const travel = Math.hypot(event.clientX - current.screen.x, event.clientY - current.screen.y);
@@ -82,11 +85,13 @@ export function useWireGestures(
     const finish = (cancelled: boolean, event?: PointerEvent) => {
       const current = gesture.current;
       if (!current) return;
-      gesture.current = null;
+      gesture.current = null; setDragging(false);
       if (current.kind === "collect") {
-        if (!cancelled && event) {
-          collect(current, event);
-          if (current.moved && current.picked.size > 1) onCollect([...current.picked], snapTie(point(event)));
+        // Ended with no release, as by Enter, the sweep collects at the last point it reached.
+        if (!cancelled) {
+          if (event) collect(current, event);
+          const reached = current.points[current.points.length - 1];
+          if (current.moved && current.picked.size > 1) onCollect([...current.picked], snapTie(reached));
         }
         if (!cancelled && !current.moved && current.hit) {
           const id = current.hit;
@@ -105,7 +110,7 @@ export function useWireGestures(
       if (!gesture.current || gesture.current.pointer !== event.pointerId) return;
       event.stopImmediatePropagation(); finish(event.type === "pointercancel", event);
     };
-    cancelGesture.current = () => { finish(true); setSelected([]); };
+    finishGesture.current = finish;
     const click = (event: MouseEvent) => {
       if (!suppressClick.current || event.detail === 0) return;
       suppressClick.current = false; event.stopImmediatePropagation(); event.preventDefault();
@@ -120,7 +125,7 @@ export function useWireGestures(
     element.addEventListener("pointercancel", end, true);
     element.addEventListener("click", click, true);
     return () => {
-      cancelGesture.current = null;
+      finishGesture.current = null;
       element.removeEventListener("lostpointercapture", lost, true);
       element.removeEventListener("pointerdown", start, true);
       element.removeEventListener("pointermove", move, true);
@@ -130,22 +135,22 @@ export function useWireGestures(
     };
   });
   return {
-    selected: selected.filter(id => links.some(link => link.id === id)), sweep, clear: () => setSelected([]),
+    selected: shown, sweep, clear: () => setSelected([]),
     select: (id: string, add: boolean) => setSelected(was => add
       ? was.includes(id) ? was.filter(key => key !== id) : [...was, id] : [id]),
     startOutlet: (event: React.PointerEvent<HTMLButtonElement>, frame: GraphGroup, outlet: GroupOutlet) => {
       if (event.button !== 0 || isPanKeyHeld()) return;
       event.stopPropagation(); event.preventDefault();
       event.currentTarget.focus(); event.currentTarget.setPointerCapture(event.pointerId);
-      gesture.current = { kind: "outlet", pointer: event.pointerId, capture: event.currentTarget,
-        start: point(event), before: ties, frame, outlet, outlets };
+      begin({ kind: "outlet", pointer: event.pointerId, capture: event.currentTarget,
+        start: point(event), before: ties, frame, outlet, outlets });
     },
     startTie: (event: React.PointerEvent<HTMLButtonElement>, tie: TwistTie) => {
       if (event.button !== 0) return;
       event.stopPropagation(); event.preventDefault();
       event.currentTarget.focus(); event.currentTarget.setPointerCapture(event.pointerId);
-      gesture.current = { kind: "tie", pointer: event.pointerId, capture: event.currentTarget,
-        start: point(event), tie, before: ties };
+      begin({ kind: "tie", pointer: event.pointerId, capture: event.currentTarget,
+        start: point(event), tie, before: ties });
     },
   };
 }
