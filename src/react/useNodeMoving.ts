@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState, type PointerEvent as ReactPointerEv
 import { useEscapeCancel } from "./controlCancel.ts";
 import { KeyMoment } from "./pageKeys.ts";
 import { isPanKeyHeld } from "./panKey.ts";
-import { movedGraph, type GraphNode, type GraphGroup, type NodeMoves } from "./nodeGraphTypes.ts";
+import { movedGraph, type GraphNode, type GraphGroup, type NodeMoves, type NodeSelection } from "./nodeGraphTypes.ts";
 export type { NodeMove, NodeMoves } from "./nodeGraphTypes.ts";
 
 // A press that travels less than this many screen pixels is a press, not a drag.
@@ -59,8 +59,9 @@ export function useNodeMoving<N extends GraphNode>(
     if (!selected.size) return false;
     setSelected(new Set()); return true;
   });
+  const selection: NodeSelection = { underWay: () => !!gesture.current, clear: () => setSelected(new Set()) };
   if (!onMovesChange) return {
-    surface, marquee, nodeProps: (_id: string) => ({}), groupProps: (_id: string) => ({}), surfaceProps: {},
+    surface, marquee, selection, nodeProps: (_id: string) => ({}), groupProps: (_id: string) => ({}), surfaceProps: {},
   };
 
   const point = (e: ReactPointerEvent): Point => {
@@ -156,5 +157,5 @@ export function useNodeMoving<N extends GraphNode>(
     onPointerUp: end,
     onPointerCancel: cancel,
   };
-  return { surface, marquee, nodeProps, groupProps, surfaceProps };
+  return { surface, marquee, selection, nodeProps, groupProps, surfaceProps };
 }

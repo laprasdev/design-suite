@@ -107,7 +107,8 @@ export function useControlBehavior(
     handleMouseUp();
   }, [onChange, handleMouseUp]);
 
-  useDragSession(isDragging, { move: handleMouseMove, end: handleMouseUp, cancel: cancelDrag });
+  useDragSession(isDragging,
+    { move: handleMouseMove, end: handleMouseUp, cancel: cancelDrag, lostFocus: handleMouseUp });
 
   return { isDragging, isHovered, setIsHovered, handleMouseDown, handlePointerDown };
 }

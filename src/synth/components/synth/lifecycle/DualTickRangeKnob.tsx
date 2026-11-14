@@ -220,8 +220,8 @@ export function DualTickRangeKnob({
     else onMaxChange(dragStartValue.current);
     setActiveTick(null); gesture.end();
   }, [activeTick, onMinChange, onMaxChange, gesture]);
-
-  useDragSession(activeTick !== null, { move: handleMouseMove, end: handleMouseUp, cancel: cancelDrag });
+  useDragSession(activeTick !== null,
+    { move: handleMouseMove, end: handleMouseUp, cancel: cancelDrag, lostFocus: handleMouseUp });
 
   // Render a draggable tick indicator
   const renderTick = (normalized: number, type: 'min' | 'max') => {

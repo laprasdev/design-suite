@@ -20,7 +20,7 @@ function AxisInput({label, value, onChange, disabled, bounds}: {
   const [held, setHeld] = useState<Bounds | null>(null), range = held ?? bounds;
   // The range holds while the knob's press lasts, wherever it is released.
   const release = () => setHeld(null);
-  useDragSession(held !== null, {end: release, cancel: release});
+  useDragSession(held !== null, {end: release, cancel: release, lostFocus: release});
   const input = <ModuleNumberInput fill ariaLabel={label} value={value} onChange={onChange} disabled={disabled}/>;
   if (!range) return input;
   return <div onMouseDownCapture={() => setHeld(bounds ?? null)}>

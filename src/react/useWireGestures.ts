@@ -8,7 +8,7 @@ import { snapTie } from "./wireGeometry.ts";
 import { collectWires, sampleWires, type SweepWire } from "./wireSweep.ts";
 import {GRAPH_NODE_ATTRIBUTE, GRAPH_WIRE_ATTRIBUTE,
   type GraphPoint, type GraphGroup, type GroupOutlet, type GroupOutlets,
-  type TwistTie, type WireLink} from "./nodeGraphTypes.ts";
+  type NodeSelection, type TwistTie, type WireLink} from "./nodeGraphTypes.ts";
 
 const STILL_PX = 4;
 type Gesture = { pointer: number; capture: HTMLElement; start: GraphPoint; before: readonly TwistTie[] } &
@@ -21,18 +21,30 @@ export function useWireGestures(
   surface: RefObject<HTMLDivElement | null>, width: number, links: readonly WireLink[],
   ties: readonly TwistTie[], onChange: ((ties: readonly TwistTie[]) => void) | undefined,
   onCollect: (ids: readonly string[], at: GraphPoint) => void, interactionSurface?: RefObject<HTMLElement | null>,
-  outlets: GroupOutlets = {}, onOutletsChange?: (outlets: GroupOutlets) => void,
+  outlets: GroupOutlets = {}, onOutletsChange?: (outlets: GroupOutlets) => void, nodeSelection?: NodeSelection,
 ) {
   const [selected, setSelected] = useState<readonly string[]>([]);
   const [sweep, setSweep] = useState<readonly GraphPoint[]>([]);
   const [dragging, setDragging] = useState(false);
   const gesture = useRef<Gesture | null>(null), suppressClick = useRef(false);
-  // Ends the gesture under way where it is, or cancels it; set while the surface listens.
-  const finishGesture = useRef<((cancelled: boolean) => void) | null>(null);
+  // Cancels the gesture under way; set while the surface listens.
+  const cancelGesture = useRef<(() => void) | null>(null);
+  const cancel = () => cancelGesture.current?.();
   const begin = (next: Gesture) => { gesture.current = next; setDragging(true); };
-  // A gesture is a drag: the drag session ends or cancels it, and unmounting cancels it.
-  useDragSession(dragging, { end: () => finishGesture.current?.(false), cancel: () => finishGesture.current?.(true) });
-  useEffect(() => () => finishGesture.current?.(true), []);
+  // A gesture is a drag that only its own release ends: Escape or the window losing focus cancels it.
+  useDragSession(dragging, { cancel, lostFocus: cancel });
+  // The window losing focus clears the selected wires, gesture or not; unmounting cancels a gesture under way.
+  useEffect(() => {
+    const clear = () => setSelected([]);
+    window.addEventListener("blur", clear);
+    return () => { cancel(); window.removeEventListener("blur", clear); };
+  }, []);
+  // Inside a NodeGraph its wires and nodes are one control: Escape while a wire gesture or a move of the nodes is under
+  // way clears both selections, as Escape with nothing under way does once the page has let it pass.
+  useEscapeCancel(KeyMoment.UNDER_WAY, () => {
+    if (!gesture.current && !nodeSelection?.underWay()) return false;
+    nodeSelection?.clear(); setSelected([]); return true;
+  });
   const shown = selected.filter(id => links.some(link => link.id === id));
   // Escape clears the selected wires once every Modal and focused control has let it pass, and takes the key only when
   // there were any.
@@ -89,11 +101,9 @@ export function useWireGestures(
       if (!current) return;
       gesture.current = null; setDragging(false);
       if (current.kind === "collect") {
-        // Ended with no release, as by Enter, the sweep collects at the last point it reached.
-        if (!cancelled) {
-          if (event) collect(current, event);
-          const reached = current.points[current.points.length - 1];
-          if (current.moved && current.picked.size > 1) onCollect([...current.picked], snapTie(reached));
+        if (!cancelled && event) {
+          collect(current, event);
+          if (current.moved && current.picked.size > 1) onCollect([...current.picked], snapTie(point(event)));
         }
         if (!cancelled && !current.moved && current.hit) {
           const id = current.hit;
@@ -112,7 +122,7 @@ export function useWireGestures(
       if (!gesture.current || gesture.current.pointer !== event.pointerId) return;
       event.stopImmediatePropagation(); finish(event.type === "pointercancel", event);
     };
-    finishGesture.current = finish;
+    cancelGesture.current = () => finish(true);
     const click = (event: MouseEvent) => {
       if (!suppressClick.current || event.detail === 0) return;
       suppressClick.current = false; event.stopImmediatePropagation(); event.preventDefault();
@@ -127,7 +137,7 @@ export function useWireGestures(
     element.addEventListener("pointercancel", end, true);
     element.addEventListener("click", click, true);
     return () => {
-      finishGesture.current = null;
+      cancelGesture.current = null;
       element.removeEventListener("lostpointercapture", lost, true);
       element.removeEventListener("pointerdown", start, true);
       element.removeEventListener("pointermove", move, true);

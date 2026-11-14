@@ -36,7 +36,7 @@ describe('Escape',()=>{
     let cancelled=0;
     // Mounted with the dialog's content, whose effects run before the dialog's own.
     if(gesture==='node move')controls.useEscapeCancel(KeyMoment.UNDER_WAY,()=>{cancelled++;return true;});
-    else controls.useDragSession(true,{end:()=>{},cancel:()=>{cancelled++;}});
+    else controls.useDragSession(true,{cancel:()=>{cancelled++;},lostFocus:()=>{cancelled++;}});
     const dialogPanel=panel(page,1),dialog=open('dialog',dialogPanel,ModalPlacement.VIEWPORT);
     press(focus==='the dialog'?inside(dialogPanel):null,[dialog]);
     assert.equal(cancelled,1,`${gesture}, focus on ${focus}: cancelled`);
