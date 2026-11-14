@@ -13,6 +13,9 @@
     "tests/duplicationGate.test.ts",
     "tests/gateFixture.ts",
     "tests/reviewGate.test.ts",
-    "tests/withoutTypeScript.ts"
+    "tests/withoutTypeScript.ts",
+    "tests/modalWidth.test.ts",
+    "tests/modalWidthCases.ts",
+    "tests/modalWidthScene.tsx"
   ]
 }

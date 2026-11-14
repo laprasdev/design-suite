@@ -55,6 +55,11 @@
       "source": "./src/react/modalRoom.ts",
       "default": "./dist/react/modalRoom.js"
     },
+    "./modal-input-check": {
+      "types": "./src/react/modalInputCheck.ts",
+      "source": "./src/react/modalInputCheck.ts",
+      "default": "./dist/react/modalInputCheck.js"
+    },
     "./synth/*": "./src/synth/*",
     "./preview3d": {
       "types": "./src/react/preview3d/index.ts",
@@ -120,12 +125,13 @@
     "check:cycles": "node scripts/cycle-gate.ts",
     "check:duplication": "scripts/gateTools/node_modules/.bin/jscpd",
     "gate-tools": "npm ci --prefix scripts/gateTools --no-audit --no-fund --loglevel=error",
-    "test": "npm run gate-tools && node --test tests/*.test.ts",
+    "gate-browser": "scripts/gateTools/node_modules/.bin/playwright install --only-shell chromium",
+    "test": "npm run gate-tools && npm run gate-browser && node --test tests/*.test.ts",
     "check:graph": "tsc -p tsconfig.graph-tests.json",
     "check:preview3d": "tsc -p tsconfig.preview3d-tests.json",
-    "check:forms": "tsc -p tsconfig.form-tests.json && node --test tests/photos.test.ts tests/pipRowForm.test.ts tests/formTypes.test.ts tests/loading.test.ts tests/playerRing.test.ts tests/modalDismissal.test.ts tests/modalPress.test.ts tests/escapeOrder.test.ts tests/pageInputOwners.test.ts",
+    "check:forms": "tsc -p tsconfig.form-tests.json && node --test tests/photos.test.ts tests/pipRowForm.test.ts tests/formTypes.test.ts tests/loading.test.ts tests/playerRing.test.ts tests/modalDismissal.test.ts tests/modalPress.test.ts tests/escapeOrder.test.ts tests/pageInputOwners.test.ts tests/modalInputCheck.test.ts",
     "check:sky": "tsc -p tsconfig.sky-tests.json",
-    "check:gates": "tsc -p tsconfig.gate-tests.json"
+    "check:gates": "npm run gate-tools && tsc -p tsconfig.gate-tests.json"
   },
   "devDependencies": {
     "@types/react": "^18.3.31",

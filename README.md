@@ -66,6 +66,7 @@ Inside a suite application root (`ApplicationElement.ROOT`), the stylesheet draw
 | `/tokens`, `/layout`, `/color`, `/theme`, `/skins` | Focused framework-independent APIs |
 | `/react` | Composed controls: bars, segmented controls, dialogs, portraits, node graphs and the shared kinds |
 | `/modal-room` | Dialog growth and measurement contract |
+| `/modal-input-check` | The source check that refuses a consumer declaring a `Modal`'s own properties |
 | `/preview3d` | Optional browser GLB stage: camera, lights, materials, clips and diagnostic skeleton |
 | `/preview3d/model` | Preview types and settings without importing Three |
 | `/preview3d/react` | Complete `ModelPreview` view with selection, playback, display and camera controls |
@@ -138,6 +139,20 @@ dismisses the others. `HoverDetail`, `ListboxSelect`, the synth `Enum`'s grid pi
 as the anchor. Every placement keeps the same surface and the module radius token.
 `MODAL_PLACEMENT_ATTRIBUTE` carries the placement on the panel and its frame for styling
 and browser checks, and `panelRef` exposes the panel for measurement or focus.
+
+A dialog names its `width` (`ModalWidth`): `compact` (380px), `titled` (420px), `reading`
+(520px), `stage` (24 control hit sizes) or, contained only, `fill` (its frame's whole width
+inside the frame's inset). A Modal naming none is `compact`, or `titled` when it has a title.
+The panel carries it as `data-modal-width`, which the stylesheet backs with the
+`--modal-width-compact`, `--modal-width-titled` and `--modal-width-reading` tokens and the
+theme's `--control-hit-size`; an anchored or media Modal takes its content's width. A
+contained Modal's `frameInset` (`ModalFrameInset`) keeps its panel the page's inset
+(`--page-inset`, the default) or the page's gutter (`--page-gutter`) from its positioned
+parent's edges, and its `top` sets the panel that many CSS pixels below its frame's top
+edge, still centred across the frame. Every `--sd-modal-` property is the Modal's own, so a
+consumer passes these props instead: `/modal-input-check`'s `modalInputFailures(source, name)`
+refuses a stylesheet or module declaring one, or the `--modal-frame-inset` that `frameInset`
+replaced, and each failure names the line and the prop to pass.
 
 `Modal` alone decides how it is dismissed (`modalDismissal.ts`): whatever opens over
 content and closes on Escape, a press elsewhere or a drag is a `Modal` placement, never a
@@ -528,6 +543,9 @@ npm run check
 npm test
 npm run build
 ```
+
+`npm test` installs the pinned gate tools (`scripts/gateTools`) and Playwright's headless
+Chromium, in which `tests/modalWidth.test.ts` reads each Modal width's computed size.
 
 ## Boundary
 

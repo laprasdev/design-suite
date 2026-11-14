@@ -10,6 +10,14 @@
 /* ---- Modal ---- */
 /* The modal layer; a host lifts a stacking context holding an open modal to it. */
 :root { --sd-modal-layer: 60; }
+/* The widths a dialog's `width` names (ModalWidth): a short dialog's, a titled dialog's and a passage's to read. A stage
+   spans 24 control hit sizes, and fill takes a contained frame's whole width inside its inset. */
+:where(:root) { --modal-width-compact: 380px; --modal-width-titled: 420px; --modal-width-reading: 520px; }
+.sd-modal[data-modal-width=compact] { --sd-modal-width: var(--modal-width-compact); }
+.sd-modal[data-modal-width=titled] { --sd-modal-width: var(--modal-width-titled); }
+.sd-modal[data-modal-width=reading] { --sd-modal-width: var(--modal-width-reading); }
+.sd-modal[data-modal-width=stage] { --sd-modal-width: calc(24 * var(--control-hit-size)); }
+.sd-modal[data-modal-width=fill] { --sd-modal-width: 100%; }
 .sd-modal-bg {
   position: fixed; inset: 0; z-index: var(--sd-modal-layer); display: grid; place-items: center;
   grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr);
@@ -20,22 +28,26 @@
 .sd-modal-bg.sd-in { opacity: 1; }
 .sd-modal {
   position:relative;
-  width: min(var(--sd-modal-width, 380px), calc(92vw / var(--css-zoom, 1))); max-height: calc(92vh / var(--css-zoom, 1)); overflow: auto;
+  width: min(var(--sd-modal-width), calc(92vw / var(--css-zoom, 1))); max-height: calc(92vh / var(--css-zoom, 1)); overflow: auto;
   border-radius: var(--sd-modal-radius); background: var(--card, var(--color-surface, #17171b));
   border: 1px solid var(--line, var(--color-line, rgba(255, 255, 255, 0.08)));
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
   transform: translateY(8px) scale(0.985); transition: transform 0.2s ease;
 }
 .sd-modal-bg.sd-in .sd-modal { transform: none; }
-.sd-modal-bg[data-modal-placement=contained] { position:absolute;padding:var(--modal-frame-inset,var(--page-inset,16px));background:none;backdrop-filter:none;pointer-events:none; }
-.sd-modal[data-modal-placement=contained] { width:max-content;max-width:min(var(--sd-modal-width,380px),100%);max-height:100%;pointer-events:auto;transform:none; }
+.sd-modal-bg[data-modal-placement=contained] { position:absolute;padding:var(--sd-modal-frame-inset);background:none;backdrop-filter:none;pointer-events:none; }
+/* A contained frame keeps its panel the page's inset, or its gutter (ModalFrameInset), from the positioned parent's edges. */
+.sd-modal-bg[data-modal-frame-inset=page] { --sd-modal-frame-inset:var(--page-inset,16px); }
+.sd-modal-bg[data-modal-frame-inset=gutter] { --sd-modal-frame-inset:var(--page-gutter); }
+.sd-modal[data-modal-placement=contained] { width:max-content;max-width:min(var(--sd-modal-width),100%);max-height:100%;pointer-events:auto;transform:none; }
+.sd-modal[data-modal-placement=contained][data-modal-width=fill] { width:100%; }
 .sd-modal[data-modal-placement=anchored] { position:fixed;width:max-content;max-width:min(360px,calc(100vw / var(--css-zoom,1) - 16px));z-index:var(--popover-layer,var(--sd-modal-layer));transform:none;transition:none; }
 .sd-modal[data-modal-form=media] {width:auto;max-width:calc(96vw / var(--css-zoom,1));max-height:calc(96vh / var(--css-zoom,1));padding:0;background:var(--stage);}
 /* A titled dialog: the title, the rows on two shared columns (the label's, sized to
    the widest, and the control's), and the actions row, which stays in view while the
    rows scroll. */
 .sd-modal[data-titled="true"] {
-  --sd-modal-width: 420px; --sd-modal-inset: var(--modal-inset, 20px); --sd-modal-gap: var(--field-gap, 8px);
+  --sd-modal-inset: var(--modal-inset, 20px); --sd-modal-gap: var(--field-gap, 8px);
   --sd-modal-title-size: 18px; --sd-modal-title-weight: 750;
   /* The actions row is a track only when it is there, so an actionless dialog ends at its rows. */
   display: grid; grid-template-rows: auto minmax(0, 1fr); grid-auto-rows: auto; row-gap: var(--sd-modal-gap);

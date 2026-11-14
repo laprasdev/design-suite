@@ -15,6 +15,7 @@
     "tests/modalDismissal.test.ts",
     "tests/modalPress.test.ts",
     "tests/escapeOrder.test.ts",
-    "tests/pageInputOwners.test.ts"
+    "tests/pageInputOwners.test.ts",
+    "tests/modalInputCheck.test.ts"
   ]
 }
