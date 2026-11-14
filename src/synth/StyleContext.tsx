@@ -8,7 +8,8 @@ import { DEFAULT_SKIN, SKIN_FILES } from '../skins.ts';
 import { skinStyle } from './skinStyle.ts';
 
 export { skinStyle };
-export type { StyleTheme, AdvancedSettings, AccentColorMode, CasingOption } from './StyleTypes.ts';
+export type { StyleTheme, AdvancedSettings, AccentColorMode, CasingOption }
+  from './StyleTypes.ts'; // Kept for synth-web's deep imports.
 import type { StyleTheme, AdvancedSettings, StyleContextType } from './StyleTypes.ts';
 
 const StyleContext = createContext<StyleContextType | null>(null);

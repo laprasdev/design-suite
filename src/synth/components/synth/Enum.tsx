@@ -1,5 +1,5 @@
 import {OptionsEnum} from '../../../react/inputs/OptionsEnum.tsx';
-export {OptionsEnum};
+export {OptionsEnum}; // Kept for synth-web's deep imports.
 import React, { useState, useCallback, useRef, type RefObject } from 'react';
 import {Modal} from '../../../react/Modal.tsx';
 import {ModalPlacement} from '../../../react/modalElements.ts';
@@ -13,7 +13,7 @@ import { paddingCSS } from '../../design/Composable.ts';
 import { CompositionWrap, type HciComposableStyle } from '../../design/designTokensLoader.ts';
 
 export type {EnumColor, EnumVariant, EnumDisplayMode, EnumOption, SingleSelectEnumProps, MultiSelectEnumProps,
-  EnumProps} from '../../../react/inputs/enumProps.ts';
+  EnumProps} from '../../../react/inputs/enumProps.ts'; // Kept for synth-web's deep imports.
 import type {EnumOption, SingleSelectEnumProps, MultiSelectEnumProps, EnumProps}
   from '../../../react/inputs/enumProps.ts';
 
