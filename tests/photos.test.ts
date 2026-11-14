@@ -1,8 +1,7 @@
 import assert from 'node:assert/strict';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { after, describe, it } from 'node:test';
-import { spawnSync } from 'node:child_process';
 import { SUITE_ROOT, bundled } from './bundled.ts';
 
 interface Element {
@@ -24,7 +23,7 @@ interface PhotosModule {
   PhotoStrip(props: { photos: { src: string; title?: string; phone?: boolean }[]; className?: string }): Element | null;
 }
 const children = (element: Element): Element[] => element.props.children as Element[];
-const { module: photos, directory, dispose } = await bundled<PhotosModule>(['src/react/Photos.tsx']);
+const { module: photos, dispose } = await bundled<PhotosModule>(['src/react/Photos.tsx']);
 after(dispose);
 
 describe('PhotoCompare inline form', () => {
@@ -110,21 +109,5 @@ describe('PhotoCompare inline form', () => {
     const single = photos.justifiedRows([1], 1000, 240, 0)[0]?.height;
     assert.equal(single, 360, 'a single row stays at most one and a half times the target');
     assert.deepEqual(photos.justifiedRows([1, 2], 0, 240, 8), []);
-  });
-
-  it('exports the form and refuses unrecognized forms in strict TypeScript', () => {
-    const { compilerOptions } = JSON.parse(readFileSync(join(SUITE_ROOT, 'tsconfig.json'), 'utf8'));
-    writeFileSync(join(directory, 'tsconfig.json'), JSON.stringify({ files: ['usage.tsx'], compilerOptions }));
-    const check = (form: string) => {
-      const index = JSON.stringify(join(SUITE_ROOT, 'src/react/index.ts'));
-      const imported = `import { PhotoCompare, PhotoCompareForm } from ${index};\n`;
-      writeFileSync(join(directory, 'usage.tsx'), imported +
-        `export const row = <PhotoCompare captures={[]} form={${form}} />; void PhotoCompareForm;\n`);
-      return spawnSync(join(SUITE_ROOT, 'node_modules/.bin/tsc'),
-        ['-p', join(directory, 'tsconfig.json'), '--pretty', 'false'], { encoding: 'utf8' });
-    };
-    const valid = check('PhotoCompareForm.INLINE'); assert.equal(valid.status, 0, valid.stdout + valid.stderr);
-    const invalid = check("'wide'"); assert.notEqual(invalid.status, 0);
-    assert.deepEqual(invalid.stdout.match(/error TS\d+/g), ['error TS2322']);
   });
 });

@@ -1,4 +1,5 @@
 import type { SkinValues } from './Composable.ts';
+import { isRecord } from '../../valueChecks.ts';
 
 export interface SettingDefinition {
   key: string;
@@ -15,10 +16,6 @@ export interface ContinuousSettingDefinition {
   key: string;
   value: unknown;
   options?: unknown[];
-}
-
-function isObject(v: unknown): v is Record<string, unknown> {
-  return typeof v === 'object' && v !== null && !Array.isArray(v);
 }
 
 export function resolveSettingDefinition(
@@ -40,7 +37,7 @@ export function resolveSettingDefinition(
     if (!variants[variantName]) variants[variantName] = {};
     const propPath = dot === -1 ? '' : rest.slice(dot + 1);
     if (propPath) variants[variantName][propPath] = v;
-    else variants[variantName] = typeof v === 'object' ? (v as Record<string, unknown>) : {};
+    else variants[variantName] = isRecord(v) ? v : {};
   }
 
   return { key: settingKey, defaultVariant: defaultVal, variantKeys, variants };

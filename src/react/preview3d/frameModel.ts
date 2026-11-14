@@ -1,7 +1,7 @@
 import type {ModelStageActor, ModelStageActorSet} from './actorModel.ts';
 import {MODEL_ACTOR_REFUSAL as refusal, modelRuntimeAssetProfile} from './actorModel.ts';
 import {MODEL_PREVIEW_ENTITY_REFUSAL, modelPreviewEntity, type ModelPreviewEntity} from './presentation.ts';
-import {modelIsNamed as named, modelIsRecord as object} from './recordModel.ts';
+import {isNonEmptyString as named, isRecord as object} from '../../valueChecks.ts';
 import {ModelStageRefusal} from './refusal.ts';
 import type {ModelSurfaceSet} from './surfaceModel.ts';
 import {modelSurfaceTakes, type ModelSurfaceTakes} from './surfaceOutputModel.ts';

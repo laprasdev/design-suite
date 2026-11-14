@@ -1,5 +1,6 @@
 import {ModelStageRefusal} from './refusal.ts';
-import {modelIsDigest, modelIsRecord as object} from './recordModel.ts';
+import {isRecord as object} from '../../valueChecks.ts';
+import {modelIsDigest} from './recordModel.ts';
 import {modelMaterialOutputShape, type ModelMaterialOutput} from './surfaceOutputModel.ts';
 export type {ModelMaterialOutput} from './surfaceOutputModel.ts';
 export const MODEL_RUNTIME_MATERIAL = Object.freeze({

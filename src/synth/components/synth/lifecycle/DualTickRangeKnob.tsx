@@ -1,27 +1,22 @@
 import {RangeKnobArc} from '../../../../react/inputs/RangeKnobArc.tsx';
 import {KnobFace} from '../../../../react/KnobFace.tsx';
 import {useDragSession} from '../../../../react/useDragSession.ts';
-import {skinForm, knobSkinConfig} from '../../../../skinForms.ts';
-import {SkinKind} from '../../../../skinKinds.ts';
+import {knobConfigFromProps, type KnobConfigProps} from '../../../../skinForms.ts';
 import {KnobForm} from '../../../design/constants/KnobConfig.ts';
 import {ModulationRings} from '../ModulationRings.tsx';
 import {type ModulationProps} from '../modulation.ts';
 import {useOwnedControlGesture as useControlGesture} from '../../../../react/inputs/useOwnedControlGesture.ts';
 import React, { useState, useRef, useCallback } from 'react';
 import { useStyle } from '../../../StyleContext.tsx';
-import { getColorScheme, resolveColorType, hexToRgba, type AnyColor, getInsetShadow } from '../../../../color.ts';
-import { D, T, O, F, Borders, TransitionKeys, LayoutDimensions } from '../../../design/index.ts';
+import { getColorScheme, resolveColorType, hexToRgba, type AnyColor } from '../../../../color.ts';
+import { T, O, F, TransitionKeys, LayoutDimensions } from '../../../design/index.ts';
 import {
-  type KnobConfig,
-  KnobPreset,
-  type KnobPresetKey,
-  KnobSize,
   KnobLayout,
   KnobLabelStyle,
   getKnobDimensions,
-  getKnobSensitivity
 } from '../../../design/constants/KnobConfig.ts';
-import { useTooltipSafe } from '../TooltipContext.tsx';
+import {KnobLabel} from '../../../../react/KnobLabel.tsx';
+import { controlTooltip, useTooltipSafe } from '../TooltipContext.tsx';
 import { KnobInnerCircle } from '../base/index.ts';
 import { RangeLimitLabels } from './RangeLimitLabels.tsx';
 
@@ -35,7 +30,7 @@ const START_ANGLE = 225;
 const END_ANGLE = 495;
 const ANGLE_RANGE = END_ANGLE - START_ANGLE; // 270°
 
-export interface DualTickRangeKnobProps extends ModulationProps {
+export interface DualTickRangeKnobProps extends ModulationProps, KnobConfigProps {
   minValue: number;
   maxValue: number;
   onMinChange: (v: number) => void;
@@ -57,52 +52,38 @@ export interface DualTickRangeKnobProps extends ModulationProps {
   toggleValue?: boolean;
   onToggleChange?: (v: boolean) => void;
   tooltip?: string;
-  // Config-based approach
-  preset?: KnobPresetKey;
-  config?: KnobConfig;
-  size?: number;
-  layout?: typeof KnobLayout[keyof typeof KnobLayout];
 }
 
-export function DualTickRangeKnob({
-  minValue,
-  maxValue,
-  onMinChange,
-  onMaxChange,
-  min = 0,
-  max = 1,
-  label,
-  displayFormat = (minV, maxV) => `${Math.round(minV * 100)}-${Math.round(maxV * 100)}`,
-  color = 'primary',
-  disabled = false,
-  minDisabled = false,
-  maxDisabled = false,
-  minOpacity = 1,
-  maxOpacity = 1,
-  minimumGapFraction = 0.02,
-  showToggle = false,
-  showLimits = true,
-  toggleValue = true,
-  onToggleChange,
-  tooltip,
-  preset = 'range',
-  config: configProp,
-  size: sizeOverride,
-  layout: layoutOverride, modulators, selectedSource, onSelectSource
-}: DualTickRangeKnobProps) {
+export function DualTickRangeKnob(props: DualTickRangeKnobProps) {
+  const {
+    minValue,
+    maxValue,
+    onMinChange,
+    onMaxChange,
+    min = 0,
+    max = 1,
+    label,
+    displayFormat = (minV, maxV) => `${Math.round(minV * 100)}-${Math.round(maxV * 100)}`,
+    color = 'primary',
+    disabled = false,
+    minDisabled = false,
+    maxDisabled = false,
+    minOpacity = 1,
+    maxOpacity = 1,
+    minimumGapFraction = 0.02,
+    showToggle = false,
+    showLimits = true,
+    toggleValue = true,
+    onToggleChange,
+    tooltip,
+    modulators, selectedSource, onSelectSource
+  } = props;
   const { getEffectiveStyle, skin } = useStyle();
   const gesture = useControlGesture();
   React.useEffect(() => gesture.end, [gesture]);
   const style = getEffectiveStyle();
   const { setTooltip, descriptions } = useTooltipSafe();
-  // Resolve config: explicit config > preset with overrides
-  const baseConfig = knobSkinConfig(configProp ?? KnobPreset[preset],
-    configProp?.form ? undefined : skinForm(skin, SkinKind.KNOB));
-  const config: KnobConfig = {
-    ...baseConfig,
-    size: sizeOverride ?? baseConfig.size,
-    layout: layoutOverride ?? baseConfig.layout
-  };
+  const config = knobConfigFromProps(skin, props, 'range');
 
   // Get derived dimensions from config
   const dims = getKnobDimensions(config);
@@ -124,14 +105,9 @@ export function DualTickRangeKnob({
   const useCutoutLabel = config.labelStyle === KnobLabelStyle.CUTOUT;
 
   // Generate auto-tooltip if none provided
-  const getTooltipText = useCallback(() => {
-    if (tooltip) return tooltip;
-    const key = label?.toLowerCase().replace(/\s+/g, '');
-    if (key && descriptions?.[key]) return descriptions[key];
-    const name = label || 'Range';
-    const displayStr = displayFormat(minValue, maxValue);
-    return `${name}: ${displayStr} (bounds: ${min} to ${max})`;
-  }, [tooltip, label, displayFormat, minValue, maxValue, min, max, descriptions]);
+  const getTooltipText = useCallback(() => controlTooltip(tooltip, label, descriptions,
+    `${label || 'Range'}: ${displayFormat(minValue, maxValue)} (bounds: ${min} to ${max})`),
+  [tooltip, label, displayFormat, minValue, maxValue, min, max, descriptions]);
 
   const handleMouseEnter = useCallback(() => {
     setIsHovered(true);
@@ -333,37 +309,8 @@ export function DualTickRangeKnob({
       }}>
         {displayFormat(minValue, maxValue)}
       </div>
-      {label && (
-        useCutoutLabel ? (
-          <div style={{
-            fontSize: config.size <= KnobSize.MINI ? T.small.fontSize : T.label.fontSize,
-            padding: `${D.spacing.microGap}px ${D.spacing.tightGap * 1.5}px`,
-            borderRadius: D.radius.tiny,
-            textTransform: 'uppercase',
-            letterSpacing: T.label.letterSpacing,
-            color: scheme.main,
-            background: style.cutoutBackground,
-            border: `${Borders.standard.width}px ${Borders.standard.style} ${style.cutoutBorder}`,
-            boxShadow: getInsetShadow('shallow'),
-            textAlign: 'center',
-            fontWeight: T.label.fontWeight
-          }}>
-            {label}
-          </div>
-        ) : (
-          <div style={{
-            fontSize: T.small.fontSize,
-            textTransform: 'uppercase',
-            letterSpacing: T.label.letterSpacing,
-            color: scheme.main,
-            fontWeight: T.label.fontWeight,
-            textAlign: 'center',
-            opacity: O.medium
-          }}>
-            {label}
-          </div>
-        )
-      )}
+      {label && <KnobLabel text={label} cutout={useCutoutLabel} size={config.size} color={scheme.main} style={style}
+        align="center" />}
     </div>
   );
 

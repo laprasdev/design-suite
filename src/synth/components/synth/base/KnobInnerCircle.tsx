@@ -5,7 +5,7 @@
 
 import React from 'react';
 import { getKnobGradient } from '../../../../color.ts';
-import type { StyleTheme } from '../../../StyleContext.tsx';
+import type { StyleTheme } from '../../../StyleTypes.ts';
 import { TransitionKeys, LayoutDimensions } from '../../../design/index.ts';
 import { KnobSize } from '../../../design/constants/KnobConfig.ts';
 

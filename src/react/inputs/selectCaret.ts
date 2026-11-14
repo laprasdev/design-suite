@@ -3,7 +3,7 @@
 // runs under it. A native select draws its arrow at the browser's own inset and in its own colour, so the select takes
 // `appearance: none` and this in its place.
 import type React from 'react';
-import type {StyleTheme} from '../../synth/StyleContext.tsx';
+import type {StyleTheme} from '../../synth/StyleTypes.ts';
 import {CARET_DOWN_TURN, CARET_PATH, CARET_SIZE, CARET_STROKE, CARET_VIEW} from '../caretGlyph.ts';
 import {dimColor} from '../styleTheme.ts';
 

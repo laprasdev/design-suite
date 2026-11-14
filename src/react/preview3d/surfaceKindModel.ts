@@ -1,4 +1,5 @@
-import {modelDigest, modelEntries, modelFlag, modelIsNamed, modelIsRecord, modelName, modelNumber, modelOption,
+import {isNonEmptyString, isRecord} from '../../valueChecks.ts';
+import {modelDigest, modelEntries, modelFlag, modelName, modelNumber, modelOption,
   modelRecord, modelRecordStating, modelShape, modelStates} from './recordModel.ts';
 import {ModelStageRefusal} from './refusal.ts';
 
@@ -144,7 +145,7 @@ export function modelSurfaceKind(value: unknown, where: string): ModelSurfaceKin
     return [name, parameter(entry, `${where}.parameters.${name}`)];
   })));
   const float = (name: unknown, at: string) => {
-    if (!modelIsNamed(name) || !modelStates(parameters, name) ||
+    if (!isNonEmptyString(name) || !modelStates(parameters, name) ||
       parameters[name].type !== MODEL_SURFACE_PARAMETER.float) {
       throw new ModelStageRefusal(refusal.float(at, String(name)));
     }
@@ -156,7 +157,7 @@ export function modelSurfaceKind(value: unknown, where: string): ModelSurfaceKin
   const displacement = kind.displacement === null ? null : Object.freeze({reach: float(modelRecord(kind.displacement,
     fields.displacement, `${where}.displacement`).reach, `${where}.displacement.reach`)});
   const coverage = (value: unknown, at: string): ModelSurfaceKind['coverage'] => {
-    if (!modelIsRecord(value)) {
+    if (!isRecord(value)) {
       if (Object.values<unknown>(MODEL_SURFACE_COVERAGE).includes(value)) {
         return modelOption(value, MODEL_SURFACE_COVERAGE, at);
       }

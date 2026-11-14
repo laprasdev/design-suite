@@ -1,4 +1,5 @@
-import {modelIsRecord as object, modelStates} from './recordModel.ts';
+import {isRecord as object} from '../../valueChecks.ts';
+import {modelStates} from './recordModel.ts';
 import {ModelStageRefusal} from './refusal.ts';
 import {MODEL_SURFACE_PARAMETER, type ModelSurfaceKind} from './surfaceKindModel.ts';
 import {MODEL_ACTOR_SURFACES, MODEL_SURFACE_REFUSAL, modelSurfaceValue, modelSurfaceValueFits,
