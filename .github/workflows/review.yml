@@ -1,6 +1,6 @@
 name: Review
-# The required code review. Claude reviews the pull request against the shared rules and the reviewer stance in
-# laprasdev/agent-rules, then a GitHub App posts its findings as one review and sets the "claude review" status on the
+# The required code review. Claude reviews the pull request against the shared policy in laprasdev/agent-rules, the
+# way its reviewing.md says to, then a GitHub App posts its findings as one review and sets the "claude review" status on the
 # head commit, which fails on any blocker or major finding.
 #
 # It runs on pull_request_target, so this workflow and the report script come from the base branch: a pull request
@@ -43,7 +43,7 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
           path: ${{ env.HEAD_DIR }}
           persist-credentials: false
-      - name: Check out the shared rules and the reviewer stance
+      - name: Check out the shared policy and how to review
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: laprasdev/agent-rules
@@ -59,7 +59,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           mkdir "$REVIEW_INPUT"
-          { cat "$AGENT_RULES/AGENTS.md"; echo; cat "$AGENT_RULES/reviewer.md"; } > "$REVIEW_INPUT/rules.md"
+          { cat "$AGENT_RULES/AGENTS.md"; echo; cat "$AGENT_RULES/reviewing.md"; } > "$REVIEW_INPUT/rules.md"
           gh pr diff "$PR_NUMBER" --repo "$REPO" > "$REVIEW_INPUT/diff.patch"
           gh pr view "$PR_NUMBER" --repo "$REPO" --json title,body,author,baseRefName,headRefName \
             > "$REVIEW_INPUT/pull-request.json"
@@ -78,8 +78,8 @@ jobs:
           prompt: |
             Review pull request #${{ env.PR_NUMBER }} of ${{ env.REPO }} at head commit ${{ env.HEAD_SHA }}, which
             targets ${{ github.event.pull_request.base.ref }}. You hold the reviewer's seat for this one pull request,
-            in CI. The shared rules and the reviewer stance in your system prompt are the standard; of the stance, its
-            reviewing rules and house style apply here. You plan nothing and sign nothing, and you never edit, commit,
+            in CI. In your system prompt, the shared policy (AGENTS.md) is the standard you hold the change to, and
+            reviewing.md after it says how to review. You plan nothing and sign nothing, and you never edit, commit,
             push or comment: the workflow posts your structured output as the review, and a blocker or major finding
             fails the required check that blocks the merge.
 
@@ -102,6 +102,7 @@ jobs:
               change's before and after captures, or a skill that covers the change's path.
             - When you couldn't read what judging the change needs, such as a file that wouldn't open or a diff cut
               off, the verdict is not_reviewed, with the reason on one line. Never approve what you didn't read.
+            - Return the findings, what you couldn't check and the verdict as the structured output.
           claude_args: |
             --model claude-fable-5-1
             --fallback-model claude-opus-5-5
@@ -142,13 +143,12 @@ jobs:
         env:
           GH_TOKEN: ${{ steps.app.outputs.token }}
           POSTED: ${{ steps.post.outcome }}
-          APPROVED: ${{ steps.report.outputs.approved }}
+          STATE: ${{ steps.report.outputs.state }}
           DESCRIPTION: ${{ steps.report.outputs.description }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
-          case "$POSTED/$APPROVED" in
-            success/true) state=success description="$DESCRIPTION" ;;
-            success/false) state=failure description="$DESCRIPTION" ;;
+          case "$POSTED" in
+            success) state="$STATE" description="$DESCRIPTION" ;;
             *) state=error description="The review did not finish; the run says why." ;;
           esac
           gh api "repos/$REPO/statuses/$HEAD_SHA" -f state="$state" -f context="claude review" \

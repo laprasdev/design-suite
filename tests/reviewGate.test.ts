@@ -6,7 +6,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { after, describe, it } from 'node:test';
 import { findingsSchema, readReview, type Finding, type Review } from '../scripts/reviewGate/findings.ts';
-import { renderReview, statusDescription, verdictLine } from '../scripts/reviewGate/render.ts';
+import { commitStatus, renderReview, verdictLine } from '../scripts/reviewGate/render.ts';
 
 const REPORT = fileURLToPath(new URL('../scripts/reviewGate/report.ts', import.meta.url));
 const COMMIT = { server: 'https://github.com', repository: 'owner/repo', sha: 'abc123' };
@@ -57,6 +57,7 @@ describe('reading the reviewer output', () => {
       [{ ...finding('minor'), line: 4 }, /findings\[0]\.line must be at most 3, the last line of src\/a\.ts/],
       [{ ...finding('minor'), path: '../review.md' }, /findings\[0]\.path must be inside the head/],
       [{ ...finding('minor'), path: 'src/b.ts' }, /findings\[0]\.path must be a file in the head, not src\/b\.ts/],
+      [{ ...finding('minor'), path: 'src' }, /findings\[0]\.path must be a file in the head, not src\./],
     ] as const) {
       assert.throws(() => read(assessed('approve', [cited])), message);
     }
@@ -86,12 +87,12 @@ describe('rendering the review', () => {
     const review: Review = { verdict: 'fix_first', findings: [finding('minor'), finding('blocker'), finding('minor')],
       unverified: [] };
     assert.equal(verdictLine(review), 'Fix first: 1 blocker, 2 minor');
-    assert.equal(statusDescription(review), 'Fix first: 1 blocker, 2 minor');
+    assert.deepEqual(commitStatus(review), { state: 'failure', description: 'Fix first: 1 blocker, 2 minor' });
   });
   it('gives a not_reviewed reason as the status, and lists what could not be checked', () => {
     const review: Review = { verdict: 'not_reviewed', reason: 'The diff was cut off.', findings: [],
       unverified: ['Before and after captures'] };
-    assert.equal(statusDescription(review), 'The diff was cut off.');
+    assert.deepEqual(commitStatus(review), { state: 'error', description: 'The diff was cut off.' });
     assert.match(renderReview(review, COMMIT), /^## Not reviewed\n\nThe diff was cut off\.\n[^]*- Before and after/);
   });
   it('lists the most severe finding first, linked to its line in the head commit', () => {
@@ -123,13 +124,13 @@ describe('the report step', () => {
   it('writes the review and records that a major finding blocks the merge', () => {
     const result = report(output(assessed('fix_first', [finding('major', 3)])));
     assert.equal(result.status, 0, result.stderr);
-    assert.equal(result.output, `approved=false\ndescription=Fix first: 1 major\nbody=${result.files.body}\n`);
+    assert.equal(result.output, `state=failure\ndescription=Fix first: 1 major\nbody=${result.files.body}\n`);
     assert.match(result.body, /^## Fix first: 1 major\n/);
   });
-  it('records approval when nothing blocks, and no approval when the change was not reviewed', () => {
-    assert.match(report(output(assessed('approve', [finding('minor', 1)]))).output, /^approved=true\n/);
+  it('records success when nothing blocks, and an error when the change was not reviewed', () => {
+    assert.match(report(output(assessed('approve', [finding('minor', 1)]))).output, /^state=success\n/);
     const notReviewed = report(output({ ...assessed('not_reviewed', []), reason: 'Too large to read.' }));
-    assert.match(notReviewed.output, /^approved=false\ndescription=Too large to read\.\n/);
+    assert.match(notReviewed.output, /^state=error\ndescription=Too large to read\.\n/);
   });
   it('refuses empty, non-JSON and contradictory output, and writes nothing', () => {
     for (const [raw, message] of [

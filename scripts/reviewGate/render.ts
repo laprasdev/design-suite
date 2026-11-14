@@ -19,9 +19,16 @@ export function verdictLine(review: Review): string {
   return counts.length ? `${title}: ${counts.join(', ')}` : title;
 }
 
-/** What the commit status says: why the change wasn't reviewed, or else the verdict line. */
-export const statusDescription = (review: Review): string =>
-  review.verdict === 'not_reviewed' ? review.reason : verdictLine(review);
+/** The commit status state each verdict sets. not_reviewed is GitHub's error: the check did not happen. */
+const STATUS_STATE: Record<Verdict, 'success' | 'failure' | 'error'> = {
+  approve: 'success', fix_first: 'failure', reject: 'failure', not_reviewed: 'error',
+};
+
+/** The commit status a review sets: its state, and why the change wasn't reviewed or else the verdict line. */
+export const commitStatus = (review: Review) => ({
+  state: STATUS_STATE[review.verdict],
+  description: review.verdict === 'not_reviewed' ? review.reason : verdictLine(review),
+});
 
 const bySeverity = (a: Finding, b: Finding) => SEVERITIES.indexOf(a.severity) - SEVERITIES.indexOf(b.severity);
 

@@ -1,6 +1,6 @@
 // What the pull request reviewer returns, and the refusal of anything else. One definition serves both sides: the
 // JSON schema Claude Code holds the reviewer's output to, and the reader the workflow applies before posting it.
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { modelIsNamed, modelIsRecord } from '../../src/react/preview3d/recordModel.ts';
 import { physicalLines } from '../sizeGate/measure.mjs';
@@ -99,7 +99,7 @@ function readFinding(value: unknown, where: string, head: string): Finding {
   };
   const file = path.resolve(head, finding.path);
   if (path.relative(head, file).startsWith('..')) refuse(`${where}.path`, `inside the head, not ${finding.path}`);
-  if (!existsSync(file)) refuse(`${where}.path`, `a file in the head, not ${finding.path}`);
+  if (!existsSync(file) || !statSync(file).isFile()) refuse(`${where}.path`, `a file in the head, not ${finding.path}`);
   const last = physicalLines(readFileSync(file, 'utf8')).length;
   if (finding.line > last) refuse(`${where}.line`, `at most ${last}, the last line of ${finding.path}`);
   return finding;
