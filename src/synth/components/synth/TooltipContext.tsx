@@ -31,6 +31,14 @@ export function useTooltipSafe() {
   return context;
 }
 
+/** A control's tooltip: its own, else the host's description of its label (keyed by the label in lower case without
+ *  spaces), else the one it generates from its value. */
+export function controlTooltip(own: string | undefined, label: string | undefined, descriptions: TooltipDescriptions,
+  generated: string): string {
+  const key = label?.toLowerCase().replace(/\s+/g, '');
+  return own || (key && descriptions[key]) || generated;
+}
+
 // Helper to generate knob tooltip
 export function generateKnobTooltip(label?: string, min?: number, max?: number, displayValue?: string): string {
   const name = label || 'Value';

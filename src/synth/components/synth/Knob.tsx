@@ -1,15 +1,10 @@
-import { knobSkinConfig, skinForm } from '../../../skinForms.ts';
-import { SkinKind } from '../../../skinKinds.ts';
+import { knobConfigFromProps, type KnobConfigProps } from '../../../skinForms.ts';
 import React, { useCallback, useState, useRef } from 'react';
 import { useStyle } from '../../StyleContext.tsx';
 import { getColorScheme, getInsetShadow, resolveColorType, hexToRgba, type AnyColor } from '../../../color.ts';
 import { D, F, O, TransitionKeys, Borders, T } from '../../design/index.ts';
 import {
-  type KnobConfig,
-  KnobPreset,
   KnobForm,
-  type KnobPresetKey,
-  KnobSize,
   KnobLayout,
   KnobLabelStyle,
   KnobValueType,
@@ -18,13 +13,14 @@ import {
   getKnobDimensions,
   getKnobSensitivity
 } from '../../design/constants/KnobConfig.ts';
+import {KnobLabel} from '../../../react/KnobLabel.tsx';
 import {KnobFace, KnobLineIndicator, HorseshoeRing} from '../../../react/KnobFace.tsx';
 import {Modal} from '../../../react/Modal.tsx';
 import {ModalPlacement} from '../../../react/modalElements.ts';
 import {Label} from '../../../react/accents.tsx';
 import {cancelsOnEscape} from '../../../react/controlCancel.ts';
 import { useKnobDrag, KnobInnerCircle } from './base/index.ts';
-import { useTooltipSafe } from './TooltipContext.tsx';
+import { controlTooltip, useTooltipSafe } from './TooltipContext.tsx';
 import { ModulationRings } from './ModulationRings.tsx';
 import type { ModulationProps } from './modulation.ts';
 
@@ -130,7 +126,7 @@ function KnobTicks({ value, min = 0, max = 1, numTicks = 11, size, scheme }: Kno
 // =====================================================
 // MAIN KNOB PROPS - Config-based interface
 // =====================================================
-export interface KnobProps extends ModulationProps {
+export interface KnobProps extends ModulationProps, KnobConfigProps {
   /** Value per pixel dragged. Defaults to the config's own. */
   sensitivity?: number;
   value: number;
@@ -151,14 +147,6 @@ export interface KnobProps extends ModulationProps {
   showToggle?: boolean;
   toggleValue?: boolean;
   onToggleChange?: (v: boolean) => void;
-  // Config-based approach - use one of these:
-  /** Use a preset configuration */
-  preset?: KnobPresetKey;
-  /** Or provide a full config object */
-  config?: KnobConfig;
-  /** Override individual config properties */
-  size?: number;
-  layout?: typeof KnobLayout[keyof typeof KnobLayout];
   /** Text alignment for horizontal layout: 'left' (default) = text left of knob, 'right' = text right of knob */
   align?: 'left' | 'right';
 }
@@ -241,43 +229,34 @@ function KnobToggle({ active, primaryColor, textColor, knobSize, onToggle }: {
 // =====================================================
 // UNIFIED KNOB COMPONENT
 // =====================================================
-export function Knob({
-  value,
-  onChange,
-  label,
-  labelIcon,
-  displayValue,
-  color = 'cyan',
-  className = '',
-  min = 0,
-  max = 1,
-  unit = '',
-  disabled = false,
-  disabledOpacity,
-  tooltip,
-  showToggle = false,
-  toggleValue = true,
-  onToggleChange,
-  preset = 'standard',
-  config: configProp,
-  size: sizeOverride,
-  layout: layoutOverride,
-  align = 'left',
-  sensitivity: sensitivityOverride,
-  modulators,
-  selectedSource,
-  onSelectSource
-}: KnobProps) {
+export function Knob(props: KnobProps) {
+  const {
+    value,
+    onChange,
+    label,
+    labelIcon,
+    displayValue,
+    color = 'cyan',
+    className = '',
+    min = 0,
+    max = 1,
+    unit = '',
+    disabled = false,
+    disabledOpacity,
+    tooltip,
+    showToggle = false,
+    toggleValue = true,
+    onToggleChange,
+    align = 'left',
+    sensitivity: sensitivityOverride,
+    modulators,
+    selectedSource,
+    onSelectSource
+  } = props;
   const { getEffectiveStyle, skin } = useStyle();
   const style = getEffectiveStyle();
   const { setTooltip, descriptions } = useTooltipSafe();
-  // Resolve config: explicit config > preset with overrides
-  const baseConfig = knobSkinConfig(configProp ?? KnobPreset[preset], configProp?.form ? undefined : skinForm(skin, SkinKind.KNOB));
-  const config: KnobConfig = {
-    ...baseConfig,
-    size: sizeOverride ?? baseConfig.size,
-    layout: layoutOverride ?? baseConfig.layout
-  };
+  const config = knobConfigFromProps(skin, props, 'standard');
 
   // Get derived dimensions from config
   const dims = getKnobDimensions(config);
@@ -301,13 +280,9 @@ export function Knob({
   );
 
   // Tooltip handling
-  const getTooltipText = useCallback(() => {
-    if (tooltip) return tooltip;
-    const key = label?.toLowerCase().replace(/\s+/g, '');
-    if (key && descriptions?.[key]) return descriptions[key];
-    const name = label || 'Knob';
-    return `${name}: ${displayValue || value.toFixed(1)} (range: ${min} to ${max})`;
-  }, [tooltip, label, displayValue, value, min, max, descriptions]);
+  const getTooltipText = useCallback(() => controlTooltip(tooltip, label, descriptions,
+    `${label || 'Knob'}: ${displayValue || value.toFixed(1)} (range: ${min} to ${max})`),
+  [tooltip, label, displayValue, value, min, max, descriptions]);
 
   const handleMouseEnter = useCallback(() => {
     setIsHovered(true);
@@ -421,32 +396,16 @@ export function Knob({
   );
 
   // Label element
-  const labelElement = labelIcon ?? (label && (
-    useCutoutLabel ? (
-      <div style={{
-        fontSize: config.size <= KnobSize.MINI ? T.small.fontSize : T.label.fontSize,
-        padding: `${D.spacing.microGap}px ${D.spacing.tightGap * 1.5}px`,
-        borderRadius: D.radius.tiny, textTransform: 'uppercase', letterSpacing: T.label.letterSpacing,
-        color: scheme.main, background: style.cutoutBackground,
-        border: `${Borders.standard.width}px ${Borders.standard.style} ${style.cutoutBorder}`,
-        boxShadow: getInsetShadow('shallow'), textAlign: 'center',
-        fontWeight: T.label.fontWeight, whiteSpace: 'nowrap'
-      }}>{label}</div>
-    ) : (
-      <div style={{
-        fontSize: T.small.fontSize, textTransform: 'uppercase', letterSpacing: T.label.letterSpacing,
-        color: scheme.main, fontWeight: T.label.fontWeight,
-        textAlign: isHorizontal ? (isRightAligned ? 'right' : 'left') : 'center', opacity: O.medium
-      }}>{label}</div>
-    )
-  ));
+  const textAlign = isHorizontal ? (isRightAligned ? 'right' : 'left') : 'center';
+  const labelElement = labelIcon ?? (label && <KnobLabel text={label} cutout={useCutoutLabel} size={config.size}
+    color={scheme.main} style={style} align={textAlign} />);
 
   // Value element
   const valueElement = valueDisplay && (
     <EditableValue text={valueDisplay} color={scheme.main} min={min} max={max} onChange={onChange}
       style={{
         fontSize: T.small.fontSize, color: scheme.main, fontWeight: T.small.fontWeight,
-        textAlign: isHorizontal ? (isRightAligned ? 'right' : 'left') : 'center', opacity: O.high,
+        textAlign, opacity: O.high,
         whiteSpace: 'nowrap', cursor: onChange ? 'text' : 'default',
       }} />
   );
