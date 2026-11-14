@@ -47,11 +47,12 @@ function renderFinding(finding: Finding, commit: Commit): string {
 const renderUnverified = (unverified: string[]): string[] =>
   unverified.length ? [['**Not checked here:**', ...unverified.map(item => `- ${item}`)].join('\n')] : [];
 
-/** The review body: the verdict, why it wasn't reviewed, what couldn't be checked, then the findings, most severe
- * first. */
-export function renderReview(review: Review, commit: Commit): string {
+/** The review body: the verdict, why it wasn't reviewed, the commit and the models that reviewed it, what couldn't be
+ * checked, then the findings, most severe first. */
+export function renderReview(review: Review, commit: Commit, models: string[]): string {
   const reason = review.verdict === 'not_reviewed' ? [review.reason] : [];
+  const reviewed = `Reviewed at ${commit.sha} by ${models.join(', ')}.`;
   const findings = [...review.findings].sort(bySeverity).map(finding => renderFinding(finding, commit));
-  return [`## ${verdictLine(review)}`, ...reason, `Reviewed at ${commit.sha}.`, ...renderUnverified(review.unverified),
-    ...findings].join('\n\n') + '\n';
+  return [`## ${verdictLine(review)}`, ...reason, reviewed, ...renderUnverified(review.unverified), ...findings]
+    .join('\n\n') + '\n';
 }

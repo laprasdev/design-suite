@@ -10,6 +10,10 @@ import { commitStatus, renderReview, verdictLine } from '../scripts/reviewGate/r
 
 const REPORT = fileURLToPath(new URL('../scripts/reviewGate/report.ts', import.meta.url));
 const COMMIT = { server: 'https://github.com', repository: 'owner/repo', sha: 'abc123' };
+const MODELS = ['claude-fable-5-1'];
+/** The action's execution file for a session whose result used `models`. */
+const execution = (models: string[]) => JSON.stringify([{ type: 'system', subtype: 'init' },
+  { type: 'result', modelUsage: Object.fromEntries(models.map(model => [model, { contextWindow: 1 }])) }]);
 /** A pull request head holding src/a.ts, three lines long. */
 const HEAD = mkdtempSync(path.join(tmpdir(), 'review-head-'));
 mkdirSync(path.join(HEAD, 'src'));
@@ -93,26 +97,29 @@ describe('rendering the review', () => {
     const review: Review = { verdict: 'not_reviewed', reason: 'The diff was cut off.', findings: [],
       unverified: ['Before and after captures'] };
     assert.deepEqual(commitStatus(review), { state: 'error', description: 'The diff was cut off.' });
-    assert.match(renderReview(review, COMMIT), /^## Not reviewed\n\nThe diff was cut off\.\n[^]*- Before and after/);
+    assert.match(renderReview(review, COMMIT, MODELS),
+      /^## Not reviewed\n\nThe diff was cut off\.\n\nReviewed at abc123 by claude-fable-5-1\.\n[^]*- Before and after/);
   });
   it('lists the most severe finding first, linked to its line in the head commit', () => {
     const review: Review = { verdict: 'reject', findings: [finding('minor', 3), finding('blocker', 1)],
       unverified: [] };
-    const body = renderReview(review, COMMIT);
+    const body = renderReview(review, COMMIT, MODELS);
     assert.ok(body.indexOf('### blocker') < body.indexOf('### minor'));
     assert.match(body, /\[src\/a\.ts:1]\(https:\/\/github\.com\/owner\/repo\/blob\/abc123\/src\/a\.ts#L1\)/);
   });
 });
 
 describe('the report step', () => {
-  /** Runs report.ts with REVIEW_OUTPUT set to `raw`, against HEAD. */
-  const report = (raw: string) => {
+  /** Runs report.ts with REVIEW_OUTPUT set to `raw` and the session's execution file holding `session`. */
+  const report = (raw: string, session: string) => {
     const input = mkdtempSync(path.join(tmpdir(), 'review-input-'));
     const files = { body: path.join(input, 'review.md'), output: path.join(input, 'output') };
     writeFileSync(files.output, '');
+    writeFileSync(path.join(input, 'execution.json'), session);
     const env = {
       ...process.env, REVIEW_OUTPUT: raw, HEAD_DIR: HEAD, REVIEW_INPUT: input, GITHUB_OUTPUT: files.output,
       GITHUB_SERVER_URL: COMMIT.server, GITHUB_REPOSITORY: COMMIT.repository, HEAD_SHA: COMMIT.sha,
+      EXECUTION_FILE: path.join(input, 'execution.json'),
     };
     const run = spawnSync(process.execPath, [REPORT], { env, encoding: 'utf8' });
     const body = existsSync(files.body) ? readFileSync(files.body, 'utf8') : '';
@@ -122,14 +129,16 @@ describe('the report step', () => {
   };
 
   it('writes the review and records that a major finding blocks the merge', () => {
-    const result = report(output(assessed('fix_first', [finding('major', 3)])));
+    const result = report(output(assessed('fix_first', [finding('major', 3)])), execution(MODELS));
     assert.equal(result.status, 0, result.stderr);
     assert.equal(result.output, `state=failure\ndescription=Fix first: 1 major\nbody=${result.files.body}\n`);
     assert.match(result.body, /^## Fix first: 1 major\n/);
   });
   it('records success when nothing blocks, and an error when the change was not reviewed', () => {
-    assert.match(report(output(assessed('approve', [finding('minor', 1)]))).output, /^state=success\n/);
-    const notReviewed = report(output({ ...assessed('not_reviewed', []), reason: 'Too large to read.' }));
+    assert.match(report(output(assessed('approve', [finding('minor', 1)])), execution(MODELS)).output,
+      /^state=success\n/);
+    const notReviewed = report(output({ ...assessed('not_reviewed', []), reason: 'Too large to read.' }),
+      execution(MODELS));
     assert.match(notReviewed.output, /^state=error\ndescription=Too large to read\.\n/);
   });
   it('refuses empty, non-JSON and contradictory output, and writes nothing', () => {
@@ -138,7 +147,20 @@ describe('the report step', () => {
       ['{"verdict":', /the output must be JSON/],
       [output(assessed('approve', [finding('blocker')])), /verdict must be fix_first or reject/],
     ] as const) {
-      const result = report(raw);
+      const result = report(raw, execution(MODELS));
+      assert.notEqual(result.status, 0);
+      assert.match(result.stderr, message);
+      assert.deepEqual([result.output, result.body], ['', '']);
+    }
+  });
+  it('names the models that served the review, and refuses a session that names none', () => {
+    const approved = output(assessed('approve', []));
+    assert.match(report(approved, execution(['claude-opus-5-5'])).body, /^Reviewed at abc123 by claude-opus-5-5\.$/m);
+    for (const [session, message] of [
+      [execution([]), /execution file: must hold a result message that names the models it used/],
+      ['[{"type":', /execution file: must be JSON/],
+    ] as const) {
+      const result = report(approved, session);
       assert.notEqual(result.status, 0);
       assert.match(result.stderr, message);
       assert.deepEqual([result.output, result.body], ['', '']);

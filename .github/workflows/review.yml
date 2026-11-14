@@ -7,6 +7,14 @@ name: Review
 # can't change what reviews it, and it never runs the pull request's code. The reviewer gets read-only file tools; the
 # Check workflow runs the code without secrets. The secrets live in the review-gate environment, which only main may
 # use, so no workflow a pull request adds can mint the app's token and set the status that protection requires.
+#
+# The reviewer runs on the owner's Claude subscription (CLAUDE_CODE_OAUTH_TOKEN, from claude setup-token), so each
+# review draws on the plan's usage limits, shared with the owner's own sessions; a review that hits them fails, and
+# the head commit gets an error status. --max-budget-usd caps Claude Code's own estimate of the run at list prices: it
+# bounds how large a run grows, not what is billed, and the job's timeout is the hard bound. Where the plan bills Fable
+# to usage credits, Claude Code spends them without asking in a run like this, so usage credits stay off on the
+# account; a Fable request they would have paid for then fails the run. --fallback-model moves to Opus only when Fable
+# is overloaded or unavailable, never on a billing or limit refusal, and the review names every model that served it.
 on:
   pull_request_target:
     types: [opened, synchronize, reopened, ready_for_review]
@@ -68,7 +76,7 @@ jobs:
         id: review
         uses: anthropics/claude-code-action@f3b070c88125d33dbae5653df5f143101d4ea9dc # v1.0.276
         with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           # The workflow's read-only token: Claude posts nothing itself.
           github_token: ${{ github.token }}
           # Instruction files in the pull request head are under review, not instructions to the reviewer, and
@@ -122,6 +130,7 @@ jobs:
         id: report
         env:
           REVIEW_OUTPUT: ${{ steps.review.outputs.structured_output }}
+          EXECUTION_FILE: ${{ steps.review.outputs.execution_file }}
         run: node scripts/reviewGate/report.ts
       # Minted only now, after the reviewer has finished, so its session never holds a token that writes.
       - name: Mint the review app's token
