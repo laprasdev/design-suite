@@ -1,3 +1,4 @@
+import {isNonEmptyString, isRecord} from '../../valueChecks.ts';
 import {ModelStageRefusal} from './refusal.ts';
 
 // The one owner of a description's records. A record states exactly its fields: one it omits and one it does not
@@ -25,11 +26,6 @@ export const MODEL_RECORD_REFUSAL = Object.freeze({
 const DIGEST = /^[a-f0-9]{64}$/;
 const refusal = MODEL_RECORD_REFUSAL;
 
-/** Whether a value is a record at all: an object that is not an array. */
-export const modelIsRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null && !Array.isArray(value);
-/** Whether a value is a non-empty string, the form of every id and name the description carries. */
-export const modelIsNamed = (value: unknown): value is string => typeof value === 'string' && value.length > 0;
 /** Whether a record states a field of its own. */
 export const modelStates = (value: object, field: string) => Object.hasOwn(value, field);
 
@@ -46,7 +42,7 @@ function exact(value: Record<string, unknown>, fields: readonly string[], where:
 }
 
 export function modelRecord(value: unknown, fields: readonly string[], where: string): Record<string, unknown> {
-  if (!modelIsRecord(value)) throw new ModelStageRefusal(refusal.record(where, fields));
+  if (!isRecord(value)) throw new ModelStageRefusal(refusal.record(where, fields));
   exact(value, fields, where);
   return value;
 }
@@ -59,7 +55,7 @@ export function modelRecord(value: unknown, fields: readonly string[], where: st
 export function modelRecordStating(value: unknown, fields: {readonly stated: readonly string[];
   readonly whenStated: readonly string[]}, where: string): Record<string, unknown> {
   const all = [...fields.stated, ...fields.whenStated];
-  if (!modelIsRecord(value)) throw new ModelStageRefusal(refusal.record(where, all));
+  if (!isRecord(value)) throw new ModelStageRefusal(refusal.record(where, all));
   const named = fields.whenStated.filter(field => modelStates(value, field));
   const unstated = named.find(field => value[field] === undefined);
   if (unstated) throw new ModelStageRefusal(refusal.unstated(where, unstated));
@@ -74,7 +70,7 @@ export function modelRecordStating(value: unknown, fields: {readonly stated: rea
 export function modelShape<Shape extends string>(value: unknown, field: string,
   shapes: Readonly<Record<Shape, readonly string[]>>, where: string): {shape: Shape; record: Record<string, unknown>} {
   const names = Object.keys(shapes) as Shape[];
-  const shape = modelIsRecord(value) && modelStates(value, field) ? names.find(name => name === value[field]) :
+  const shape = isRecord(value) && modelStates(value, field) ? names.find(name => name === value[field]) :
     undefined;
   if (shape === undefined) throw new ModelStageRefusal(refusal.shape(where, field, names));
   return {shape, record: modelRecord(value, shapes[shape], where)};
@@ -83,13 +79,13 @@ export function modelShape<Shape extends string>(value: unknown, field: string,
 /** A record whose names are the data's own (a kind's parameters, a description's sets): its own entries. `element`
  * says what each entry is, for the refusal: "surface sets by name". */
 export function modelEntries(value: unknown, where: string, element: string): [string, unknown][] {
-  if (!modelIsRecord(value)) throw new ModelStageRefusal(refusal.entries(where, element));
+  if (!isRecord(value)) throw new ModelStageRefusal(refusal.entries(where, element));
   return Object.entries(value);
 }
 
 /** A record of exactly one field, one of these names: which it states, and what that field holds. */
 export function modelOneOf<Name extends string>(value: unknown, names: readonly Name[], where: string) {
-  const stated = modelIsRecord(value) ? names.filter(name => modelStates(value, name)) : [];
+  const stated = isRecord(value) ? names.filter(name => modelStates(value, name)) : [];
   if (stated.length !== 1) throw new ModelStageRefusal(refusal.oneOf(where, names));
   const [name] = stated;
   return {name, content: modelRecord(value, [name], where)[name]};
@@ -101,7 +97,7 @@ export function modelOneOf<Name extends string>(value: unknown, names: readonly 
  * description an order is data (the actors, a colour's channels).
  */
 export const modelRecordIdentity = (value: unknown): string => JSON.stringify(value, (_, item: unknown) =>
-  modelIsRecord(item) ? Object.fromEntries(Object.entries(item).sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0)) :
+  isRecord(item) ? Object.fromEntries(Object.entries(item).sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0)) :
     item);
 
 /** Whether a value is a SHA-256 as the description states every file's: 64 lowercase hex digits. */
@@ -127,7 +123,7 @@ export function modelFlag(value: unknown, where: string): boolean {
 
 /** A non-empty string, refused by its name otherwise. */
 export function modelName(value: unknown, where: string): string {
-  if (!modelIsNamed(value)) throw new ModelStageRefusal(refusal.named(where));
+  if (!isNonEmptyString(value)) throw new ModelStageRefusal(refusal.named(where));
   return value;
 }
 

@@ -1,12 +1,15 @@
 import React from 'react';
-import {useStyle, type StyleTheme} from '../../synth/StyleContext.tsx';
+import {useStyle} from '../../synth/StyleContext.tsx';
+import type {StyleTheme} from '../../synth/StyleTypes.ts';
 import {getColorScheme, hexToRgba, resolveColorType} from '../../color.ts';
 import {D, F, C, O, T, TransitionKeys, applyCasing} from '../../synth/design/index.ts';
-import type {SingleSelectEnumProps, EnumOption} from '../../synth/components/synth/Enum.tsx';
+import type {SingleSelectEnumProps, EnumOption} from './enumProps.ts';
 import {skinForm} from '../../skinForms.ts';
 import {SkinKind} from '../../skinKinds.ts';
 import {SkinChoice} from './SkinChoice.tsx';
 
+// Every choice in view on a module's grid, wrapping to fit. Given `columns`, the choices keep to that many column
+// lines; without, each takes the room its words need, and they wrap to another row rather than cut a word.
 export function OptionsEnum<Value>(props: Omit<SingleSelectEnumProps<Value>, 'variant'> & {
   appearance?: string; ariaLabel?: string;
 }) {

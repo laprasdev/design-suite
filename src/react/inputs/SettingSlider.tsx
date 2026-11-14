@@ -6,7 +6,8 @@ import {SkinKind, SliderSkinForm} from '../../skinKinds.ts';
 import {useOwnedControlGesture as useControlGesture} from './useOwnedControlGesture.ts';
 import {useControlBehavior} from '../../synth/components/synth/base/useControlBehavior.ts';
 import {RangeSlider, type RangeSliderProps} from '../../synth/components/synth/RangeSlider.tsx';
-import type {SettingSliderProps} from '../../synth/components/synth/Slider.tsx';
+import type {SliderModulationProps} from '../../synth/components/synth/modulation.ts';
+import {SliderForm} from './sliderForm.ts';
 import {ModulationTracks, modulationRoom} from './ModulationTracks.tsx';
 import {HoverDetail} from '../HoverDetail.tsx';
 import {ResetIcon} from '../HeaderIconButton.tsx';
@@ -20,6 +21,24 @@ const inputStyle = (value: number, min: number, max: number): React.CSSPropertie
   height: SETTING_THUMB, '--range-track': `${SLIDER_TRACK_HEIGHT}px`, '--range-thumb': `${SETTING_THUMB}px`,
   '--range-fill': `${percentOf(value, min, max)}%`} as React.CSSProperties);
 
+export interface SettingSliderProps extends SliderModulationProps {
+  form: typeof SliderForm.SETTING;
+  label: string;
+  detail?: string;
+  value: number;
+  min: number;
+  max: number;
+  step: number | 'any';
+  defaultValue?: number;
+  onChange(value: number): void;
+  resetLabel?: string;
+  disabled?: boolean;
+  format?: (value: number)=>React.ReactNode;
+  compact?: boolean;
+  /** A drag moves the value this far a pixel from where it was pressed, like the cell form's, in place of the
+   *  track's absolute position; a range with more steps than the track has pixels can then still land on each. */
+  sensitivity?: number;
+}
 export function SkinRangeSlider(props: RangeSliderProps) {
   const {skin} = useStyle(), form = props.appearance ?? skinForm(skin, SkinKind.SLIDER);
   if (!props.singleEnded || props.quiet || form !== SliderSkinForm.SETTING) return <RangeSlider {...props}/>;

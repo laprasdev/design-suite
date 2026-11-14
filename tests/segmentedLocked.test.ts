@@ -1,9 +1,10 @@
 // A locked control, or an option unavailable on its own, changes nothing when pressed, in both the single and the
 // [Flags] form, and with `onPoint` too, which keeps its options pointable instead of disabling them. The control is
-// rendered once with hooks that hold no state, and its buttons' own handlers are pressed.
+// rendered once as a Component (renderedHooks.ts), and its buttons' own handlers are pressed.
 import assert from 'node:assert/strict';
 import {after, describe, it} from 'node:test';
 import {bundled, replacedHooks} from './bundled.ts';
+import {Component, STATEFUL_HOOKS, rendered} from './renderedHooks.ts';
 
 interface Node {type: unknown; props: {children?: unknown; onClick?: () => void; onActivate?: () => void}}
 type Options = {value: number; label: string; disabled?: boolean}[];
@@ -13,9 +14,6 @@ interface Props {
 }
 interface Module {SegmentedControl(props: Props): Node}
 
-const STATELESS_HOOKS =
-  'export const useContext = () => ({}), useRef = () => ({current: null}), useLayoutEffect = () => undefined;';
-
 const pressables = (node: unknown): Node[] => {
   if (Array.isArray(node)) return node.flatMap(pressables);
   if (!node || typeof node !== 'object') return [];
@@ -24,7 +22,7 @@ const pressables = (node: unknown): Node[] => {
   return [...pressed, ...pressables(element.props.children)];
 };
 
-const {module, dispose} = await bundled<Module>(['src/react/SegmentedControl.tsx'], [replacedHooks(STATELESS_HOOKS)]);
+const {module, dispose} = await bundled<Module>(['src/react/SegmentedControl.tsx'], [replacedHooks(STATEFUL_HOOKS)]);
 after(dispose);
 
 describe('a locked segmented control', () => {
@@ -32,7 +30,9 @@ describe('a locked segmented control', () => {
   const presses = (props: Partial<Props>) => {
     const changes: unknown[] = [];
     const onChange = (value: unknown) => changes.push(value);
-    const found = pressables(module.SegmentedControl({options, value: 0, ...props, onChange}));
+    const control = new Component(() => module.SegmentedControl({options, value: 0, ...props, onChange}));
+    rendered(control);
+    const found = pressables(control.now);
     assert.equal(found.length, options.length);
     found.forEach(each => (each.props.onClick ?? each.props.onActivate)?.());
     return changes;

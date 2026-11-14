@@ -1,11 +1,12 @@
 import React, { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { useEscapeCancel } from "./controlCancel.ts";
+import { KeyMoment } from "./pageKeys.ts";
 import { isPanKeyHeld } from "./panKey.ts";
-import { movedGraph, type GraphNode, type GraphGroup, type NodeMoves } from "./nodeGraphTypes.ts";
+import { movedGraph, type GraphNode, type GraphGroup, type NodeMoves, type NodeSelection } from "./nodeGraphTypes.ts";
 export type { NodeMove, NodeMoves } from "./nodeGraphTypes.ts";
 
 // A press that travels less than this many screen pixels is a press, not a drag.
 const STILL_PX = 4;
-const ESCAPE = "Escape";
 
 interface Box { x: number; y: number; w: number; h: number }
 interface Point { x: number; y: number }
@@ -48,16 +49,19 @@ export function useNodeMoving<N extends GraphNode>(
     suppressClick.current = true;
     setMarquee(null);
   };
-  useEffect(() => {
-    const key = (e: KeyboardEvent) => {
-      if (e.key !== ESCAPE || (!gesture.current && !selected.size)) return;
-      cancel(); setSelected(new Set());
-    };
-    window.addEventListener("keydown", key);
-    return () => window.removeEventListener("keydown", key);
-  }, [selected, onMovesChange]);
+  // Escape cancels a move or a marquee under way, and the selection with it, before any Modal around the graph sees the
+  // key; with nothing under way it clears the selection, once every Modal and focused control has let the key pass.
+  useEscapeCancel(KeyMoment.UNDER_WAY, () => {
+    if (!gesture.current) return false;
+    cancel(); setSelected(new Set()); return true;
+  });
+  useEscapeCancel(KeyMoment.PAGE_AFTER_FOCUS, () => {
+    if (!selected.size) return false;
+    setSelected(new Set()); return true;
+  });
+  const selection: NodeSelection = { underWay: () => !!gesture.current, clear: () => setSelected(new Set()) };
   if (!onMovesChange) return {
-    surface, marquee, nodeProps: (_id: string) => ({}), groupProps: (_id: string) => ({}), surfaceProps: {},
+    surface, marquee, selection, nodeProps: (_id: string) => ({}), groupProps: (_id: string) => ({}), surfaceProps: {},
   };
 
   const point = (e: ReactPointerEvent): Point => {
@@ -153,5 +157,5 @@ export function useNodeMoving<N extends GraphNode>(
     onPointerUp: end,
     onPointerCancel: cancel,
   };
-  return { surface, marquee, nodeProps, groupProps, surfaceProps };
+  return { surface, marquee, selection, nodeProps, groupProps, surfaceProps };
 }

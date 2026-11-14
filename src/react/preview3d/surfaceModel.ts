@@ -1,4 +1,5 @@
-import {modelDigest, modelEntries, modelFlag, modelIsRecord, modelName, modelNumber, modelNumbers, modelOneOf,
+import {isRecord} from '../../valueChecks.ts';
+import {modelDigest, modelEntries, modelFlag, modelName, modelNumber, modelNumbers, modelOneOf,
   modelOption, modelRecord, modelShape, modelStates} from './recordModel.ts';
 import {ModelStageRefusal} from './refusal.ts';
 import {MODEL_FILE_SURFACE, MODEL_SURFACE_PARAMETER, MODEL_VECTOR_SIZE, type ModelSurfaceKind}
@@ -63,7 +64,7 @@ export const MODEL_SURFACE_REFUSAL = Object.freeze({
 const refusal = MODEL_SURFACE_REFUSAL;
 
 function texture(value: unknown, where: string): ModelSurfaceTexture {
-  if (modelIsRecord(value) && 'constant' in value) return Object.freeze({constant: modelOption(
+  if (isRecord(value) && 'constant' in value) return Object.freeze({constant: modelOption(
     modelRecord(value, ['constant'], where).constant, MODEL_TEXTURE_CONSTANT, `${where}.constant`)});
   const record = modelRecord(value, TEXTURE_FIELDS, where);
   if (!Array.isArray(record.wrap) || record.wrap.length !== 2) {
@@ -97,7 +98,7 @@ export function modelSurfaceValue(entry: unknown, where: string): ModelSurfaceVa
   return Object.freeze({texture: texture(content, at)});
 }
 function entry(input: unknown, where: string): ModelSurfaceEntry {
-  if (modelIsRecord(input) && modelStates(input, 'kind') && input.kind === MODEL_FILE_SURFACE) {
+  if (isRecord(input) && modelStates(input, 'kind') && input.kind === MODEL_FILE_SURFACE) {
     modelRecord(input, ['kind'], where);
     return MODEL_FILE_ENTRY;
   }

@@ -1,7 +1,7 @@
 import {hexToRgba} from '../color.ts';
 import {skinPalette, flattenSkin, resolveDesignSystem, resolveSkin, type SkinJson} from '../skins.ts';
 import {resolveContainerComposable, resolveComponentComposable} from './design/Composable.ts';
-import type {StyleTheme} from './StyleContext.tsx';
+import type {StyleTheme} from './StyleTypes.ts';
 
 type Palette = Record<string, unknown>;
 interface CutoutShadow { inset: number[][]; highlight: number[]; highlightColor?: string }

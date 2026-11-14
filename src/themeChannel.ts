@@ -1,4 +1,5 @@
 import {createTheme, type Theme} from './theme.ts';
+import {isNonEmptyString, isRecord} from './valueChecks.ts';
 
 export const THEME_PROTOCOL = 'looms.theme';
 export const THEME_VERSION = 1;
@@ -7,17 +8,16 @@ export const THEME_SOURCE_TIMEOUT_MS = 10000;
 const SUBSCRIBE = 'subscribe', UNSUBSCRIBE = 'unsubscribe', UPDATE = 'update';
 export interface ThemeData { skin: string; theme: Theme }
 const message = (type: string) => ({protocol: THEME_PROTOCOL, version: THEME_VERSION, type});
-const isMessage = (data: unknown): data is Record<string, unknown> => !!data && typeof data === 'object'
-  && 'protocol' in data && data.protocol === THEME_PROTOCOL && 'version' in data && data.version === THEME_VERSION;
+const isMessage = (data: unknown): data is Record<string, unknown> =>
+  isRecord(data) && data.protocol === THEME_PROTOCOL && data.version === THEME_VERSION;
 
 /** Theme values are data, never CSS text or executable content. */
 export function isThemeData(data: unknown): data is ThemeData {
-  if (!data || typeof data !== 'object') return false;
+  if (!isRecord(data)) return false;
   const {skin, theme} = data as Partial<ThemeData>;
-  if (typeof skin !== 'string' || !skin || !theme || typeof theme.name !== 'string') return false;
+  if (!isNonEmptyString(skin) || !theme || typeof theme.name !== 'string') return false;
   const defaults = createTheme();
-  if (theme.typography !== undefined && (!theme.typography || typeof theme.typography !== 'object'
-    || Array.isArray(theme.typography))) return false;
+  if (theme.typography !== undefined && !isRecord(theme.typography)) return false;
   if (theme.typography !== undefined && Object.entries(defaults.typography).some(([key, fallback]) => {
     const value = theme.typography[key as keyof Theme['typography']];
     return typeof fallback === 'string' ? typeof value !== 'string' || !value.trim() || value.length > 256

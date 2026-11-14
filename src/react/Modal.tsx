@@ -7,8 +7,8 @@ import {KEPT_ROOM_ATTRIBUTE,SCROLL_STEP_PX,keptRoom,modalGrowthLimit} from './mo
 import { cssRect } from './cssZoom.ts';
 import { ModalLayout, type ModalTitleProps } from './ModalLayout.tsx';
 import { ModalElement, MODAL_TITLED_ATTRIBUTE, MODAL_PLACEMENT_ATTRIBUTE, ModalPlacement,
-  type ModalPlacementValue } from './modalElements.ts';
-import { useModalEscape } from './modalEscape.ts';
+  type ModalPlacementProps } from './modalElements.ts';
+import { useModalDismissal } from './modalDismissal.ts';
 const FADE_MS = 200;
 
 /* Keep a node mounted through its fade-out, returning [mounted, visible].
@@ -173,13 +173,12 @@ export type ModalProps = ModalTitleProps & Omit<HTMLAttributes<HTMLDivElement>, 
   keepRoomFor?: string;
   className?: string;
   children: ReactNode;
-  placement?: ModalPlacementValue;
   panelRef?: RefObject<HTMLDivElement>;
-};
+} & ModalPlacementProps;
 export function Modal({
   form = "dialog", open, onClose, dismissible = true, dismissOnContent = false, blocking = false, returnFocusRef,
   ariaLabel, labelledBy, keepRoomFor, className = "", title, actions, children,
-  placement = ModalPlacement.VIEWPORT, panelRef, role = 'dialog',
+  placement = ModalPlacement.VIEWPORT, anchor, group, panelRef, role = 'dialog',
   onClick, onKeyDown, tabIndex, style, ...attributes
 }: ModalProps) {
   const [mounted, visible] = useFadeMount(open);
@@ -191,7 +190,8 @@ export function Modal({
   onCloseRef.current = onClose;
   const close = () => onCloseRef.current?.();
   const interactive = dismissible;
-  const escapeKey = useModalEscape(dialog, {open: open && mounted, placement, dismissible, onClose: onCloseRef});
+  const escapeKey = useModalDismissal(dialog, {open: open && mounted, placement, anchor, group, dismissible,
+    onClose: onCloseRef});
   // An ancestor scroll container can itself be a tab stop even when every
   // sibling outside the dialog is inert. Keep both Tab directions in the dialog.
   const containFocus = (event: ReactKeyboardEvent) => {

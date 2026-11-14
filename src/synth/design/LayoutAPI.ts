@@ -7,7 +7,7 @@ import React from 'react';
 import { LayoutDimensions, CompactDimensions } from '../../layout.ts';
 import { Shadows, Typography, Opacity, ContainerStyles, Borders } from '../../tokens.ts';
 import { FlexKeys, PositionKeys, CursorKeys, TransformKeys, TransitionKeys, Units, CommonStrings } from './KeysPaths.ts';
-import type { StyleTheme } from '../StyleContext.tsx';
+import type { StyleTheme } from '../StyleTypes.ts';
 import { containerCSS } from './Composable.ts';
 import { DisplayMode, type DisplayModeValue, ContainerType, type ContainerTypeValue, createBorder } from './constants/index.ts';
 

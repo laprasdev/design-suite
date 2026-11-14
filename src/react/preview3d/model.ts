@@ -1,6 +1,5 @@
 import {element} from '../elementContract.ts';
 import type {ModelStageSurfaceMode} from './surfaceModeModel.ts';
-import type {ModelRuntimeMaterialProfile} from './runtimeMaterialModel.ts';
 import type {ModelStageActorSnapshot} from './actorModel.ts';
 import type {ModelPreviewFrame} from './frameModel.ts';
 import type {ModelStageDescription} from './descriptionModel.ts';
@@ -50,7 +49,7 @@ export {MODEL_ANIMATION_LAYER, MODEL_ANIMATION_REFUSAL, modelAnimationLayers} fr
 export type {ModelAnimationLayer, ModelAnimationSample} from './animationLayerModel.ts';
 export {MODEL_ACTOR_ANIMATION, MODEL_ACTOR_REFUSAL, MODEL_STAGE_DRIVER, modelStageActorSet} from './actorModel.ts';
 export type {ModelStageActor, ModelStageActorAnimation, ModelStageActorSet, ModelStageActorSnapshot,
-  ModelStageDriver} from './actorModel.ts';
+  ModelStageAsset, ModelStageDriver} from './actorModel.ts';
 // The whole description, checked with no renderer: every part, and every actor's set against the description's sets.
 export {MODEL_STAGE_DESCRIPTION_PARTS, modelStageActorSets, modelStageDescription} from './descriptionModel.ts';
 export type {ModelStageDescription, ModelStageDescriptionPart} from './descriptionModel.ts';
@@ -104,16 +103,6 @@ export function modelLocalHold(reducedMotion: boolean, hidden: boolean): ModelSt
  */
 export const modelLocalAdvance = (elapsedMilliseconds: number, hold: ModelStageHold | null) => hold === null ?
   Math.min(elapsedMilliseconds / MODEL_STAGE.millisecondsPerSecond, MODEL_STAGE.maxFrameDelta) : 0;
-/** A model file an actor draws. Its revision, digest and runtime profile are each stated or left out, never stated
- * empty. A stated `sha256` is checked on every read of the file; with none stated the file is read unverified (whether
- * every asset must state one is the owner's question). */
-export interface ModelStageAsset {
-  readonly id: string;
-  readonly path: string;
-  readonly revision?: string;
-  readonly sha256?: string;
-  readonly runtimeMaterials?: ModelRuntimeMaterialProfile;
-}
 /** A model as the view's catalog names it: its asset id, its name, and the clips its picker offers. */
 export interface ModelPreviewAsset {
   readonly id: string;

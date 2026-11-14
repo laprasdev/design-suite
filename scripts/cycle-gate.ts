@@ -5,7 +5,7 @@
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { modelIsRecord } from '../src/react/preview3d/recordModel.ts';
+import { isRecord } from '../src/valueChecks.ts';
 
 const DEPCRUISE = fileURLToPath(new URL('gateTools/node_modules/.bin/depcruise', import.meta.url));
 const CONFIG = ['--config', '.dependency-cruiser.json'];
@@ -28,7 +28,7 @@ function depcruise(args: string[], stdout: 'pipe' | 'inherit'): { status: number
 }
 
 const field = (value: unknown, name: string): unknown =>
-  modelIsRecord(value) && Object.hasOwn(value, name) ? value[name]
+  isRecord(value) && Object.hasOwn(value, name) ? value[name]
     : refuse(`dependency-cruiser's result has no ${name}.`);
 
 /** Whether dependency-cruiser loaded a TypeScript compiler, by the transpilers its summary says it found. */

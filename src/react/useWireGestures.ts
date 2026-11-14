@@ -1,11 +1,14 @@
 import { useEffect, useRef, useState, type RefObject } from "react";
+import { useEscapeCancel } from "./controlCancel.ts";
+import { KeyMoment } from "./pageKeys.ts";
 import { nearestGroupOutlet } from "./groupOutlets.ts";
 import { isPanKeyHeld } from "./panKey.ts";
+import { useDragSession } from "./useDragSession.ts";
 import { snapTie } from "./wireGeometry.ts";
 import { collectWires, sampleWires, type SweepWire } from "./wireSweep.ts";
 import {GRAPH_NODE_ATTRIBUTE, GRAPH_WIRE_ATTRIBUTE,
   type GraphPoint, type GraphGroup, type GroupOutlet, type GroupOutlets,
-  type TwistTie, type WireLink} from "./nodeGraphTypes.ts";
+  type NodeSelection, type TwistTie, type WireLink} from "./nodeGraphTypes.ts";
 
 const STILL_PX = 4;
 type Gesture = { pointer: number; capture: HTMLElement; start: GraphPoint; before: readonly TwistTie[] } &
@@ -18,21 +21,37 @@ export function useWireGestures(
   surface: RefObject<HTMLDivElement | null>, width: number, links: readonly WireLink[],
   ties: readonly TwistTie[], onChange: ((ties: readonly TwistTie[]) => void) | undefined,
   onCollect: (ids: readonly string[], at: GraphPoint) => void, interactionSurface?: RefObject<HTMLElement | null>,
-  outlets: GroupOutlets = {}, onOutletsChange?: (outlets: GroupOutlets) => void,
+  outlets: GroupOutlets = {}, onOutletsChange?: (outlets: GroupOutlets) => void, nodeSelection?: NodeSelection,
 ) {
   const [selected, setSelected] = useState<readonly string[]>([]);
   const [sweep, setSweep] = useState<readonly GraphPoint[]>([]);
+  const [dragging, setDragging] = useState(false);
   const gesture = useRef<Gesture | null>(null), suppressClick = useRef(false);
+  // Cancels the gesture under way; set while the surface listens.
   const cancelGesture = useRef<(() => void) | null>(null);
-  // Node selection can rerender this surface during the same Escape dispatch. Keep this listener installed.
-  useEffect(() => {
-    const key = (event: KeyboardEvent) => { if (event.key === "Escape") cancelGesture.current?.(); };
-    const cancel = () => cancelGesture.current?.();
-    window.addEventListener("keydown", key); window.addEventListener("blur", cancel);
-    return () => {
-      cancel(); window.removeEventListener("keydown", key); window.removeEventListener("blur", cancel);
-    };
-  }, []);
+  const cancel = () => cancelGesture.current?.();
+  const begin = (next: Gesture) => { gesture.current = next; setDragging(true); };
+  // A gesture is a drag that only its own release ends: Escape or the window losing focus cancels it. Inside a
+  // NodeGraph its wires and nodes are one control, so Escape that cancels a gesture also clears the node selection, as
+  // Escape with nothing under way clears both once the page has let it pass.
+  useDragSession(dragging, { cancel: () => { cancel(); nodeSelection?.clear(); }, lostFocus: cancel });
+  // Unmounting cancels a gesture under way.
+  useEffect(() => () => cancel(), []);
+  // Escape that cancels a move of the nodes clears the selected wires too. It must hear the key before useNodeMoving's
+  // own cancel ends the move: a moment's hearings hear a key in the order they began (pageKeys), useEscapeCancel keeps
+  // its hearing while mounted, and GraphWires, inside NodeGraph, begins its hearings first, as React commits a child's
+  // effects before its parent's.
+  useEscapeCancel(KeyMoment.UNDER_WAY, () => {
+    if (!nodeSelection?.underWay()) return false;
+    setSelected([]); return true;
+  });
+  const shown = selected.filter(id => links.some(link => link.id === id));
+  // Escape clears the selected wires once every Modal and focused control has let it pass, and takes the key only when
+  // there were any.
+  useEscapeCancel(KeyMoment.PAGE_AFTER_FOCUS, () => {
+    if (!shown.length) return false;
+    setSelected([]); return true;
+  });
   const point = (event: { clientX: number; clientY: number }): GraphPoint => {
     const box = surface.current!.getBoundingClientRect(), scale = width / box.width;
     return { x: (event.clientX - box.left) * scale, y: (event.clientY - box.top) * scale };
@@ -47,11 +66,11 @@ export function useWireGestures(
       event.preventDefault(); event.stopImmediatePropagation();
       element.setPointerCapture(event.pointerId);
       const at = point(event);
-      gesture.current = { kind: "collect", pointer: event.pointerId, capture: element, start: at, before: ties,
+      begin({ kind: "collect", pointer: event.pointerId, capture: element, start: at, before: ties,
         hit: (event.target as Element).closest<SVGElement>(".bd-edge-hit")
           ?.getAttribute(GRAPH_WIRE_ATTRIBUTE) ?? undefined,
         screen: { x: event.clientX, y: event.clientY }, moved: false, points: [at],
-        wires: sampleWires(element), picked: new Set() };
+        wires: sampleWires(element), picked: new Set() });
     };
     const collect = (current: Extract<Gesture, { kind: "collect" }>, event: PointerEvent) => {
       const travel = Math.hypot(event.clientX - current.screen.x, event.clientY - current.screen.y);
@@ -80,7 +99,7 @@ export function useWireGestures(
     const finish = (cancelled: boolean, event?: PointerEvent) => {
       const current = gesture.current;
       if (!current) return;
-      gesture.current = null;
+      gesture.current = null; setDragging(false);
       if (current.kind === "collect") {
         if (!cancelled && event) {
           collect(current, event);
@@ -103,7 +122,7 @@ export function useWireGestures(
       if (!gesture.current || gesture.current.pointer !== event.pointerId) return;
       event.stopImmediatePropagation(); finish(event.type === "pointercancel", event);
     };
-    cancelGesture.current = () => { finish(true); setSelected([]); };
+    cancelGesture.current = () => finish(true);
     const click = (event: MouseEvent) => {
       if (!suppressClick.current || event.detail === 0) return;
       suppressClick.current = false; event.stopImmediatePropagation(); event.preventDefault();
@@ -128,22 +147,22 @@ export function useWireGestures(
     };
   });
   return {
-    selected: selected.filter(id => links.some(link => link.id === id)), sweep, clear: () => setSelected([]),
+    selected: shown, sweep, clear: () => setSelected([]),
     select: (id: string, add: boolean) => setSelected(was => add
       ? was.includes(id) ? was.filter(key => key !== id) : [...was, id] : [id]),
     startOutlet: (event: React.PointerEvent<HTMLButtonElement>, frame: GraphGroup, outlet: GroupOutlet) => {
       if (event.button !== 0 || isPanKeyHeld()) return;
       event.stopPropagation(); event.preventDefault();
       event.currentTarget.focus(); event.currentTarget.setPointerCapture(event.pointerId);
-      gesture.current = { kind: "outlet", pointer: event.pointerId, capture: event.currentTarget,
-        start: point(event), before: ties, frame, outlet, outlets };
+      begin({ kind: "outlet", pointer: event.pointerId, capture: event.currentTarget,
+        start: point(event), before: ties, frame, outlet, outlets });
     },
     startTie: (event: React.PointerEvent<HTMLButtonElement>, tie: TwistTie) => {
       if (event.button !== 0) return;
       event.stopPropagation(); event.preventDefault();
       event.currentTarget.focus(); event.currentTarget.setPointerCapture(event.pointerId);
-      gesture.current = { kind: "tie", pointer: event.pointerId, capture: event.currentTarget,
-        start: point(event), tie, before: ties };
+      begin({ kind: "tie", pointer: event.pointerId, capture: event.currentTarget,
+        start: point(event), tie, before: ties });
     },
   };
 }

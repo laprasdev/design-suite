@@ -1,4 +1,4 @@
-import type { StyleTheme } from './synth/StyleContext.tsx';
+import type { StyleTheme } from './synth/StyleTypes.ts';
 
 export type ColorType = 'primary' | 'secondary' | 'tertiary';
 

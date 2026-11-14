@@ -1,6 +1,6 @@
 import {modelPresentationPose, modelPresentationVector, type ModelPresentationPose} from './placementModel.ts';
 import {ModelStageRefusal} from './refusal.ts';
-import {modelIsRecord as object} from './recordModel.ts';
+import {isRecord as object} from '../../valueChecks.ts';
 import {modelMaterialOutputs} from './runtimeMaterialModel.ts';
 import type {ModelMaterialOutput, ModelRuntimeMaterialProfile} from './runtimeMaterialModel.ts';
 import {modelSurfaceOutputs, type ModelSurfaceTakes} from './surfaceOutputModel.ts';

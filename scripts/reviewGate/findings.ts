@@ -2,7 +2,7 @@
 // JSON schema Claude Code holds the reviewer's output to, and the reader the workflow applies before posting it.
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
-import { modelIsNamed, modelIsRecord } from '../../src/react/preview3d/recordModel.ts';
+import { isNonEmptyString, isRecord } from '../../src/valueChecks.ts';
 import { physicalLines } from '../sizeGate/measure.mjs';
 
 export const SEVERITIES = ['blocker', 'major', 'minor'] as const;
@@ -79,7 +79,7 @@ const refuse = (where: string, expected: string): never => {
 const oneOf = <T extends string>(values: readonly T[], value: unknown, where: string): T =>
   values.find(option => option === value) ?? refuse(where, `one of ${values.join(', ')}`);
 
-const readText = (value: unknown, where: string): string => modelIsNamed(value) ? value : refuse(where, 'text');
+const readText = (value: unknown, where: string): string => isNonEmptyString(value) ? value : refuse(where, 'text');
 
 const readLineNumber = (value: unknown, where: string): number =>
   typeof value === 'number' && Number.isInteger(value) && value >= 1 ? value : refuse(where, 'a line number');
@@ -91,7 +91,7 @@ const readTexts = (value: Record<string, unknown>, where: string) => Object.from
 
 /** A finding, refused unless it cites a line of a file in the head. */
 function readFinding(value: unknown, where: string, head: string): Finding {
-  if (!modelIsRecord(value)) return refuse(where, 'an object');
+  if (!isRecord(value)) return refuse(where, 'an object');
   const finding: Finding = {
     severity: oneOf(SEVERITIES, value.severity, `${where}.severity`),
     line: readLineNumber(value.line, `${where}.line`),
@@ -120,7 +120,7 @@ export function readReview(json: string, head: string): Review {
   } catch {
     return refuse('the output', 'JSON');
   }
-  if (!modelIsRecord(value)) return refuse('the output', 'an object');
+  if (!isRecord(value)) return refuse('the output', 'an object');
   const verdict = oneOf(VERDICTS, value.verdict, 'verdict');
   const assessment: Assessment = {
     findings: readList(value.findings, 'findings').map((finding, index) =>

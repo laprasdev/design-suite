@@ -7,7 +7,9 @@ import {
 } from "./wireGeometry.ts";
 import { nearestGroupOutlet, stepGroupOutlet } from "./groupOutlets.ts";
 import { useWireGestures } from "./useWireGestures.ts";
-import type { GraphEdge, GraphGroup, GraphNode, GraphPoint, GroupOutlets, TwistTie } from "./nodeGraphTypes.ts";
+import type {
+  GraphEdge, GraphGroup, GraphNode, GraphPoint, GroupOutlets, NodeSelection, TwistTie,
+} from "./nodeGraphTypes.ts";
 
 // Logical CSS pixels per second: route length changes trip time, never activity speed.
 const FLOW_PIXELS_PER_SECOND = 30, FLOW_LIGHTS = 3, TIE_STEP = 8;
@@ -34,13 +36,15 @@ function FlowLights({ path }: { path: string }) {
 
 export function GraphWires({
   surface, width, height, nodes, edges, groups, showPorts, ties = NO_TIES, onTiesChange, interactionSurface,
-  outlets = NO_OUTLETS, onOutletsChange,
+  outlets = NO_OUTLETS, onOutletsChange, nodeSelection,
 }: {
   surface: RefObject<HTMLDivElement | null>; width: number; height: number;
   nodes: readonly GraphNode[]; edges: readonly GraphEdge[]; groups?: readonly GraphGroup[]; showPorts: boolean;
   outlets?: GroupOutlets; onOutletsChange?(outlets: GroupOutlets): void;
   ties?: readonly TwistTie[]; onTiesChange?(ties: readonly TwistTie[]): void;
   interactionSurface?: RefObject<HTMLElement | null>;
+  /** Inside a NodeGraph, its node selection: Escape while a wire gesture or a node move is under way clears both. */
+  nodeSelection?: NodeSelection;
 }) {
   const { links, bundles, outputs } = useMemo(
     () => graphLinks(nodes, edges, ties, groups, outlets), [nodes, edges, ties, groups, outlets]);
@@ -52,7 +56,7 @@ export function GraphWires({
     onTiesChange?.(tieWires(ties, { id: `tie:${crypto.randomUUID()}`, edges: ids, ...position }));
   };
   const wires = useWireGestures(surface, width, links, ties, onTiesChange, collect,
-    interactionSurface, outlets, onOutletsChange);
+    interactionSurface, outlets, onOutletsChange, nodeSelection);
   const picked = links.filter(link => wires.selected.includes(link.id));
   const middle = picked.length ? {
     x: picked.reduce((sum, link) => sum + wireMiddle(link).x, 0) / picked.length,

@@ -1,7 +1,6 @@
-import type {ModelStageAsset} from './model.ts';
 import {modelPresentationPose, type ModelPresentationPose} from './placementModel.ts';
 import type {ModelAnimationSample} from './animationLayerModel.ts';
-import {modelRuntimeMaterialProfile} from './runtimeMaterialModel.ts';
+import {modelRuntimeMaterialProfile, type ModelRuntimeMaterialProfile} from './runtimeMaterialModel.ts';
 import {modelDigest, modelName, modelNumber, modelRecord, modelRecordStating, modelShape, modelStates}
   from './recordModel.ts';
 import {ModelStageRefusal} from './refusal.ts';
@@ -21,6 +20,16 @@ export type ModelStageActorAnimation =
 // The fields each shape states, and nothing else: a field of another shape is refused, never dropped.
 const ANIMATION_FIELDS: Readonly<Record<ModelStageActorAnimation['kind'], readonly string[]>> = Object.freeze({
   rest: ['kind'], playing: ['kind', 'name'], held: ['kind', 'name', 'timeSeconds']});
+/** A model file an actor draws. Its revision, digest and runtime profile are each stated or left out, never stated
+ * empty. A stated `sha256` is checked on every read of the file; with none stated the file is read unverified (whether
+ * every asset must state one is the owner's question). */
+export interface ModelStageAsset {
+  readonly id: string;
+  readonly path: string;
+  readonly revision?: string;
+  readonly sha256?: string;
+  readonly runtimeMaterials?: ModelRuntimeMaterialProfile;
+}
 export interface ModelStageActor {
   readonly id: string;
   readonly asset: ModelStageAsset;

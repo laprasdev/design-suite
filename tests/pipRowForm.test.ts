@@ -1,10 +1,9 @@
-// PipRow's compact form is opt-in: the meter stays the default, writes no form and keeps its rules, and a form outside
-// PipRowForm fails the type check.
+// PipRow's compact form is opt-in: the meter stays the default, writes no form and keeps its rules. That a form
+// outside PipRowForm fails the type check is formTypes.test.ts's row.
 import assert from 'node:assert/strict';
-import {readFileSync, writeFileSync} from 'node:fs';
+import {readFileSync} from 'node:fs';
 import {join} from 'node:path';
 import {after, describe, it} from 'node:test';
-import {spawnSync} from 'node:child_process';
 import {SUITE_ROOT, bundled} from './bundled.ts';
 
 interface Element { props: {className: string; 'data-form'?: string; children: {props: {'data-on': string}}[]} }
@@ -13,7 +12,7 @@ interface PipRowModule {
   PipRowForm: {METER: string; COMPACT: string};
 }
 
-const {module, directory: dir, dispose} = await bundled<PipRowModule>(['src/react/PipRow.tsx']);
+const {module, dispose} = await bundled<PipRowModule>(['src/react/PipRow.tsx']);
 after(dispose);
 
 describe('PipRow forms', () => {
@@ -39,22 +38,5 @@ describe('PipRow forms', () => {
     const compact = `.bd-piprow[data-form="${module.PipRowForm.COMPACT}"]`;
     assert.ok(css.includes(`${compact} { width: auto; }`));
     assert.ok(css.includes(`${compact} > .bd-pip { flex: none; width: 8px; }`));
-  });
-
-  it('refuses a form outside PipRowForm at the type check', () => {
-    const {compilerOptions} = JSON.parse(readFileSync(join(SUITE_ROOT, 'tsconfig.json'), 'utf8'));
-    writeFileSync(join(dir, 'tsconfig.json'), JSON.stringify({files: ['usage.tsx'], compilerOptions}));
-    const check = (form: string) => {
-      const pipRow = JSON.stringify(join(SUITE_ROOT, 'src/react/PipRow.tsx'));
-      writeFileSync(join(dir, 'usage.tsx'), `import {PipRow, PipRowForm} from ${pipRow};\n` +
-        `export const row = <PipRow value={1} max={3} segments={3} form={${form}} />; void PipRowForm;\n`);
-      return spawnSync(join(SUITE_ROOT, 'node_modules/.bin/tsc'),
-        ['-p', join(dir, 'tsconfig.json'), '--pretty', 'false'], {encoding: 'utf8'});
-    };
-    const valid = check('PipRowForm.COMPACT');
-    assert.equal(valid.status, 0, valid.stdout + valid.stderr);
-    const invalid = check("'wide'");
-    assert.notEqual(invalid.status, 0);
-    assert.deepEqual(invalid.stdout.match(/error TS\d+/g), ['error TS2322']);
   });
 });

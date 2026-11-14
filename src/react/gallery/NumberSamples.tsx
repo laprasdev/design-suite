@@ -2,7 +2,8 @@ import React, {useState} from 'react';
 import {Knob, KnobPreset, KnobLayout, KnobLabelStyle, KnobValueType}
   from '../../synth/components/synth/Knob.tsx';
 import {DualTickRangeKnob} from '../../synth/components/synth/lifecycle/DualTickRangeKnob.tsx';
-import {Slider, SliderForm} from '../../synth/components/synth/Slider.tsx';
+import {Slider} from '../../synth/components/synth/Slider.tsx';
+import {SliderForm} from '../inputs/sliderForm.ts';
 import {ModuleNumberInput} from '../inputs/ModuleNumberInput.tsx';
 import {ModuleField} from '../../synth/components/synth/ModuleGrid.tsx';
 import {FieldEmphasis, NO_VALUE} from '../../fields.ts';

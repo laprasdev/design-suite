@@ -1,5 +1,5 @@
 import {ModelStageRefusal} from './refusal.ts';
-import {modelIsNamed as named, modelIsRecord as object} from './recordModel.ts';
+import {isNonEmptyString as named, isRecord as object} from '../../valueChecks.ts';
 // The engine's animation layers for one actor, validated from unknown input. Clip lookup belongs to playback.
 // Engine cross-fade weights are floats: each weight's range and a layer's sum are compared within this tolerance.
 export const MODEL_PREVIEW_WEIGHT_TOLERANCE = 1e-6;
