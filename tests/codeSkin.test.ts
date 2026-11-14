@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {test} from 'node:test';
 import {hexToRgba} from '../src/color.ts';
+import {ApplicationElement} from '../src/react/applicationElements.ts';
 import {createSkinTheme} from '../src/skinTheme.ts';
 import {SKIN_NAMES} from '../src/skins.ts';
 import {createTheme, themeVariables, WASH_ALPHA} from '../src/theme.ts';
@@ -19,11 +20,16 @@ test('every theme washes code in its own text colour, and a theme may set the wa
   assert.equal(createTheme({colors: {codeWash: '#123456'}}).colors.codeWash, '#123456');
 });
 
-test('the code skin reads its wash, border, radius, colour, face and size from theme variables only', () => {
+// Only inside a suite application root, where a host applies the theme; a page outside one keeps its own code.
+const IN_ROOT = `:where(${ApplicationElement.ROOT.selector}) `;
+
+test('the code skin sits inside the application root and reads its look from theme variables only', () => {
   const css = readFileSync(FOUNDATION, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
-  const bodies = [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)]
-    .filter(([, selector]) => /(?:^|[\s,(])(?:code|pre)(?![\w-])/.test(selector)).map(([, , body]) => body);
-  assert.ok(bodies.length > 0, 'foundation.css holds the code skin');
+  const rules = [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)]
+    .filter(([, selector]) => /(?:^|[\s,(])(?:code|pre)(?![\w-])/.test(selector));
+  assert.ok(rules.length > 0, 'foundation.css holds the code skin');
+  assert.deepEqual(rules.map(([, selector]) => selector.trim()).filter(selector => !selector.startsWith(IN_ROOT)), []);
+  const bodies = rules.map(([, , body]) => body);
   const used = new Set(bodies.flatMap(body => [...body.matchAll(/var\((--[\w-]+)\)/g)].map(([, name]) => name)));
   const variables = themeVariables(createTheme());
   assert.deepEqual(SKIN_VARIABLES.filter(name => !used.has(name)), []);
