@@ -131,8 +131,9 @@ it opens from: the panel and the anchor are its region, and the region also hold
 regions of the `Modal`s anchored inside its panel, such as a list opened from a detail.
 Dismissed with focus in its panel, an anchored `Modal` hands focus back to its anchor. An
 anchored `Modal` may also name a `group`, of which one is open at a time: opening one
-dismisses the others. `HoverDetail` composes the anchored placement for its tooltip or
-dialog content. Every placement keeps the same surface and the module radius token.
+dismisses the others. `HoverDetail`, `ListboxSelect`, the synth `Enum`'s grid picker and a
+`Knob`'s refused number compose the anchored placement, the first three with their trigger
+as the anchor. Every placement keeps the same surface and the module radius token.
 `MODAL_PLACEMENT_ATTRIBUTE` carries the placement on the panel and its frame for styling
 and browser checks, and `panelRef` exposes the panel for measurement or focus.
 
@@ -160,6 +161,22 @@ capture listeners and native listeners on the elements between the focus and the
 application root already have. A window capture listener added before the first `Modal`
 opened sees every Escape. A dismissible viewport `Modal` also closes on its backdrop;
 content may supply its own actions.
+
+The page's own keys and presses have one owner for each thing they do: `modalDismissal.ts`
+(how an open `Modal` is dismissed), `controlCancel.ts` (Escape cancelling what a control
+is in the middle of, a drag, a move, a gesture or an edit, and marking the key handled so
+a `Modal` around the control stays open), `useDragSession.ts` (a drag from its press to
+its end), `panKey.ts` (Space held to pan a canvas) and `ThemeMoon` (Shift over the moon
+revealing the theme swatches). `check:forms` reads `src` and fails if any other file
+listens on the document, the window or the global object for a key going down, up or
+pressed, a pointer, mouse or touch press or release, or a click, or if any file but the
+first two names Escape. It reads listeners on the page itself, not on an element.
+`HoverDetail` keeps a document `dragstart` listener that keeps details from opening while
+a drag lasts, which is about opening, not dismissal; it also closes a hover detail when
+the pointer leaves or focus moves away. `ThemeMoon`'s swatches close on idle and have no
+Escape: they are choices fanned from the moon without a panel, and giving them the rule
+would make them an anchored `Modal` with its surface, which changes the approved reveal
+and is the owner's to decide.
 
 Give a `Modal` a `title` and it lays its children out on one grid: the title, which
 names the dialog, then each `ModalRow` (a label and its control on two shared columns,
