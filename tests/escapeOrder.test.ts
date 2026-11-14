@@ -43,6 +43,23 @@ describe('Escape',()=>{
   }
  });
 
+ it('cancels what is under way before a Modal decides, whichever began hearing keys first',async()=>{
+  for(const first of ['the dialog','what is under way'] as const) {
+   const {open,closed,controls,dispose}=await scene();
+   try {
+    let cancelled=0;
+    const underWay=()=>controls.useEscapeCancel(controls.EscapeCancel.UNDER_WAY,()=>{cancelled++;return true;});
+    if(first==='what is under way')underWay();
+    open('dialog',panel(page,1),ModalPlacement.VIEWPORT);
+    // With nothing on the page reading keys before the dialog opened, a reader mounting inside it later.
+    if(first==='the dialog')underWay();
+    press(null,[]);
+    assert.equal(cancelled,1,`${first} first: cancelled`);
+    assert.deepEqual(closed,[],`${first} first: the dialog stays open`);
+   } finally {dispose();}
+  }
+ });
+
  it('closes a dialog over a selection, and keeps the selection',async()=>{
   for(const focus of ['the dialog','nothing'] as const) {
    const {open,closed,controls,dispose}=await scene();
