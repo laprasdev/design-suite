@@ -24,6 +24,15 @@ jobs:
         with:
           node-version: 24
       - run: npm ci --ignore-scripts --no-audit --no-fund
+      # npm test reads Modal widths in Playwright's headless Chromium shell, kept between runs of one Playwright version.
+      - if: matrix.script == 'test'
+        id: playwright
+        run: echo "version=$(node -p "require('./scripts/gateTools/package.json').devDependencies.playwright")" >> "$GITHUB_OUTPUT"
+      - if: matrix.script == 'test'
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: ms-playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
       - run: npm run "$SCRIPT"
         env:
           SCRIPT: ${{ matrix.script }}

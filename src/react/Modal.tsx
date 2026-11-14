@@ -1,13 +1,13 @@
 /* Modal owns the shell for dialogs, contained teaching panels and anchored help.
-   Placement changes where it sits; every form keeps the same themed surface. */
+   Placement changes where it sits and width how wide; every form keeps the same themed surface. */
 import { useEffect, useLayoutEffect, useRef, useState, type HTMLAttributes, type ReactNode, type RefObject, type SyntheticEvent, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import {focusableControls} from './focusable.ts';
 import {LayoutDimensions} from '../layout.ts';
 import {KEPT_ROOM_ATTRIBUTE,SCROLL_STEP_PX,keptRoom,modalGrowthLimit} from './modalRoom.ts';
 import { cssRect } from './cssZoom.ts';
 import { ModalLayout, type ModalTitleProps } from './ModalLayout.tsx';
-import { ModalElement, MODAL_TITLED_ATTRIBUTE, MODAL_PLACEMENT_ATTRIBUTE, ModalPlacement,
-  type ModalPlacementProps } from './modalElements.ts';
+import { ModalElement, ModalForm, ModalPlacement, modalShape,
+  type ModalFormProps, type ModalPlacementProps } from './modalElements.ts';
 import { useModalDismissal } from './modalDismissal.ts';
 const FADE_MS = 200;
 
@@ -161,7 +161,6 @@ function useHeldTop(mounted: boolean, keepRoomFor: string | undefined, backdrop:
 }
 
 export type ModalProps = ModalTitleProps & Omit<HTMLAttributes<HTMLDivElement>, 'title'|'children'> & {
-  form?: "dialog" | "media";
   open: boolean;
   onClose?: () => void;
   dismissible?: boolean;
@@ -174,12 +173,12 @@ export type ModalProps = ModalTitleProps & Omit<HTMLAttributes<HTMLDivElement>, 
   className?: string;
   children: ReactNode;
   panelRef?: RefObject<HTMLDivElement>;
-} & ModalPlacementProps;
+} & ModalFormProps & ModalPlacementProps;
 export function Modal({
-  form = "dialog", open, onClose, dismissible = true, dismissOnContent = false, blocking = false, returnFocusRef,
+  open, onClose, dismissible = true, dismissOnContent = false, blocking = false, returnFocusRef,
   ariaLabel, labelledBy, keepRoomFor, className = "", title, actions, children,
   placement = ModalPlacement.VIEWPORT, anchor, group, panelRef, role = 'dialog',
-  onClick, onKeyDown, tabIndex, style, ...attributes
+  form = ModalForm.DIALOG, width, frameInset, top, onClick, onKeyDown, tabIndex, style, ...attributes
 }: ModalProps) {
   const [mounted, visible] = useFadeMount(open);
   const backdrop = useRef<HTMLDivElement>(null), ownDialog = useRef<HTMLDivElement>(null), dialog = panelRef ?? ownDialog;
@@ -213,6 +212,7 @@ export function Modal({
   }, [blocked]);
 
   if (!mounted) return null;
+  const shape = modalShape({form, placement, titled: title !== undefined, width, frameInset, top});
   const clickPanel: NonNullable<ModalProps['onClick']> = event => {
     event.stopPropagation();
     onClick?.(event);
@@ -222,9 +222,9 @@ export function Modal({
   };
   const panel = <div {...attributes} ref={dialog}
     className={`${ModalElement.PANEL.className}${className ? " " + className : ""}`}
-    style={{'--sd-modal-radius':`${LayoutDimensions.radius.module}px`,...style}}
+    style={{'--sd-modal-radius':`${LayoutDimensions.radius.module}px`,...shape.panelStyle,...style}}
     role={role} data-modal-form={form} aria-modal={viewport && role === 'dialog' ? true : undefined} data-dismissible={interactive}
-    {...{[MODAL_TITLED_ATTRIBUTE]: title !== undefined, [MODAL_PLACEMENT_ATTRIBUTE]: placement}}
+    {...shape.panel}
     aria-label={ariaLabel ?? title} aria-labelledby={labelledBy} tabIndex={tabIndex ?? (blocking ? -1 : undefined)}
     onClick={clickPanel} onPointerDownCapture={viewport ? hold : undefined}
     onKeyDownCapture={viewport ? hold : undefined} onClickCapture={viewport ? opened : undefined}
@@ -232,5 +232,5 @@ export function Modal({
     {title === undefined ? children : <ModalLayout title={title} actions={actions}>{children}</ModalLayout>}
   </div>;
   return anchored ? panel : <div ref={backdrop} className={`${ModalElement.FRAME.className}${visible ? " sd-in" : ""}`}
-    {...{[MODAL_PLACEMENT_ATTRIBUTE]: placement}} onClick={interactive ? close : undefined}>{panel}</div>;
+    {...shape.frame} onClick={interactive ? close : undefined}>{panel}</div>;
 }

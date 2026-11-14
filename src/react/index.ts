@@ -17,8 +17,9 @@ export { PipRow, PipRowForm, type PipRowFormValue, type PipRowProps } from "./Pi
 export { Button, type ButtonProps, type ButtonVariant } from "./Button.tsx";
 export { Modal, type ModalProps } from './Modal.tsx';
 export { ModalRow, type ModalRowProps, type ModalTitleProps } from './ModalLayout.tsx';
-export { ModalElement, ModalPlacement, MODAL_TITLED_ATTRIBUTE, MODAL_ROW_LABELLED_ATTRIBUTE,
-  MODAL_PLACEMENT_ATTRIBUTE } from './modalElements.ts';
+export { ModalElement, ModalForm, ModalPlacement, ModalWidth, ModalFrameInset, MODAL_TITLED_ATTRIBUTE,
+  MODAL_ROW_LABELLED_ATTRIBUTE, MODAL_PLACEMENT_ATTRIBUTE, type ModalWidthValue, type ModalFrameInsetValue,
+} from './modalElements.ts';
 export { PlayerIcon, PlayerStatusRings, type PlayerIconProps, type PhotoRing, type StatusRing, type RingSegment,
   type Hand, type ActiveHand } from './PlayerIcon.tsx';
 export { PlayerIconElement, PlayerIconSideElement, type PlayerIconSide } from './playerIconElements.ts';

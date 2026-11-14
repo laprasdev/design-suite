@@ -1,7 +1,8 @@
 :where(:root) {
  --header-control-compact:26px;--header-control:var(--header-control-compact);
  --header-gap-compact:8px;--header-gap:var(--header-gap-compact);
- --header-icon-size:20px;--page-gutter:0px;--popover-layer:10000;
+ /* Outside a page surface (page-bar.css), a page keeps the theme's inset. */
+ --header-icon-size:20px;--page-gutter:0px;--page-inset:var(--inset);--popover-layer:10000;
  --label-action-size:12px;--surface-chrome:var(--card);
 }
 /* Reset plain buttons, but not composable ones. `:where` keeps the exclusion at zero
