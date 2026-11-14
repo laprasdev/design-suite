@@ -15,8 +15,13 @@ const OWNERS: Readonly<Record<string,string>>={
  'a key going down or up on the page':'src/react/pageKeys.ts',
 };
 const NAMES_ESCAPE=/['"]Escape['"]/;
-const LISTENS_ON_THE_PAGE=new RegExp(String.raw`(?<![\w.])(?:(?:document|window|globalThis)\.)?addEventListener\(\s*`
- +String.raw`['"](?:key(?:down|up|press)|(?:pointer|mouse|touch)(?:down|up|start|end)|click)['"]`);
+// A listener on the page names its receiver (the document, its body or root element, the window or the global object)
+// or none, and its event literally.
+const PAGE=String.raw`document\.body|document\.documentElement|document|window|globalThis|self`;
+const KEYS_AND_PRESSES=['key(?:down|up|press)','(?:pointer|mouse|touch)(?:down|up|start|end)','(?:dbl|aux)?click',
+ 'contextmenu'].join('|');
+const LISTENS_ON_THE_PAGE=new RegExp(String.raw`(?<![\w.])(?:(?:${PAGE})\.)?addEventListener\(\s*`
+ +`['"](?:${KEYS_AND_PRESSES})['"]`);
 
 it('gives every key and press listened for on the page one owner per concept, and Escape two',()=>{
  const sources=readdirSync(join(SUITE_ROOT,'src'),{recursive:true,encoding:'utf8'})
