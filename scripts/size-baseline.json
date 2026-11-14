@@ -29,7 +29,7 @@
     "src/skins.ts": {"lines":82,"longLines":6,"importLines":17},
     "src/synth/components/synth/40-IntegerIncrementer.tsx": {"lines":112,"longLines":6,"importLines":5},
     "src/synth/components/synth/Boolean.tsx": {"lines":209,"longLines":4,"importLines":9},
-    "src/synth/components/synth/Enum.tsx": {"lines":725,"longLines":27,"importLines":9},
+    "src/synth/components/synth/Enum.tsx": {"lines":722,"longLines":26,"importLines":11},
     "src/synth/components/synth/Graph.tsx": {"lines":662,"longLines":2,"importLines":5},
     "src/synth/components/synth/Knob.tsx": {"lines":576,"longLines":12,"importLines":24},
     "src/synth/components/synth/Layout.tsx": {"lines":151,"longLines":8,"importLines":4},
