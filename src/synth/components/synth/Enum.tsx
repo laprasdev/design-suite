@@ -11,63 +11,9 @@ import { useLongPress } from './base/index.ts';
 import { paddingCSS } from '../../design/Composable.ts';
 import { CompositionWrap, type HciComposableStyle } from '../../design/designTokensLoader.ts';
 
-// =====================================================
-// UNIFIED ENUM COMPONENT
-// Replaces: BaseFullDisplayEnum, CyclingEnum, MultiSelectEnum
-// =====================================================
-
-export type EnumColor = 'primary' | 'secondary' | 'tertiary' | 'cyan' | 'pink' | 'green';
-export type EnumVariant = 'full' | 'cycling' | 'multi' | 'options';
-export type EnumDisplayMode = 'shared' | 'distinct';
-
-export interface EnumOption<T = string> {
-  value: T;
-  label?: string;
-  icon?: React.ReactNode;
-  image?: string;
-  tooltip?: string;
-}
-
-// =====================================================
-// BASE ENUM PROPS
-// =====================================================
-interface BaseEnumProps<T = string> {
-  options: EnumOption<T>[];
-  className?: string;
-  color?: EnumColor;
-  layout?: HciComposableStyle;
-  optionComposition?: HciComposableStyle;
-  disabled?: boolean;
-}
-
-// =====================================================
-// SINGLE SELECT PROPS (full, cycling)
-// =====================================================
-export interface SingleSelectEnumProps<T = string> extends BaseEnumProps<T> {
-  value: T;
-  onChange?: (value: T) => void;
-  variant?: 'full' | 'cycling' | 'options';
-  /** Size in px for cycling variant button (default: uses SIZES.enumMinWidth) */
-  size?: number;
-  /** How many columns the options form lays its choices in. */
-  columns?: number;
-  /** The options form with several lit at once, for a flags value. Takes the place of `value`. */
-  litValues?: T[];
-}
-
-// =====================================================
-// MULTI SELECT PROPS
-// =====================================================
-export interface MultiSelectEnumProps<T = string> extends BaseEnumProps<T> {
-  values: T[];
-  onChange?: (values: T[]) => void;
-  primaryValue?: T;
-  variant: 'multi';
-  displayStyle?: 'default' | 'full';
-}
-
-// Union type for all enum props
-export type EnumProps<T = string> = SingleSelectEnumProps<T> | MultiSelectEnumProps<T>;
+export type {EnumColor, EnumVariant, EnumDisplayMode, EnumOption, SingleSelectEnumProps, MultiSelectEnumProps, EnumProps}
+  from '../../../react/inputs/enumProps.ts';
+import type {EnumOption, SingleSelectEnumProps, MultiSelectEnumProps, EnumProps} from '../../../react/inputs/enumProps.ts';
 
 // Type guard for multi-select
 function isMultiSelect<T>(props: EnumProps<T>): props is MultiSelectEnumProps<T> {

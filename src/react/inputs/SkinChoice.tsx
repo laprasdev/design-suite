@@ -1,5 +1,5 @@
 import React from 'react';
-import type {SingleSelectEnumProps} from '../../synth/components/synth/Enum.tsx';
+import type {SingleSelectEnumProps} from './enumProps.ts';
 import {SegmentedControl} from '../SegmentedControl.tsx';
 import {Cycle} from '../Cycle.tsx';
 import {ListboxSelect} from '../ListboxSelect.tsx';

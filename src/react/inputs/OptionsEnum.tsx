@@ -2,7 +2,7 @@ import React from 'react';
 import {useStyle, type StyleTheme} from '../../synth/StyleContext.tsx';
 import {getColorScheme, hexToRgba, resolveColorType} from '../../color.ts';
 import {D, F, C, O, T, TransitionKeys, applyCasing} from '../../synth/design/index.ts';
-import type {SingleSelectEnumProps, EnumOption} from '../../synth/components/synth/Enum.tsx';
+import type {SingleSelectEnumProps, EnumOption} from './enumProps.ts';
 import {skinForm} from '../../skinForms.ts';
 import {SkinKind} from '../../skinKinds.ts';
 import {SkinChoice} from './SkinChoice.tsx';
