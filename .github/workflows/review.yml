@@ -1,0 +1,113 @@
+name: Review
+# The required code review. Claude reviews the pull request against the shared rules and the reviewer's house style,
+# the workflow posts its findings as one review, and the "claude review" status on the head commit fails on any
+# blocker or major finding.
+#
+# It runs on pull_request_target, so this workflow, the reviewer's instructions and the report script come from the
+# base branch: a pull request can't change what reviews it. It never runs the pull request's code. The reviewer gets
+# read-only file tools, and the Check workflow runs the code without secrets.
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened, ready_for_review]
+    branches: [main]
+concurrency:
+  group: review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+permissions:
+  contents: read
+  pull-requests: write
+  statuses: write
+jobs:
+  review:
+    # A draft gets no review and so no verdict: it can't merge, and marking it ready starts its review.
+    if: ${{ !github.event.pull_request.draft }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPO: ${{ github.repository }}
+      PR_NUMBER: ${{ github.event.pull_request.number }}
+      HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      REVIEW_BODY: ${{ github.workspace }}/.review-input/review.md
+    steps:
+      - name: Check out the base branch, which holds the reviewer's instructions and the report script
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Check out the pull request head, to read and never run
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: pr
+          persist-credentials: false
+      - name: Check out the shared rules
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: laprasdev/agent-rules
+          token: ${{ secrets.AGENT_RULES_TOKEN }}
+          path: .agent-rules
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+      - name: Gather the reviewer's rules, the diff and the description
+        id: input
+        run: |
+          mkdir .review-input
+          cat .agent-rules/AGENTS.md scripts/reviewGate/reviewer.md > .review-input/rules.md
+          gh pr diff "$PR_NUMBER" --repo "$REPO" > .review-input/diff.patch
+          gh pr view "$PR_NUMBER" --repo "$REPO" --json title,body,author,baseRefName,headRefName \
+            > .review-input/pull-request.json
+          echo "schema=$(node scripts/reviewGate/schema.ts)" >> "$GITHUB_OUTPUT"
+      - name: Review
+        id: review
+        uses: anthropics/claude-code-action@f3b070c88125d33dbae5653df5f143101d4ea9dc # v1.0.276
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          # The workflow's own token: Claude posts nothing itself, so the Claude GitHub App isn't needed.
+          github_token: ${{ github.token }}
+          # Instruction files in the pull request head are under review, not instructions to the reviewer.
+          settings: '{"claudeMdExcludes": ["${{ github.workspace }}/pr/**"]}'
+          prompt: |
+            Review pull request #${{ github.event.pull_request.number }} of ${{ github.repository }} at head commit
+            ${{ github.event.pull_request.head.sha }}, which targets ${{ github.event.pull_request.base.ref }}.
+            The pull request review instructions in your system prompt say what you have and how to judge it.
+            Return your findings and verdict as the structured output.
+          claude_args: |
+            --model claude-fable-5-1
+            --fallback-model claude-opus-5-5
+            --effort max
+            --max-budget-usd 20
+            --permission-mode default
+            --tools "Read,Glob,Grep"
+            --disallowedTools "Read(.git/**)"
+            --append-system-prompt-file ${{ github.workspace }}/.review-input/rules.md
+            --json-schema '${{ steps.input.outputs.schema }}'
+      - name: Write the review and its verdict
+        id: report
+        env:
+          REVIEW_OUTPUT: ${{ steps.review.outputs.structured_output }}
+          HEAD_DIR: pr
+        run: node scripts/reviewGate/report.ts
+      - name: Post the review
+        id: post
+        run: >-
+          gh api "repos/$REPO/pulls/$PR_NUMBER/reviews"
+          -f commit_id="$HEAD_SHA" -f event=COMMENT -F body=@"$REVIEW_BODY"
+      - name: Record the verdict on the head commit
+        if: ${{ !cancelled() }}
+        env:
+          POSTED: ${{ steps.post.outcome }}
+          APPROVED: ${{ steps.report.outputs.approved }}
+          VERDICT: ${{ steps.report.outputs.verdict }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          case "$POSTED/$APPROVED" in
+            success/true) state=success description="$VERDICT" ;;
+            success/false) state=failure description="$VERDICT" ;;
+            *) state=error description="The review did not finish; the run says why." ;;
+          esac
+          gh api "repos/$REPO/statuses/$HEAD_SHA" -f state="$state" -f context="claude review" \
+            -f description="$description" -f target_url="$RUN_URL"
+          test "$state" = success

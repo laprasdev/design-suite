@@ -1,0 +1,13 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": [
+      "node"
+    ],
+    "allowJs": true
+  },
+  "include": [
+    "scripts/reviewGate",
+    "tests/reviewGate.test.ts"
+  ]
+}
