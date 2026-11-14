@@ -6,11 +6,10 @@
     zoom twice in WebKit. Sizes come from the bar's height: a typical sprite stands 1/φ² of it and the
     chat 1/φ³, so together they fill 1/φ. Sprites keep their art's own proportions
     in one image size, set so a typical one fills half its image. */
- --participant-phi:1.618;
- --participant-typical-height:calc(var(--participant-height) / var(--participant-phi) / var(--participant-phi));
+ --participant-typical-height:calc(var(--participant-height) / var(--phi) / var(--phi));
  --participant-typical-fill:.5;
  --participant-image-size:calc(var(--participant-typical-height) / var(--participant-typical-fill) * var(--bar-participant-scale,1));
- --participant-chat-height:calc(var(--participant-typical-height) / var(--participant-phi));
+ --participant-chat-height:calc(var(--participant-typical-height) / var(--phi));
  --participant-roam-time:28s;
  --participant-space-time:.62s;
  --participant-clearance:var(--bar-participant-inset,calc(var(--field-gap) * 2));
@@ -18,7 +17,7 @@
  column-gap:var(--field-gap);overflow:visible;clip-path:inset(calc(-1 * var(--header-control)) 0 0);
  transition:grid-template-columns var(--participant-space-time) ease-in-out;
 }
-.bar-participant-group { --participant-size:min(var(--bar-participant-size,calc(var(--participant-image-size) * var(--participant-phi))),calc(var(--bar-participant-fit,var(--participant-width)) / var(--participant-count)));position:relative;grid-column:1;justify-self:end;width:min(var(--participant-cluster-width,calc(var(--participant-width) * .2)),calc(var(--participant-count) * var(--participant-size)),calc(100% - var(--participant-clearance)));height:100%; }
+.bar-participant-group { --participant-size:min(var(--bar-participant-size,calc(var(--participant-image-size) * var(--phi))),calc(var(--bar-participant-fit,var(--participant-width)) / var(--participant-count)));position:relative;grid-column:1;justify-self:end;width:min(var(--participant-cluster-width,calc(var(--participant-width) * .2)),calc(var(--participant-count) * var(--participant-size)),calc(100% - var(--participant-clearance)));height:100%; }
 .bar-participant-group+ .bar-participant-group { grid-column:3;justify-self:start; }
 .app-root .bar-participant {
  --participant-cycle:calc(var(--participant-roam-time) + var(--participant-index) * 3s);
