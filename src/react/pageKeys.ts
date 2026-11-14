@@ -35,19 +35,3 @@ export function onPageKey(way: PageKeyValue, moment: KeyMomentValue, listener: K
   if (!hearings.size) stopListening();
  };
 }
-
-// Whether Space is held: on a canvas that selects by dragging, Space and a drag pans instead. A Space typed into a
-// field is the field's and holds nothing. Heard from first use.
-const PAN_KEY = ' ';
-let held = false, listening = false;
-const TYPING = 'input,textarea,select,[contenteditable="true"]';
-const typing = (target: EventTarget | null) => target instanceof Element && !!target.closest(TYPING);
-export function isPanKeyHeld() {
- if (!listening && typeof window !== 'undefined') {
-  listening = true;
-  onPageKey(PageKey.DOWN, KeyMoment.LAST, e => { if (e.key === PAN_KEY && !typing(e.target)) held = true; });
-  onPageKey(PageKey.UP, KeyMoment.LAST, e => { if (e.key === PAN_KEY) held = false; });
-  window.addEventListener('blur', () => { held = false; });
- }
- return held;
-}

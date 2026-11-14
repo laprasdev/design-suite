@@ -171,8 +171,8 @@ drag from its press to its end). A listener hears the key at a moment: `FIRST` a
 `SECOND` in the window's capture phase, before anything on the page, or `LAST` in its
 bubble phase, after everything on the page that let the key pass. Everything else that
 reads a key on the page hears it through `pageKeys.ts`: a drag session's keys, `FIRST`; a
-`Modal`'s Escape, `SECOND`; Space held to pan a canvas, which a Space typed into a field
-does not hold, and `ThemeMoon`'s Shift over the moon and its idle reset, `LAST`. Only
+`Modal`'s Escape, `SECOND`; Space held to pan a canvas (`panKey.ts`), which a Space typed
+into a field does not hold, and `ThemeMoon`'s Shift over the moon and its idle reset, `LAST`. Only
 `modalDismissal.ts` and `controlCancel.ts` name Escape. `controlCancel.ts` cancels what is
 under way, a drag, a move or a gesture, `FIRST`, and marks the key handled so a `Modal`
 around it stays open. It clears a selection `LAST`, so a dialog over the selection closes,

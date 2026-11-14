@@ -7,7 +7,7 @@ export {
   type GraphGroup, type GraphGroupResize, type GroupOutlet, type GroupOutlets,
   type GroupEdge, type GroupResizePhase, type TwistTie, graphEdgeId, movedGraph,
 } from "./NodeGraph.tsx";
-export { isPanKeyHeld } from "./pageKeys.ts";
+export { isPanKeyHeld } from "./panKey.ts";
 export { bezierPath, edgePoint, linkPath, verticalBezierPath, type NodeBox, type NodeSide } from "./geometry.ts";
 export { Label, Glyph, Divider, LightBox, type LabelKind } from "./accents.tsx";
 export { MonthGrid, type DayCell, type MonthGridProps } from "./Calendar.tsx";
