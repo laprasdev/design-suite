@@ -22,6 +22,7 @@ import {KnobFace, KnobLineIndicator, HorseshoeRing} from '../../../react/KnobFac
 import {Modal} from '../../../react/Modal.tsx';
 import {ModalPlacement} from '../../../react/modalElements.ts';
 import {Label} from '../../../react/accents.tsx';
+import {cancelsOnEscape} from '../../../react/controlCancel.ts';
 import { useKnobDrag, KnobInnerCircle } from './base/index.ts';
 import { useTooltipSafe } from './TooltipContext.tsx';
 import { ModulationRings } from './ModulationRings.tsx';
@@ -187,8 +188,7 @@ export function EditableValue({ text, value, color, style, onChange, min, max, r
   /** One press opens the box, as its text cursor promises. Without it, as on the old grid, a double-click does. */
   opensOnPress?: boolean;
 }) {
-  const [editing, setEditing] = useState(false);
-  const [refused, setRefused] = useState<string | null>(null);
+  const [editing, setEditing] = useState(false), [refused, setRefused] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const opensWith = value === undefined ? text.replace(/[^0-9.\-]/g, '') : String(value);
 
@@ -203,7 +203,7 @@ export function EditableValue({ text, value, color, style, onChange, min, max, r
   };
   const onKey = (event: React.KeyboardEvent) => {
     if (event.key === 'Enter') commit();
-    else if (refusesOutside && event.key === 'Escape') { event.stopPropagation(); setEditing(false); }
+    else cancelsOnEscape(event, () => { if (!refusesOutside) return false; setEditing(false); return true; });
   };
 
   if (!editing || !onChange) return <div data-editable-value style={refusesOutside ? { ...style, position: 'relative' } : style} onClick={opensOnPress ? () => setEditing(true) : undefined} onDoubleClick={opensOnPress ? undefined : () => setEditing(true)}>

@@ -1,5 +1,6 @@
 import React, { useRef, type PointerEvent } from "react";
 import { Button } from "./Button.tsx";
+import { cancelsOnEscape } from "./controlCancel.ts";
 import type { GraphGroup, GraphGroupResize, GroupEdge } from "./nodeGraphTypes.ts";
 
 const EDGES = {
@@ -25,6 +26,12 @@ export function GroupResize({ group, onResize, step }: {
     else if (finish) onResize(group.id, size, edge, "cancel");
     if (finish) drag.current = null;
   };
+  // A drag in progress goes back to the size it began at.
+  const cancel = (edge: GroupEdge) => {
+    if (!drag.current) return false;
+    onResize(group.id, { w: drag.current.w, h: drag.current.h }, edge, "cancel"); drag.current = null;
+    return true;
+  };
   return (Object.keys(EDGES) as GroupEdge[]).map(edge =>
     <Button key={edge} variant="text" className="bd-node-group-resize" data-edge={edge}
     aria-label={`Reshape ${group.label} from ${edge}`} title={`Drag ${edge} edge to reflow nodes · Arrows to reshape`}
@@ -38,16 +45,8 @@ export function GroupResize({ group, onResize, step }: {
       onResize(group.id, { w: group.w, h: group.h }, edge, "start");
     }}
     onPointerMove={event => resize(event, edge)} onPointerUp={event => resize(event, edge, true)}
-    onPointerCancel={event => {
-      event.stopPropagation();
-      if (drag.current) onResize(group.id, { w: drag.current.w, h: drag.current.h }, edge, "cancel");
-      drag.current = null;
-    }} onKeyDown={event => {
-      if (event.key === "Escape" && drag.current) {
-        event.preventDefault(); event.stopPropagation();
-        onResize(group.id, { w: drag.current.w, h: drag.current.h }, edge, "cancel"); drag.current = null;
-        return;
-      }
+    onPointerCancel={event => { event.stopPropagation(); cancel(edge); }} onKeyDown={event => {
+      if (cancelsOnEscape(event, () => cancel(edge))) return;
       const { axis, sign: edgeSign } = EDGES[edge];
       const direction = axis === "w" ? { ArrowLeft: -1, ArrowRight: 1 } : { ArrowUp: -1, ArrowDown: 1 };
       const sign = direction[event.key as keyof typeof direction];

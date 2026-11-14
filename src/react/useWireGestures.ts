@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type RefObject } from "react";
+import { useEscapeCancel } from "./controlCancel.ts";
 import { nearestGroupOutlet } from "./groupOutlets.ts";
 import { isPanKeyHeld } from "./panKey.ts";
 import { snapTie } from "./wireGeometry.ts";
@@ -24,14 +25,15 @@ export function useWireGestures(
   const [sweep, setSweep] = useState<readonly GraphPoint[]>([]);
   const gesture = useRef<Gesture | null>(null), suppressClick = useRef(false);
   const cancelGesture = useRef<(() => void) | null>(null);
-  // Node selection can rerender this surface during the same Escape dispatch. Keep this listener installed.
+  useEscapeCancel(() => {
+    const cancel = cancelGesture.current;
+    if (!cancel) return false;
+    cancel(); return true;
+  });
   useEffect(() => {
-    const key = (event: KeyboardEvent) => { if (event.key === "Escape") cancelGesture.current?.(); };
     const cancel = () => cancelGesture.current?.();
-    window.addEventListener("keydown", key); window.addEventListener("blur", cancel);
-    return () => {
-      cancel(); window.removeEventListener("keydown", key); window.removeEventListener("blur", cancel);
-    };
+    window.addEventListener("blur", cancel);
+    return () => { cancel(); window.removeEventListener("blur", cancel); };
   }, []);
   const point = (event: { clientX: number; clientY: number }): GraphPoint => {
     const box = surface.current!.getBoundingClientRect(), scale = width / box.width;

@@ -1,11 +1,11 @@
 import React, { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { useEscapeCancel } from "./controlCancel.ts";
 import { isPanKeyHeld } from "./panKey.ts";
 import { movedGraph, type GraphNode, type GraphGroup, type NodeMoves } from "./nodeGraphTypes.ts";
 export type { NodeMove, NodeMoves } from "./nodeGraphTypes.ts";
 
 // A press that travels less than this many screen pixels is a press, not a drag.
 const STILL_PX = 4;
-const ESCAPE = "Escape";
 
 interface Box { x: number; y: number; w: number; h: number }
 interface Point { x: number; y: number }
@@ -48,14 +48,10 @@ export function useNodeMoving<N extends GraphNode>(
     suppressClick.current = true;
     setMarquee(null);
   };
-  useEffect(() => {
-    const key = (e: KeyboardEvent) => {
-      if (e.key !== ESCAPE || (!gesture.current && !selected.size)) return;
-      cancel(); setSelected(new Set());
-    };
-    window.addEventListener("keydown", key);
-    return () => window.removeEventListener("keydown", key);
-  }, [selected, onMovesChange]);
+  useEscapeCancel(() => {
+    if (!gesture.current && !selected.size) return false;
+    cancel(); setSelected(new Set()); return true;
+  });
   if (!onMovesChange) return {
     surface, marquee, nodeProps: (_id: string) => ({}), groupProps: (_id: string) => ({}), surfaceProps: {},
   };
