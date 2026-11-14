@@ -8,6 +8,8 @@ import {skinForm} from '../../skinForms.ts';
 import {SkinKind} from '../../skinKinds.ts';
 import {SkinChoice} from './SkinChoice.tsx';
 
+// Every choice in view on a module's grid, wrapping to fit. Given `columns`, the choices keep to that many column
+// lines; without, each takes the room its words need, and they wrap to another row rather than cut a word.
 export function OptionsEnum<Value>(props: Omit<SingleSelectEnumProps<Value>, 'variant'> & {
   appearance?: string; ariaLabel?: string;
 }) {

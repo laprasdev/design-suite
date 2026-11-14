@@ -30,14 +30,16 @@ function useEnumLabel() {
 
 /** What names an option to assistive technology: its tooltip, else its label, else its value. */
 const optionName = (option: EnumOption<unknown>) => option.tooltip ?? option.label ?? String(option.value);
+/** A native title only for an option drawn without its label (an icon or an image), never repeating a drawn label. */
+const undrawnTitle = (option: EnumOption<unknown>, labelDrawn: boolean) =>
+  labelDrawn ? undefined : option.tooltip ?? option.label;
 
 // =====================================================
 // UNIFIED ENUM COMPONENT
 // =====================================================
 export function Enum<T = string>(props: EnumProps<T>) {
   const { options, className = '', color = 'cyan', layout, optionComposition, disabled } = props;
-  const { getEffectiveStyle, advancedSettings } = useStyle();
-  const style = getEffectiveStyle();
+  const { getEffectiveStyle, advancedSettings } = useStyle(), style = getEffectiveStyle();
   const scheme = getColorScheme(resolveColorType(color), style);
 
   if (props.variant === 'cycling') {
@@ -234,10 +236,11 @@ function EnumChoices<T>({ options, selection, look, layout, optionComposition, d
       {options.map((option, index) => {
         const chosen = selection.isSelected(option.value);
         const drawn = look.choice(chosen, selection.isPrimary(option.value));
+        const labelled = !option.icon && !option.image;
         return (
           <button
             key={index} disabled={disabled} aria-pressed={chosen}
-            aria-label={optionName(option)} title={option.tooltip ?? option.label}
+            aria-label={optionName(option)} title={undrawnTitle(option, labelled)}
             onFocus={() => setTooltip(option.tooltip ?? option.label ?? null)} onBlur={() => setTooltip(null)}
             onClick={() => selection.onSelect(option.value)}
             onMouseEnter={() => option.tooltip && setTooltip(option.tooltip)}
@@ -248,7 +251,7 @@ function EnumChoices<T>({ options, selection, look, layout, optionComposition, d
             {option.icon && <div style={drawn.icon}>{option.icon}</div>}
             {option.image && <img src={option.image} alt={option.label || String(option.value)}
               style={{ width: '100%', height: '100%', objectFit: 'contain', ...drawn.image }} />}
-            {!option.icon && !option.image && <span style={drawn.label}>{fmtLabel(option)}</span>}
+            {labelled && <span style={drawn.label}>{fmtLabel(option)}</span>}
           </button>
         );
       })}
@@ -256,10 +259,6 @@ function EnumChoices<T>({ options, selection, look, layout, optionComposition, d
   );
 }
 
-// =====================================================
-// OPTIONS - Every choice in view on a module's grid, wrapping to fit
-// =====================================================
-// Given `columns`, the choices keep to that many column lines. Without, each takes the room its words need and they wrap to another row rather than cut a word.
 // =====================================================
 // FLOATING GRID PICKER - Opens above cycling enum on long-press
 // =====================================================
@@ -344,7 +343,7 @@ function CyclingButton<T>({ option, color, fontSize, style: buttonStyle, classNa
   const fmtLabel = useEnumLabel();
   return (
     <button className={className} style={buttonStyle} aria-label={optionName(option)}
-      title={option.tooltip ?? option.label} aria-haspopup="dialog" aria-expanded={expanded}
+      title={undrawnTitle(option, !option.icon)} aria-haspopup="dialog" aria-expanded={expanded}
       onClick={event => { if (event.detail === 0) onCycle(); }}
       onKeyDown={event => { if (event.key === 'ArrowDown') { event.preventDefault(); onOpen(); } }}>
       {option?.icon && <div style={{ color }}>{option.icon}</div>}
