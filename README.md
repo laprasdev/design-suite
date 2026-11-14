@@ -185,7 +185,8 @@ document, its body or root element, the window or the global object (`globalThis
 pressed, or any file but the two press owners for a pointer, mouse or touch press or
 release, a click, a double or auxiliary click, or a context menu. It also fails if any
 file but `controlCancel.ts` and `modalDismissal.ts` names Escape. It does not see a
-listener on an element, an event named by a variable or an `on…` property.
+listener on an element, on a receiver or for an event named by a variable (`const w =
+window; w.addEventListener(…)`), or set as an `on…` property.
 `HoverDetail` keeps a document `dragstart` listener that keeps details from opening while
 a drag lasts, which is about opening, not dismissal; it also closes a hover detail when
 the pointer leaves or focus moves away. `ThemeMoon`'s swatches close on idle and have no
