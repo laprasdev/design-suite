@@ -5,7 +5,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useStyle } from '../../StyleContext.tsx';
 import { getColorScheme, getBooleanStyles, getInsetShadow, type ColorType } from '../../../color.ts';
 import { D, F, C, DC, SYNTH_LABEL, TransitionKeys } from '../../design/index.ts';
-import { useTooltipSafe } from './TooltipContext.tsx';
+import { controlTooltip, useTooltipSafe } from './TooltipContext.tsx';
 import {HoverDetail} from '../../../react/HoverDetail.tsx';
 import {SelectionMark} from '../../../react/SelectionMark.tsx';
 
@@ -90,17 +90,8 @@ function CellBoolean({
   }, [variant, value, oscillateSpeed]);
 
   // Generate auto-tooltip if none provided
-  const getTooltipText = useCallback(() => {
-    if (tooltip) return tooltip;
-    // Look up the host's descriptions by label key
-    if (label) {
-      const key = label.toLowerCase().replace(/\s+/g, '').replace(/[^a-z]/g, '');
-      if (descriptions?.[key]) return descriptions[key];
-    }
-    // Generate default tooltip
-    const name = label || 'Toggle';
-    return `${name} — ${value ? 'Enabled' : 'Disabled'}`;
-  }, [tooltip, label, value, descriptions]);
+  const getTooltipText = useCallback(() => controlTooltip(tooltip, label, descriptions,
+    `${label || 'Toggle'} — ${value ? 'Enabled' : 'Disabled'}`), [tooltip, label, value, descriptions]);
 
   const handleMouseEnter = useCallback(() => {
     setTooltip(getTooltipText());
