@@ -33,7 +33,8 @@ export type ModalWidthValue=(typeof ModalWidth)[keyof typeof ModalWidth];
 // or the page's gutter.
 export const ModalFrameInset=Object.freeze({PAGE:'page',GUTTER:'gutter'} as const);
 export type ModalFrameInsetValue=(typeof ModalFrameInset)[keyof typeof ModalFrameInset];
-// A contained Modal keeps its frame's inset and may sit at a top, in CSS pixels below its frame's top edge.
+// A contained Modal keeps its frame's inset and may sit at a `top`: 0 or more CSS pixels below its frame's top edge,
+// within the inset or past it. A negative or non-finite top is refused when the Modal renders.
 type Contained={frameInset?: ModalFrameInsetValue;top?: number};
 type NotContained={[Key in keyof Contained]?: never};
 type NotAnchored={anchor?: never;group?: never};
@@ -48,6 +49,13 @@ export type ModalPlacementProps=
 // Media takes its content's size, so it names no width.
 export type ModalFormProps={form?: typeof ModalForm.DIALOG}|{form: typeof ModalForm.MEDIA;width?: never};
 
+// A contained panel set at `top` below its frame's top edge: a top within the frame's inset gives a negative margin
+// past the inset, which sets the panel into it.
+function placedAt(top: number): CSSProperties {
+ if(!Number.isFinite(top)||top<0)
+  throw new RangeError(`A contained Modal's top is 0 or more CSS pixels below its frame's top edge, not ${top}.`);
+ return {alignSelf:'start',marginTop:`calc(${top}px - var(${MODAL_FRAME_INSET_PROPERTY}))`};
+}
 interface ModalShape extends Contained {
  form: ModalFormValue;
  placement: ModalPlacementValue;
@@ -60,8 +68,7 @@ interface ModalShape extends Contained {
 export function modalShape({form,placement,titled,width,frameInset=ModalFrameInset.PAGE,top}: ModalShape) {
  const contained=placement===ModalPlacement.CONTAINED;
  const sized=form===ModalForm.DIALOG&&placement!==ModalPlacement.ANCHORED;
- const panelStyle: CSSProperties=contained&&top!==undefined
-  ?{alignSelf:'start',marginTop:`calc(${top}px - var(${MODAL_FRAME_INSET_PROPERTY}))`}:{};
+ const panelStyle=contained&&top!==undefined?placedAt(top):{};
  return {
   panel:{[MODAL_PLACEMENT_ATTRIBUTE]:placement,[MODAL_TITLED_ATTRIBUTE]:titled,
    [MODAL_WIDTH_ATTRIBUTE]:sized?width??(titled?ModalWidth.TITLED:ModalWidth.COMPACT):undefined},

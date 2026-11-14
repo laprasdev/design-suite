@@ -16,7 +16,7 @@ const FORMS = [
 /** A word no form has. */
 const OUTSIDE = "'wide'";
 const REACT_ENTRY = JSON.stringify(join(SUITE_ROOT, 'src/react/index.ts'));
-const MODAL_NAMES = 'Modal, ModalFrameInset, ModalPlacement, ModalWidth';
+const MODAL_NAMES = 'Modal, ModalForm, ModalFrameInset, ModalPlacement, ModalWidth';
 
 describe('opt-in forms at the type check', () => {
   for (const {component, form, prop, from, props, member} of FORMS) {
@@ -38,7 +38,7 @@ const MODAL_SHAPES = [
     refused: 'frameInset={ModalFrameInset.GUTTER}'},
   {accepted: 'placement={ModalPlacement.CONTAINED} top={8}', refused: 'top={8}'},
   {accepted: 'width={ModalWidth.STAGE}', refused: 'placement={ModalPlacement.ANCHORED} width={ModalWidth.STAGE}'},
-  {accepted: 'form="media"', refused: 'form="media" width={ModalWidth.READING}'},
+  {accepted: 'form={ModalForm.MEDIA}', refused: 'form={ModalForm.MEDIA} width={ModalWidth.READING}'},
 ] as const;
 
 describe('a Modal\'s width, frame inset and top at the type check', () => {
