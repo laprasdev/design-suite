@@ -17,7 +17,8 @@ export { PipRow, PipRowForm, type PipRowFormValue, type PipRowProps } from "./Pi
 export { Button, type ButtonProps, type ButtonVariant } from "./Button.tsx";
 export { Modal, type ModalProps } from './Modal.tsx';
 export { ModalRow, type ModalRowProps, type ModalTitleProps } from './ModalLayout.tsx';
-export { ModalElement, ModalPlacement, MODAL_TITLED_ATTRIBUTE, MODAL_ROW_LABELLED_ATTRIBUTE } from './modalElements.ts';
+export { ModalElement, ModalPlacement, MODAL_TITLED_ATTRIBUTE, MODAL_ROW_LABELLED_ATTRIBUTE,
+  MODAL_PLACEMENT_ATTRIBUTE } from './modalElements.ts';
 export { PlayerIcon, PlayerStatusRings, type PlayerIconProps, type PhotoRing, type StatusRing, type RingSegment,
   type Hand, type ActiveHand } from './PlayerIcon.tsx';
 export { PlayerIconElement, PlayerIconSideElement, type PlayerIconSide } from './playerIconElements.ts';
@@ -29,7 +30,7 @@ export { Bar, BarContents, type BarProps, type BarSlots } from './Bar.tsx';
 export { BarElement, BarSlotElement, barSlotsWithin } from './barElements.ts';
 export { ActionBar, type ActionBarProps, type ActionBarNotice } from './ActionBar.tsx';
 export { ActionBarElement, ActionBarSlotElement, BarParticipantElement } from './actionBarElements.ts';
-export { HoverDetail } from './HoverDetail.tsx';
+export { HoverDetail, type HoverDetailProps } from './HoverDetail.tsx';
 export { SegmentedControl, TEXT_SEGMENT_VARIANT, JOINED_SEGMENT_VARIANT, ICON_SEGMENT_VARIANT,
   SEGMENT_GROUP_START_ATTRIBUTE, type SegmentValue, type SegmentOption,
   type SingleSegmentProps } from './SegmentedControl.tsx';

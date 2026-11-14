@@ -119,8 +119,19 @@ Passing an empty detached wrapper to `capturePage(source, wrapper)` captures onl
 the source's children and keeps the wrapper's layout. Consumers retain the snapshot
 for cleanup; `.copy` and the placement result expose its element for animation.
 
-Use `Modal` for short confirmations and bounded pickers. `ViewStack` keeps its
-existing modal behavior; the page form does not add a backdrop or Escape handler.
+Use `Modal` for short confirmations and bounded pickers. `ViewStack` composes it
+for its shell, backdrop and Escape handler while owning its view transitions.
+The Crossfade page form does not add a backdrop or Escape handler.
+
+`ModalPlacement` puts the same `Modal` panel in the viewport (the default), contained
+in its positioned parent, or anchored where its caller's positioning styles place it.
+Contained and anchored panels keep the page interactive and leave focus to their
+caller; an anchored panel has no backdrop. `HoverDetail` composes the anchored placement
+for its tooltip or dialog content. Every placement keeps the same surface and the module
+radius token. `MODAL_PLACEMENT_ATTRIBUTE` carries the placement on the panel and its
+frame for styling and browser checks, and `panelRef` exposes the panel for measurement
+or focus. A dismissible `Modal` closes on Escape in every placement, and a viewport one
+also on its backdrop; content may supply its own actions.
 
 Give a `Modal` a `title` and it lays its children out on one grid: the title, which
 names the dialog, then each `ModalRow` (a label and its control on two shared columns,
