@@ -1,10 +1,9 @@
 // Turns the reviewer's structured output into the pull request review and its verdict, for
-// .github/workflows/review.yml. A finding must cite a line that exists in the head, or the report is refused.
-import { appendFileSync, readFileSync, writeFileSync } from 'node:fs';
+// .github/workflows/review.yml. findings.ts refuses an output it can't post, and then nothing is written.
+import { appendFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { physicalLines } from '../sizeGate/measure.mjs';
-import { blockingFindings, readReview, type Finding } from './findings.ts';
-import { renderReview, verdictLine } from './render.ts';
+import { readReview } from './findings.ts';
+import { renderReview, statusDescription } from './render.ts';
 
 const env = (name: string): string => {
   const value = process.env[name];
@@ -12,18 +11,11 @@ const env = (name: string): string => {
   return value;
 };
 
-function checkCited(headDir: string, finding: Finding): void {
-  const file = path.resolve(headDir, finding.path);
-  if (path.relative(headDir, file).startsWith('..')) throw new Error(`report: ${finding.path} is outside the head.`);
-  const lines = physicalLines(readFileSync(file, 'utf8')).length;
-  if (finding.line > lines) throw new Error(`report: ${finding.path}:${finding.line} is past its last line, ${lines}.`);
-}
-
-const review = readReview(env('REVIEW_OUTPUT'));
-const headDir = path.resolve(env('HEAD_DIR'));
-review.findings.forEach(finding => checkCited(headDir, finding));
 const commit = { server: env('GITHUB_SERVER_URL'), repository: env('GITHUB_REPOSITORY'), sha: env('HEAD_SHA') };
-writeFileSync(env('REVIEW_BODY'), renderReview(review, commit));
-const verdict = verdictLine(review);
-appendFileSync(env('GITHUB_OUTPUT'), `approved=${blockingFindings(review).length === 0}\nverdict=${verdict}\n`);
-console.log(verdict);
+const files = { body: path.join(env('REVIEW_INPUT'), 'review.md'), output: env('GITHUB_OUTPUT') };
+const review = readReview(env('REVIEW_OUTPUT'), path.resolve(env('HEAD_DIR')));
+const description = statusDescription(review);
+writeFileSync(files.body, renderReview(review, commit));
+const approved = review.verdict === 'approve';
+appendFileSync(files.output, `approved=${approved}\ndescription=${description}\nbody=${files.body}\n`);
+console.log(description);

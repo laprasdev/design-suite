@@ -4,32 +4,44 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { describe, it } from 'node:test';
+import { after, describe, it } from 'node:test';
 import { findingsSchema, readReview, type Finding, type Review } from '../scripts/reviewGate/findings.ts';
-import { renderReview, verdictLine } from '../scripts/reviewGate/render.ts';
+import { renderReview, statusDescription, verdictLine } from '../scripts/reviewGate/render.ts';
 
 const REPORT = fileURLToPath(new URL('../scripts/reviewGate/report.ts', import.meta.url));
 const COMMIT = { server: 'https://github.com', repository: 'owner/repo', sha: 'abc123' };
+/** A pull request head holding src/a.ts, three lines long. */
+const HEAD = mkdtempSync(path.join(tmpdir(), 'review-head-'));
+mkdirSync(path.join(HEAD, 'src'));
+writeFileSync(path.join(HEAD, 'src/a.ts'), 'one\ntwo\nthree\n');
+after(() => rmSync(HEAD, { recursive: true }));
+
 const finding = (severity: Finding['severity'], line = 2): Finding => ({
   severity, line, path: 'src/a.ts', rule: 'Names', problem: 'p', failure: 'f', fix: 'x',
 });
 const output = (review: Review | Record<string, unknown>) => JSON.stringify(review);
+const read = (review: Review | Record<string, unknown>) => readReview(output(review), HEAD);
+const assessed = (verdict: string, findings: unknown[]) => ({ verdict, findings, unverified: [] });
 
 describe('reading the reviewer output', () => {
   it('reads a review whose verdict follows from its findings', () => {
-    const review: Review = { verdict: 'fix_first', findings: [finding('minor'), finding('major')] };
-    assert.deepEqual(readReview(output(review)), review);
-    assert.equal(readReview(output({ verdict: 'approve', findings: [finding('minor')] })).findings.length, 1);
+    const review: Review = { verdict: 'fix_first', findings: [finding('minor'), finding('major')], unverified: ['x'] };
+    assert.deepEqual(read(review), review);
+    assert.equal(read(assessed('approve', [finding('minor')])).findings.length, 1);
   });
-  it('refuses an approval that reports a blocker or major finding', () => {
-    for (const severity of ['blocker', 'major'] as const) {
-      assert.throws(() => readReview(output({ verdict: 'approve', findings: [finding(severity)] })), /contradicts/);
+  it('refuses an approval that reports a blocker or major finding, and a refusal that reports none', () => {
+    for (const [verdict, severity] of [['approve', 'blocker'], ['approve', 'major'], ['fix_first', 'minor'],
+      ['reject', 'minor']] as const) {
+      assert.throws(() => read(assessed(verdict, [finding(severity)])), /review output: verdict must be/);
     }
   });
-  it('refuses fix first or reject when nothing blocks', () => {
-    for (const verdict of ['fix_first', 'reject'] as const) {
-      assert.throws(() => readReview(output({ verdict, findings: [finding('minor')] })), /contradicts/);
+  it('reads not_reviewed only with a reason of one line short enough for the commit status', () => {
+    const review = read({ ...assessed('not_reviewed', [finding('major')]), reason: 'The diff was cut off.' });
+    assert.equal(review.verdict === 'not_reviewed' && review.reason, 'The diff was cut off.');
+    for (const reason of [undefined, '', 'two\nlines', 'x'.repeat(141)]) {
+      assert.throws(() => read({ ...assessed('not_reviewed', []), reason }), /review output: reason must be/);
     }
+    assert.throws(() => read({ ...assessed('approve', []), reason: 'r' }), /reason must be left out/);
   });
   it('refuses a finding with a missing, empty or malformed field', () => {
     const broken: Record<string, unknown>[] = [
@@ -37,12 +49,23 @@ describe('reading the reviewer output', () => {
       { ...finding('minor'), severity: 'nit' }, { ...finding('minor'), line: 0 }, { ...finding('minor'), line: 1.5 },
     ];
     for (const item of broken) {
-      assert.throws(() => readReview(output({ verdict: 'approve', findings: [item] })), /review output: findings\[0]/);
+      assert.throws(() => read(assessed('approve', [item])), /review output: findings\[0]\.\w+ must be/);
     }
   });
-  it('refuses an unknown verdict and findings that are not a list', () => {
-    assert.throws(() => readReview(output({ verdict: 'lgtm', findings: [] })), /verdict must be one of/);
-    assert.throws(() => readReview(output({ verdict: 'approve', findings: {} })), /findings must be a list/);
+  it('refuses a finding that cites a line the head does not have', () => {
+    for (const [cited, message] of [
+      [{ ...finding('minor'), line: 4 }, /findings\[0]\.line must be at most 3, the last line of src\/a\.ts/],
+      [{ ...finding('minor'), path: '../review.md' }, /findings\[0]\.path must be inside the head/],
+      [{ ...finding('minor'), path: 'src/b.ts' }, /findings\[0]\.path must be a file in the head, not src\/b\.ts/],
+    ] as const) {
+      assert.throws(() => read(assessed('approve', [cited])), message);
+    }
+  });
+  it('refuses an unknown verdict, lists that are not lists, and output that is not JSON', () => {
+    assert.throws(() => read(assessed('lgtm', [])), /verdict must be one of/);
+    assert.throws(() => read({ verdict: 'approve', findings: {}, unverified: [] }), /findings must be a list/);
+    assert.throws(() => read({ verdict: 'approve', findings: [], unverified: [''] }), /unverified\[0] must be text/);
+    assert.throws(() => readReview('Approve.', HEAD), /the output must be JSON/);
   });
 });
 
@@ -59,58 +82,62 @@ describe('the findings schema', () => {
 
 describe('rendering the review', () => {
   it('states the verdict and counts each severity found', () => {
-    assert.equal(verdictLine({ verdict: 'approve', findings: [] }), 'Approve');
-    const review: Review = { verdict: 'fix_first', findings: [finding('minor'), finding('blocker'), finding('minor')] };
+    assert.equal(verdictLine({ verdict: 'approve', findings: [], unverified: [] }), 'Approve');
+    const review: Review = { verdict: 'fix_first', findings: [finding('minor'), finding('blocker'), finding('minor')],
+      unverified: [] };
     assert.equal(verdictLine(review), 'Fix first: 1 blocker, 2 minor');
+    assert.equal(statusDescription(review), 'Fix first: 1 blocker, 2 minor');
+  });
+  it('gives a not_reviewed reason as the status, and lists what could not be checked', () => {
+    const review: Review = { verdict: 'not_reviewed', reason: 'The diff was cut off.', findings: [],
+      unverified: ['Before and after captures'] };
+    assert.equal(statusDescription(review), 'The diff was cut off.');
+    assert.match(renderReview(review, COMMIT), /^## Not reviewed\n\nThe diff was cut off\.\n[^]*- Before and after/);
   });
   it('lists the most severe finding first, linked to its line in the head commit', () => {
-    const body = renderReview({ verdict: 'reject', findings: [finding('minor', 3), finding('blocker', 7)] }, COMMIT);
+    const review: Review = { verdict: 'reject', findings: [finding('minor', 3), finding('blocker', 1)],
+      unverified: [] };
+    const body = renderReview(review, COMMIT);
     assert.ok(body.indexOf('### blocker') < body.indexOf('### minor'));
-    assert.match(body, /\[src\/a\.ts:7]\(https:\/\/github\.com\/owner\/repo\/blob\/abc123\/src\/a\.ts#L7\)/);
+    assert.match(body, /\[src\/a\.ts:1]\(https:\/\/github\.com\/owner\/repo\/blob\/abc123\/src\/a\.ts#L1\)/);
   });
 });
 
 describe('the report step', () => {
-  /** Runs report.ts on a head holding src/a.ts, three lines long. */
-  const report = (review: Review | Record<string, unknown>) => {
-    const dir = mkdtempSync(path.join(tmpdir(), 'review-gate-'));
-    const head = path.join(dir, 'pr');
-    mkdirSync(path.join(head, 'src'), { recursive: true });
-    writeFileSync(path.join(head, 'src/a.ts'), 'one\ntwo\nthree\n');
-    const files = { body: path.join(dir, 'review.md'), output: path.join(dir, 'output') };
+  /** Runs report.ts with REVIEW_OUTPUT set to `raw`, against HEAD. */
+  const report = (raw: string) => {
+    const input = mkdtempSync(path.join(tmpdir(), 'review-input-'));
+    const files = { body: path.join(input, 'review.md'), output: path.join(input, 'output') };
     writeFileSync(files.output, '');
     const env = {
-      ...process.env, REVIEW_OUTPUT: output(review), HEAD_DIR: head, REVIEW_BODY: files.body,
-      GITHUB_OUTPUT: files.output, GITHUB_SERVER_URL: COMMIT.server, GITHUB_REPOSITORY: COMMIT.repository,
-      HEAD_SHA: COMMIT.sha,
+      ...process.env, REVIEW_OUTPUT: raw, HEAD_DIR: HEAD, REVIEW_INPUT: input, GITHUB_OUTPUT: files.output,
+      GITHUB_SERVER_URL: COMMIT.server, GITHUB_REPOSITORY: COMMIT.repository, HEAD_SHA: COMMIT.sha,
     };
     const run = spawnSync(process.execPath, [REPORT], { env, encoding: 'utf8' });
-    const written = { body: existsSync(files.body) ? readFileSync(files.body, 'utf8') : '' };
-    const result = { status: run.status, stderr: run.stderr, output: readFileSync(files.output, 'utf8'), ...written };
-    rmSync(dir, { recursive: true });
+    const body = existsSync(files.body) ? readFileSync(files.body, 'utf8') : '';
+    const result = { status: run.status, stderr: run.stderr, output: readFileSync(files.output, 'utf8'), body, files };
+    rmSync(input, { recursive: true });
     return result;
   };
-  const cited = (file: string, line: number) =>
-    ({ verdict: 'fix_first', findings: [{ ...finding('major', line), path: file }] });
 
   it('writes the review and records that a major finding blocks the merge', () => {
-    const result = report(cited('src/a.ts', 3));
+    const result = report(output(assessed('fix_first', [finding('major', 3)])));
     assert.equal(result.status, 0, result.stderr);
-    assert.equal(result.output, 'approved=false\nverdict=Fix first: 1 major\n');
+    assert.equal(result.output, `approved=false\ndescription=Fix first: 1 major\nbody=${result.files.body}\n`);
     assert.match(result.body, /^## Fix first: 1 major\n/);
   });
-  it('records approval when nothing blocks', () => {
-    const result = report({ verdict: 'approve', findings: [finding('minor', 1)] });
-    assert.equal(result.status, 0, result.stderr);
-    assert.equal(result.output, 'approved=true\nverdict=Approve: 1 minor\n');
+  it('records approval when nothing blocks, and no approval when the change was not reviewed', () => {
+    assert.match(report(output(assessed('approve', [finding('minor', 1)]))).output, /^approved=true\n/);
+    const notReviewed = report(output({ ...assessed('not_reviewed', []), reason: 'Too large to read.' }));
+    assert.match(notReviewed.output, /^approved=false\ndescription=Too large to read\.\n/);
   });
-  it('refuses a finding that cites a line the head does not have, and writes nothing', () => {
-    for (const [where, message] of [
-      [cited('src/a.ts', 4), /src\/a\.ts:4 is past its last line, 3/],
-      [cited('../review.md', 1), /\.\.\/review\.md is outside the head/],
-      [cited('src/b.ts', 1), /ENOENT/],
+  it('refuses empty, non-JSON and contradictory output, and writes nothing', () => {
+    for (const [raw, message] of [
+      ['', /the workflow must set REVIEW_OUTPUT/],
+      ['{"verdict":', /the output must be JSON/],
+      [output(assessed('approve', [finding('blocker')])), /verdict must be fix_first or reject/],
     ] as const) {
-      const result = report(where);
+      const result = report(raw);
       assert.notEqual(result.status, 0);
       assert.match(result.stderr, message);
       assert.deepEqual([result.output, result.body], ['', '']);
