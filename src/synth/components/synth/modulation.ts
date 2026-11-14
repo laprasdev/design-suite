@@ -1,6 +1,6 @@
 import {PHI, PHI_INVERSE, LayoutDimensions} from '../../../layout.ts';
 import {Opacity} from '../../../tokens.ts';
-import type {StyleTheme} from '../../StyleContext.tsx';
+import type {StyleTheme} from '../../StyleTypes.ts';
 
 // What a control needs to draw a modulation: where its source sits in the registry, how far it reaches, and where it is now.
 export const ModulationRoot = Object.freeze({SELF: 'self', GLOBAL: 'global', COMPUTATION: 'computation', RELATIONSHIP: 'relationship'} as const);

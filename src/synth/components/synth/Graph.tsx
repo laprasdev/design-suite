@@ -1,5 +1,6 @@
 import React, { useRef, useEffect } from 'react';
-import { useStyle, type StyleTheme } from '../../StyleContext.tsx';
+import { useStyle } from '../../StyleContext.tsx';
+import type { StyleTheme } from '../../StyleTypes.ts';
 import { getColorScheme, hexToRgba, getGridSpacing, resolveColorType, type AnyColor, type GridDistance }
   from '../../../color.ts';
 import { D, F, C, O, Borders, T } from '../../design/index.ts';
