@@ -1,6 +1,6 @@
-// Suite source run under Node: esbuild bundles the named files into one module, written to a fresh directory under
-// .local (which git leaves out) and imported from there. Packages stay external and stylesheets load empty, since no
-// test reads either through the bundle. A test may keep its own fixtures in the directory; `dispose` removes it.
+// Suite source run under Node: esbuild bundles the named files into one module, written to a fresh scratch directory
+// and imported from there. Packages stay external and stylesheets load empty, since no test reads either through the
+// bundle. `dispose` removes the directory.
 import {mkdirSync,mkdtempSync,rmSync,writeFileSync} from 'node:fs';
 import {basename,extname,join} from 'node:path';
 import {fileURLToPath,pathToFileURL} from 'node:url';
@@ -23,17 +23,22 @@ export const replacedHooks=(hooks: string): Plugin=>({name:REPLACED,setup(builde
 
 export interface Bundled<Module> {
  readonly module: Module;
- readonly directory: string;
  dispose(): void;
+}
+
+/** A fresh directory under .local (which git leaves out, and where the suite's packages resolve), named from `name`,
+ *  and its removal. */
+export function scratchDirectory(name: string): {readonly directory: string; dispose(): void} {
+ mkdirSync(SCRATCH,{recursive:true});
+ const directory=mkdtempSync(join(SCRATCH,`${name}-`));
+ return {directory,dispose:()=>rmSync(directory,{recursive:true,force:true})};
 }
 
 // `sources` are paths from the suite root, and the module exports what each of them exports. `plugins` reach esbuild
 // as they are, for a test that replaces a dependency.
 export async function bundled<Module>(sources: readonly [string,...string[]],plugins: readonly Plugin[]=[]):
  Promise<Bundled<Module>> {
- mkdirSync(SCRATCH,{recursive:true});
- const [first]=sources,directory=mkdtempSync(join(SCRATCH,`${basename(first,extname(first))}-`));
- const dispose=()=>rmSync(directory,{recursive:true,force:true});
+ const [first]=sources,{directory,dispose}=scratchDirectory(basename(first,extname(first)));
  try {
   const output=await build({absWorkingDir:SUITE_ROOT,bundle:true,write:false,format:'esm',platform:'node',
    packages:'external',loader:{'.css':'empty'},plugins:[...plugins],stdin:{resolveDir:SUITE_ROOT,
@@ -41,7 +46,7 @@ export async function bundled<Module>(sources: readonly [string,...string[]],plu
   const file=join(directory,'bundle.mjs');
   writeFileSync(file,output.outputFiles[0].text);
   const module: Module=await import(pathToFileURL(file).href);
-  return {module,directory,dispose};
+  return {module,dispose};
  } catch(error) {
   dispose();
   throw error;
