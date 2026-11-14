@@ -48,7 +48,6 @@
     "src/synth/design/ComposableComponents.tsx": {"lines":256,"longLines":0,"importLines":9},
     "src/synth/design/LayoutAPI.ts": {"lines":204,"longLines":4,"importLines":7},
     "src/synth/design/constants/KnobConfig.ts": {"lines":248,"longLines":0,"importLines":1},
-    "src/theme.ts": {"lines":78,"longLines":1,"importLines":3},
     "src/tokens.ts": {"lines":145,"longLines":1,"importLines":1},
     "tests/composable.test.ts": {"lines":54,"longLines":2,"importLines":6},
     "tests/skins.test.ts": {"lines":131,"longLines":3,"importLines":9}

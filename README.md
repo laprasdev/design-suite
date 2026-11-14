@@ -56,6 +56,8 @@ import '@looms/bloom-design/react/styles.css';
 
 `createTheme` returns data without touching the document, and `applyTheme` writes it to CSS variables. `src/synth` holds the web synth's controls, which read their colors through `StyleProvider`.
 
+Inside a suite application root (`ApplicationElement.ROOT`), the stylesheet draws every `code` and `pre`, in `src/react/foundation.css`: one skin for a chip and a block, from the theme variables the host applies there (`codeWash`, line, small radius and code type). A page outside a root keeps its own code. A chip keeps its own case, tracking and weight inside a head, and takes the weight of a `strong` around it. A host places code and may map its colour to a state token, as Workbench dims a source path, but never changes its skin: Workbench's `check:styles` refuses a local wash, border, radius, face, weight, tracking or case on `code` or `pre`.
+
 ## Entrypoints
 
 | Import | Contents |

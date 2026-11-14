@@ -24,14 +24,18 @@ export type ThemeTypography = { [K in keyof typeof THEME_TYPOGRAPHY]:
 export interface ThemeSpec {
   typography?: Partial<ThemeTypography>;
   name?: string;
-  colors?: Partial<Record<"bg" | "stage" | "surface" | "surfaceHi" | "line" | "bevel" | "text" | "dim" | "faint" | "accent" | "accentDeep" | "accentWash" | "teal" | "amber" | "gold" | "goldLight" | "grass" | "sand" | "scarlet", string>>;
+  colors?: Partial<Record<"bg" | "stage" | "surface" | "surfaceHi" | "line" | "bevel" | "text" | "dim" | "faint"
+    | "accent" | "accentDeep" | "accentWash" | "codeWash" | "teal" | "amber" | "gold" | "goldLight" | "grass" | "sand"
+    | "scarlet", string>>;
   radius?: { lg?: number; sm?: number };
   stroke?: { line?: number };
   space?: { inset?: number };
 }
+// A wash is its colour at this alpha: faint enough that text on it keeps its contrast.
+export const WASH_ALPHA = 0.11;
 export function createTheme(spec: ThemeSpec = {}) {
   const c = spec.colors || {};
-  const accent = c.accent || "#c4678f";
+  const accent = c.accent || "#c4678f", text = c.text || "#f0f0f3";
   return {
     name: spec.name || "bloom-dark",
     typography: {...THEME_TYPOGRAPHY, ...spec.typography},
@@ -42,12 +46,14 @@ export function createTheme(spec: ThemeSpec = {}) {
       surfaceHi: c.surfaceHi || "#1c1c22",
       line: c.line || "rgba(255,255,255,0.11)",
       bevel: c.bevel || "rgba(255,255,255,0.05)",
-      text: c.text || "#f0f0f3",
+      text,
       dim: c.dim || "#82828e",
       faint: c.faint || "#55555f",
       accent,
       accentDeep: c.accentDeep || "#7d3f5b",
-      accentWash: c.accentWash || hexToRgba(accent, 0.11),
+      accentWash: c.accentWash || hexToRgba(accent, WASH_ALPHA),
+      // Behind a code span or block.
+      codeWash: c.codeWash || hexToRgba(text, WASH_ALPHA),
       teal: c.teal || "#4ecfc6",
       amber: c.amber || "#e2a659",
       // Trophy gold, and the brighter gold of its glow.
@@ -89,7 +95,8 @@ export function themeVariables(t: Theme): Record<string, string> {
     "--bg": c.bg, "--stage": c.stage, "--card": c.surface, "--card-hi": c.surfaceHi, "--line": c.line,
       "--bevel": c.bevel,
     "--text": c.text, "--selection-foreground": c.text, "--dim": c.dim, "--faint": c.faint,
-    "--pink": c.accent, "--pink-deep": c.accentDeep, "--pink-wash": c.accentWash, "--teal": c.teal,
+    "--pink": c.accent, "--pink-deep": c.accentDeep, "--pink-wash": c.accentWash, "--code-wash": c.codeWash,
+      "--teal": c.teal,
     "--amber": c.amber, "--gold": c.gold, "--gold-light": c.goldLight, "--grass": c.grass, "--sand": c.sand,
     "--scarlet": c.scarlet,
     "--r": `${t.radius.lg}px`, "--r-sm": `${t.radius.sm}px`, "--inset": `${t.space.inset}px`,
