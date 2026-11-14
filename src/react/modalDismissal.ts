@@ -29,11 +29,15 @@ const openModals=new Map<Element,OpenModal>();
 // The part of a Modal's own region that holds the node: its panel or its anchor.
 const ownPart=(modal: OpenModal,node: Node)=>[modal.panel,modal.anchor?.current].find(part=>part?.contains(node));
 // Whether the node is in the Modal's region: its own part, or the region of an open Modal anchored inside its panel.
-function regionHolds(modal: OpenModal,node: Node): boolean {
- if(ownPart(modal,node))return true;
- for(const inner of openModals.values()) {
-  const anchor=inner.anchor?.current;
-  if(inner!==modal&&anchor&&modal.panel.contains(anchor)&&regionHolds(inner,node))return true;
+// The walk takes each Modal once, so Modals anchored in each other's panels end it.
+function regionHolds(modal: OpenModal,node: Node) {
+ const region=[modal];
+ for(const outer of region) {
+  if(ownPart(outer,node))return true;
+  for(const inner of openModals.values()) {
+   const anchor=inner.anchor?.current;
+   if(anchor&&!region.includes(inner)&&outer.panel.contains(anchor))region.push(inner);
+  }
  }
  return false;
 }

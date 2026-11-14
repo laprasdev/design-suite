@@ -37,6 +37,19 @@ describe('Presses, drags and groups',()=>{
   } finally {dispose();}
  });
 
+ it('take each Modal once when two are anchored in each other\'s panels',async()=>{
+  const {open,closed,dispose}=await scene();
+  try {
+   const firstPanel=panel(page,1),secondPanel=panel(page,2);
+   open('first',firstPanel,ModalPlacement.ANCHORED,{anchor:trigger(secondPanel,2.2)});
+   open('second',secondPanel,ModalPlacement.ANCHORED,{anchor:trigger(firstPanel,1.2)});
+   pressAt(inside(firstPanel));
+   assert.deepEqual(closed,[],'each holds the other, so a press in either keeps both');
+   pressAt(inside(page));
+   assert.deepEqual(closed.sort(),['first','second']);
+  } finally {dispose();}
+ });
+
  it('dismiss every anchored Modal when a drag starts, even from its anchor',async()=>{
   const {open,closed,dispose}=await scene();
   try {
