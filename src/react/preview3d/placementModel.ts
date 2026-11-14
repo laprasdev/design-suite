@@ -1,5 +1,6 @@
 import {ModelStageRefusal} from './refusal.ts';
-import {modelFlag, modelIsRecord as object, modelNumbers, modelRecord} from './recordModel.ts';
+import {isRecord as object} from '../../valueChecks.ts';
+import {modelFlag, modelNumbers, modelRecord} from './recordModel.ts';
 
 // The stage's placement data, with no renderer: vectors, unit rotations and whole poses, their validators and the one
 // coordinate adapter. Every other preview file reaches these through here, so none of them imports another for them.

@@ -11,6 +11,7 @@ import neon from '../unity/Runtime/Resources/SharedSchema/Design/Synth/Skins/neo
 import promethium from '../unity/Runtime/Resources/SharedSchema/Design/Synth/Skins/promethium.skin.json' with {type: 'json'};
 import serum from '../unity/Runtime/Resources/SharedSchema/Design/Synth/Skins/serum.skin.json' with {type: 'json'};
 import test from '../unity/Runtime/Resources/SharedSchema/Design/Synth/Skins/test.skin.json' with {type: 'json'};
+import {isRecord} from './valueChecks.ts';
 
 export type SkinJson = Record<string, unknown>;
 interface SkinMeta { inherit?: string; label?: string; priority?: number }
@@ -21,13 +22,12 @@ const SKIN_SUFFIX = '.skin.json';
 const NO_PARENT = 'null'; // How the base skin says it has no parent.
 
 const metaOf = (skin: SkinJson) => (skin.meta ?? {}) as SkinMeta;
-const isObject = (value: unknown): value is SkinJson => typeof value === 'object' && value !== null && !Array.isArray(value);
 
 export function deepMerge(parent: SkinJson, child: SkinJson): SkinJson {
   const merged = {...parent};
   for (const [key, value] of Object.entries(child)) {
     const existing = merged[key];
-    merged[key] = isObject(value) && isObject(existing) ? deepMerge(existing, value) : value;
+    merged[key] = isRecord(value) && isRecord(existing) ? deepMerge(existing, value) : value;
   }
   return merged;
 }
@@ -77,7 +77,7 @@ export function flattenSkin(skin: SkinJson, prefix = ''): Map<string, unknown> {
   const flattened = new Map<string, unknown>();
   for (const [key, value] of Object.entries(skin)) {
     const path = prefix ? `${prefix}.${key}` : key;
-    if (isObject(value)) flattenSkin(value, path).forEach((nested, nestedPath) => flattened.set(nestedPath, nested));
+    if (isRecord(value)) flattenSkin(value, path).forEach((nested, nestedPath) => flattened.set(nestedPath, nested));
     else flattened.set(path, value);
   }
   return flattened;
