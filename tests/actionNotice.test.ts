@@ -1,34 +1,18 @@
 // The suite's one notice: it shows what failed and the start of its detail, and an action bar floats it over what is
 // below the bar, so showing it never moves that content.
 import assert from 'node:assert/strict';
-import {mkdtempSync, rmSync, writeFileSync} from 'node:fs';
-import {join} from 'node:path';
-import {fileURLToPath, pathToFileURL} from 'node:url';
-import {after, before, describe, it} from 'node:test';
-import {build} from 'esbuild';
+import {after, describe, it} from 'node:test';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {createElement, type ReactElement} from 'react';
+import {bundled} from './bundled.ts';
 
-const root = fileURLToPath(new URL('../', import.meta.url));
 type Module = typeof import('../src/react/ActionBar.tsx') & typeof import('../src/react/pageBarElements.ts');
+const {module, dispose} = await bundled<Module>(['src/react/ActionBar.tsx', 'src/react/pageBarElements.ts']);
+after(dispose);
 const NOTICE = Object.freeze({tone: 'error', message: 'Not applied',
   detail: 'Actor second: clip swim is not an animation in the model file.'} as const);
 
 describe('the action notice', () => {
-  let dir = '', module: Module;
-  before(async () => {
-    dir = mkdtempSync(join(root, '.action-notice-'));
-    const output = await build({absWorkingDir: root, stdin: {resolveDir: root, contents:
-      "export * from './src/react/ActionBar.tsx'; export * from './src/react/pageBarElements.ts';"},
-      bundle: true, write: false, format: 'esm', platform: 'node',
-      external: ['react', 'react/*', 'react-dom', 'react-dom/*', 'lucide-react'],
-      loader: {'.css': 'empty'}});
-    const file = join(dir, 'actionBar.mjs');
-    writeFileSync(file, output.outputFiles[0].text);
-    module = await import(pathToFileURL(file).href);
-  });
-  after(() => rmSync(dir, {recursive: true, force: true}));
-
   it('shows the detail as text beside the message, with the whole detail as the hint', () => {
     const markup = renderToStaticMarkup(createElement(module.ActionNotice, {notice: NOTICE}));
     const detail = new RegExp(`class="[^"]*${module.ActionNoticeDetailElement.className}"[^>]*>${NOTICE.detail}<`);

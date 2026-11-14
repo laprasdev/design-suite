@@ -1,26 +1,15 @@
 import assert from 'node:assert/strict';
-import {mkdtempSync, rmSync, writeFileSync} from 'node:fs';
-import {join} from 'node:path';
-import {fileURLToPath, pathToFileURL} from 'node:url';
-import {after, before, it} from 'node:test';
-import {build} from 'esbuild';
+import {after, it} from 'node:test';
 import {ModulationRoot} from '../src/synth/components/synth/modulation.ts';
 import {blendedReach} from '../src/react/inputs/modulationBlend.ts';
 import {blendEndGroups, END_CIRCLE_MIN} from '../src/react/inputs/blendEnds.ts';
 import {ModulationPart} from '../src/react/inputs/modulationParts.ts';
 import type {BlendedEnds} from '../src/react/inputs/BlendedEnds.tsx';
+import {bundled} from './bundled.ts';
 
-const root = fileURLToPath(new URL('../', import.meta.url));
-let directory = '', draw: typeof BlendedEnds;
-before(async () => {
-  directory = mkdtempSync(join(root, '.blended-ends-'));
-  const output = await build({absWorkingDir: root, entryPoints: ['src/react/inputs/BlendedEnds.tsx'],
-    bundle: true, write: false, format: 'esm', platform: 'node', packages: 'external'});
-  const file = join(directory, 'BlendedEnds.mjs');
-  writeFileSync(file, output.outputFiles[0].text);
-  draw = (await import(pathToFileURL(file).href)).BlendedEnds;
-});
-after(() => rmSync(directory, {recursive: true, force: true}));
+const {module: {BlendedEnds: draw}, dispose} =
+  await bundled<{BlendedEnds: typeof BlendedEnds}>(['src/react/inputs/BlendedEnds.tsx']);
+after(dispose);
 
 interface Press {key: string; preventDefault(): void; stopPropagation(): void}
 interface Node {

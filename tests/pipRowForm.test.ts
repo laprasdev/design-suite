@@ -1,32 +1,22 @@
 // PipRow's compact form is opt-in: the meter stays the default, writes no form and keeps its rules, and a form outside
 // PipRowForm fails the type check.
 import assert from 'node:assert/strict';
-import {mkdtempSync, readFileSync, rmSync, writeFileSync} from 'node:fs';
+import {readFileSync, writeFileSync} from 'node:fs';
 import {join} from 'node:path';
-import {fileURLToPath, pathToFileURL} from 'node:url';
-import {after, before, describe, it} from 'node:test';
+import {after, describe, it} from 'node:test';
 import {spawnSync} from 'node:child_process';
-import {build} from 'esbuild';
+import {SUITE_ROOT, bundled} from './bundled.ts';
 
-const root = fileURLToPath(new URL('../', import.meta.url));
 interface Element { props: {className: string; 'data-form'?: string; children: {props: {'data-on': string}}[]} }
 interface PipRowModule {
   PipRow(props: {value: number; max: number; segments: number; form?: string}): Element;
   PipRowForm: {METER: string; COMPACT: string};
 }
 
-describe('PipRow forms', () => {
-  let dir = '', module: PipRowModule;
-  before(async () => {
-    dir = mkdtempSync(join(root, '.piprow-form-'));
-    const output = await build({absWorkingDir: root, entryPoints: ['src/react/PipRow.tsx'], bundle: true,
-      write: false, format: 'esm', platform: 'node', external: ['react', 'react/*']});
-    const file = join(dir, 'PipRow.mjs');
-    writeFileSync(file, output.outputFiles[0].text);
-    module = await import(pathToFileURL(file).href);
-  });
-  after(() => rmSync(dir, {recursive: true, force: true}));
+const {module, directory: dir, dispose} = await bundled<PipRowModule>(['src/react/PipRow.tsx']);
+after(dispose);
 
+describe('PipRow forms', () => {
   it('keeps the meter as the default and writes no form for it', () => {
     const row = module.PipRow({value: 2, max: 3, segments: 3});
     assert.equal(row.props.className, 'bd-piprow');
@@ -43,7 +33,7 @@ describe('PipRow forms', () => {
   });
 
   it('keeps the meter rules and scopes the compact rules to its form', () => {
-    const css = readFileSync(join(root, 'src/react/widgets.css'), 'utf8');
+    const css = readFileSync(join(SUITE_ROOT, 'src/react/widgets.css'), 'utf8');
     assert.match(css, /\.bd-piprow \{[^}]*width: 100%;/);
     assert.match(css, /\.bd-pip \{[^}]*flex: 1 1 0;/);
     const compact = `.bd-piprow[data-form="${module.PipRowForm.COMPACT}"]`;
@@ -52,13 +42,14 @@ describe('PipRow forms', () => {
   });
 
   it('refuses a form outside PipRowForm at the type check', () => {
-    const {compilerOptions} = JSON.parse(readFileSync(join(root, 'tsconfig.json'), 'utf8'));
+    const {compilerOptions} = JSON.parse(readFileSync(join(SUITE_ROOT, 'tsconfig.json'), 'utf8'));
     writeFileSync(join(dir, 'tsconfig.json'), JSON.stringify({files: ['usage.tsx'], compilerOptions}));
     const check = (form: string) => {
-      writeFileSync(join(dir, 'usage.tsx'), "import {PipRow, PipRowForm} from '../src/react/PipRow.tsx';\n" +
+      const pipRow = JSON.stringify(join(SUITE_ROOT, 'src/react/PipRow.tsx'));
+      writeFileSync(join(dir, 'usage.tsx'), `import {PipRow, PipRowForm} from ${pipRow};\n` +
         `export const row = <PipRow value={1} max={3} segments={3} form={${form}} />; void PipRowForm;\n`);
-      return spawnSync(join(root, 'node_modules/.bin/tsc'), ['-p', join(dir, 'tsconfig.json'), '--pretty', 'false'],
-        {encoding: 'utf8'});
+      return spawnSync(join(SUITE_ROOT, 'node_modules/.bin/tsc'),
+        ['-p', join(dir, 'tsconfig.json'), '--pretty', 'false'], {encoding: 'utf8'});
     };
     const valid = check('PipRowForm.COMPACT');
     assert.equal(valid.status, 0, valid.stdout + valid.stderr);

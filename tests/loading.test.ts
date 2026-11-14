@@ -1,29 +1,16 @@
 import assert from 'node:assert/strict';
-import {mkdirSync,mkdtempSync,readFileSync,rmSync,writeFileSync} from 'node:fs';
+import {readFileSync} from 'node:fs';
 import {join} from 'node:path';
-import {fileURLToPath,pathToFileURL} from 'node:url';
-import {after,before,describe,it} from 'node:test';
+import {after,describe,it} from 'node:test';
 import {Children,isValidElement,type ComponentProps} from 'react';
-import {build} from 'esbuild';
 import type {Label} from '../src/react/accents.tsx';
+import {SUITE_ROOT,bundled} from './bundled.ts';
 
-const root=fileURLToPath(new URL('../',import.meta.url));
+type LoadingModule=typeof import('../src/react/Pokeball.tsx') & Pick<typeof import('../src/react/accents.tsx'),'Label'>;
+const {module,dispose}=await bundled<LoadingModule>(['src/react/Pokeball.tsx','src/react/accents.tsx']);
+after(dispose);
 
 describe('loading composition ownership',()=>{
- let directory='';
- let module:typeof import('../src/react/Pokeball.tsx') & Pick<typeof import('../src/react/accents.tsx'),'Label'>;
- before(async()=>{
-  mkdirSync(join(root,'.local'),{recursive:true});
-  directory=mkdtempSync(join(root,'.local/loading-contract-'));
-  const output=await build({absWorkingDir:root,stdin:{resolveDir:root,contents:
-   "export * from './src/react/Pokeball.tsx';export {Label} from './src/react/accents.tsx';"},
-   bundle:true,write:false,format:'esm',platform:'node',external:['react','react/*']});
-  const file=join(directory,'loading.mjs');
-  writeFileSync(file,output.outputFiles[0].text);
-  module=await import(pathToFileURL(file).href);
- });
- after(()=>{if(directory)rmSync(directory,{recursive:true,force:true});});
-
  it('composes the existing status Label for default and custom copy',()=>{
   for(const children of [undefined,'Loading players']){
    const indicator=module.LoadingIndicator({children});
@@ -41,7 +28,7 @@ describe('loading composition ownership',()=>{
  });
 
  it('leaves typography to Label while loader CSS owns layout and animation',()=>{
-  const css=readFileSync(join(root,'src/react/loading.css'),'utf8').replace(/\/\*[\s\S]*?\*\//g,'');
+  const css=readFileSync(join(SUITE_ROOT,'src/react/loading.css'),'utf8').replace(/\/\*[\s\S]*?\*\//g,'');
   // The ball's line-height:0 is icon geometry, not label typography.
   const typography=[...css.matchAll(/[;{]\s*(font(?:-[\w-]+)?|letter-spacing|text-transform)\s*:/gi)];
   assert.deepEqual(typography.map(match=>match[1]),[],

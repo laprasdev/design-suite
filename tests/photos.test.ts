@@ -1,12 +1,10 @@
 import assert from 'node:assert/strict';
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
-import { after, before, describe, it } from 'node:test';
+import { after, describe, it } from 'node:test';
 import { spawnSync } from 'node:child_process';
-import { build } from 'esbuild';
+import { SUITE_ROOT, bundled } from './bundled.ts';
 
-const root = fileURLToPath(new URL('../', import.meta.url));
 interface Element {
   type: string;
   props: {
@@ -26,19 +24,10 @@ interface PhotosModule {
   PhotoStrip(props: { photos: { src: string; title?: string; phone?: boolean }[]; className?: string }): Element | null;
 }
 const children = (element: Element): Element[] => element.props.children as Element[];
+const { module: photos, directory, dispose } = await bundled<PhotosModule>(['src/react/Photos.tsx']);
+after(dispose);
 
 describe('PhotoCompare inline form', () => {
-  let directory = '', photos: PhotosModule;
-  before(async () => {
-    directory = mkdtempSync(join(root, '.photos-form-'));
-    const output = await build({ absWorkingDir: root, entryPoints: ['src/react/Photos.tsx'], bundle: true,
-      write: false, format: 'esm', platform: 'node', external: ['react', 'react/*'] });
-    const file = join(directory, 'Photos.mjs');
-    writeFileSync(file, output.outputFiles[0].text);
-    photos = await import(pathToFileURL(file).href);
-  });
-  after(() => rmSync(directory, { recursive: true, force: true }));
-
   it('preserves default captures, labels, links and empty behavior', () => {
     const captures = [{ src: '/first.png', label: 'Before', href: '/full.png', title: 'Original' }];
     const row = photos.PhotoCompare({ captures, className: 'consumer' })!;
@@ -63,7 +52,7 @@ describe('PhotoCompare inline form', () => {
   });
 
   it('keeps base layout and label CSS intact and scopes each form to its own selectors', () => {
-    const css = readFileSync(join(root, 'src/react/photos.css'), 'utf8');
+    const css = readFileSync(join(SUITE_ROOT, 'src/react/photos.css'), 'utf8');
     const [base, rest] = css.split('/* StripTile');
     const [strip, afterStrip] = rest.split('/* Inline comparisons');
     const [inline, rows] = afterStrip.split('/* Rows');
@@ -124,13 +113,14 @@ describe('PhotoCompare inline form', () => {
   });
 
   it('exports the form and refuses unrecognized forms in strict TypeScript', () => {
-    const { compilerOptions } = JSON.parse(readFileSync(join(root, 'tsconfig.json'), 'utf8'));
+    const { compilerOptions } = JSON.parse(readFileSync(join(SUITE_ROOT, 'tsconfig.json'), 'utf8'));
     writeFileSync(join(directory, 'tsconfig.json'), JSON.stringify({ files: ['usage.tsx'], compilerOptions }));
     const check = (form: string) => {
-      const imported = "import { PhotoCompare, PhotoCompareForm } from '../src/react/index.ts';\n";
+      const index = JSON.stringify(join(SUITE_ROOT, 'src/react/index.ts'));
+      const imported = `import { PhotoCompare, PhotoCompareForm } from ${index};\n`;
       writeFileSync(join(directory, 'usage.tsx'), imported +
         `export const row = <PhotoCompare captures={[]} form={${form}} />; void PhotoCompareForm;\n`);
-      return spawnSync(join(root, 'node_modules/.bin/tsc'),
+      return spawnSync(join(SUITE_ROOT, 'node_modules/.bin/tsc'),
         ['-p', join(directory, 'tsconfig.json'), '--pretty', 'false'], { encoding: 'utf8' });
     };
     const valid = check('PhotoCompareForm.INLINE'); assert.equal(valid.status, 0, valid.stdout + valid.stderr);

@@ -2,13 +2,9 @@
 // [Flags] form, and with `onPoint` too, which keeps its options pointable instead of disabling them. The control is
 // rendered once with hooks that hold no state, and its buttons' own handlers are pressed.
 import assert from 'node:assert/strict';
-import {mkdtempSync, rmSync, writeFileSync} from 'node:fs';
-import {join} from 'node:path';
-import {fileURLToPath, pathToFileURL} from 'node:url';
-import {after, before, describe, it} from 'node:test';
-import {build} from 'esbuild';
+import {after, describe, it} from 'node:test';
+import {bundled, replacedHooks} from './bundled.ts';
 
-const root = fileURLToPath(new URL('../', import.meta.url));
 interface Node {type: unknown; props: {children?: unknown; onClick?: () => void; onActivate?: () => void}}
 type Options = {value: number; label: string; disabled?: boolean}[];
 interface Props {
@@ -17,8 +13,8 @@ interface Props {
 }
 interface Module {SegmentedControl(props: Props): Node}
 
-const STATELESS_REACT = (react: string) => `export * from ${JSON.stringify(react)};
-export const useContext = () => ({}), useRef = () => ({current: null}), useLayoutEffect = () => undefined;`;
+const STATELESS_HOOKS =
+  'export const useContext = () => ({}), useRef = () => ({current: null}), useLayoutEffect = () => undefined;';
 
 const pressables = (node: unknown): Node[] => {
   if (Array.isArray(node)) return node.flatMap(pressables);
@@ -28,25 +24,10 @@ const pressables = (node: unknown): Node[] => {
   return [...pressed, ...pressables(element.props.children)];
 };
 
-describe('a locked segmented control', () => {
-  let dir = '', module: Module;
-  before(async () => {
-    dir = mkdtempSync(join(root, '.segmented-locked-'));
-    const react = fileURLToPath(import.meta.resolve('react'));
-    const output = await build({absWorkingDir: root, entryPoints: ['src/react/SegmentedControl.tsx'], bundle: true,
-      write: false, format: 'esm', platform: 'node', jsx: 'automatic', loader: {'.css': 'empty'},
-      plugins: [{name: 'stateless-react', setup(builder) {
-        builder.onResolve({filter: /^react$/}, () => ({path: 'react', namespace: 'stateless'}));
-        builder.onResolve({filter: /^react-dom/}, () => ({path: 'react-dom', namespace: 'stateless'}));
-        builder.onLoad({filter: /.*/, namespace: 'stateless'}, args => ({resolveDir: root,
-          contents: args.path === 'react' ? STATELESS_REACT(react) : 'export const createPortal = () => null;'}));
-      }}]});
-    const file = join(dir, 'SegmentedControl.mjs');
-    writeFileSync(file, output.outputFiles[0].text);
-    module = await import(pathToFileURL(file).href);
-  });
-  after(() => rmSync(dir, {recursive: true, force: true}));
+const {module, dispose} = await bundled<Module>(['src/react/SegmentedControl.tsx'], [replacedHooks(STATELESS_HOOKS)]);
+after(dispose);
 
+describe('a locked segmented control', () => {
   const options: Options = [{value: 0, label: 'a'}, {value: 1, label: 'b', disabled: true}, {value: 2, label: 'c'}];
   const presses = (props: Partial<Props>) => {
     const changes: unknown[] = [];
