@@ -29,6 +29,7 @@ test('theme consumer accepts only its source, origin, protocol and complete data
   client.emit(message('update', bloom), source, 'http://unrelated.localhost');
   client.emit({...message('update', bloom), version: THEME_VERSION + 1}, source);
   client.emit(message('update', {skin: 'bloom', theme: {name: 'bloom'}}), source);
+  client.emit(Object.assign([], message('update', bloom)), source);
   assert.equal(received.length, 0);
   client.emit(message('update', bloom), source);
   assert.deepEqual(received, [bloom]);
