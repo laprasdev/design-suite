@@ -35,12 +35,8 @@ export function useWireGestures(
   // NodeGraph its wires and nodes are one control, so Escape that cancels a gesture also clears the node selection, as
   // Escape with nothing under way clears both once the page has let it pass.
   useDragSession(dragging, { cancel: () => { cancel(); nodeSelection?.clear(); }, lostFocus: cancel });
-  // The window losing focus clears the selected wires, gesture or not; unmounting cancels a gesture under way.
-  useEffect(() => {
-    const clear = () => setSelected([]);
-    window.addEventListener("blur", clear);
-    return () => { cancel(); window.removeEventListener("blur", clear); };
-  }, []);
+  // Unmounting cancels a gesture under way.
+  useEffect(() => () => cancel(), []);
   // Escape that cancels a move of the nodes clears the selected wires too. It must hear the key before useNodeMoving's
   // own cancel ends the move: a moment's hearings hear a key in the order they began (pageKeys), useEscapeCancel keeps
   // its hearing while mounted, and GraphWires, inside NodeGraph, begins its hearings first, as React commits a child's

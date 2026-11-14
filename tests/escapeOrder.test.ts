@@ -185,4 +185,16 @@ describe('The window losing focus',()=>{
    assert.deepEqual(drawn.drawn.ties,[TIE],'the wire gesture is cancelled');
   } finally {played.dispose();}
  });
+
+ it('keeps a graph\'s selections, its wires\' as its nodes\'',async()=>{
+  const played=await scene();
+  try {
+   const drawn=graph(played);
+   drawn.selectNode();drawn.wires.now.select('ab',false);rendered(drawn.wires);
+   windowBlurs();
+   rendered(drawn.nodes,drawn.wires);
+   assert.ok(drawn.nodeSelected(),'the node selection is kept');
+   assert.deepEqual(drawn.wires.now.selected,['ab'],'the wire selection is kept');
+  } finally {played.dispose();}
+ });
 });
