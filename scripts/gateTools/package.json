@@ -1,0 +1,11 @@
+{
+  "name": "design-suite-gate-tools",
+  "private": true,
+  "description": "The pinned tools npm run check:cycles and check:duplication run, apart from the package's own dependencies, which consumers install to run prepare. dependency-cruiser needs TypeScript 6 beside it, and jscpd's binary is 42 MB. Install with npm ci --prefix scripts/gateTools.",
+  "type": "module",
+  "devDependencies": {
+    "dependency-cruiser": "18.7.1",
+    "jscpd": "5.4.2",
+    "typescript": "6.0.3"
+  }
+}

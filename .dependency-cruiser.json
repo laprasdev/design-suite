@@ -1,0 +1,26 @@
+{
+  "forbidden": [
+    {
+      "name": "no-circular",
+      "comment": "No circular imports of any kind, type-only, JSDoc and lazy import() included. When modules import each other, directly or through others, the need they share moves to a leaf file they all import.",
+      "severity": "error",
+      "from": {},
+      "to": {
+        "circular": true
+      }
+    }
+  ],
+  "options": {
+    "tsPreCompilationDeps": true,
+    "detectJSDocImports": true,
+    "tsConfig": {
+      "fileName": "tsconfig.json"
+    },
+    "doNotFollow": {
+      "path": "node_modules"
+    },
+    "exclude": {
+      "path": "(^|/)node_modules/|^(dist|\\.local)/"
+    }
+  }
+}

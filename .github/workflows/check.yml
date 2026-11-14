@@ -1,0 +1,29 @@
+name: Check
+# Every repository check, each a required status named after its npm script: `npm run check` (gate tools, types,
+# size, circular imports, duplication), `npm test` and `npm run build`, which AGENTS.md asks for before every push,
+# and the per-area type checks.
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  npm:
+    name: npm run ${{ matrix.script }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        script: [check, test, build, 'check:graph', 'check:forms', 'check:sky', 'check:preview3d', 'check:gates']
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - run: npm run "$SCRIPT"
+        env:
+          SCRIPT: ${{ matrix.script }}
