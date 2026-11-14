@@ -31,19 +31,23 @@ export function useWireGestures(
   const cancelGesture = useRef<(() => void) | null>(null);
   const cancel = () => cancelGesture.current?.();
   const begin = (next: Gesture) => { gesture.current = next; setDragging(true); };
-  // A gesture is a drag that only its own release ends: Escape or the window losing focus cancels it.
-  useDragSession(dragging, { cancel, lostFocus: cancel });
+  // A gesture is a drag that only its own release ends: Escape or the window losing focus cancels it. Inside a
+  // NodeGraph its wires and nodes are one control, so Escape that cancels a gesture also clears the node selection, as
+  // Escape with nothing under way clears both once the page has let it pass.
+  useDragSession(dragging, { cancel: () => { cancel(); nodeSelection?.clear(); }, lostFocus: cancel });
   // The window losing focus clears the selected wires, gesture or not; unmounting cancels a gesture under way.
   useEffect(() => {
     const clear = () => setSelected([]);
     window.addEventListener("blur", clear);
     return () => { cancel(); window.removeEventListener("blur", clear); };
   }, []);
-  // Inside a NodeGraph its wires and nodes are one control: Escape while a wire gesture or a move of the nodes is under
-  // way clears both selections, as Escape with nothing under way does once the page has let it pass.
+  // Escape that cancels a move of the nodes clears the selected wires too. It must hear the key before useNodeMoving's
+  // own cancel ends the move: a moment's hearings hear a key in the order they began (pageKeys), useEscapeCancel keeps
+  // its hearing while mounted, and GraphWires, inside NodeGraph, begins its hearings first, as React commits a child's
+  // effects before its parent's.
   useEscapeCancel(KeyMoment.UNDER_WAY, () => {
-    if (!gesture.current && !nodeSelection?.underWay()) return false;
-    nodeSelection?.clear(); setSelected([]); return true;
+    if (!nodeSelection?.underWay()) return false;
+    setSelected([]); return true;
   });
   const shown = selected.filter(id => links.some(link => link.id === id));
   // Escape clears the selected wires once every Modal and focused control has let it pass, and takes the key only when

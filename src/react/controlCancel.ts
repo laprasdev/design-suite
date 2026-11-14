@@ -18,7 +18,7 @@ export function cancelsOnEscape(event: Key,cancel: ()=>boolean) {
 // drag, a move or a gesture, before any Modal or focused control; a selection with the page after focus, once every
 // Modal and focused control has let the key pass, so Escape closes a dialog over it, or cancels a focused control's
 // edit, first. Hears Escape while the control is mounted, so a render during the same key's dispatch cannot drop the
-// listener. `cancel` is read when the key arrives.
+// listener, and the hearing keeps its place in its moment's order. `cancel` is read when the key arrives.
 export function useEscapeCancel(moment: typeof KeyMoment.UNDER_WAY|typeof KeyMoment.PAGE_AFTER_FOCUS,
  cancel: ()=>boolean) {
  const latest=useRef(cancel);
