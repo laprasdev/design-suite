@@ -5,8 +5,9 @@
 // =====================================================
 import React, { type ReactNode, type TableHTMLAttributes } from "react";
 
-// FIT sizes the table to its content instead of the full width.
-export const DataTableForm = Object.freeze({ FIT: 'fit' } as const);
+// FIT sizes the table to its content instead of the full width. WRAP lets the first column, the rows' names, wrap at
+// their break points, so a long name such as a path takes lines rather than pushing the table past its frame.
+export const DataTableForm = Object.freeze({ FIT: 'fit', WRAP: 'wrap' } as const);
 export type DataTableForm = (typeof DataTableForm)[keyof typeof DataTableForm];
 
 export interface DataTableProps extends TableHTMLAttributes<HTMLTableElement> {

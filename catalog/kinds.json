@@ -300,7 +300,7 @@
   },
   "DataTable": {
    "data": "named counts and notes",
-   "note": "DataTableForm.FIT sizes the table to its content, with 12px heads and every column in the text colour; the default stays full width.",
+   "note": "DataTableForm.FIT sizes the table to its content, with 12px heads and every column in the text colour; DataTableForm.WRAP lets the first column's names wrap at their break points instead of pushing the table past its frame; the default stays full width with names on one line.",
    "kit": [
     "DataTable",
     "RecordTable"
