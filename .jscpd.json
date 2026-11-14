@@ -1,0 +1,9 @@
+{
+  "format": ["typescript", "tsx", "javascript", "jsx", "css"],
+  "minTokens": 50,
+  "minLines": 5,
+  "mode": "mild",
+  "threshold": 0,
+  "reporters": ["console"],
+  "ignore": ["**/node_modules/**", "**/dist/**", "**/.local/**"]
+}

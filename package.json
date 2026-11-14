@@ -116,7 +116,9 @@
   "scripts": {
     "build": "node scripts/build.mjs",
     "prepare": "npm run build",
-    "check": "tsc -p . && node scripts/size-gate.mjs",
+    "check": "tsc -p . && node scripts/size-gate.mjs && npm run check:cycles && npm run check:duplication",
+    "check:cycles": "npx --yes --package=dependency-cruiser@18.7.1 --package=typescript@6.0.3 -- depcruise --config .dependency-cruiser.json --output-type err .",
+    "check:duplication": "npx --yes jscpd@5.4.2 --config .jscpd.json .",
     "test": "node --test tests/*.test.ts",
     "check:graph": "tsc -p tsconfig.graph-tests.json",
     "check:preview3d": "tsc -p tsconfig.preview3d-tests.json",
