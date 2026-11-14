@@ -31,7 +31,7 @@
     "src/synth/components/synth/Boolean.tsx": {"lines":209,"longLines":4,"importLines":9},
     "src/synth/components/synth/Enum.tsx": {"lines":722,"longLines":26,"importLines":11},
     "src/synth/components/synth/Graph.tsx": {"lines":662,"longLines":2,"importLines":5},
-    "src/synth/components/synth/Knob.tsx": {"lines":576,"longLines":12,"importLines":24},
+    "src/synth/components/synth/Knob.tsx": {"lines":572,"longLines":11,"importLines":28},
     "src/synth/components/synth/Layout.tsx": {"lines":151,"longLines":8,"importLines":4},
     "src/synth/components/synth/ModulationRings.tsx": {"lines":71,"longLines":12,"importLines":4},
     "src/synth/components/synth/ModuleGrid.tsx": {"lines":80,"longLines":10,"importLines":8},

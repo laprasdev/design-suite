@@ -1,6 +1,6 @@
 import { knobSkinConfig, skinForm } from '../../../skinForms.ts';
 import { SkinKind } from '../../../skinKinds.ts';
-import React, { useCallback, useEffect, useState, useRef } from 'react';
+import React, { useCallback, useState, useRef } from 'react';
 import { useStyle } from '../../StyleContext.tsx';
 import { getColorScheme, getInsetShadow, resolveColorType, hexToRgba, type AnyColor } from '../../../color.ts';
 import { D, F, O, TransitionKeys, Borders, T } from '../../design/index.ts';
@@ -19,6 +19,9 @@ import {
   getKnobSensitivity
 } from '../../design/constants/KnobConfig.ts';
 import {KnobFace, KnobLineIndicator, HorseshoeRing} from '../../../react/KnobFace.tsx';
+import {Modal} from '../../../react/Modal.tsx';
+import {ModalPlacement} from '../../../react/modalElements.ts';
+import {Label} from '../../../react/accents.tsx';
 import { useKnobDrag, KnobInnerCircle } from './base/index.ts';
 import { useTooltipSafe } from './TooltipContext.tsx';
 import { ModulationRings } from './ModulationRings.tsx';
@@ -169,17 +172,10 @@ export function limitWords(typed: number, min: number, max: number) {
   return `Takes ${takes}, so ${typed} wasn't written.`;
 }
 
-/** A refusal stays in view until the next press or key anywhere. */
-function useRefusal() {
-  const [refused, setRefused] = useState<string | null>(null);
-  useEffect(() => {
-    if (!refused) return;
-    const clear = () => setRefused(null);
-    addEventListener('pointerdown', clear, true); addEventListener('keydown', clear, true);
-    return () => { removeEventListener('pointerdown', clear, true); removeEventListener('keydown', clear, true); };
-  }, [refused]);
-  return { refused, setRefused };
-}
+/** A refusal is an anchored Modal under the value, its words a Label: a press elsewhere or Escape dismisses it. */
+const REFUSAL_PLACE: React.CSSProperties = {
+  position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)', padding: D.moduleGrid.inputPadding,
+};
 
 /**
  * `refusesOutside` writes nothing for a number past min or max and says so, where without it the number is clamped. Escape then leaves without writing.
@@ -191,9 +187,8 @@ export function EditableValue({ text, value, color, style, onChange, min, max, r
   /** One press opens the box, as its text cursor promises. Without it, as on the old grid, a double-click does. */
   opensOnPress?: boolean;
 }) {
-  const theme = useStyle().getEffectiveStyle();
   const [editing, setEditing] = useState(false);
-  const { refused, setRefused } = useRefusal();
+  const [refused, setRefused] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const opensWith = value === undefined ? text.replace(/[^0-9.\-]/g, '') : String(value);
 
@@ -213,7 +208,8 @@ export function EditableValue({ text, value, color, style, onChange, min, max, r
 
   if (!editing || !onChange) return <div data-editable-value style={refusesOutside ? { ...style, position: 'relative' } : style} onClick={opensOnPress ? () => setEditing(true) : undefined} onDoubleClick={opensOnPress ? undefined : () => setEditing(true)}>
     {text}
-    {refused && <span role="alert" data-value-refused style={{ ...T.moduleValue, position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)', zIndex: D.pageShell.overlayLayer, width: 'max-content', maxWidth: D.moduleGrid.rowValueWidth * 2, padding: D.moduleGrid.inputPadding, textAlign: 'center', color: theme.textColor, background: theme.cutoutBackground, border: `${Borders.standard.width}px solid ${theme.primaryColor}`, borderRadius: D.radius.tiny }}>{refused}</span>}
+    {refused && <Modal open placement={ModalPlacement.ANCHORED} onClose={() => setRefused(null)} role="alert"
+      style={REFUSAL_PLACE}><Label kind="action">{refused}</Label></Modal>}
   </div>;
 
   return (
