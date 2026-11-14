@@ -18,3 +18,6 @@
 .bd-table[data-table-form="fit"] { width: auto; max-width: 100%; justify-self: start; align-self: start; }
 .bd-table[data-table-form="fit"] th { font-size: 12px; }
 .bd-table[data-table-form="fit"] td:last-child { color: var(--color-text, #f0f0f3); }
+
+/* Wrap: the names wrap at their break points, spaces and <wbr>, once the table would otherwise pass its frame. */
+.bd-table[data-table-form="wrap"] td:first-child { white-space: normal; }
