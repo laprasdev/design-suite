@@ -1,4 +1,6 @@
-import {SettingSlider, SkinRangeSlider} from '../../../react/inputs/SettingSlider.tsx';
+import {SettingSlider, SkinRangeSlider, type SettingSliderProps} from '../../../react/inputs/SettingSlider.tsx';
+import {SliderForm} from '../../../react/inputs/sliderForm.ts';
+export {SliderForm};
 import {skinFormOrDefault} from '../../../skinForms.ts';
 import {SkinDefault, SliderSkinForm as SkinSliderForm} from '../../../skinKinds.ts';
 import {ModulationTracks} from '../../../react/inputs/ModulationTracks.tsx';
@@ -84,28 +86,6 @@ function SliderFader({ fraction, scheme, style, active, thin }: {
 // SLIDER COMPONENT
 // =====================================================
 
-// One slider, three forms: a bare track for a module's grid, a labelled row with its written value and a reset, or a two-ended range.
-export const SliderForm=Object.freeze({
- CELL:'cell',THIN:'thin',SETTING:'setting',RANGE:'range',PROGRESS:'progress',
-} as const);
-export interface SettingSliderProps extends SliderModulationProps {
-  form: typeof SliderForm.SETTING;
-  label: string;
-  detail?: string;
-  value: number;
-  min: number;
-  max: number;
-  step: number | 'any';
-  defaultValue?: number;
-  onChange(value: number): void;
-  resetLabel?: string;
-  disabled?: boolean;
-  format?: (value: number)=>React.ReactNode;
-  compact?: boolean;
-  /** A drag moves the value this far a pixel from where it was pressed, like the cell form's, in place of the
-   *  track's absolute position; a range with more steps than the track has pixels can then still land on each. */
-  sensitivity?: number;
-}
 export function Slider(
  props: SliderProps|SettingSliderProps|SliderProgressProps|(RangeSliderProps&{form:typeof SliderForm.RANGE})
 ) {
