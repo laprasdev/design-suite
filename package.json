@@ -118,7 +118,7 @@
     "prepare": "npm run build",
     "check": "npm run gate-tools && tsc -p . && node scripts/size-gate.mjs && npm run check:cycles && npm run check:duplication",
     "check:cycles": "node scripts/cycle-gate.ts",
-    "check:duplication": "scripts/gateTools/node_modules/.bin/jscpd --config .jscpd.json .",
+    "check:duplication": "scripts/gateTools/node_modules/.bin/jscpd",
     "gate-tools": "npm ci --prefix scripts/gateTools --no-audit --no-fund --loglevel=error",
     "test": "npm run gate-tools && node --test tests/*.test.ts",
     "check:graph": "tsc -p tsconfig.graph-tests.json",

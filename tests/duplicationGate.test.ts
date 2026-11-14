@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { runGate } from './gateFixture.ts';
+import { GATE, runGate } from './gateFixture.ts';
 
 /** A function long enough to be a clone: over the 50 tokens and 5 lines .jscpd.json counts. */
 const FUNCTION = [
@@ -21,7 +21,7 @@ const FUNCTION = [
 const RULES = ['margin: 0 auto;', 'padding: 4px 8px;', 'border: 1px solid currentColor;', 'border-radius: 6px;',
   'display: grid;', 'gap: 4px;', 'align-items: center;', 'font-size: 12px;'].map(line => `  ${line}`).join('\n');
 
-const duplication = (files: Record<string, string>) => runGate('check:duplication', files, process.env);
+const duplication = (files: Record<string, string>) => runGate(GATE.duplication, files, process.env);
 
 describe('the duplication gate', () => {
   it('refuses a function copied into a second file', () => {
@@ -34,6 +34,11 @@ describe('the duplication gate', () => {
     const run = duplication({ 'src/panel.css': `.panel {\n${RULES}\n}\n\n.card {\n${RULES}\n}\n` });
     assert.equal(run.status, 1, run.output);
     assert.match(run.output, /Clone found \(css\)/);
+  });
+  it('refuses a scan that analyzed no file, which would find no clone', () => {
+    const run = duplication({ 'notes/readme.md': '# Notes\n' });
+    assert.equal(run.status, 1, run.output);
+    assert.match(run.output, /jscpd analyzed no files/);
   });
   it('passes the same code written once', () => {
     const run = duplication({ 'src/one.ts': FUNCTION, 'src/panel.css': `.panel {\n${RULES}\n}\n` });
