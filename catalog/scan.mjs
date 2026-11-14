@@ -3,7 +3,7 @@ import { readFile, readdir } from 'node:fs/promises';
 import path from 'node:path';
 
 const SUITE = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
-const ISM = path.resolve(SUITE, '../InfiniteStateMachine/packages');
+const ISM = path.resolve(SUITE, '../infinite-state-machine/packages');
 const SM = `${ISM}/com.bloom.state-machine`;
 const SYNTH = `${ISM}/synth-web/src`;
 const BB = process.env.BASEBALL_ROOT || path.resolve(SUITE, '../slowbro-sports');
