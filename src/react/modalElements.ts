@@ -1,3 +1,4 @@
+import type {RefObject} from 'react';
 import {element} from './elementContract.ts';
 
 // A titled Modal's parts, shared by its layout, its stylesheet and consumers' browser checks.
@@ -12,3 +13,8 @@ export const MODAL_ROW_LABELLED_ATTRIBUTE='data-labelled';
 export const MODAL_PLACEMENT_ATTRIBUTE='data-modal-placement';
 export const ModalPlacement=Object.freeze({VIEWPORT:'viewport',CONTAINED:'contained',ANCHORED:'anchored'} as const);
 export type ModalPlacementValue=(typeof ModalPlacement)[keyof typeof ModalPlacement];
+// Where a Modal sits. Only an anchored Modal names an anchor, the element it opens from, which is part of its region,
+// and a group, of which one is open at a time.
+export type ModalPlacementProps=
+ |{placement?: typeof ModalPlacement.VIEWPORT|typeof ModalPlacement.CONTAINED;anchor?: never;group?: never}
+ |{placement: typeof ModalPlacement.ANCHORED;anchor?: RefObject<HTMLElement|null>;group?: string};

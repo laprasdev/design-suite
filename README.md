@@ -123,28 +123,43 @@ Use `Modal` for short confirmations and bounded pickers. `ViewStack` composes it
 for its shell, backdrop and Escape handler while owning its view transitions.
 The Crossfade page form does not add a backdrop or Escape handler.
 
-`ModalPlacement` puts the same `Modal` panel in the viewport (the default), contained
-in its positioned parent, or anchored where its caller's positioning styles place it.
-Contained and anchored panels keep the page interactive and leave focus to their
-caller; an anchored panel has no backdrop. `HoverDetail` composes the anchored placement
-for its tooltip or dialog content. Every placement keeps the same surface and the module
-radius token. `MODAL_PLACEMENT_ATTRIBUTE` carries the placement on the panel and its
-frame for styling and browser checks, and `panelRef` exposes the panel for measurement
-or focus.
+`ModalPlacement` puts the same `Modal` panel in the viewport (the default), contained in
+its positioned parent, or anchored where its caller's positioning styles place it.
+Contained and anchored panels keep the page interactive and leave focus to their caller;
+an anchored panel has no backdrop. An anchored `Modal` may name its `anchor`, the element
+it opens from: the panel and the anchor are its region, and the region also holds the
+regions of the `Modal`s anchored inside its panel, such as a list opened from a detail.
+Dismissed with focus in its panel, an anchored `Modal` hands focus back to its anchor. An
+anchored `Modal` may also name a `group`, of which one is open at a time: opening one
+dismisses the others. `HoverDetail` composes the anchored placement for its tooltip or
+dialog content. Every placement keeps the same surface and the module radius token.
+`MODAL_PLACEMENT_ATTRIBUTE` carries the placement on the panel and its frame for styling
+and browser checks, and `panelRef` exposes the panel for measurement or focus.
 
-Escape goes to one receiver and stops there: the innermost open `Modal` that receives it,
-which closes if it is dismissible. A contained or anchored panel receives Escape only while
-focus is inside it, and the topmost viewport `Modal` receives every other one. A key that a
-control inside the receiver has already handled (its default prevented) stops there without
-closing it.
+`Modal` alone decides how it is dismissed (`modalDismissal.ts`): whatever opens over
+content and closes on Escape, a press elsewhere or a drag is a `Modal` placement, never a
+handler of its own. Escape goes to one receiver. The innermost open `Modal` whose own
+panel or anchor holds the focus receives it and stops it there; a contained or anchored
+`Modal` receives an Escape only so. The topmost viewport `Modal` (the latest in the
+document) receives every other Escape and stops it. With no viewport `Modal` open, the
+topmost anchored `Modal` receives an Escape that no region holds, wherever the focus is,
+and the key goes on to the focused control: a detail shown on hover closes on Escape
+without moving pointer or focus (WCAG 1.4.13), and a control still cancels what it was
+doing. The receiver closes if it is dismissible; a key that a control inside its panel has
+already handled (its default prevented) stops there without closing it. A press outside an
+anchored `Modal`'s region, or a drag starting anywhere, dismisses it if it is dismissible,
+and the press goes on to what it lands on.
 
-The topmost viewport `Modal` takes an Escape aimed outside it in the window's capture phase,
-before the document or any element sees it. A receiver holding the focus takes the key in its
-panel's React handler: React handlers around it and the document's and window's bubbling
-listeners never see it, but the document's capture listeners and native listeners on the
-elements between the focus and the application root already have. A window capture listener
-added before the first `Modal` opened sees every Escape. A dismissible viewport `Modal` also
-closes on its backdrop; content may supply its own actions.
+The window hears Escape, presses and drags in its capture phase. The topmost viewport
+`Modal` takes an Escape aimed outside it, and an anchored `Modal` one at its anchor,
+there, and stops it before the document or any element sees it; the topmost anchored
+`Modal` takes an Escape no region holds there too, without stopping it. A receiver holding
+the focus in its panel takes the key in its panel's React handler: React handlers around
+it and the document's and window's bubbling listeners never see it, but the document's
+capture listeners and native listeners on the elements between the focus and the
+application root already have. A window capture listener added before the first `Modal`
+opened sees every Escape. A dismissible viewport `Modal` also closes on its backdrop;
+content may supply its own actions.
 
 Give a `Modal` a `title` and it lays its children out on one grid: the title, which
 names the dialog, then each `ModalRow` (a label and its control on two shared columns,
