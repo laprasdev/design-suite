@@ -42,8 +42,8 @@ export function actorAsset(clips: readonly ClipSpec[], skeleton = true) {
   return {asset: {scene, animations} as unknown as GLTF, bone, body};
 }
 
-export const THEME: ModelStageTheme = Object.freeze({colors: Object.freeze({stage: '#000', text: '#fff',
-  surface: '#111', surfaceHi: '#222', accent: '#f00', accentDeep: '#800', teal: '#0ff'})});
+export const THEME: ModelStageTheme = Object.freeze({colors: Object.freeze({stage: '#000000', text: '#ffffff',
+  surface: '#111111', surfaceHi: '#222222', accent: '#ff0000', accentDeep: '#880000', teal: '#00ffff'})});
 
 export function actorContext(clock: ModelStageClock = 'external') {
   const scene = new THREE.Scene(), modes = createModelSurfaceModes();
