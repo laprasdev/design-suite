@@ -1,6 +1,7 @@
 import {forwardRef,type ReactNode} from 'react';
 import {AlertTriangle,Info} from 'lucide-react';
 import {Bar,type BarProps} from './Bar.tsx';
+import {BAR_FILL} from './barElements.ts';
 import {Label} from './accents.tsx';
 import {Button} from './Button.tsx';
 import {ActionBarElement,ActionNoticeElement} from './actionBarElements.ts';
@@ -41,6 +42,7 @@ export function ActionNotice({notice}: {notice?: ActionBarNotice|null}) {
    role={notice.tone==='error'?'alert':'status'} title={notice.detail} slots={{
     left:<><Icon size={16} aria-hidden="true"/><Label kind="action">{notice.message}</Label>
      {notice.detail&&<Label kind="action" className={ActionNoticeElement.DETAIL.className}>{notice.detail}</Label>}</>,
-    right:notice.action&&<Button variant="subtle" onClick={notice.action.onClick}>{notice.action.label}</Button>,
+    right:notice.action&&<Button {...BAR_FILL} variant="subtle" onClick={notice.action.onClick}>
+     {notice.action.label}</Button>,
    }}/>:null;
 }

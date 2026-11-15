@@ -23,7 +23,10 @@
 .bd-btn {
   font-family: inherit;
   display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-  min-width:var(--button-min-width,0);min-height:var(--button-min-height,auto);padding: var(--button-padding-block,8px) var(--button-padding-inline,16px); border:var(--line-width, 1px) solid transparent; border-radius: var(--r-sm, 9px); cursor: pointer;
+  min-width:var(--button-min-width,0);min-height:var(--button-min-height,auto);
+  /* A surface sets the block padding's start and end apart by giving the token two values. */
+  padding-block:var(--button-padding-block,8px);padding-inline:var(--button-padding-inline,16px);
+  border:var(--line-width, 1px) solid transparent; border-radius: var(--r-sm, 9px); cursor: pointer;
   transition: filter 0.15s, background 0.15s, border-color 0.15s, color 0.15s;
 }
 .bd-btn > .bd-label { color: inherit; }
@@ -41,7 +44,8 @@
 .bd-btn--accent { background: transparent; border: 0; color: var(--color-accent, #c4678f); }
 .bd-btn--accent:hover { filter: brightness(1.15); }
 /* Text actions: no surface, the label's own padding. */
-.bd-btn--text,.bd-btn--subtle { background: transparent; border: 0; padding:var(--button-padding-block,4px) var(--button-padding-inline,0); border-radius: 0; }
+.bd-btn--text,.bd-btn--subtle { background: transparent; border: 0; border-radius: 0;
+  padding-block:var(--button-padding-block,4px);padding-inline:var(--button-padding-inline,0); }
 /* Text-only action: full-strength text. Pair with `glow` for a call to action. */
 .bd-btn--text { color: var(--color-text, #f0f0f3); }
 .bd-btn--text:hover { filter: brightness(1.15); }

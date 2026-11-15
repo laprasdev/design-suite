@@ -11,7 +11,6 @@
 .action-bar,.action-bar-notice { --header-control:var(--header-control-compact);--button-padding-block:0; }
 .action-bar { --button-min-height:var(--header-control); }
 .action-bar-notice { --button-min-height:initial; }
-.action-bar-notice>.bar-right { align-self:stretch;align-items:stretch; }
 .action-bar>.bar-center { container-type:inline-size;--participant-cluster-width:50cqw;--bar-participant-fit:calc((100cqw - var(--participant-clearance) * 2 - var(--field-gap)) / 2); }
 .action-bar>.bar-left,.action-bar>.bar-center:not(:has(.bar-participants)) { overflow:hidden; }
 .action-bar:has(.header-notices[data-inline]>*) { --bar-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1fr); }

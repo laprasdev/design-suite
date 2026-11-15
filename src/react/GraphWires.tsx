@@ -2,6 +2,7 @@ import {GRAPH_WIRE_ATTRIBUTE} from './nodeGraphTypes.ts';
 import React, { useLayoutEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { Cable, X } from "lucide-react";
 import { Button } from "./Button.tsx";
+import { NodeGraphElement } from "./nodeGraphElements.ts";
 import {
   bundleVertical, freeTiePoint, graphLinks, TIE_SIZE, TIE_RUN, snapTie, tieWidth, tieWires, wireMiddle,
 } from "./wireGeometry.ts";
@@ -97,7 +98,7 @@ export function GraphWires({
     </svg>
     {showPorts && onOutletsChange && outputs.map(output => {
       const position = outlets[output.group] ?? nearestGroupOutlet(output.frame, output.at);
-      return <Button key={`handle:${output.group}`} variant="text" className="bd-group-outlet-handle"
+      return <Button key={`handle:${output.group}`} variant="text" className={NodeGraphElement.OUTLET_HANDLE.className}
         data-group-outlet-handle={output.group} aria-label={`Move ${output.frame.label} output`}
         title="Drag along any wall · Arrows move around the frame · Delete restores automatic placement"
         style={{ left: output.at.x, top: output.at.y }}
@@ -113,7 +114,8 @@ export function GraphWires({
           onOutletsChange({ ...outlets, [output.group]: stepGroupOutlet(output.frame, position, direction) });
         }} />;
     })}
-    {onTiesChange && bundles.map(bundle => <Button key={bundle.id} className="bd-twist-tie" variant="ghost"
+    {onTiesChange && bundles.map(bundle => <Button key={bundle.id} variant="ghost"
+      className={NodeGraphElement.TWIST_TIE.className}
       aria-label={`Twist tie: ${bundle.members.length} wires`}
       title="Drag to route · Arrows to move · Double-click or Delete to untie"
       style={{ left: bundle.x, top: bundle.y, width: tieWidth(bundle.members.length), height: TIE_SIZE.height,

@@ -1,5 +1,6 @@
 import React, { useRef, type PointerEvent } from "react";
 import { Button } from "./Button.tsx";
+import { NodeGraphElement } from "./nodeGraphElements.ts";
 import { cancelsOnEscape } from "./controlCancel.ts";
 import type { GraphGroup, GraphGroupResize, GroupEdge } from "./nodeGraphTypes.ts";
 
@@ -33,7 +34,7 @@ export function GroupResize({ group, onResize, step }: {
     return true;
   };
   return (Object.keys(EDGES) as GroupEdge[]).map(edge =>
-    <Button key={edge} variant="text" className="bd-node-group-resize" data-edge={edge}
+    <Button key={edge} variant="text" className={NodeGraphElement.GROUP_RESIZE.className} data-edge={edge}
     aria-label={`Reshape ${group.label} from ${edge}`} title={`Drag ${edge} edge to reflow nodes · Arrows to reshape`}
     onPointerDown={event => {
       if (event.button !== 0) return;

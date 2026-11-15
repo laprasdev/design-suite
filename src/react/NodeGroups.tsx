@@ -2,6 +2,7 @@ import React, { type HTMLAttributes } from "react";
 import { GroupResize } from "./GroupResize.tsx";
 import { ChevronUp } from "lucide-react";
 import { Button } from "./Button.tsx";
+import { NodeGraphElement } from "./nodeGraphElements.ts";
 import type { GraphGroup, GraphNode, GraphGroupResize } from "./nodeGraphTypes.ts";
 
 import { GROUP_SPACE } from "./groupGeometry.ts";
@@ -14,7 +15,7 @@ export function NodeGroups({ groups, nodes, onToggle, onResize, groupProps }: {
     return <div key={group.id} className="bd-node-group" data-group={group.id}
       data-completed={group.completed || undefined}
       style={{ left: group.x, top: group.y, width: group.w, height: group.h }}>
-      <Button className="bd-node-group-heading" variant="subtle" aria-expanded="true"
+      <Button className={NodeGraphElement.GROUP_HEADING.className} variant="subtle" aria-expanded="true"
         aria-label={`Collapse ${group.label}`} onPointerDown={event => event.stopPropagation()}
         {...groupProps(group.id)} title="Drag to move · Click to fold"
         onClick={() => onToggle?.(group.id)}>

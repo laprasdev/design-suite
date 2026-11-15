@@ -15,6 +15,7 @@
   --bd-node-radius: var(--radius-card-sm, 9px);
   --bd-node-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
   --bd-node-selected: var(--color-text, #f0f0f3);
+  --bd-node-heading-height: 40px;
 
   --bd-edge-stroke: rgba(240, 240, 243, 0.2);
   --bd-edge-width: 1.6px;
@@ -48,7 +49,7 @@
 .bd-group-outlet { --bd-port-stroke:var(--bd-group-output, color-mix(in srgb,var(--bd-accent) 55%,var(--bd-edge-stroke))); }
 .bd-group-outlet-handle {
   position:absolute;z-index:4;width:24px;height:24px;
-  --button-min-height:0;--button-padding-block:0;--button-padding-inline:0;
+  --button-padding-block:0;--button-padding-inline:0;
   transform:translate(-50%,-50%);border:0;border-radius:50%;background:transparent;
   cursor:grab;touch-action:none;
 }
@@ -107,7 +108,7 @@
 }
 .bd-node-group .bd-node-group-heading {
   pointer-events:auto;position:absolute;z-index:1;top:0;left:0;right:0;justify-content:flex-start;
-  --button-min-height:40px;--button-padding-block:8px;--button-padding-inline:16px;
+  --button-min-height:var(--bd-node-heading-height);--button-padding-block:8px;--button-padding-inline:16px;
   border:0;border-radius:0;font-size:14px;
 }
 .bd-node-group-heading .bd-label { display:flex;align-items:center;gap:8px;font-size:14px; }
@@ -118,7 +119,7 @@
 .bd-edge-hit:focus-visible { outline:none;stroke:var(--bd-node-selected);stroke-width:3; }
 .bd-nodegraph .bd-twist-tie {
   position:absolute;z-index:2;border-radius:4px;cursor:grab;touch-action:none;
-  --button-min-height:0;--button-padding-block:0;--button-padding-inline:0;
+  --button-padding-block:0;--button-padding-inline:0;
   background:var(--bd-node-bg);border:2px solid var(--bd-node-selected);box-shadow:0 0 0 2px var(--bd-node-bg);
 }
 .bd-twist-tie:active { cursor:grabbing; }
@@ -133,7 +134,7 @@
 .bd-wire-sweep { fill:none;stroke:var(--bd-accent);stroke-width:2;stroke-dasharray:4 4;pointer-events:none; }
 .bd-node-group .bd-node-group-resize {
   position:absolute;z-index:3;pointer-events:auto;touch-action:none;border:0;border-radius:4px;
-  --button-min-height:0;--button-padding-block:0;--button-padding-inline:0;
+  --button-padding-block:0;--button-padding-inline:0;
   background:transparent;
 }
 .bd-node-group-resize:is([data-edge="left"],[data-edge="right"]) { top:8px;bottom:8px;width:10px;cursor:ew-resize; }

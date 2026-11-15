@@ -2,7 +2,11 @@
 // graphs embedded in a page leave ordinary scrolling to that page.
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {cssRect, zoomOf} from './cssZoom.ts';
+import {NodeGraphElement} from './nodeGraphElements.ts';
 import type {PointerEvent as ReactPointerEvent} from 'react';
+// A press on a group's resize edge or its movable heading takes over the view from automatic fitting.
+const GROUP_GESTURE_HANDLES =
+  `${NodeGraphElement.GROUP_RESIZE.selector},${NodeGraphElement.GROUP_HEADING.selector}[data-moving]`;
 export interface GraphViewport {width: number; height: number; selecting?: boolean; readable?: boolean;
   fill?: boolean; expand?: boolean;}
 const frameElement = (node: HTMLDivElement | null): HTMLDivElement =>
@@ -103,8 +107,7 @@ export function usePanZoom(viewport?: GraphViewport) {
     frame, view, zoomBy, fit,
     handlers: { onPointerDown, onPointerMove, onPointerUp, onPointerCancel: onPointerUp,
       onPointerDownCapture: (e: ReactPointerEvent<HTMLDivElement>) => {
-        if ((e.target instanceof Element
-          && e.target.closest('.bd-node-group-resize,.bd-node-group-heading[data-moving]'))) automatic.current = false;
+        if ((e.target instanceof Element && e.target.closest(GROUP_GESTURE_HANDLES))) automatic.current = false;
       } },
   };
 }

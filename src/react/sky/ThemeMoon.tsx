@@ -1,4 +1,5 @@
 import {Button} from '../Button.tsx';
+import {ThemeMoonElement} from './themeMoonElements.ts';
 import {SegmentedControl, ICON_SEGMENT_VARIANT} from '../SegmentedControl.tsx';
 import {KeyMoment, PageKey, onPageKey} from '../pageKeys.ts';
 // The theme, behind the moon crossing the header's sky. The moon is tonight's: its real phase, lit on the side the sun
@@ -90,7 +91,7 @@ export function ThemeMoon({skins, skin, onSkin, fan, onOpen}: ThemeMoonProps) {
             className: 'theme-swatch', style: {'--swatch-index': index}, label: <Swatch skin={choice}/>}))}/>
       </div>
       <Button variant="subtle"
-        type="button" className="theme-moon-button" aria-label="Theme" aria-expanded={open}
+        type="button" className={ThemeMoonElement.BUTTON.className} aria-label="Theme" aria-expanded={open}
         title={`${phase.name}, ${Math.round(phase.illuminated * 100)}% lit`} onClick={() => setOpen(x => !x)}
       >
         <Moon phase={phase} />

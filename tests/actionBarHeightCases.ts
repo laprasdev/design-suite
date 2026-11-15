@@ -11,3 +11,7 @@ export const FOOTER_SETTING=Object.freeze({label:'Palette',options:[{value:'day'
 // their size.
 export const FLAT_SURFACE=Object.freeze({'--page-bar-height-scale':0});
 export const OUTSIDE_BUTTON='Outside';
+// Chromium lays out boxes in sixty-fourths of a CSS pixel, so a width computed in CSS lands within one of them.
+export const LAYOUT_UNIT=1/64;
+// A phone's bottom safe area, deeper than a footer's padding, which a footer's action pads its block end to.
+export const SAFE_AREA=Object.freeze({bottom:40});
