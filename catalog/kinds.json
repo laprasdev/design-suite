@@ -250,7 +250,7 @@
   "ActionBar": {
    "data": "the current actors and their state",
    "webFirst": "baseball core ActionBar",
-   "note": "Web-first. Optional notice shows feedback beneath the header with action-label typography and an optional recovery action. PageHeaderBar's centerRow puts the centre slot on its own row at phone width, its below slot holds content under the header (the notice, floating or not, sits beneath it), and floatingNotice floats the notice over the page under the header as the header-notices layer, so what is below never moves. PageFooter's compact drops its settings' labels at phone width; each setting keeps its label as the control's hover hint. Reaches C# once promoted in the language. HeaderSky composes constellations and ThemeMoon; ThemeMoon composes the SegmentedControl icons form for theme selection.",
+   "note": "Web-first. Every Button it holds is the bar's control height (--header-control). Optional notice shows feedback beneath the header with action-label typography and an optional recovery action. PageHeaderBar's centerRow puts the centre slot on its own row at phone width, its below slot holds content under the header (the notice, floating or not, sits beneath it), and floatingNotice floats the notice over the page under the header as the header-notices layer, so what is below never moves. PageFooter's compact drops its settings' labels at phone width; each setting keeps its label as the control's hover hint. Reaches C# once promoted in the language. HeaderSky composes constellations and ThemeMoon; ThemeMoon composes the SegmentedControl icons form for theme selection.",
    "core": [
     "ActionBar",
     "Bar",

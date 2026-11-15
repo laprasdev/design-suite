@@ -2,31 +2,17 @@
 // in the viewport, a stage of 24 control hit sizes, and a contained Modal filling its frame inside the page's inset or
 // gutter, or outside a page surface the theme's inset. A Modal naming no width keeps the width every Modal had before
 // it could name one, and a contained Modal given a top sits that far below its frame's top edge, past the inset or
-// within it; a negative top is refused. Playwright is a gate tool: `npm test` installs it and its Chromium.
+// within it; a negative top is refused.
 import assert from 'node:assert/strict';
-import {after,test} from 'node:test';
-import {build} from 'esbuild';
-import playwright from '../scripts/gateTools/node_modules/playwright/index.js';
+import {test} from 'node:test';
 import type {Locator} from '../scripts/gateTools/node_modules/playwright/index.js';
 import {ModalElement,ModalForm,ModalPlacement,MODAL_WIDTH_ATTRIBUTE,ModalWidth,modalShape}
  from '../src/react/modalElements.ts';
-import {SUITE_ROOT} from './bundled.ts';
+import {openScene} from './browserScene.ts';
 import {CASE_ATTRIBUTE,CONTAINED_PARENT,MODAL_WIDTH_PX,ModalCase,THEME_INSET_PX,VIEWPORT_PX,VIEWPORT_WIDTHS}
  from './modalWidthCases.ts';
 
-const SCENE='tests/modalWidthScene.tsx';
-const {outputFiles}=await build({absWorkingDir:SUITE_ROOT,entryPoints:[SCENE],bundle:true,write:false,outdir:'scene',
- format:'iife',platform:'browser',jsx:'automatic',loader:{'.css':'css'},define:{'process.env.NODE_ENV':'"production"'},
- logLevel:'warning'});
-const bundledText=(extension: string)=>outputFiles.find(file=>file.path.endsWith(extension))?.text
- ??assert.fail(`esbuild wrote no ${extension} file for ${SCENE}`);
-const browser=await playwright.chromium.launch();
-after(()=>browser.close());
-const page=await browser.newPage({viewport:VIEWPORT_PX,reducedMotion:'reduce'});
-page.on('pageerror',error=>assert.fail(`${SCENE} threw: ${error.message}`));
-await page.setContent('<!doctype html><body><div id="root"></div></body>');
-await page.addStyleTag({content:bundledText('.css')});
-await page.addScriptTag({content:bundledText('.js')});
+const page=await openScene('tests/modalWidthScene.tsx',VIEWPORT_PX);
 
 const inCase=(name: string,selector: string)=>page.locator(`[${CASE_ATTRIBUTE}="${name}"] ${selector}`);
 const panel=(name: string)=>inCase(name,ModalElement.PANEL.selector);
