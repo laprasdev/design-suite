@@ -12,7 +12,7 @@ export function NodeGroups({ groups, nodes, onToggle, onResize, groupProps }: {
 }) {
   return groups.map(group => {
     const members = nodes.filter(node => group.members.includes(node.id));
-    return <div key={group.id} className="bd-node-group" data-group={group.id}
+    return <div key={group.id} className={NodeGraphElement.GROUP.className} data-group={group.id}
       data-completed={group.completed || undefined}
       style={{ left: group.x, top: group.y, width: group.w, height: group.h }}>
       <Button className={NodeGraphElement.GROUP_HEADING.className} variant="subtle" aria-expanded="true"

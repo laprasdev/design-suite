@@ -6,5 +6,5 @@
 .bar>.bar-center { grid-area:center;position:relative;align-self:stretch;justify-content:center; }
 .bar>.bar-right { grid-area:right;justify-content:flex-end; }
 .bar>.bar-left:empty,.bar>.bar-right:empty { display:none; }
-/* An item that BAR_FILL marks (barElements.ts) fills its bar's line, its slot stretched to that line. */
+/* An item that BAR_FILL_ATTRIBUTE marks (barElements.ts) fills its bar's line, its slot stretched to that line. */
 .bar>:has(>[data-bar-fill]),.bar>*>[data-bar-fill] { align-self:stretch; }

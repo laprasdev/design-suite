@@ -3,6 +3,7 @@ import React, { useLayoutEffect, useMemo, useRef, useState, type RefObject } fro
 import { Cable, X } from "lucide-react";
 import { Button } from "./Button.tsx";
 import { NodeGraphElement } from "./nodeGraphElements.ts";
+import type { ElementContract } from "./elementContract.ts";
 import {
   bundleVertical, freeTiePoint, graphLinks, TIE_SIZE, TIE_RUN, snapTie, tieWidth, tieWires, wireMiddle,
 } from "./wireGeometry.ts";
@@ -16,6 +17,11 @@ import type {
 const FLOW_PIXELS_PER_SECOND = 30, FLOW_LIGHTS = 3, TIE_STEP = 8;
 const NO_OUTLETS: GroupOutlets = Object.freeze({});
 const NO_TIES: readonly TwistTie[] = Object.freeze([]);
+// A wire's classes: a wire, what else it is, and flowing when it carries flow; and a group outlet's port.
+const wireClass = (flow: boolean | undefined, ...kinds: readonly ElementContract[]) =>
+  [NodeGraphElement.EDGE, ...kinds, ...(flow ? [NodeGraphElement.EDGE_FLOW] : [])]
+    .map(kind => kind.className).join(" ");
+const portClass = [NodeGraphElement.PORT, NodeGraphElement.OUTLET].map(kind => kind.className).join(" ");
 
 function FlowLights({ path }: { path: string }) {
   const geometry = useRef<SVGPathElement>(null), [seconds, setSeconds] = useState(0);
@@ -24,10 +30,10 @@ function FlowLights({ path }: { path: string }) {
     if (!Number.isFinite(length)) throw new Error("Wire flow requires a finite path length.");
     setSeconds(length / FLOW_PIXELS_PER_SECOND);
   }, [path]);
-  return <g className="bd-flow">
+  return <g className={NodeGraphElement.FLOW.className}>
     <defs><path ref={geometry} d={path} /></defs>
     {seconds > 0 && Array.from({ length: FLOW_LIGHTS }, (_, k) => (
-      <circle key={k} className="bd-flow-light" r="2.6">
+      <circle key={k} className={NodeGraphElement.FLOW_LIGHT.className} r="2.6">
         <animateMotion key={`${path}:${seconds}`} dur={`${seconds}s`} begin={`${(-k * seconds) / FLOW_LIGHTS}s`}
           calcMode="paced" repeatCount="indefinite" path={path} />
       </circle>
@@ -66,23 +72,25 @@ export function GraphWires({
   const tie = () => { collect(wires.selected, middle); wires.clear(); };
   const untie = (id: string) => onTiesChange?.(ties.filter(item => item.id !== id));
   return <>
-    <svg data-graph-wires className="bd-edges" width={width} height={height} viewBox={`0 0 ${width} ${height}`}
+    <svg data-graph-wires className={NodeGraphElement.EDGES.className} width={width} height={height}
+      viewBox={`0 0 ${width} ${height}`}
       aria-hidden={(!onTiesChange && !onOutletsChange) || undefined}>
       {links.map(link => <path key={link.id} data-selected={wires.selected.includes(link.id) || undefined}
-        className={`bd-edge${link.flow ? " bd-edge--flow" : ""}`} data-group-source={link.groupOutput}
+        className={wireClass(link.flow)} data-group-source={link.groupOutput}
         style={link.color ? {'--bd-edge-stroke': link.color} as React.CSSProperties : undefined}
         d={link.branch ?? link.d} />)}
       {outputs.map(output => <path key={`output:${output.group}`} data-group-output={output.group}
         data-selected={output.ids.some(id => wires.selected.includes(id)) || undefined}
-        className={`bd-edge bd-edge-output${output.flow ? " bd-edge--flow" : ""}`} d={output.d} />)}
-      {showPorts && outputs.map(output => <circle key={`outlet:${output.group}`} className="bd-port bd-group-outlet"
+        className={wireClass(output.flow, NodeGraphElement.EDGE_OUTPUT)} d={output.d} />)}
+      {showPorts && outputs.map(output => <circle key={`outlet:${output.group}`} className={portClass}
         data-group-outlet={output.group} cx={output.at.x} cy={output.at.y} r="3.1" />)}
       {links.map(link => link.flow && <FlowLights key={`flow:${link.id}`} path={link.d} />)}
       {showPorts && links.map(link => <g key={`ports:${link.id}`} aria-hidden="true">
-        <circle className="bd-port" cx={link.a.x} cy={link.a.y} r="3.1" />
-        <circle className="bd-port" cx={link.b.x} cy={link.b.y} r="3.1" />
+        <circle className={NodeGraphElement.PORT.className} cx={link.a.x} cy={link.a.y} r="3.1" />
+        <circle className={NodeGraphElement.PORT.className} cx={link.b.x} cy={link.b.y} r="3.1" />
       </g>)}
-      {onTiesChange && links.map(link => <path key={`hit:${link.id}`} className="bd-edge-hit" d={link.d}
+      {onTiesChange && links.map(link => <path key={`hit:${link.id}`} d={link.d}
+        className={NodeGraphElement.EDGE_HIT.className}
         {...{[GRAPH_WIRE_ATTRIBUTE]: link.id}} role="button" tabIndex={0} aria-label={`Select wire: ${link.label}`}
         aria-pressed={wires.selected.includes(link.id)} onPointerDown={event => event.stopPropagation()}
         onClick={event => { event.stopPropagation(); wires.select(link.id, event.shiftKey); }}
@@ -93,7 +101,7 @@ export function GraphWires({
         }}>
         <title>{link.label} · Shift-click to add · Shift-drag to collect and tie wires</title>
       </path>)}
-      {wires.sweep.length > 1 && <path className="bd-wire-sweep"
+      {wires.sweep.length > 1 && <path className={NodeGraphElement.WIRE_SWEEP.className}
         d={wires.sweep.map((point, i) => `${i ? "L" : "M"} ${point.x} ${point.y}`).join(" ")} />}
     </svg>
     {showPorts && onOutletsChange && outputs.map(output => {
@@ -129,8 +137,9 @@ export function GraphWires({
         event.preventDefault();
         onTiesChange(ties.map(item => item.id === bundle.id
           ? { ...item, x: item.x + step[0], y: item.y + step[1] } : item));
-      }}><span className="bd-tie-knot" aria-hidden="true" /></Button>)}
-    {onTiesChange && picked.length > 0 && !wires.sweep.length && <div className="bd-wire-actions"
+      }}><span className={NodeGraphElement.TIE_KNOT.className} aria-hidden="true" /></Button>)}
+    {onTiesChange && picked.length > 0 && !wires.sweep.length && <div
+      className={NodeGraphElement.WIRE_ACTIONS.className}
       style={{ left: middle.x, top: middle.y }}
       onPointerDown={event => event.stopPropagation()}>
       <Button variant="ghost" disabled={picked.length < 2} onClick={tie} aria-label="Tie selected wires">

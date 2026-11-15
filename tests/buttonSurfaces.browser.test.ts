@@ -1,9 +1,10 @@
 // The Buttons a surface sizes from its own rules, a node graph's resize edges, group output handle and twist tie and
 // the sky's theme moon, take that size through the Button's tokens: none keeps the Button's padding, and a twist tie
-// is the size its wires give it. A group's heading is the graph's heading height. Read in Chromium from
-// buttonSurfacesScene.tsx at a desktop and a phone width.
+// is the size its wires give it. A group's heading is the graph's heading height, its label inset as far as the
+// group insets its members. Read in Chromium from buttonSurfacesScene.tsx at a desktop and a phone width.
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
+import {GROUP_SPACE} from '../src/react/groupGeometry.ts';
 import {NODE_HEADING_HEIGHT_PROPERTY,NodeGraphElement} from '../src/react/nodeGraphElements.ts';
 import {TIE_SIZE,tieWidth} from '../src/react/wireGeometry.ts';
 import {DESKTOP_VIEWPORT,PHONE_VIEWPORT,openScene} from './browserScene.ts';
@@ -27,11 +28,15 @@ for(const viewport of [DESKTOP_VIEWPORT,PHONE_VIEWPORT])test(`at ${viewport.widt
   const size=await tie.evaluate(node=>node instanceof HTMLElement&&{width:node.offsetWidth,height:node.offsetHeight});
   assert.deepEqual(size,{width:tieWidth(TIED_EDGES.length),height:TIE_SIZE.height});
  });
- await t.test('a group\'s heading is the graph\'s heading height',async()=>{
-  const {height,expected}=await page.locator(NodeGraphElement.GROUP_HEADING.selector).evaluate((node,name)=>
-   ({height:node.getBoundingClientRect().height,expected:parseFloat(getComputedStyle(node).getPropertyValue(name))}),
-  NODE_HEADING_HEIGHT_PROPERTY);
+ await t.test('a group\'s heading is the graph\'s heading height, its label at the group\'s inset',async()=>{
+  const {height,expected,inset}=await page.locator(NodeGraphElement.GROUP_HEADING.selector).evaluate((node,name)=>{
+   const frame=node.getBoundingClientRect(),label=node.firstElementChild;
+   if(!label)throw new Error('the heading draws no label');
+   return {height:frame.height,expected:parseFloat(getComputedStyle(node).getPropertyValue(name)),
+    inset:label.getBoundingClientRect().left-frame.left};
+  },NODE_HEADING_HEIGHT_PROPERTY);
   assert.ok(expected>0,`the graph sets no ${NODE_HEADING_HEIGHT_PROPERTY}`);
   assert.equal(height,expected);
+  assert.equal(inset,GROUP_SPACE.inset);
  });
 });
