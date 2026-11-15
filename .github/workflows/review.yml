@@ -1,6 +1,8 @@
 name: Review
 # Calls the code review in laprasdev/review-gate, whose README says when it runs and what it records. It is not a
-# required check unless branch protection names its "claude review" status.
+# required check unless branch protection names its "claude review" status. By the owner's decision of 2026-11-14, a
+# pull request is reviewed when it opens, reopens or is marked ready, and again each time the review label is added;
+# a later push is not reviewed by itself.
 on:
   pull_request_target:
     types: [opened, reopened, ready_for_review, labeled]
@@ -11,4 +13,4 @@ permissions:
   id-token: write
 jobs:
   review:
-    uses: laprasdev/review-gate/.github/workflows/review.yml@main
+    uses: laprasdev/review-gate/.github/workflows/review.yml@859f99c5fe24d9cb9296e84f7cda1d426956a338 # main, 2026-11-14
