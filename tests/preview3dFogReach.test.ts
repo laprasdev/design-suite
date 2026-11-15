@@ -6,6 +6,7 @@ import {createModelEnvironment} from '../src/react/preview3d/environment.ts';
 import {createModelStageAids} from '../src/react/preview3d/scene.ts';
 import {modelMaterialChanges} from '../src/react/preview3d/shading.ts';
 import {modelDrawnMaterials} from '../src/react/preview3d/renderers.ts';
+import {THEME} from './preview3dActorFixture.ts';
 
 const materialsUnder = (root: THREE.Object3D) => [...modelDrawnMaterials(root).keys()];
 
@@ -27,9 +28,7 @@ describe('what the stage\'s fog reaches', () => {
   });
 
   it('reaches none of the stage\'s own floor and grid', () => {
-    const theme = {colors: {stage: '#000000', text: '#ffffff', surface: '#111111', surfaceHi: '#222222',
-      accent: '#ff0000', accentDeep: '#880000', teal: '#00ffff'}};
-    const aids = createModelStageAids(theme, {clock: 'local', floor: true, grid: true, kinds: new Map()},
+    const aids = createModelStageAids(THEME, {clock: 'local', floor: true, grid: true, kinds: new Map()},
       {floor: () => undefined, attach: () => () => undefined});
     assert.equal(aids.length, 2);
     for (const material of aids.flatMap(materialsUnder)) assert.equal(Reflect.get(material, 'fog'), false);
