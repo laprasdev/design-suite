@@ -17,7 +17,7 @@
   --bar-columns:auto minmax(0,1fr) auto;--action-bar-inset:0px;--bar-gap:var(--field-gap);
 }
 /* Play, the bar's one bordered Button, pads its label; Reset Camera and a notice's recovery Button are text actions
-   whose labels meet the bar's edges. */
+   with no inline padding, so Reset Camera's label meets the bar's edge and Retry's sits at the notice's inset. */
 .model-preview-actions>.bar-left {--button-padding-inline:10px;}
 .model-preview-stage {
   position:relative;height:clamp(14rem,50dvh,38rem);min-width:0;
