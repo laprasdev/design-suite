@@ -10,6 +10,7 @@ on:
 permissions:
   contents: read
   pull-requests: read
+  # Only so the gate can read its own commit from the job's OIDC token, which can write nothing on GitHub.
   id-token: write
 jobs:
   review:
