@@ -14,3 +14,5 @@ permissions:
 jobs:
   review:
     uses: laprasdev/review-gate/.github/workflows/review.yml@859f99c5fe24d9cb9296e84f7cda1d426956a338 # main, 2026-11-14
+    # The gate's secrets live in this repository's review-gate environment and reach a called workflow only this way.
+    secrets: inherit
