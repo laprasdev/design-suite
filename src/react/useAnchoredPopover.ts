@@ -7,8 +7,9 @@ import {HEADER_CONTROL_PROPERTY} from './headerControl.ts';
 // height fits on either side.
 export const POPOVER_GAP=8,VIEWPORT_EDGE=8,POPOVER_MIN_HEIGHT=24;
 // The palette a popover carries from its anchor, so a team-coloured section's
-// popover keeps that team's colours outside it.
-const ANCHOR_STYLE: readonly `--${string}`[]=['--pink','--teal','--pink-deep','--pink-wash',HEADER_CONTROL_PROPERTY,'--header-gap'];
+// popover keeps that team's colours, and the header's control size and gap, outside it.
+const ANCHOR_STYLE: readonly `--${string}`[]=['--pink','--teal','--pink-deep','--pink-wash',
+ HEADER_CONTROL_PROPERTY,'--header-gap'];
 // A popover's height within `room`, scrolling within when taller.
 const within=(room: number,scroll: boolean): CSSProperties=>({maxHeight:room,overflowY:scroll?'auto':'visible',visibility:room>=POPOVER_MIN_HEIGHT?'visible':'hidden'});
 // A placed popover's style: its position and the custom properties it carries from its anchor.
@@ -74,9 +75,7 @@ export function useAnchoredPopover(open: boolean,anchor: RefObject<HTMLElement|n
     top=besideTop;
    }
    placed={height:panelNode.scrollHeight,offset:top-a.top};
-   setPosition({...inherited,'--anchor-width':`${a.width}px`,
-    left,
-    top,...within(available,scroll)});
+   setPosition({...inherited,'--anchor-width':`${a.width}px`,left,top,...within(available,scroll)});
   };
   const hold=()=>{
    if(panelNode.scrollHeight===placed.height)return;

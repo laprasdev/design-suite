@@ -1,45 +1,67 @@
-// Every Button an ActionBar holds, its notice's recovery Button included, is exactly the bar's control height, its own
-// `--header-control`, and so is the bar inside its bottom line; a notice standing alone fits its Button to its own
-// control height. Exact holds because the Buttons drop their block padding and the action label's line box (12px
-// text) is shorter than the control. The bars' tokens reach no Button outside them: a PageFooter's action still
-// stretches to the footer, and a Button outside any bar keeps its own padding and height. Read in Chromium from
-// actionBarHeightScene.tsx at a desktop and a phone width.
+// Every Button an ActionBar holds is exactly the bar's control height, its own `--header-control`, and so is the bar
+// inside its bottom line. A notice, in a bar or alone, with a recovery Button or without, is that control height
+// tall, its Button inside its line. Exact holds because the Buttons drop their block padding and the action label's
+// line box (12px text) is shorter than the control. The bars' tokens reach no Button outside them: a PageFooter's
+// action stretches to a footer its setting makes taller, is the footer's control height on a surface scaled flat, and
+// a Button outside any bar keeps its own padding and height. Read in Chromium from actionBarHeightScene.tsx, on a page
+// surface, at a desktop and a phone width.
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import type {Locator} from '../scripts/gateTools/node_modules/playwright/index.js';
 import {ActionBarElement,ActionNoticeElement} from '../src/react/actionBarElements.ts';
 import {HEADER_CONTROL_PROPERTY} from '../src/react/headerControl.ts';
 import {DESKTOP_VIEWPORT,PHONE_VIEWPORT,openScene} from './browserScene.ts';
-import {ACTION_BAR_BUTTONS,FOOTER_ACTION,NOTICE_BUTTONS,OUTSIDE_BUTTON} from './actionBarHeightCases.ts';
+import {ACTION_BAR_BUTTONS,FOOTER_ACTIONS,NOTICE_BUTTONS,OUTSIDE_BUTTON} from './actionBarHeightCases.ts';
 
 const page=await openScene('tests/actionBarHeightScene.tsx',DESKTOP_VIEWPORT);
 const bar=page.locator(ActionBarElement.selector);
 await bar.waitFor();
+const notices=page.locator(ActionNoticeElement.ROOT.selector);
+const button=(label: string)=>page.getByRole('button',{name:label});
+const footer=(action: string)=>page.getByRole('contentinfo').filter({has:button(action)});
 const controlHeight=async (owner: Locator)=>{
  const height=await owner.evaluate((node,name)=>parseFloat(getComputedStyle(node).getPropertyValue(name)),
   HEADER_CONTROL_PROPERTY);
  assert.ok(height>0,`${owner} sets no ${HEADER_CONTROL_PROPERTY}`);
  return height;
 };
-const button=(label: string)=>page.getByRole('button',{name:label});
-const height=async (locator: Locator)=>(await locator.boundingBox()??assert.fail(`${locator} is not laid out`)).height;
+// An element's laid-out height, the height inside its block borders, and its block padding, in CSS pixels.
+const box=(locator: Locator)=>locator.evaluate(node=>{
+ const style=getComputedStyle(node),{height}=node.getBoundingClientRect();
+ return {height,inner:height-parseFloat(style.borderTopWidth)-parseFloat(style.borderBottomWidth),
+  padding:parseFloat(style.paddingTop)+parseFloat(style.paddingBottom)};
+});
+// A Button in a bar or a notice drops its block padding and is `expected` tall.
+const fits=async (label: string,expected: number)=>{
+ const {height,padding}=await box(button(label));
+ assert.equal(padding,0,`${label} keeps its block padding`);
+ assert.equal(height,expected,label);
+};
 
 for(const viewport of [DESKTOP_VIEWPORT,PHONE_VIEWPORT])test(`at ${viewport.width}px`,async t=>{
  await page.setViewportSize(viewport);
  await t.test('each Button in an ActionBar, and the bar within its line, are its control height',async()=>{
   const expected=await controlHeight(bar);
-  assert.equal(await bar.evaluate(node=>node.clientHeight),expected);
-  for(const label of Object.values(ACTION_BAR_BUTTONS))assert.equal(await height(button(label)),expected,label);
+  assert.equal((await box(bar)).inner,expected);
+  for(const label of Object.values(ACTION_BAR_BUTTONS))await fits(label,expected);
  });
- await t.test('a notice\'s recovery Button is the notice\'s control height, in a bar and alone',async()=>{
-  for(const label of Object.values(NOTICE_BUTTONS)) {
-   const notice=page.locator(ActionNoticeElement.selector,{has:button(label)});
-   assert.equal(await height(button(label)),await controlHeight(notice),label);
-  }
+ await t.test('a notice is the bar\'s control height in a bar and alone, its recovery Button inside its line',
+  async()=>{
+   const expected=await controlHeight(bar);
+   assert.equal(await notices.count(),Object.keys(NOTICE_BUTTONS).length+1);
+   for(const notice of await notices.all())assert.equal((await box(notice)).height,expected,`${notice}`);
+   for(const label of Object.values(NOTICE_BUTTONS))
+    await fits(label,(await box(notices.filter({has:button(label)}))).inner);
+  });
+ await t.test('a PageFooter\'s action stretches to a footer its setting makes taller',async()=>{
+  const set=footer(FOOTER_ACTIONS.set),{inner}=await box(set);
+  assert.ok(inner>await controlHeight(set),'the footer is no taller than its control height');
+  assert.equal((await box(button(FOOTER_ACTIONS.set))).height,inner);
  });
- await t.test('a PageFooter\'s action stretches to the footer\'s full height',async()=>{
-  assert.equal(await height(button(FOOTER_ACTION)),
-   await page.getByRole('contentinfo').evaluate(node=>node.clientHeight));
+ await t.test('a PageFooter\'s action is the footer\'s control height on a surface scaled flat',async()=>{
+  const flat=footer(FOOTER_ACTIONS.flat),expected=await controlHeight(flat);
+  assert.equal((await box(button(FOOTER_ACTIONS.flat))).height,expected);
+  assert.equal((await box(flat)).inner,expected);
  });
  await t.test('a Button outside any bar keeps its own padding and is that much taller than its label',async()=>{
   const outside=button(OUTSIDE_BUTTON);
@@ -51,6 +73,6 @@ for(const viewport of [DESKTOP_VIEWPORT,PHONE_VIEWPORT])test(`at ${viewport.widt
     label:text.getBoundingClientRect().height};
   });
   assert.ok(padding>0,'a bar\'s block padding reached a Button outside it');
-  assert.equal(await height(outside),label+padding+frame);
+  assert.equal((await box(outside)).height,label+padding+frame);
  });
 });

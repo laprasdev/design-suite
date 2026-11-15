@@ -22,7 +22,7 @@
 /* ---- Button (composes Label) ---- */
 .bd-btn {
   font-family: inherit;
-  display: inline-flex; align-items: center; justify-content: center; gap: 6px; box-sizing: border-box;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
   min-width:var(--button-min-width,0);min-height:var(--button-min-height,auto);padding: var(--button-padding-block,8px) var(--button-padding-inline,16px); border:var(--line-width, 1px) solid transparent; border-radius: var(--r-sm, 9px); cursor: pointer;
   transition: filter 0.15s, background 0.15s, border-color 0.15s, color 0.15s;
 }

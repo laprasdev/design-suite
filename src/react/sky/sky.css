@@ -24,7 +24,8 @@
 .theme-moon { --moon-size:22px;position:relative;display:flex;align-items:center; }
 .sky-moon > .theme-moon { animation:sky-moon-arc var(--moon-crossing) linear infinite;animation-delay:inherit; }
 .theme-moon-button {
-  display:grid;place-items:center;width:var(--moon-size);height:var(--moon-size);padding:0;border:0;border-radius:50%;background:none;
+  display:grid;place-items:center;width:var(--moon-size);height:var(--moon-size);border:0;border-radius:50%;background:none;
+  --button-padding-block:0;--button-padding-inline:0;
   filter:drop-shadow(0 0 3px color-mix(in srgb,var(--text) 35%,transparent));
   transition:filter .3s ease,transform .3s cubic-bezier(.34,1.6,.5,1);
 }
