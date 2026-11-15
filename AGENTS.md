@@ -11,5 +11,5 @@ One source for components, tokens, skins and the design language, published as `
 - **Unity's skins and tokens under `unity/`** are partly written by exporters: a hand edit is overwritten unless the exporter changes too, and a changed value reaches Unity on its next import.
 - `src/synth` holds the web synth's moved code in its original layout. New shared code goes in `src/react` or the root token files.
 - `npm run check:forms` (also in CI) checks that the loader renders the existing `Label` and rejects loader-owned typography. A regression extends these contract checks. They cover declared contracts, not all semantic duplication.
-- `scripts/size-gate.mjs` is the one size gate (lines per file, characters per line, a baseline that only falls); bloom-3d-design and the web synth run it through its `run` entry.
-- TypeScript: 10 tracked JavaScript modules (`catalog/build.mjs`, `catalog/scan.mjs`, `examples/gallery.jsx`, `examples/galleryContent.js`, `scripts/build.mjs`, `scripts/size-gate.mjs` and the four in `scripts/sizeGate/`). No gate stops a new one: `tsc -p .` reads only `src`. Adding it is open work.
+- `scripts/size-gate.ts` is the one size gate (lines per file, characters per line, a baseline that only falls); bloom-3d-design and the web synth run it through its `run` entry.
+- TypeScript: 0 tracked JavaScript modules; `scripts/type-gate.ts` (in `npm run check`) enforces repository-wide strict TypeScript coverage (`tsconfig.repo.json`, no JavaScript modules, no declaration sidecars, no `any`, no compiler suppressions).

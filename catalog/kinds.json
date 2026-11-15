@@ -1,5 +1,5 @@
 {
- "_": "One row per component kind, keyed by the data it edits. Names on the right must exist in the scan or build.mjs fails. Unity names win where they exist.",
+ "_": "One row per component kind, keyed by the data it edits. Names on the right must exist in the scan or build.ts fails. Unity names win where they exist.",
  "kinds": {
   "MultiChoice": {
    "data": "enum, all options visible",

@@ -4,11 +4,11 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, it } from 'node:test';
-import { FILE_LINE_LIMIT, LINE_CHARACTER_LIMIT } from '../scripts/sizeGate/limits.mjs';
-import { measureScope, measureText } from '../scripts/sizeGate/measure.mjs';
-import { compare } from '../scripts/sizeGate/compare.mjs';
-import { allowed, ratcheted, readBaseline } from '../scripts/sizeGate/baselineFile.mjs';
-import { run } from '../scripts/size-gate.mjs';
+import { FILE_LINE_LIMIT, LINE_CHARACTER_LIMIT } from '../scripts/sizeGate/limits.ts';
+import { measureScope, measureText } from '../scripts/sizeGate/measure.ts';
+import { compare } from '../scripts/sizeGate/compare.ts';
+import { allowed, ratcheted, readBaseline } from '../scripts/sizeGate/baselineFile.ts';
+import { run } from '../scripts/size-gate.ts';
 
 type Numbers = { lines: number; longLines: number; importLines: number };
 const SCOPE = {

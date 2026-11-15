@@ -6,13 +6,17 @@ import {SKIN_NAMES} from '../src/skins.ts';
 import {themeVariables} from '../src/theme.ts';
 import {connectThemeClient, connectThemeSource, isThemeData, THEME_PROTOCOL, THEME_VERSION}
   from '../src/themeChannel.ts';
+import {isRecord} from '../src/valueChecks.ts';
 
 class Port {
   listeners = new Set<(event: unknown) => void>();
-  sent: {message: any; origin: string}[] = [];
+  sent: {message: Record<string, unknown>; origin: string}[] = [];
   addEventListener(_type: string, fn: (event: unknown) => void) { this.listeners.add(fn); }
   removeEventListener(_type: string, fn: (event: unknown) => void) { this.listeners.delete(fn); }
-  postMessage(message: unknown, origin: string) { this.sent.push({message, origin}); }
+  postMessage(message: unknown, origin: string) {
+    if (!isRecord(message)) throw new Error('expected record theme message');
+    this.sent.push({message, origin});
+  }
   emit(data: unknown, source: Port, origin = 'http://theme.localhost') {
     this.listeners.forEach(fn => fn({data, source, origin}));
   }

@@ -114,14 +114,15 @@
     "dist",
     "src",
     "unity",
-    "scripts/build.mjs",
+    "scripts/build.ts",
     "README.md",
     "examples"
   ],
   "scripts": {
-    "build": "node scripts/build.mjs",
+    "build": "node scripts/build.ts",
     "prepare": "npm run build",
-    "check": "npm run gate-tools && tsc -p . && node scripts/size-gate.mjs && npm run check:cycles && npm run check:duplication",
+    "check": "npm run gate-tools && tsc -p . && npm run check:types && node scripts/size-gate.ts && npm run check:cycles && npm run check:duplication",
+    "check:types": "node scripts/type-gate.ts",
     "check:cycles": "node scripts/cycle-gate.ts",
     "check:duplication": "scripts/gateTools/node_modules/.bin/jscpd",
     "gate-tools": "npm ci --prefix scripts/gateTools --no-audit --no-fund --loglevel=error",

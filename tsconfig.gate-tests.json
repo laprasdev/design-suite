@@ -4,13 +4,15 @@
     "types": [
       "node"
     ],
-    "allowJs": true
+    "allowJs": false
   },
   "include": [
     "scripts/cycle-gate.ts",
+    "scripts/type-gate.ts",
     "scripts/reviewGate",
     "tests/cycleGate.test.ts",
     "tests/duplicationGate.test.ts",
+    "tests/typeGate.test.ts",
     "tests/gateFixture.ts",
     "tests/reviewGate.test.ts",
     "tests/withoutTypeScript.ts",

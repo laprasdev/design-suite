@@ -10,7 +10,7 @@ interface Node {type: unknown; props: {children?: unknown; onClick?: () => void;
 type Options = {value: number; label: string; disabled?: boolean}[];
 interface Props {
   options: Options; onPoint?: (value: number | null) => void; disabled?: boolean;
-  multiple?: boolean; value: number | number[]; onChange: (value: never) => void;
+  multiple?: boolean; value: number | readonly number[]; onChange: (value: never) => void;
 }
 interface Module {SegmentedControl(props: Props): Node}
 

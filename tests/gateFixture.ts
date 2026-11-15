@@ -3,17 +3,18 @@
 // The directory sits under a .local directory, as a worktree of this repository does, so a gate that matched its
 // ignore patterns against absolute paths would skip every file and pass.
 import { spawnSync } from 'node:child_process';
-import { copyFileSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { copyFileSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
-const CONFIGS = ['.dependency-cruiser.json', '.jscpd.json', 'tsconfig.json'];
+const CONFIGS = ['.dependency-cruiser.json', '.jscpd.json', 'package.json', 'tsconfig.json', 'tsconfig.repo.json'];
 const COLOR = /\x1b\[[0-9;]*m/g;
 
-/** The entry point of each gate: npm run check:cycles and check:duplication run these, with no arguments. */
+/** The entry point of each gate: npm run check:types, check:cycles and check:duplication run these, with no args. */
 export const GATE = {
+  types: [process.execPath, path.join(ROOT, 'scripts/type-gate.ts')],
   cycles: [process.execPath, path.join(ROOT, 'scripts/cycle-gate.ts')],
   duplication: [path.join(ROOT, 'scripts/gateTools/node_modules/.bin/jscpd')],
 } as const;
@@ -26,6 +27,7 @@ export function runGate(gate: readonly string[], files: Record<string, string>, 
   const dir = path.join(scratch, '.local', 'repository');
   try {
     mkdirSync(dir, { recursive: true });
+    symlinkSync(path.join(ROOT, 'node_modules'), path.join(dir, 'node_modules'), 'dir');
     CONFIGS.forEach(config => copyFileSync(path.join(ROOT, config), path.join(dir, config)));
     for (const [file, text] of Object.entries(files)) {
       mkdirSync(path.dirname(path.join(dir, file)), { recursive: true });

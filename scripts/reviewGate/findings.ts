@@ -3,7 +3,7 @@
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { isNonEmptyString, isRecord } from '../../src/valueChecks.ts';
-import { physicalLines } from '../sizeGate/measure.mjs';
+import { physicalLines } from '../sizeGate/measure.ts';
 
 export const SEVERITIES = ['blocker', 'major', 'minor'] as const;
 export const VERDICTS = ['approve', 'fix_first', 'reject', 'not_reviewed'] as const;
