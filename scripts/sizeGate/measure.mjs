@@ -9,7 +9,7 @@ const IMPORT_END = /['"][^'"]*['"]\s*;?\s*(\/\/.*)?$/;
 const CARRIAGE_RETURN = /\r$/;
 
 /** The lines an editor numbers. A final newline ends the last line rather than starting another. */
-export function physicalLines(text) {
+function physicalLines(text) {
   if (!text) return [];
   const lines = text.split('\n');
   if (text.endsWith('\n')) lines.pop();
