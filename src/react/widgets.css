@@ -22,8 +22,8 @@
 /* ---- Button (composes Label) ---- */
 .bd-btn {
   font-family: inherit;
-  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-  min-width:var(--button-min-width,0);padding: var(--button-padding-block,8px) var(--button-padding-inline,16px); border:var(--line-width, 1px) solid transparent; border-radius: var(--r-sm, 9px); cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px; box-sizing: border-box;
+  min-width:var(--button-min-width,0);min-height:var(--button-min-height,auto);padding: var(--button-padding-block,8px) var(--button-padding-inline,16px); border:var(--line-width, 1px) solid transparent; border-radius: var(--r-sm, 9px); cursor: pointer;
   transition: filter 0.15s, background 0.15s, border-color 0.15s, color 0.15s;
 }
 .bd-btn > .bd-label { color: inherit; }
@@ -40,11 +40,13 @@
 /* Accent-coloured text action: no surface or border. */
 .bd-btn--accent { background: transparent; border: 0; color: var(--color-accent, #c4678f); }
 .bd-btn--accent:hover { filter: brightness(1.15); }
-/* Text-only action: no surface, full-strength text. Pair with `glow` for a call to action. */
-.bd-btn--text { background: transparent; border: 0; padding:var(--button-padding-block,4px) var(--button-padding-inline,0); border-radius: 0; color: var(--color-text, #f0f0f3); }
+/* Text actions: no surface, the label's own padding. */
+.bd-btn--text,.bd-btn--subtle { background: transparent; border: 0; padding:var(--button-padding-block,4px) var(--button-padding-inline,0); border-radius: 0; }
+/* Text-only action: full-strength text. Pair with `glow` for a call to action. */
+.bd-btn--text { color: var(--color-text, #f0f0f3); }
 .bd-btn--text:hover { filter: brightness(1.15); }
 /* Quiet text action: dim until hovered, then the accent. */
-.bd-btn--subtle { background: transparent; border: 0; padding: 4px 0; border-radius: 0; color: var(--color-dim, #82828e); }
+.bd-btn--subtle { color: var(--color-dim, #82828e); }
 .bd-btn--subtle:hover:not(:disabled) { color: var(--color-accent, #c4678f); }
 .bd-btn:disabled { opacity: 0.55; cursor: default; }
 .bd-glyph { display: inline-flex; align-items: center; justify-content: center; flex: none; }

@@ -1,6 +1,6 @@
 .model-preview {
   display:flex;flex-direction:column;gap:var(--field-gap);min-width:0;color:var(--text);
-  --button-padding-block:6px;--button-padding-inline:10px;--field-segment:4rem;
+  --button-padding-inline:10px;--field-segment:4rem;
 }
 .model-preview-controls {display:flex;flex-direction:column;gap:var(--field-gap);min-width:0;}
 .model-preview-fields {display:flex;flex-wrap:wrap;gap:var(--field-gap);min-width:0;}

@@ -2,9 +2,6 @@ import {forwardRef, type ButtonHTMLAttributes, type ReactNode} from 'react';
 import {createLucideIcon, type IconNode, type LucideProps} from 'lucide-react';
 import {PHI_INVERSE} from '../layout.ts';
 
-/** Square header controls follow the active page bar's CSS size. */
-export const HEADER_CONTROL_SIZE = 'var(--header-control)';
-
 // Navigation artwork fills the same square canvas, including its stroke. The
 // drawings share a weight and natural bounds; CSS never stretches a glyph.
 const NAVIGATION_SIDE = 24, NAVIGATION_STROKE = 1.5;

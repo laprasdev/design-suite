@@ -3,7 +3,7 @@ import {AlertTriangle,Info} from 'lucide-react';
 import {Bar,type BarProps} from './Bar.tsx';
 import {Label} from './accents.tsx';
 import {Button} from './Button.tsx';
-import {ActionBarElement} from './actionBarElements.ts';
+import {ActionBarElement,ActionNoticeElement} from './actionBarElements.ts';
 import {HeaderNoticesElement} from './pageBarElements.ts';
 import {element} from './elementContract.ts';
 import {SegmentDefaultsContext,type SegmentDefaults} from './segmentContext.ts';
@@ -39,7 +39,7 @@ export const ActionBar=forwardRef<HTMLDivElement,ActionBarProps>(function Action
 // What failed in a word or two, then the start of its detail, cut to a few words; the whole detail is the hover hint.
 export function ActionNotice({notice}: {notice?: ActionBarNotice|null}) {
  const Icon=notice?.tone==='error'?AlertTriangle:Info;
- return notice?<Bar className="action-bar-notice" data-tone={notice.tone}
+ return notice?<Bar className={ActionNoticeElement.className} data-tone={notice.tone}
    role={notice.tone==='error'?'alert':'status'} title={notice.detail} slots={{
     left:<><Icon size={16} aria-hidden="true"/><Label kind="action">{notice.message}</Label>
      {notice.detail&&<Label kind="action" className={ActionNoticeDetailElement.className}>{notice.detail}</Label>}</>,

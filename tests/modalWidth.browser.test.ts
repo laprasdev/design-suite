@@ -8,11 +8,11 @@ import {test} from 'node:test';
 import type {Locator} from '../scripts/gateTools/node_modules/playwright/index.js';
 import {ModalElement,ModalForm,ModalPlacement,MODAL_WIDTH_ATTRIBUTE,ModalWidth,modalShape}
  from '../src/react/modalElements.ts';
-import {openScene} from './browserScene.ts';
-import {CASE_ATTRIBUTE,CONTAINED_PARENT,MODAL_WIDTH_PX,ModalCase,THEME_INSET_PX,VIEWPORT_PX,VIEWPORT_WIDTHS}
+import {DESKTOP_VIEWPORT,openScene} from './browserScene.ts';
+import {CASE_ATTRIBUTE,CONTAINED_PARENT,MODAL_WIDTH_PX,ModalCase,THEME_INSET_PX,VIEWPORT_WIDTHS}
  from './modalWidthCases.ts';
 
-const page=await openScene('tests/modalWidthScene.tsx',VIEWPORT_PX);
+const page=await openScene('tests/modalWidthScene.tsx',DESKTOP_VIEWPORT);
 
 const inCase=(name: string,selector: string)=>page.locator(`[${CASE_ATTRIBUTE}="${name}"] ${selector}`);
 const panel=(name: string)=>inCase(name,ModalElement.PANEL.selector);

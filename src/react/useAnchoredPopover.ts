@@ -1,5 +1,6 @@
 import {useLayoutEffect,useState,type CSSProperties,type RefObject} from 'react';
 import {cssRect,cssViewport} from './cssZoom.ts';
+import {HEADER_CONTROL_PROPERTY} from './headerControl.ts';
 
 // Where a popover portaled to the app root sits beside its anchor: this far from
 // the anchor and from the viewport's edges, hidden while less than the minimum
@@ -7,7 +8,7 @@ import {cssRect,cssViewport} from './cssZoom.ts';
 export const POPOVER_GAP=8,VIEWPORT_EDGE=8,POPOVER_MIN_HEIGHT=24;
 // The palette a popover carries from its anchor, so a team-coloured section's
 // popover keeps that team's colours outside it.
-const ANCHOR_STYLE: readonly `--${string}`[]=['--pink','--teal','--pink-deep','--pink-wash','--header-control','--header-gap'];
+const ANCHOR_STYLE: readonly `--${string}`[]=['--pink','--teal','--pink-deep','--pink-wash',HEADER_CONTROL_PROPERTY,'--header-gap'];
 // A popover's height within `room`, scrolling within when taller.
 const within=(room: number,scroll: boolean): CSSProperties=>({maxHeight:room,overflowY:scroll?'auto':'visible',visibility:room>=POPOVER_MIN_HEIGHT?'visible':'hidden'});
 // A placed popover's style: its position and the custom properties it carries from its anchor.
