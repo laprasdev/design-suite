@@ -1,7 +1,8 @@
 // What the size gate reads of each file: its physical lines, the lines over the character limit, and the lines that
 // belong to import statements, which a split may add to a file that imports what it moved.
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
+import { repositoryFiles } from '../repositoryFiles.ts';
 import { LINE_CHARACTER_LIMIT, type FileMeasurement, type SizeScope, type SizeSkip } from './limits.ts';
 
 const IMPORT_START = /^import[\s{*'"]/;
@@ -40,31 +41,27 @@ export function measureText(text: string): FileMeasurement {
   return { lines: lines.length, longLines: long.length, importLines: importLineCount(lines), long };
 }
 
-const skipped = (relative: string, skip: SizeSkip): boolean =>
-  skip.suffixes.some(suffix => relative.endsWith(suffix)) || skip.directories.includes(path.posix.basename(relative));
+/** Whether a suffix or a folder on the way to `file` puts it out of scope. */
+const skipped = (file: string, skip: SizeSkip): boolean => skip.suffixes.some(suffix => file.endsWith(suffix))
+  || file.split('/').slice(0, -1).some(folder => skip.directories.includes(folder));
 
-function walk(root: string, dir: string, skip: SizeSkip): string[] {
-  const at = path.join(root, dir);
-  if (!existsSync(at)) throw new Error(`size-gate: the scope names ${dir}, which ${root} doesn't have.`);
-  return readdirSync(at, { withFileTypes: true }).flatMap(entry => {
-    const relative = path.posix.join(dir, entry.name);
-    if (skipped(relative, skip)) return [];
-    return entry.isDirectory() ? walk(root, relative, skip) : [relative];
-  });
+/** Whether `file` sits in `dir`; `.` is the whole repository. */
+function inside(dir: string, file: string): boolean {
+  const relative = path.posix.relative(dir, file);
+  return relative !== '..' && !relative.startsWith('../');
 }
 
-function listedFiles(root: string, files: readonly string[]): readonly string[] {
-  const missing = files.filter(file => !existsSync(path.join(root, file)));
+function existing(root: string, paths: readonly string[]): void {
+  const missing = paths.filter(entry => !existsSync(path.join(root, entry)));
   if (missing.length) throw new Error(`size-gate: the scope names ${missing.join(', ')}, which ${root} doesn't have.`);
-  return files;
 }
 
-/** Every file the scope covers, as a path from the root with forward slashes. */
+/** Every file the repository holds that the scope covers, as a path from the root with forward slashes. */
 function scopeFiles(root: string, scope: SizeScope): string[] {
-  const walked = scope.dirs.flatMap(dir => walk(root, dir, scope.skip));
-  const covered = (file: string): boolean =>
-    scope.extensions.some(extension => file.endsWith(extension)) && !skipped(file, scope.skip);
-  return [...listedFiles(root, scope.files), ...walked].filter(covered).sort();
+  existing(root, [...scope.dirs, ...scope.files]);
+  const covered = (file: string): boolean => !skipped(file, scope.skip)
+    && (scope.files.includes(file) || scope.dirs.some(dir => inside(dir, file)));
+  return repositoryFiles(root, scope.extensions).filter(covered).sort();
 }
 
 /** The numbers of every file in scope, by path. */

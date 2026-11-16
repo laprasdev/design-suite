@@ -19,15 +19,15 @@ type ModeFlag = typeof Flag.CHECK | typeof Flag.INIT | typeof Flag.ALLOW;
 const MODES: readonly ModeFlag[] = [Flag.CHECK, Flag.INIT, Flag.ALLOW];
 const today = (): string => new Date().toISOString().slice(0, 10);
 
-/** This repo's baseline, from its root. */
-const SUITE_BASELINE = 'scripts/size-baseline.json';
+/** This repo's baseline, from its root, whose scope names the repository's source for every gate. */
+export const SUITE_BASELINE = 'scripts/size-baseline.json';
 
 /** This repo's scope, read only by --init: afterwards the baseline carries it. */
 const SUITE_SCOPE: SizeScope = {
-  dirs: ['src', 'tests', 'scripts', 'catalog', 'examples'],
+  dirs: ['.'],
   files: [],
-  extensions: ['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs'],
-  skip: { directories: ['node_modules', 'dist', '__snapshots__'], suffixes: ['.d.ts', '.meta'] },
+  extensions: ['.ts', '.tsx', '.mts', '.cts', '.js', '.jsx', '.mjs', '.cjs'],
+  skip: { directories: [], suffixes: [] },
 };
 
 export interface SizeGateOptions {

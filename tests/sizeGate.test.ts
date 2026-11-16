@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -8,7 +9,8 @@ import { FILE_LINE_LIMIT, LINE_CHARACTER_LIMIT } from '../scripts/sizeGate/limit
 import { measureScope, measureText } from '../scripts/sizeGate/measure.ts';
 import { compare } from '../scripts/sizeGate/compare.ts';
 import { allowed, ratcheted, readBaseline } from '../scripts/sizeGate/baselineFile.ts';
-import { run } from '../scripts/size-gate.ts';
+import { SUITE_BASELINE, run } from '../scripts/size-gate.ts';
+import { repositoryFiles } from '../scripts/repositoryFiles.ts';
 
 type Numbers = { lines: number; longLines: number; importLines: number };
 const SCOPE = {
@@ -25,6 +27,20 @@ const baselineOf = (files: Record<string, Numbers>) => ({ scope: SCOPE, files, a
 const problemsOf = (files: Record<string, string>, base: Record<string, Numbers> = {}) =>
   compare(measured(files), baselineOf(base)).problems;
 const GRANT = { path: 'src/a.ts', step: '3', reason: 'a split', date: '2026-11-02' };
+const ROOT = fileURLToPath(new URL('..', import.meta.url));
+const SUITE_SCOPE = readBaseline(path.join(ROOT, SUITE_BASELINE)).scope;
+
+/** A fresh git repository holding `files`, which the gate reads as the repository's files. */
+function repository(files: Record<string, string>): string {
+  const root = mkdtempSync(path.join(tmpdir(), 'size-gate-'));
+  const init = spawnSync('git', ['init', '--quiet', root], { encoding: 'utf8' });
+  if (init.status !== 0) throw new Error(`git init failed in ${root}: ${init.stderr}`);
+  for (const [name, text] of Object.entries(files)) {
+    mkdirSync(path.dirname(path.join(root, name)), { recursive: true });
+    writeFileSync(path.join(root, name), text);
+  }
+  return root;
+}
 
 describe('measuring a file', () => {
   it('counts the lines an editor numbers', () => {
@@ -125,9 +141,7 @@ describe('an allowance for a split\'s import lines', () => {
 describe('the command', () => {
   const quiet = () => {};
   const repo = () => {
-    const root = mkdtempSync(path.join(tmpdir(), 'size-gate-'));
-    mkdirSync(path.join(root, 'src'));
-    writeFileSync(path.join(root, 'src/a.ts'), file(250));
+    const root = repository({ 'src/a.ts': file(250) });
     return { root, baselinePath: path.join(root, 'baseline.json'), scope: SCOPE, log: quiet };
   };
   it('writes a first baseline once, then fails a scratch long line and writes nothing for it', () => {
@@ -154,12 +168,30 @@ describe('the command', () => {
   });
 });
 
+describe('the repository\'s source', () => {
+  it('reads what git holds, leaving out what .gitignore ignores and keeping what it does not', () => {
+    const root = repository({ '.gitignore': 'built/\n', 'built/a.ts': file(250), 'src/a.ts': file(10) });
+    assert.deepEqual([...measureScope(root, { ...SCOPE, dirs: ['.'] }).keys()], ['src/a.ts']);
+    rmSync(root, { recursive: true });
+  });
+  for (const probe of ['scripts/probe.mts', 'scripts/probe.cts', 'src/__snapshots__/probe.ts', 'src/dist/probe.ts']) {
+    it(`holds ${probe} to the limits under this repo's scope`, () => {
+      const root = repository({ [probe]: file(250) });
+      const problems = compare(measureScope(root, SUITE_SCOPE), { scope: SUITE_SCOPE, files: {}, allowances: [] });
+      assert.deepEqual(problems.problems, [`${probe}: 250 lines, over the 200-line limit (not baselined)`]);
+      rmSync(root, { recursive: true });
+    });
+  }
+});
+
 describe('this repo', () => {
   it('holds its own baseline', () => {
-    const root = fileURLToPath(new URL('..', import.meta.url));
-    const baselinePath = path.join(root, 'scripts/size-baseline.json');
+    const baselinePath = path.join(ROOT, SUITE_BASELINE);
     assert.ok(existsSync(baselinePath));
     const baseline = readBaseline(baselinePath);
-    assert.deepEqual(compare(measureScope(root, baseline.scope), baseline).problems, []);
+    assert.deepEqual(compare(measureScope(ROOT, baseline.scope), baseline).problems, []);
+  });
+  it('measures every source file the repository holds, the files the type gate reads', () => {
+    assert.deepEqual([...measureScope(ROOT, SUITE_SCOPE).keys()], repositoryFiles(ROOT, SUITE_SCOPE.extensions).sort());
   });
 });

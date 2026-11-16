@@ -33,7 +33,7 @@ const LEAF = {
     + 'export const label = (item: Item): string => nameOf(item);\n',
 };
 
-const cycles = (files: Record<string, string>) => runGate(GATE.cycles, files, process.env);
+const cycles = (files: Record<string, string>) => runGate(GATE.cycles, { base: {}, head: files }, process.env);
 
 describe('the cycle gate', () => {
   it('refuses a cycle that only an import type closes', () => {
@@ -65,7 +65,7 @@ describe('the cycle gate', () => {
   });
   it('refuses a cruise that read no TypeScript, which would pass the cycle', () => {
     const env = { ...process.env, NODE_OPTIONS: `--import ${WITHOUT_TYPESCRIPT}` };
-    const run = runGate(GATE.cycles, TYPE_ONLY, env);
+    const run = runGate(GATE.cycles, { base: {}, head: TYPE_ONLY }, env);
     assert.equal(run.status, 1, run.output);
     assert.match(run.output, /cycle gate: dependency-cruiser loaded no TypeScript compiler it supports/);
   });

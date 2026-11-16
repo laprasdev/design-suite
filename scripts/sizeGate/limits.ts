@@ -26,11 +26,11 @@ export interface SizeScope {
   readonly skip: SizeSkip;
 }
 
-export interface BaselineNumbers {
+export type BaselineNumbers = {
   readonly lines: number;
   readonly longLines: number;
   readonly importLines: number;
-}
+};
 
 export interface AllowanceSpan {
   readonly lines: number;

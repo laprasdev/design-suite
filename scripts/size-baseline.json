@@ -1,5 +1,5 @@
 {
-  "scope": {"dirs":["src","tests","scripts","catalog","examples"],"files":[],"extensions":[".ts",".tsx",".js",".jsx",".mjs",".cjs"],"skip":{"directories":["node_modules","dist","__snapshots__"],"suffixes":[".d.ts",".meta"]}},
+  "scope": {"dirs":["."],"files":[],"extensions":[".ts",".tsx",".mts",".cts",".js",".jsx",".mjs",".cjs"],"skip":{"directories":[],"suffixes":[]}},
   "files": {
     "src/color.ts": {"lines":205,"longLines":1,"importLines":1},
     "src/layout.ts": {"lines":309,"longLines":10,"importLines":2},

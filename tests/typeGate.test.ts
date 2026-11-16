@@ -1,7 +1,10 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { describe, it } from 'node:test';
-import { CAST_RECORD_FILE, NO_CASTS, castRecord } from '../scripts/typeGate/castRatchet.ts';
+import { fileURLToPath } from 'node:url';
+import { SUITE_BASELINE } from '../scripts/size-gate.ts';
+import { readBaseline } from '../scripts/sizeGate/baselineFile.ts';
+import { CAST_BASELINE, castBaselineText, type CastNumbers } from '../scripts/typeGate/castBaseline.ts';
 import { isRecord } from '../src/valueChecks.ts';
 import { GATE, runGate } from './gateFixture.ts';
 
@@ -31,9 +34,11 @@ function readConfig(file: string): Config {
 const BASE_CONFIG = readConfig('tsconfig.json');
 const REPO_CONFIG = readConfig('tsconfig.repo.json');
 
-/** The record of a fixture that holds no casts, unless a case writes its own. */
-const NO_CAST_RECORD = { [CAST_RECORD_FILE]: `${castRecord(NO_CASTS)}\n` };
-const types = (files: Record<string, string>) => runGate(GATE.types, { ...NO_CAST_RECORD, ...files }, process.env);
+/** A fixture's cast baseline, which names no file unless a case gives its numbers. */
+const castBaseline = (files: Record<string, CastNumbers>) => ({ [CAST_BASELINE]: castBaselineText({ files }) });
+const SIZE_SCOPE = readBaseline(fileURLToPath(new URL(`../${SUITE_BASELINE}`, import.meta.url))).scope;
+const types = (files: Record<string, string>) =>
+  runGate(GATE.types, { base: {}, head: { ...castBaseline({}), ...files } }, process.env);
 
 describe('the type gate', () => {
   it('refuses a JavaScript module anywhere in the repository', () => {
@@ -68,28 +73,40 @@ describe('the type gate', () => {
     assert.equal(run.status, 0, run.output);
   });
 
-  it('refuses a cast or non-null assertion above the record, by file and line, and not `as const`', () => {
+  it('refuses a file that holds more casts or non-null assertions than its baseline, naming that file alone', () => {
     const source = [
       'export const read = (input: unknown): string => input as string;', 'export const kinds = [1] as const;', '',
     ].join('\n');
     const cast = types({ 'src/ok.ts': VALID_SOURCE, 'src/cast.ts': source });
     assert.equal(cast.status, 1, cast.output);
-    assert.match(cast.output, /src\/cast\.ts:1: cast\./);
-    assert.doesNotMatch(cast.output, /src\/cast\.ts:2/);
-    assert.match(cast.output, /1 casts, above the 0 AGENTS\.md records/);
+    assert.match(cast.output, /src\/cast\.ts: 1 casts, baselined 0, at lines 1;/);
 
-    const recorded = types({ [CAST_RECORD_FILE]: castRecord({ ...NO_CASTS, cast: 1 }), 'src/cast.ts': source });
-    assert.equal(recorded.status, 0, recorded.output);
+    const held = { 'src/held.ts': source, ...castBaseline({ 'src/held.ts': { casts: 1, nonNullAssertions: 0 } }) };
+    assert.equal(types(held).status, 0);
+    const again = 'export const again = (input: unknown) => input as number;\n';
+    const grown = types({ ...held, 'src/grown.ts': `${source}${again}` });
+    assert.equal(grown.status, 1, grown.output);
+    assert.match(grown.output, /src\/grown\.ts: 2 casts, baselined 0, at lines 1, 3;/);
+    assert.doesNotMatch(grown.output, /src\/held\.ts/);
 
     const nonNull = types({ 'src/first.ts': 'export const first = (list: string[]): string => list[0]!;\n' });
     assert.equal(nonNull.status, 1, nonNull.output);
-    assert.match(nonNull.output, /src\/first\.ts:1: non-null assertion\./);
+    assert.match(nonNull.output, /src\/first\.ts: 1 non-null assertions, baselined 0, at lines 1;/);
   });
 
-  it('refuses a record above the count, naming the lower record', () => {
-    const run = types({ 'src/ok.ts': VALID_SOURCE, [CAST_RECORD_FILE]: castRecord({ ...NO_CASTS, cast: 2 }) });
+  it('passes a file that holds fewer than its baseline, and says the ratchet lowers it', () => {
+    const baseline = castBaseline({ 'src/ok.ts': { casts: 2, nonNullAssertions: 0 } });
+    const run = types({ 'src/ok.ts': VALID_SOURCE, ...baseline });
+    assert.equal(run.status, 0, run.output);
+    assert.match(run.output, /ratchet: src\/ok\.ts holds 0 casts, baselined 2/);
+  });
+
+  it('refuses a size scope that names a JavaScript or TypeScript extension no gate would read', () => {
+    const narrowed = { ...SIZE_SCOPE, extensions: ['.ts', '.tsx'] };
+    const baseline = JSON.stringify({ scope: narrowed, files: {}, allowances: [] });
+    const run = types({ 'src/ok.ts': VALID_SOURCE, [SUITE_BASELINE]: baseline });
     assert.equal(run.status, 1, run.output);
-    assert.ok(run.output.includes(`the casts fell; record "${castRecord(NO_CASTS)}" in AGENTS.md.`), run.output);
+    assert.match(run.output, /scripts\/size-baseline\.json names no \.js, \.jsx, \.mjs, \.cjs, \.mts, \.cts source/);
   });
 
   it('refuses a declaration file of any extension unless it only augments a module', () => {

@@ -1,7 +1,11 @@
 // The size gate's baseline: what it covers, the numbers of each file over a limit, and the allowances granted.
-// The numbers only fall, except through an allowance that a step records for import lines its split added.
+// The numbers only fall (scripts/baseline/baselinedFiles.ts), except through an allowance that a step records for
+// import lines its split added.
 import { readFileSync, writeFileSync } from 'node:fs';
 import { isRecord, isStringList } from '../../src/valueChecks.ts';
+import {
+  LIST, OBJECT, baselineText, fileEntries, jsonBlock, parseFiles, ratchetedFiles, type BaselineRule,
+} from '../baseline/baselinedFiles.ts';
 import { withinLimits } from './compare.ts';
 import {
   FILE_LINE_LIMIT,
@@ -11,7 +15,6 @@ import {
 
 const numbersOf = ({ lines, longLines, importLines }: BaselineNumbers): BaselineNumbers =>
   ({ lines, longLines, importLines });
-
 
 const isNumbers = (value: unknown): value is BaselineNumbers =>
   isRecord(value) && typeof value.lines === 'number' && typeof value.longLines === 'number'
@@ -24,28 +27,24 @@ const isAllowance = (value: unknown): value is AllowanceRecord =>
   isRecord(value) && typeof value.path === 'string' && typeof value.step === 'string'
   && typeof value.reason === 'string' && typeof value.date === 'string' && isSpan(value.from) && isSpan(value.to);
 
-function parseBaseline(value: unknown, file: string): SizeBaseline {
+/** A size baseline from its decoded JSON; `file` names where it was read, for the refusal. */
+export function parseBaseline(value: unknown, file: string): SizeBaseline {
   const invalid = (): never => {
     const needs = 'scope {dirs, files, extensions, skip}, files and allowances';
     throw new Error(`size-gate: ${file} isn't a baseline: it needs ${needs}.`);
   };
   if (!isRecord(value)) return invalid();
-  const { scope, files, allowances } = value;
+  const { scope, allowances } = value;
   if (!isRecord(scope) || !isRecord(scope.skip)) return invalid();
   if (!isStringList(scope.dirs) || !isStringList(scope.files) || !isStringList(scope.extensions)) return invalid();
   if (!isStringList(scope.skip.directories) || !isStringList(scope.skip.suffixes)) return invalid();
-  if (!isRecord(files) || !Array.isArray(allowances) || !allowances.every(isAllowance)) return invalid();
-  const parsedFiles: Record<string, BaselineNumbers> = {};
-  for (const [entry, numbers] of Object.entries(files)) {
-    if (!isNumbers(numbers)) return invalid();
-    parsedFiles[entry] = numbers;
-  }
+  if (!Array.isArray(allowances) || !allowances.every(isAllowance)) return invalid();
   return {
     scope: {
       dirs: scope.dirs, files: scope.files, extensions: scope.extensions,
       skip: { directories: scope.skip.directories, suffixes: scope.skip.suffixes },
     },
-    files: parsedFiles,
+    files: parseFiles(value.files, isNumbers, invalid),
     allowances,
   };
 }
@@ -54,17 +53,14 @@ export function readBaseline(file: string): SizeBaseline {
   return parseBaseline(JSON.parse(readFileSync(file, 'utf8')), file);
 }
 
-/** One line per baselined file, so a ratchet's diff reads file by file. */
-export function writeBaseline(file: string, baseline: SizeBaseline): void {
-  const entries = Object.entries(baseline.files).sort(([a], [b]) => (a < b ? -1 : 1))
-    .map(([entry, numbers]) => `    ${JSON.stringify(entry)}: ${JSON.stringify(numbers)}`);
-  const allowances = baseline.allowances.map(allowance => `    ${JSON.stringify(allowance)}`);
-  const list = (lines: readonly string[], open: string, close: string): string =>
-    lines.length ? `${open}\n${lines.join(',\n')}\n  ${close}` : `${open}${close}`;
-  const text = `{\n  "scope": ${JSON.stringify(baseline.scope)},\n  "files": ${list(entries, '{', '}')},\n`
-    + `  "allowances": ${list(allowances, '[', ']')}\n}\n`;
-  writeFileSync(file, text);
-}
+export const sizeBaselineText = (baseline: SizeBaseline): string => baselineText({
+  scope: JSON.stringify(baseline.scope),
+  files: jsonBlock(fileEntries(baseline.files), OBJECT),
+  allowances: jsonBlock(baseline.allowances.map(allowance => JSON.stringify(allowance)), LIST),
+});
+
+export const writeBaseline = (file: string, baseline: SizeBaseline): void =>
+  writeFileSync(file, sizeBaselineText(baseline));
 
 /** A first baseline: every file in scope that's over a limit today. */
 export function freshBaseline(scope: SizeScope, measuredFiles: ReadonlyMap<string, FileMeasurement>): SizeBaseline {
@@ -83,17 +79,19 @@ function lowered(base: BaselineNumbers, measured: FileMeasurement): BaselineNumb
   };
 }
 
+/** Import lines may rise as a file's lines fall, since they move together; the lines that are not imports may not. */
+const rose = (base: BaselineNumbers, head: BaselineNumbers): boolean => head.lines > base.lines
+  || head.longLines > base.longLines || head.lines - head.importLines > base.lines - base.importLines;
+
+export const SIZE_RULE: BaselineRule<BaselineNumbers, FileMeasurement> = { isNumbers, withinLimits, lowered, rose };
+
 /** The lower numbers, with files that now pass or are gone dropped, and their allowances with them. */
 export function ratcheted(
   baseline: SizeBaseline,
   measuredFiles: ReadonlyMap<string, FileMeasurement>,
 ): SizeBaseline {
-  const files: Record<string, BaselineNumbers> = {};
-  for (const [file, base] of Object.entries(baseline.files)) {
-    const measured = measuredFiles.get(file);
-    if (measured && !withinLimits(measured)) files[file] = lowered(base, measured);
-  }
-  const allowances = baseline.allowances.filter(allowance => files[allowance.path]);
+  const files = ratchetedFiles(baseline.files, measuredFiles, SIZE_RULE);
+  const allowances = baseline.allowances.filter(allowance => Object.hasOwn(files, allowance.path));
   return { ...baseline, files, allowances };
 }
 
