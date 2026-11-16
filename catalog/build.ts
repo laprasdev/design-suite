@@ -51,16 +51,20 @@ function readKinds(raw: unknown): { rows: Record<string, KindRow>; rawKinds: Rec
   return { rows, rawKinds: raw.kinds };
 }
 
-function baseballRevision(here: string): string | null {
+// The slowbro-sports revision the catalog's sources came from; README's route archives them from this checkout.
+function baseballRevision(here: string): string {
+  const repo = path.resolve(here, '../../slowbro-sports');
+  const command = ['-C', repo, 'rev-parse', '--short', 'origin/dev'];
   try {
-    const repo = path.resolve(here, '../../slowbro-sports');
-    return execFileSync('git', ['-C', repo, 'rev-parse', '--short', 'origin/dev']).toString().trim();
-  } catch {
-    return null;
+    return execFileSync('git', command, { stdio: ['ignore', 'pipe', 'pipe'] }).toString().trim();
+  } catch (error) {
+    throw new Error(`catalog/build.ts: cannot read origin/dev of the slowbro-sports checkout at ${repo}, `
+      + 'which generatedFrom.baseballOriginDev records.', { cause: error });
   }
 }
 
 const here = fileURLToPath(new URL('.', import.meta.url));
+const baseballOriginDev = baseballRevision(here);
 const inv = await scan();
 const { rows: kinds, rawKinds } = readKinds(JSON.parse(await readFile(path.join(here, 'kinds.json'), 'utf8')));
 const unityEnums = inv.unity.enums;
@@ -100,7 +104,7 @@ const unmapped = {
 };
 
 const out = {
-  generatedFrom: { baseballOriginDev: baseballRevision(here) },
+  generatedFrom: { baseballOriginDev },
   missing,
   kinds: rawKinds,
   styleAxes: {

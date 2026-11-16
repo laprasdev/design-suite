@@ -4,7 +4,7 @@
   "description": "Bloom Design tokens, theming and composable React controls, dialogs, portraits and node graphs.",
   "type": "module",
   "engines": {
-    "node": ">=24.2.0"
+    "node": ">=24.3.0"
   },
   "main": "./dist/index.js",
   "module": "./dist/index.js",
