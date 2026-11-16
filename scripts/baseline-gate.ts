@@ -2,12 +2,14 @@
 // base branch's baseline, or that the base branch's baseline does not name, unless the size baseline records an
 // allowance for that file which the base branch lacks, raising it from the base branch's numbers by what the
 // allowance rule in scripts/sizeGate/compare.ts grants, with the import lines measured in the file as the base branch
-// and the working tree hold it. A baseline the base branch does not hold yet is new, and the gate says so.
+// and the working tree hold it. A baseline the base branch does not hold yet is new, and the gate says so. The base
+// branch's baseline is read as the size gate's --rewrite reads it, since a branch cannot rewrite its base; the working
+// tree's is read as it stands.
 //   node scripts/baseline-gate.ts
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { BASE_BRANCH, baseBranchAbsence } from './baseline/baseBranch.ts';
-import { risenFiles, type BaselinedFiles, type FileNumbers } from './baseline/baselinedFiles.ts';
+import { Reading, risenFiles, type BaselinedFiles, type FileNumbers } from './baseline/baselinedFiles.ts';
 import { gitOutput } from './repositoryFiles.ts';
 import { SUITE_BASELINE } from './size-gate.ts';
 import { SIZE_RULE, parseBaseline } from './sizeGate/baselineFile.ts';
@@ -24,7 +26,7 @@ import {
  */
 interface BaselineReading<Numbers extends FileNumbers, Baseline extends { readonly files: BaselinedFiles<Numbers> }> {
   readonly file: string;
-  readonly parse: (value: unknown, file: string) => Baseline;
+  readonly parse: (value: unknown, file: string, reading: Reading) => Baseline;
   readonly rose: (base: Numbers, head: Numbers) => boolean;
   readonly unaccounted: (root: string, base: Baseline, head: Baseline, file: string) => string | undefined;
 }
@@ -58,8 +60,8 @@ function risen<Numbers extends FileNumbers, Baseline extends { readonly files: B
   const onBase = gitOutput(root, ['ls-tree', '--name-only', BASE_BRANCH, '--', file]).trim();
   if (!onBase) return { refusals: [], notices: [`${file} is new: ${BASE_BRANCH} holds none to hold it to`] };
   const baseName = `${BASE_BRANCH}:${file}`;
-  const base = parse(JSON.parse(gitOutput(root, ['show', baseName])), baseName);
-  const head = parse(JSON.parse(readFileSync(path.join(root, file), 'utf8')), file);
+  const base = parse(JSON.parse(gitOutput(root, ['show', baseName])), baseName, Reading.REWRITE);
+  const head = parse(JSON.parse(readFileSync(path.join(root, file), 'utf8')), file, Reading.CURRENT);
   const refusals = risenFiles(base.files, head.files, rose).flatMap(entry => {
     const why = unaccounted(root, base, head, entry);
     if (!why) return [];

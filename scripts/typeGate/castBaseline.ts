@@ -5,8 +5,8 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import ts from '../gateTools/node_modules/typescript/lib/typescript.js';
 import { isRecord } from '../../src/valueChecks.ts';
 import {
-  OBJECT, anyRose, baselineText, fileEntries, holdsNumbers, jsonBlock, lowest, parseFiles, ratchetedFiles,
-  type BaselineRule, type BaselinedFiles,
+  OBJECT, anyRose, baselineText, fileEntries, holdsNumbers, jsonBlock, lowest, parseFiles, ratchetedFiles, takenFields,
+  type BaselineRead, type BaselineRule, type BaselinedFiles, type Reading,
 } from '../baseline/baselinedFiles.ts';
 
 export const CAST_BASELINE = 'scripts/cast-baseline.json';
@@ -23,23 +23,28 @@ export const NO_CASTS: CastNumbers = Object.freeze({ casts: 0, nonNullAssertions
 const isCastNumbers = holdsNumbers(CAST_KINDS);
 
 export const CAST_RULE: BaselineRule<CastNumbers, CastNumbers> = {
+  fields: { takes: CAST_KINDS, retired: [] },
   isNumbers: isCastNumbers,
   withinLimits: measured => CAST_KINDS.every(kind => measured[kind] === 0),
   lowered: lowest(CAST_KINDS),
   rose: anyRose,
 };
 
-/** A cast baseline from its decoded JSON; `file` names where it was read, for the refusal. */
-export function parseCastBaseline(value: unknown, file: string): CastBaseline {
-  const invalid = (): never => {
-    throw new Error(`type gate: ${file} isn't a cast baseline: it needs files of {${CAST_KINDS.join(', ')}}.`);
+/** A cast baseline from its decoded JSON, read as `reading` says; `file` names where it was read, for the refusal. */
+export function parseCastBaseline(value: unknown, file: string, reading: Reading): CastBaseline {
+  const refuse = (why: string): never => {
+    throw new Error(`type gate: ${file} ${why}.`);
   };
-  if (!isRecord(value)) return invalid();
-  return { files: parseFiles(value.files, isCastNumbers, invalid) };
+  const read: BaselineRead = {
+    reading, refuse, invalid: () => refuse(`isn't a cast baseline: it needs files of {${CAST_KINDS.join(', ')}}`),
+  };
+  if (!isRecord(value)) return read.invalid();
+  const baseline = takenFields(value, { takes: ['files'], retired: [] }, 'the baseline', read);
+  return { files: parseFiles(baseline.files, CAST_RULE, read) };
 }
 
-export const readCastBaseline = (file: string): CastBaseline =>
-  parseCastBaseline(JSON.parse(readFileSync(file, 'utf8')), file);
+export const readCastBaseline = (file: string, reading: Reading): CastBaseline =>
+  parseCastBaseline(JSON.parse(readFileSync(file, 'utf8')), file, reading);
 
 export const castBaselineText = (baseline: CastBaseline): string =>
   baselineText({ files: jsonBlock(fileEntries(baseline.files), OBJECT) });

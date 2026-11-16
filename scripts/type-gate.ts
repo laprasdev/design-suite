@@ -12,6 +12,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import ts from './gateTools/node_modules/typescript/lib/typescript.js';
 import { isRecord, isStringList } from '../src/valueChecks.ts';
+import { Reading } from './baseline/baselinedFiles.ts';
 import { repositoryFiles } from './repositoryFiles.ts';
 import { SUITE_BASELINE } from './size-gate.ts';
 import { readBaseline } from './sizeGate/baselineFile.ts';
@@ -47,7 +48,7 @@ const runTsc = (root: string, args: readonly string[]) => run(TSC, ['-p', CONFIG
 
 /** The JavaScript and TypeScript files the repository holds, refused unless the size scope names all of them source. */
 function scriptFiles(root: string): string[] {
-  const { extensions } = readBaseline(path.join(root, SUITE_BASELINE)).scope;
+  const { extensions } = readBaseline(path.join(root, SUITE_BASELINE), Reading.CURRENT).scope;
   const unnamed = SCRIPT_EXTENSIONS.filter(extension => !extensions.includes(extension));
   if (unnamed.length) failGate(`${SUITE_BASELINE} names no ${unnamed.join(', ')} source, which no gate would read.`);
   return repositoryFiles(root, extensions).filter(file => SCRIPT_EXTENSIONS.some(ext => file.endsWith(ext)));
@@ -148,7 +149,7 @@ for (const file of tsFiles) {
   casts.push(...inspected.casts);
 }
 const castBaselinePath = path.join(root, CAST_BASELINE);
-const castBaseline = readCastBaseline(castBaselinePath);
+const castBaseline = readCastBaseline(castBaselinePath, Reading.CURRENT);
 const castsByFile = castNumbers(casts);
 problems.push(...castRefusals(castBaseline, castsByFile, casts));
 const typecheck = runTsc(root, ['--pretty', 'false']);

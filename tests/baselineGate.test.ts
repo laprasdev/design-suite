@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
+import { Reading } from '../scripts/baseline/baselinedFiles.ts';
 import { SUITE_BASELINE } from '../scripts/size-gate.ts';
 import { SIZE_RULE, readBaseline, sizeBaselineText } from '../scripts/sizeGate/baselineFile.ts';
 import {
@@ -18,7 +19,7 @@ const ONE_CAST = { 'src/a.ts': { casts: 1, nonNullAssertions: 0 } };
 const TWO_CASTS = { 'src/a.ts': { casts: 2, nonNullAssertions: 0 } };
 const baselines = (tree: GateTree) => runGate(GATE.baselines, tree, process.env);
 
-const SUITE_SIZE = readBaseline(fileURLToPath(new URL(`../${SUITE_BASELINE}`, import.meta.url)));
+const SUITE_SIZE = readBaseline(fileURLToPath(new URL(`../${SUITE_BASELINE}`, import.meta.url)), Reading.CURRENT);
 /** The size baseline with `files` and `allowances` in place of this repository's, and no casts. */
 const sizeBaseline = (change: Pick<SizeBaseline, 'files' | 'allowances'>) =>
   ({ ...casts({}), [SUITE_BASELINE]: sizeBaselineText({ ...SUITE_SIZE, ...change }) });
@@ -61,6 +62,17 @@ describe('the baseline gate', () => {
     assert.equal(raised(303, source(303, 7)).status, 0);
     assert.equal(raised(290, source(290, 6), []).status, 0, 'it fell');
     assert.equal(raised(304, source(304, 7)).status, 1, 'one line past what the split added');
+  });
+
+  it('reads origin/main\'s baseline as --rewrite reads it, and refuses a retired field in the working tree\'s', () => {
+    const files = { 'src/a.ts': { lines: 300, longLines: 1, importLines: 4 } };
+    const base = { ...casts({}), [SUITE_BASELINE]: JSON.stringify({ ...SUITE_SIZE, files }), ...source(300, 4) };
+    const current = sizeBaseline({ files: entry(290), allowances: [] });
+    const fell = baselines({ base, head: { ...current, ...source(290, 4) } });
+    assert.equal(fell.status, 0, fell.output);
+    const retired = baselines({ base, head: source(290, 4) });
+    assert.equal(retired.status, 1, retired.output);
+    assert.match(retired.output, /size-baseline\.json files\["src\/a\.ts"\] holds importLines, which only an earlier/);
   });
 
   it('reads a size rise by the size gate\'s own cap, so a baseline may record what its file measures', () => {

@@ -8,6 +8,7 @@ import { describe, it } from 'node:test';
 import { FILE_LINE_LIMIT, LINE_CHARACTER_LIMIT } from '../scripts/sizeGate/limits.ts';
 import { measureScope, measureText } from '../scripts/sizeGate/measure.ts';
 import { compare } from '../scripts/sizeGate/compare.ts';
+import { Reading } from '../scripts/baseline/baselinedFiles.ts';
 import { allowed, ratcheted, readBaseline } from '../scripts/sizeGate/baselineFile.ts';
 import { SUITE_BASELINE, run } from '../scripts/size-gate.ts';
 import { repositoryFiles } from '../scripts/repositoryFiles.ts';
@@ -28,7 +29,7 @@ const problemsOf = (files: Record<string, string>, base: Record<string, Numbers>
   compare(measured(files), baselineOf(base)).problems;
 const GRANT = { path: 'src/a.ts', step: '3', reason: 'a split', date: '2026-11-02' };
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
-const SUITE_SCOPE = readBaseline(path.join(ROOT, SUITE_BASELINE)).scope;
+const SUITE_SCOPE = readBaseline(path.join(ROOT, SUITE_BASELINE), Reading.CURRENT).scope;
 
 /** A fresh git repository holding `files`, which the gate reads as the repository's files. */
 function repository(files: Record<string, string>): string {
@@ -163,9 +164,9 @@ describe('the command', () => {
     run({ ...job, argv: ['--init'] });
     writeFileSync(path.join(job.root, 'src/a.ts'), file(240));
     assert.equal(run({ ...job, argv: ['--check'] }), 0);
-    assert.equal(readBaseline(job.baselinePath).files['src/a.ts'].lines, 250);
+    assert.equal(readBaseline(job.baselinePath, Reading.CURRENT).files['src/a.ts'].lines, 250);
     assert.equal(run(job), 0);
-    assert.equal(readBaseline(job.baselinePath).files['src/a.ts'].lines, 240);
+    assert.equal(readBaseline(job.baselinePath, Reading.CURRENT).files['src/a.ts'].lines, 240);
     rmSync(job.root, { recursive: true });
   });
 });
@@ -190,7 +191,7 @@ describe('this repo', () => {
   it('holds its own baseline', () => {
     const baselinePath = path.join(ROOT, SUITE_BASELINE);
     assert.ok(existsSync(baselinePath));
-    const baseline = readBaseline(baselinePath);
+    const baseline = readBaseline(baselinePath, Reading.CURRENT);
     assert.deepEqual(compare(measureScope(ROOT, baseline.scope), baseline).problems, []);
   });
   it('measures every source file the repository holds, the files the type gate reads', () => {
