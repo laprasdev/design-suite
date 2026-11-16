@@ -1,7 +1,7 @@
 {
   "name": "design-suite-gate-tools",
   "private": true,
-  "description": "The pinned tools npm run check:cycles and check:duplication run, and Playwright, in whose headless Chromium npm test reads the Modal widths, apart from the package's own dependencies, which consumers install to run prepare. dependency-cruiser needs TypeScript 6 beside it, and jscpd's binary is 42 MB. Install with npm ci --prefix scripts/gateTools, and the browser with npm run gate-browser.",
+  "description": "The pinned tools npm run check:cycles and check:duplication run, and Playwright, in whose headless Chromium npm test reads the Modal widths, apart from the package's own dependencies, which consumers install to run prepare. dependency-cruiser needs TypeScript 6 beside it, and scripts/type-gate.ts parses with its JavaScript compiler API, which TypeScript 7 does not ship; jscpd's binary is 42 MB. Install with npm ci --prefix scripts/gateTools, and the browser with npm run gate-browser.",
   "type": "module",
   "devDependencies": {
     "dependency-cruiser": "18.7.1",

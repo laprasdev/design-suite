@@ -9,7 +9,10 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
-const CONFIGS = ['.dependency-cruiser.json', '.jscpd.json', 'package.json', 'tsconfig.json', 'tsconfig.repo.json'];
+const CONFIGS = [
+  '.dependency-cruiser.json', '.jscpd.json', 'package.json', 'tsconfig.json', 'tsconfig.repo.json',
+  'scripts/size-baseline.json',
+];
 const COLOR = /\x1b\[[0-9;]*m/g;
 
 /** The entry point of each gate: npm run check:types, check:cycles and check:duplication run these, with no args. */
@@ -28,7 +31,10 @@ export function runGate(gate: readonly string[], files: Record<string, string>, 
   try {
     mkdirSync(dir, { recursive: true });
     symlinkSync(path.join(ROOT, 'node_modules'), path.join(dir, 'node_modules'), 'dir');
-    CONFIGS.forEach(config => copyFileSync(path.join(ROOT, config), path.join(dir, config)));
+    for (const config of CONFIGS) {
+      mkdirSync(path.dirname(path.join(dir, config)), { recursive: true });
+      copyFileSync(path.join(ROOT, config), path.join(dir, config));
+    }
     for (const [file, text] of Object.entries(files)) {
       mkdirSync(path.dirname(path.join(dir, file)), { recursive: true });
       writeFileSync(path.join(dir, file), text);

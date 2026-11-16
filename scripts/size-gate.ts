@@ -19,6 +19,9 @@ type ModeFlag = typeof Flag.CHECK | typeof Flag.INIT | typeof Flag.ALLOW;
 const MODES: readonly ModeFlag[] = [Flag.CHECK, Flag.INIT, Flag.ALLOW];
 const today = (): string => new Date().toISOString().slice(0, 10);
 
+/** This repo's baseline, from its root. */
+export const SUITE_BASELINE = 'scripts/size-baseline.json';
+
 /** This repo's scope, read only by --init: afterwards the baseline carries it. */
 const SUITE_SCOPE: SizeScope = {
   dirs: ['src', 'tests', 'scripts', 'catalog', 'examples'],
@@ -27,14 +30,6 @@ const SUITE_SCOPE: SizeScope = {
   skip: { directories: ['node_modules', 'dist', '__snapshots__'], suffixes: ['.d.ts', '.meta'] },
 };
 
-interface GateJob {
-  readonly root: string;
-  readonly baselinePath: string;
-  readonly scope: SizeScope;
-  readonly argv: readonly string[];
-  readonly say: (line: string) => void;
-}
-
 export interface SizeGateOptions {
   readonly root: string;
   readonly baselinePath: string;
@@ -42,6 +37,9 @@ export interface SizeGateOptions {
   readonly argv?: readonly string[];
   readonly log?: (line: string) => void;
 }
+
+/** One run's options, with `log` bound to the gate's prefix as `say`. */
+type GateJob = Required<Omit<SizeGateOptions, 'log'>> & { readonly say: (line: string) => void };
 
 function flagValue(argv: readonly string[], flag: string): string {
   const value = argv[argv.indexOf(flag) + 1];
@@ -92,8 +90,8 @@ export function run({ root, baselinePath, scope, argv = [], log = console.log }:
   return gate(job, mode !== Flag.CHECK);
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (import.meta.main) {
   const root = fileURLToPath(new URL('..', import.meta.url));
-  const baselinePath = path.join(root, 'scripts/size-baseline.json');
+  const baselinePath = path.join(root, SUITE_BASELINE);
   process.exitCode = run({ root, baselinePath, scope: SUITE_SCOPE, argv: process.argv.slice(2) });
 }
