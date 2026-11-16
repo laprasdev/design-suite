@@ -21,7 +21,8 @@ const FUNCTION = [
 const RULES = ['margin: 0 auto;', 'padding: 4px 8px;', 'border: 1px solid currentColor;', 'border-radius: 6px;',
   'display: grid;', 'gap: 4px;', 'align-items: center;', 'font-size: 12px;'].map(line => `  ${line}`).join('\n');
 
-const duplication = (files: Record<string, string>) => runGate(GATE.duplication, files, process.env);
+const duplication = (files: Record<string, string>) =>
+  runGate(GATE.duplication, { base: {}, head: files }, process.env);
 
 describe('the duplication gate', () => {
   it('refuses a function copied into a second file', () => {

@@ -75,6 +75,19 @@ export function createTheme(spec: ThemeSpec = {}) {
 // Fired when a host swaps its palette, so controls that measure themselves can redraw.
 export const PALETTE_CHANGE_EVENT = "palette-change";
 export type Theme = ReturnType<typeof createTheme>;
+type ThemeColor = keyof Theme["colors"];
+type ColorVariable = `--color-${string}`;
+const colorVariable = (name: string): ColorVariable =>
+  `--color-${name.replace(/[A-Z]/g, letter => `-${letter.toLowerCase()}`)}`;
+// The colours themeVariables publishes as --color-*; the shared desk's "Theme colours" to-do publishes the rest.
+const APPLIED_COLORS = Object.freeze(
+  ["surface", "surfaceHi", "line", "text", "dim", "accent", "accentDeep"] as const satisfies readonly ThemeColor[]);
+
+// Every colour of a theme as its --color-<kebab-case name> custom property.
+export function colorVariables(t: Theme): Record<ColorVariable, string> {
+  return Object.fromEntries(Object.entries(t.colors).map(([name, color]) => [colorVariable(name), color]));
+}
+
 // The custom properties the composed controls read, from one theme.
 export function themeVariables(t: Theme): Record<string, string> {
   const c = t.colors, type = t.typography ?? THEME_TYPOGRAPHY;
@@ -89,9 +102,7 @@ export function themeVariables(t: Theme): Record<string, string> {
       "--type-code": `${type.codeSize}px`,
     "--leading-title": String(type.titleLeading), "--leading-code": String(type.codeLeading),
     "--tracking-caps": type.capsTracking, "--tracking-caps-wide": type.wideTracking,
-    "--color-surface": c.surface, "--color-surface-hi": c.surfaceHi, "--color-line": c.line,
-    "--color-text": c.text, "--color-dim": c.dim, "--color-accent": c.accent,
-    "--color-accent-deep": c.accentDeep, "--surface-chrome": c.surface,
+    ...Object.fromEntries(APPLIED_COLORS.map(name => [colorVariable(name), c[name]])), "--surface-chrome": c.surface,
     "--bg": c.bg, "--stage": c.stage, "--card": c.surface, "--card-hi": c.surfaceHi, "--line": c.line,
       "--bevel": c.bevel,
     "--text": c.text, "--selection-foreground": c.text, "--dim": c.dim, "--faint": c.faint,

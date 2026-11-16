@@ -21,8 +21,12 @@ describe('what a yes/no draws', () => {
     }
   });
   it('steps an overridable press through all four and round again', () => {
-    const seen = [YesNo.UNSET];
-    for (let step = 0; step < Object.values(YesNo).length; step++) seen.push(YES_NO_NEXT[seen.at(-1)!]);
+    let current: YesNoValue = YesNo.UNSET;
+    const seen: YesNoValue[] = [current];
+    for (let step = 0; step < Object.values(YesNo).length; step++) {
+      current = YES_NO_NEXT[current];
+      seen.push(current);
+    }
     assert.deepEqual(seen, [YesNo.UNSET, YesNo.ON, YesNo.OFF, YesNo.INHERIT, YesNo.UNSET]);
   });
 });
