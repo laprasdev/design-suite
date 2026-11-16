@@ -3,31 +3,28 @@ import { mkdir, readFile, rm } from 'node:fs/promises';
 import { relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { build } from 'esbuild';
-import { isNonEmptyString, isRecord } from '../src/valueChecks.ts';
+import {
+  OTHER_FIELDS, entryAt, holdsNonEmptyString, holdsRecord, holdsShape, refusalBy, type FieldCheck, type ShapeOf,
+} from './fieldChecks.ts';
 
-interface ExportTarget {
-  readonly source: string;
-  readonly default: string;
-}
-
-function readExportTarget(subpath: string, value: unknown): ExportTarget | null {
-  if (typeof value === 'string') return null;
-  if (!isRecord(value) || !isNonEmptyString(value.source) || !isNonEmptyString(value.default)) {
-    throw new Error(`package.json exports["${subpath}"] must state non-empty source and default paths.`);
-  }
-  return { source: value.source, default: value.default };
-}
+/** An export that names its source and its built file; an export given as a bare path is a pattern, not built. */
+const EXPORT_TARGET_SHAPE = Object.freeze({ source: holdsNonEmptyString, default: holdsNonEmptyString });
+type ExportTarget = ShapeOf<typeof EXPORT_TARGET_SHAPE>;
+const holdsExportTarget: FieldCheck<ExportTarget> = holdsShape(EXPORT_TARGET_SHAPE, OTHER_FIELDS.ignored);
+const MANIFEST_SHAPE = Object.freeze({ name: holdsNonEmptyString, version: holdsNonEmptyString, exports: holdsRecord });
+const holdsManifest: FieldCheck<ShapeOf<typeof MANIFEST_SHAPE>> = holdsShape(MANIFEST_SHAPE, OTHER_FIELDS.ignored);
+const refuse = refusalBy(reason => {
+  throw new Error(`package.json: ${reason}.`);
+}, 'the manifest');
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const manifest: unknown = JSON.parse(await readFile(resolve(root, 'package.json'), 'utf8'));
-if (!isRecord(manifest) || !isNonEmptyString(manifest.name) || !isNonEmptyString(manifest.version)
-  || !isRecord(manifest.exports)) {
-  throw new Error('package.json must state name, version and exports.');
-}
+holdsManifest(manifest, '', refuse);
 const exportEntries = Object.entries(manifest.exports);
-const targets = exportEntries.flatMap(([subpath, value]) => {
-  const target = readExportTarget(subpath, value);
-  return target ? [target] : [];
+const targets = exportEntries.flatMap(([subpath, value]): ExportTarget[] => {
+  if (typeof value === 'string') return [];
+  holdsExportTarget(value, entryAt('exports', subpath), refuse);
+  return [value];
 });
 const entryPoints = Object.fromEntries(
   targets.filter(entry => /\.tsx?$/.test(entry.source)).map(entry => [

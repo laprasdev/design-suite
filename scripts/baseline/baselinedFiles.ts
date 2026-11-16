@@ -2,38 +2,28 @@
 // file whose numbers grew and, on a pass, writes the lower numbers and drops each file that now holds its limits or is
 // gone; scripts/baseline-gate.ts refuses a baseline that rose above the base branch's. The size and cast baselines are
 // both read, lowered and written here. A reader refuses any field a baseline's format does not take, naming it.
-import { isRecord } from '../../src/valueChecks.ts';
+import { OTHER_FIELDS, holdsFields, holdsNumber, refusalBy, type FieldCheck, type Refusal } from '../fieldChecks.ts';
 
 /** One file's numbers, each named. */
 export type FileNumbers = Readonly<Record<string, number>>;
 /** The numbers of each file a baseline names, by path. */
 export type BaselinedFiles<Numbers extends FileNumbers> = Readonly<Record<string, Numbers>>;
 
-/**
- * One read of a baseline: its refusals, which add the gate and the file. `refuse` says why; `invalid` says what the
- * baseline needs, for a record that is not of its shape.
- */
-export interface BaselineRead {
-  readonly refuse: (why: string) => never;
-  readonly invalid: () => never;
-}
+/** A baseline's refusal, which `source` (the gate and the file) begins. */
+export const baselineRefusal = (source: string): Refusal => refusalBy(reason => {
+  throw new Error(`${source} ${reason}.`);
+}, 'the baseline');
 
-/**
- * One gate's reading of its numbers: the kinds and the check of a file's numbers, what holds the limits, what a pass
- * keeps, and when a baseline's numbers rose from another's.
- */
+/** One gate's reading of its numbers: what holds the limits, what a pass keeps, and when a baseline's numbers rose. */
 export interface BaselineRule<Numbers extends FileNumbers, Measured> {
-  readonly kinds: readonly string[];
-  readonly isNumbers: (value: unknown) => value is Numbers;
   readonly withinLimits: (measured: Measured) => boolean;
   readonly lowered: (base: Numbers, measured: Measured) => Numbers;
   readonly rose: (base: Numbers, head: Numbers) => boolean;
 }
 
-/** Whether `value` holds a number for each of `kinds`, a file's numbers in a baseline that records those kinds. */
-export const holdsNumbers = <Kind extends string>(kinds: readonly Kind[]) =>
-  (value: unknown): value is Readonly<Record<Kind, number>> =>
-    isRecord(value) && kinds.every(kind => typeof value[kind] === 'number');
+/** A file's numbers in a baseline that records `kinds`: a number for each, and no other field. */
+export const holdsNumbers = <Kind extends string>(kinds: readonly Kind[]): FieldCheck<Readonly<Record<Kind, number>>> =>
+  holdsFields(kinds, holdsNumber, OTHER_FIELDS.refused);
 
 /** Each of `kinds` at the lower of the baselined and the measured number. */
 export const lowest = <Kind extends string>(kinds: readonly Kind[]) =>
@@ -49,36 +39,6 @@ export const anyRose = <Numbers extends FileNumbers>(base: Numbers, head: Number
 
 export const OBJECT = ['{', '}'] as const;
 export const LIST = ['[', ']'] as const;
-
-/** `value`, read at `where`, as a record holding only `fields`; it refuses any other field by name. */
-export function takenFields(
-  value: unknown,
-  fields: readonly string[],
-  where: string,
-  { refuse, invalid }: BaselineRead,
-): Record<string, unknown> {
-  if (!isRecord(value)) return invalid();
-  for (const field of Object.keys(value)) {
-    if (!fields.includes(field)) refuse(`${where} holds ${field}; it takes ${fields.join(', ')}`);
-  }
-  return value;
-}
-
-/** A baseline's `files`, refused through `invalid` when any entry is not a file's numbers, and by name for a field. */
-export function parseFiles<Numbers extends FileNumbers>(
-  value: unknown,
-  { kinds, isNumbers }: Pick<BaselineRule<Numbers, unknown>, 'kinds' | 'isNumbers'>,
-  read: BaselineRead,
-): BaselinedFiles<Numbers> {
-  if (!isRecord(value)) return read.invalid();
-  const files: Record<string, Numbers> = {};
-  for (const [file, entry] of Object.entries(value)) {
-    const numbers = takenFields(entry, kinds, `files[${JSON.stringify(file)}]`, read);
-    if (!isNumbers(numbers)) return read.invalid();
-    files[file] = numbers;
-  }
-  return files;
-}
 
 /** A JSON object or list of `entries`, one to a line, so a baseline's diff reads entry by entry. */
 export const jsonBlock = (entries: readonly string[], [open, close]: typeof OBJECT | typeof LIST): string =>

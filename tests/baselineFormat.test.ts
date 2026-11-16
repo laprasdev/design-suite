@@ -58,7 +58,7 @@ describe('reading a size baseline', () => {
       assert.throws(() => read({ ...CURRENT, notes: 'x' }, 'b.json'),
         /the baseline holds notes; it takes scope, files, allowances\./);
       assert.throws(() => read({ ...CURRENT, scope: { ...SCOPE, skip: { suffixes: [] } } }, 'b.json'),
-        /b\.json isn't a baseline: it needs scope, files, allowances, with a scope of dirs, files, extensions, skip\./);
+        /size-gate: b\.json scope\.skip\.directories must be a list\./);
     }
   });
 

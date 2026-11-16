@@ -3,7 +3,8 @@ import { execFileSync } from 'node:child_process';
 import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { isRecord, isStringList } from '../src/valueChecks.ts';
+import { holdsStringList, refusalBy } from '../scripts/fieldChecks.ts';
+import { isRecord } from '../src/valueChecks.ts';
 import { scan } from './scan.ts';
 
 /** The sources a kind names its members in; each one is a set the scan finds. */
@@ -16,11 +17,13 @@ type ListField = typeof LIST_FIELDS[number];
 type KindLists = Partial<Record<ListField, readonly string[]>>;
 type KindRow = Readonly<KindLists> & { readonly webFirst?: string };
 
+const refuse = refusalBy(reason => {
+  throw new Error(`kinds.json: ${reason}.`);
+}, 'the catalog');
+
 function readStringList(value: unknown, where: string): readonly string[] | undefined {
   if (value === undefined) return undefined;
-  if (!isStringList(value)) {
-    throw new Error(`kinds.json: ${where} must be a list of strings.`);
-  }
+  holdsStringList(value, where, refuse);
   return value;
 }
 

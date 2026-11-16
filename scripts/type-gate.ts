@@ -11,7 +11,9 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import ts from './gateTools/node_modules/typescript/lib/typescript.js';
-import { isRecord, isStringList } from '../src/valueChecks.ts';
+import {
+  OTHER_FIELDS, holdsRecord, holdsShape, holdsStringList, refusalBy, type FieldCheck, type ShapeOf,
+} from './fieldChecks.ts';
 import { repositoryFiles } from './repositoryFiles.ts';
 import { SUITE_BASELINE } from './size-gate.ts';
 import { readBaseline } from './sizeGate/baselineFile.ts';
@@ -117,14 +119,17 @@ function inspectSyntax(relPath: string, text: string): { issues: string[]; casts
   return { issues, casts };
 }
 
+/** What `tsc --showConfig` reports that the gate reads: the effective options and the files they cover. */
+const SHOWN_CONFIG_SHAPE = Object.freeze({ compilerOptions: holdsRecord, files: holdsStringList });
+const holdsShownConfig: FieldCheck<ShapeOf<typeof SHOWN_CONFIG_SHAPE>> =
+  holdsShape(SHOWN_CONFIG_SHAPE, OTHER_FIELDS.ignored);
+
 /** The files tsconfig.repo.json covers, from its effective configuration, which holds every required option. */
 function readCoveredFiles(root: string): Set<string> {
   const shown = runTsc(root, ['--showConfig']);
   if (shown.status !== 0) return failGate(`${CONFIG} failed --showConfig:\n${shown.output.trim()}`);
   const parsed: unknown = JSON.parse(shown.output);
-  if (!isRecord(parsed) || !isRecord(parsed.compilerOptions) || !isStringList(parsed.files)) {
-    return failGate(`${CONFIG} --showConfig returned no compilerOptions record or files list.`);
-  }
+  holdsShownConfig(parsed, '', refusalBy(reason => failGate(`${CONFIG} --showConfig: ${reason}.`), 'its output'));
   for (const [option, value] of Object.entries(REQUIRED_OPTIONS)) {
     if (parsed.compilerOptions[option] !== value) failGate(`${CONFIG} must hold ${option}: ${value}.`);
   }

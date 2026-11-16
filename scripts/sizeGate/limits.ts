@@ -1,5 +1,7 @@
 // The size rules this repo and the web synth hold their code to.
-import { holdsShape, isListOf, isRecordOf, isString, isStringList, type ShapeOf } from '../../src/valueChecks.ts';
+import {
+  OTHER_FIELDS, holdsListOf, holdsRecordOf, holdsShape, holdsString, holdsStringList, type FieldCheck, type ShapeOf,
+} from '../fieldChecks.ts';
 import { holdsNumbers } from '../baseline/baselinedFiles.ts';
 
 export const FILE_LINE_LIMIT = 200;
@@ -20,22 +22,23 @@ export interface FileMeasurement extends BaselineNumbers {
   readonly long: readonly LongLine[];
 }
 
-/** Each record of a size baseline, as its fields and their checks; its type and its reader derive from it. */
-export const SKIP_SHAPE = Object.freeze({ directories: isStringList, suffixes: isStringList });
+/** Each record of a size baseline, as its fields and their checks; its type and its check derive from it. */
+const SKIP_SHAPE = Object.freeze({ directories: holdsStringList, suffixes: holdsStringList });
 export type SizeSkip = ShapeOf<typeof SKIP_SHAPE>;
 
-export const SCOPE_SHAPE = Object.freeze({
-  dirs: isStringList, files: isStringList, extensions: isStringList, skip: holdsShape(SKIP_SHAPE),
+const SCOPE_SHAPE = Object.freeze({
+  dirs: holdsStringList, files: holdsStringList, extensions: holdsStringList,
+  skip: holdsShape(SKIP_SHAPE, OTHER_FIELDS.refused),
 });
 export type SizeScope = ShapeOf<typeof SCOPE_SHAPE>;
-export const isSizeScope = holdsShape(SCOPE_SHAPE);
 
-export const ALLOWANCE_SHAPE = Object.freeze({ path: isString, step: isString, reason: isString, date: isString });
+const ALLOWANCE_SHAPE = Object.freeze({ path: holdsString, step: holdsString, reason: holdsString, date: holdsString });
 export type AllowanceGrant = ShapeOf<typeof ALLOWANCE_SHAPE>;
-export const isAllowance = holdsShape(ALLOWANCE_SHAPE);
-export const isBaselineNumbers = holdsNumbers(SIZE_KINDS);
 
-export const SIZE_BASELINE_SHAPE = Object.freeze({
-  scope: isSizeScope, files: isRecordOf(isBaselineNumbers), allowances: isListOf(isAllowance),
+const SIZE_BASELINE_SHAPE = Object.freeze({
+  scope: holdsShape(SCOPE_SHAPE, OTHER_FIELDS.refused),
+  files: holdsRecordOf(holdsNumbers(SIZE_KINDS)),
+  allowances: holdsListOf(holdsShape(ALLOWANCE_SHAPE, OTHER_FIELDS.refused)),
 });
 export type SizeBaseline = ShapeOf<typeof SIZE_BASELINE_SHAPE>;
+export const holdsSizeBaseline: FieldCheck<SizeBaseline> = holdsShape(SIZE_BASELINE_SHAPE, OTHER_FIELDS.refused);

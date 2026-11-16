@@ -3,51 +3,24 @@
 // import lines its split added. It records no import lines: the allowance rule measures them in both files.
 import { readFileSync, writeFileSync } from 'node:fs';
 import {
-  LIST, OBJECT, baselineText, fileEntries, jsonBlock, lowest, parseFiles, ratchetedFiles, takenFields,
-  type BaselineRead, type BaselineRule,
+  LIST, OBJECT, baselineRefusal, baselineText, fileEntries, jsonBlock, lowest, ratchetedFiles, type BaselineRule,
 } from '../baseline/baselinedFiles.ts';
 import { allowanceRefusal, sizeRose, withinLimits } from './compare.ts';
 import {
-  ALLOWANCE_SHAPE, SCOPE_SHAPE, SIZE_BASELINE_SHAPE, SIZE_KINDS, SKIP_SHAPE, isAllowance, isBaselineNumbers,
-  isSizeScope, type AllowanceGrant, type BaselineNumbers, type FileMeasurement, type SizeBaseline, type SizeScope,
+  SIZE_KINDS, holdsSizeBaseline, type AllowanceGrant, type BaselineNumbers, type FileMeasurement, type SizeBaseline,
+  type SizeScope,
 } from './limits.ts';
 
 const numbersOf = ({ lines, longLines }: BaselineNumbers): BaselineNumbers => ({ lines, longLines });
 
 export const SIZE_RULE: BaselineRule<BaselineNumbers, FileMeasurement> = {
-  kinds: SIZE_KINDS, isNumbers: isBaselineNumbers, withinLimits, lowered: lowest(SIZE_KINDS), rose: sizeRose,
+  withinLimits, lowered: lowest(SIZE_KINDS), rose: sizeRose,
 };
-
-/** The scope a baseline names, each of its records holding only the fields it takes. */
-function parseScope(value: unknown, read: BaselineRead): SizeScope {
-  const scope = takenFields(value, Object.keys(SCOPE_SHAPE), 'scope', read);
-  const named = { ...scope, skip: takenFields(scope.skip, Object.keys(SKIP_SHAPE), 'scope.skip', read) };
-  return isSizeScope(named) ? named : read.invalid();
-}
-
-/** A baseline's allowances, each holding only the fields an allowance takes. */
-function parseAllowances(value: unknown, read: BaselineRead): AllowanceGrant[] {
-  if (!Array.isArray(value)) return read.invalid();
-  return value.map((allowance: unknown, index) => {
-    const grant = takenFields(allowance, Object.keys(ALLOWANCE_SHAPE), `allowances[${index}]`, read);
-    return isAllowance(grant) ? grant : read.invalid();
-  });
-}
 
 /** A size baseline from its decoded JSON; `file` names where it was read, for the refusal. */
 export function parseBaseline(value: unknown, file: string): SizeBaseline {
-  const refuse = (why: string): never => {
-    throw new Error(`size-gate: ${file} ${why}.`);
-  };
-  const fields = (shape: object): string => Object.keys(shape).join(', ');
-  const needs = `${fields(SIZE_BASELINE_SHAPE)}, with a scope of ${fields(SCOPE_SHAPE)}`;
-  const read: BaselineRead = { refuse, invalid: () => refuse(`isn't a baseline: it needs ${needs}`) };
-  const baseline = takenFields(value, Object.keys(SIZE_BASELINE_SHAPE), 'the baseline', read);
-  return {
-    scope: parseScope(baseline.scope, read),
-    files: parseFiles(baseline.files, SIZE_RULE, read),
-    allowances: parseAllowances(baseline.allowances, read),
-  };
+  holdsSizeBaseline(value, '', baselineRefusal(`size-gate: ${file}`));
+  return value;
 }
 
 export function readBaseline(file: string): SizeBaseline {
