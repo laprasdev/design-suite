@@ -1,5 +1,6 @@
-// A throwaway repository for the gate tests: the committed gate configs, and source each test writes to break or
-// satisfy a gate. A gate runs there through its own entry point, as its npm script runs it from the repository root.
+// A throwaway git repository for the gate tests: the committed gate configs and .gitignore, and source each test
+// writes to break or satisfy a gate. A gate runs there through its own entry point, as its npm script runs it from the
+// repository root.
 // The directory sits under a .local directory, as a worktree of this repository does, so a gate that matched its
 // ignore patterns against absolute paths would skip every file and pass.
 import { spawnSync } from 'node:child_process';
@@ -10,7 +11,7 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const CONFIGS = [
-  '.dependency-cruiser.json', '.jscpd.json', 'package.json', 'tsconfig.json', 'tsconfig.repo.json',
+  '.dependency-cruiser.json', '.gitignore', '.jscpd.json', 'package.json', 'tsconfig.json', 'tsconfig.repo.json',
   'scripts/size-baseline.json',
 ];
 const COLOR = /\x1b\[[0-9;]*m/g;
@@ -30,6 +31,8 @@ export function runGate(gate: readonly string[], files: Record<string, string>, 
   const dir = path.join(scratch, '.local', 'repository');
   try {
     mkdirSync(dir, { recursive: true });
+    const init = spawnSync('git', ['init', '--quiet', dir], { encoding: 'utf8' });
+    if (init.status !== 0) throw new Error(`gate fixture: git init failed (${init.error?.message ?? init.stderr}).`);
     symlinkSync(path.join(ROOT, 'node_modules'), path.join(dir, 'node_modules'), 'dir');
     for (const config of CONFIGS) {
       mkdirSync(path.dirname(path.join(dir, config)), { recursive: true });

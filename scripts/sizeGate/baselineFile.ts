@@ -5,7 +5,7 @@ import { isRecord, isStringList } from '../../src/valueChecks.ts';
 import { withinLimits } from './compare.ts';
 import {
   FILE_LINE_LIMIT,
-  type AllowanceGrant, type AllowanceRecord, type BaselineNumbers,
+  type AllowanceGrant, type AllowanceRecord, type AllowanceSpan, type BaselineNumbers,
   type FileMeasurement, type SizeBaseline, type SizeScope,
 } from './limits.ts';
 
@@ -17,7 +17,7 @@ const isNumbers = (value: unknown): value is BaselineNumbers =>
   isRecord(value) && typeof value.lines === 'number' && typeof value.longLines === 'number'
   && typeof value.importLines === 'number';
 
-const isSpan = (value: unknown): value is { lines: number; importLines: number } =>
+const isSpan = (value: unknown): value is AllowanceSpan =>
   isRecord(value) && typeof value.lines === 'number' && typeof value.importLines === 'number';
 
 const isAllowance = (value: unknown): value is AllowanceRecord =>
@@ -97,19 +97,23 @@ export function ratcheted(
   return { ...baseline, files, allowances };
 }
 
-function allowanceRefusal(
+/** The baselined and measured numbers an allowance raises from and to; throws, naming why, when none is due. */
+function allowanceBasis(
   grant: AllowanceGrant,
   base: BaselineNumbers | undefined,
   measured: FileMeasurement | undefined,
-): string | null {
-  if (!grant.step || !grant.reason) return 'an allowance names the step that caused it and why';
-  if (!base) return 'only a baselined file takes an allowance';
-  if (!measured) return 'the file is gone';
+): { base: BaselineNumbers; measured: FileMeasurement } {
+  const refuse = (reason: string): never => {
+    throw new Error(`size-gate: no allowance for ${grant.path}: ${reason}.`);
+  };
+  if (!grant.step || !grant.reason) return refuse('an allowance names the step that caused it and why');
+  if (!base) return refuse('only a baselined file takes an allowance');
+  if (!measured) return refuse('the file is gone');
   const cap = Math.max(FILE_LINE_LIMIT, base.lines);
-  if (measured.lines <= cap) return `it is within its ${cap} lines, so it needs none`;
-  if (measured.longLines > base.longLines) return 'it gained a long line, which no allowance covers';
+  if (measured.lines <= cap) return refuse(`it is within its ${cap} lines, so it needs none`);
+  if (measured.longLines > base.longLines) return refuse('it gained a long line, which no allowance covers');
   const grown = measured.lines - measured.importLines - (cap - base.importLines);
-  return grown > 0 ? `it grew by ${grown} lines that aren't imports` : null;
+  return grown > 0 ? refuse(`it grew by ${grown} lines that aren't imports`) : { base, measured };
 }
 
 /**
@@ -121,9 +125,7 @@ export function allowed(
   measuredFiles: ReadonlyMap<string, FileMeasurement>,
   grant: AllowanceGrant,
 ): SizeBaseline {
-  const base = baseline.files[grant.path], measured = measuredFiles.get(grant.path);
-  const refusal = allowanceRefusal(grant, base, measured);
-  if (refusal || !base || !measured) throw new Error(`size-gate: no allowance for ${grant.path}: ${refusal}.`);
+  const { base, measured } = allowanceBasis(grant, baseline.files[grant.path], measuredFiles.get(grant.path));
   const record: AllowanceRecord = {
     path: grant.path, step: grant.step, reason: grant.reason, date: grant.date,
     from: { lines: base.lines, importLines: base.importLines },

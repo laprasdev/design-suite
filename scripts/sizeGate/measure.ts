@@ -60,7 +60,7 @@ function listedFiles(root: string, files: readonly string[]): readonly string[] 
 }
 
 /** Every file the scope covers, as a path from the root with forward slashes. */
-export function scopeFiles(root: string, scope: SizeScope): string[] {
+function scopeFiles(root: string, scope: SizeScope): string[] {
   const walked = scope.dirs.flatMap(dir => walk(root, dir, scope.skip));
   const covered = (file: string): boolean =>
     scope.extensions.some(extension => file.endsWith(extension)) && !skipped(file, scope.skip);

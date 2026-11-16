@@ -20,7 +20,7 @@ const MODES: readonly ModeFlag[] = [Flag.CHECK, Flag.INIT, Flag.ALLOW];
 const today = (): string => new Date().toISOString().slice(0, 10);
 
 /** This repo's baseline, from its root. */
-export const SUITE_BASELINE = 'scripts/size-baseline.json';
+const SUITE_BASELINE = 'scripts/size-baseline.json';
 
 /** This repo's scope, read only by --init: afterwards the baseline carries it. */
 const SUITE_SCOPE: SizeScope = {

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { describe, it } from 'node:test';
+import { CAST_RECORD_FILE, NO_CASTS, castRecord } from '../scripts/typeGate/castRatchet.ts';
 import { isRecord } from '../src/valueChecks.ts';
 import { GATE, runGate } from './gateFixture.ts';
 
@@ -30,13 +31,65 @@ function readConfig(file: string): Config {
 const BASE_CONFIG = readConfig('tsconfig.json');
 const REPO_CONFIG = readConfig('tsconfig.repo.json');
 
-const types = (files: Record<string, string>) => runGate(GATE.types, files, process.env);
+/** The record of a fixture that holds no casts, unless a case writes its own. */
+const NO_CAST_RECORD = { [CAST_RECORD_FILE]: `${castRecord(NO_CASTS)}\n` };
+const types = (files: Record<string, string>) => runGate(GATE.types, { ...NO_CAST_RECORD, ...files }, process.env);
 
 describe('the type gate', () => {
   it('refuses a JavaScript module anywhere in the repository', () => {
     const run = types({ 'src/ok.ts': VALID_SOURCE, 'scripts/legacy.mjs': 'export const legacy = 1;\n' });
     assert.equal(run.status, 1, run.output);
     assert.match(run.output, /scripts\/legacy\.mjs: JavaScript module/);
+  });
+
+  it('inspects a dist folder below the root, which tsc compiles', () => {
+    const nestedDist = types({
+      'src/ok.ts': VALID_SOURCE,
+      'src/dist/legacy.js': 'export const legacy = 1;\n',
+      'src/dist/legacy.d.ts': 'export declare const legacy: number;\n',
+    });
+    assert.equal(nestedDist.status, 1, nestedDist.output);
+    assert.match(nestedDist.output, /src\/dist\/legacy\.js: JavaScript module/);
+    assert.match(nestedDist.output, /src\/dist\/legacy\.d\.ts: declaration file that augments no/);
+  });
+
+  it('inspects a __snapshots__ folder below the root, which tsc compiles', () => {
+    const nestedSnapshots = types({
+      'src/ok.ts': VALID_SOURCE,
+      'src/__snapshots__/hidden.ts': '// @ts-ignore\nexport const hidden = (input: any): string => input;\n',
+    });
+    assert.equal(nestedSnapshots.status, 1, nestedSnapshots.output);
+    assert.match(nestedSnapshots.output, /src\/__snapshots__\/hidden\.ts:1: compiler suppression comment/);
+    assert.match(nestedSnapshots.output, /src\/__snapshots__\/hidden\.ts:2: explicit any/);
+  });
+
+  it('skips what .gitignore ignores', () => {
+    const run = types({ 'src/ok.ts': VALID_SOURCE, 'dist/bundle.js': 'export const bundle = 1;\n' });
+    assert.equal(run.status, 0, run.output);
+  });
+
+  it('refuses a cast or non-null assertion above the record, by file and line, and not `as const`', () => {
+    const source = [
+      'export const read = (input: unknown): string => input as string;', 'export const kinds = [1] as const;', '',
+    ].join('\n');
+    const cast = types({ 'src/ok.ts': VALID_SOURCE, 'src/cast.ts': source });
+    assert.equal(cast.status, 1, cast.output);
+    assert.match(cast.output, /src\/cast\.ts:1: cast\./);
+    assert.doesNotMatch(cast.output, /src\/cast\.ts:2/);
+    assert.match(cast.output, /1 casts, above the 0 AGENTS\.md records/);
+
+    const recorded = types({ [CAST_RECORD_FILE]: castRecord({ ...NO_CASTS, cast: 1 }), 'src/cast.ts': source });
+    assert.equal(recorded.status, 0, recorded.output);
+
+    const nonNull = types({ 'src/first.ts': 'export const first = (list: string[]): string => list[0]!;\n' });
+    assert.equal(nonNull.status, 1, nonNull.output);
+    assert.match(nonNull.output, /src\/first\.ts:1: non-null assertion\./);
+  });
+
+  it('refuses a record above the count, naming the lower record', () => {
+    const run = types({ 'src/ok.ts': VALID_SOURCE, [CAST_RECORD_FILE]: castRecord({ ...NO_CASTS, cast: 2 }) });
+    assert.equal(run.status, 1, run.output);
+    assert.ok(run.output.includes(`the casts fell; record "${castRecord(NO_CASTS)}" in AGENTS.md.`), run.output);
   });
 
   it('refuses a declaration file of any extension unless it only augments a module', () => {
@@ -113,6 +166,6 @@ describe('the type gate', () => {
       'src/ok.ts': `${VALID_SOURCE}export const note = '// @ts-ignore in a literal is data';\n`,
     });
     assert.equal(run.status, 0, run.output);
-    assert.match(run.output, /type gate: 1 TypeScript files checked, 0 JavaScript modules/);
+    assert.match(run.output, /type gate: 1 TypeScript files checked, 0 JavaScript modules, 0 assertions held/);
   });
 });

@@ -70,7 +70,7 @@ function enums(src: string, file: string): UnityEnums {
     let text = '';
     let brace = 1;
     let outer = 0;
-    for (let index = (match.index ?? 0) + match[0].length; brace > 0 && index < code.length; index++) {
+    for (let index = match.index + match[0].length; brace > 0 && index < code.length; index++) {
       const ch = code[index];
       if (ch === '{') brace++;
       else if (ch === '}' && --brace === 0) break;
@@ -139,7 +139,8 @@ export async function scan(): Promise<ScanInventory> {
     skins[file.replace('.skin.json', '')] = summarizeSkin(doc);
   }
   const base = parseJsonRecord(await read(`${SKINS}/SynthSkin.json`), 'SynthSkin.json');
-  const baseFormsDoc = isRecord(base.forms) ? base.forms : {};
+  if (!isRecord(base.forms)) throw new Error('scan: SynthSkin.json must state a forms object, which baseForms reads.');
+  const baseFormsDoc = base.forms;
   const tokens = parseJsonRecord(await read(`${SKINS}/SynthDesignTokens.json`), 'SynthDesignTokens.json');
   const composable = await read(`${SUITE_SYNTH}/design/Composable.ts`);
   const hci = composable.match(/export interface HciDataComposable \{([\s\S]*?)\n\}/)?.[1] ?? '';

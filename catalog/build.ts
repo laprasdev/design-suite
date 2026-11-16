@@ -6,20 +6,15 @@ import { fileURLToPath } from 'node:url';
 import { isRecord, isStringList } from '../src/valueChecks.ts';
 import { scan } from './scan.ts';
 
-type SourceKey = 'unity' | 'web' | 'kit' | 'core' | 'skinForms' | 'containerForms';
+/** The sources a kind names its members in; each one is a set the scan finds. */
+const SOURCE_KEYS = ['unity', 'web', 'kit', 'core', 'skinForms', 'containerForms'] as const;
+type SourceKey = typeof SOURCE_KEYS[number];
+/** Every list a kinds.json row may hold: the sources, and the folders its web members live in. */
+const LIST_FIELDS = [...SOURCE_KEYS, 'webDirs'] as const;
+type ListField = typeof LIST_FIELDS[number];
 
-interface KindRow {
-  readonly unity?: readonly string[];
-  readonly web?: readonly string[];
-  readonly webDirs?: readonly string[];
-  readonly kit?: readonly string[];
-  readonly core?: readonly string[];
-  readonly skinForms?: readonly string[];
-  readonly containerForms?: readonly string[];
-  readonly webFirst?: string;
-}
-
-const SOURCE_KEYS: readonly SourceKey[] = ['unity', 'web', 'kit', 'core', 'skinForms', 'containerForms'];
+type KindLists = Partial<Record<ListField, readonly string[]>>;
+type KindRow = Readonly<KindLists> & { readonly webFirst?: string };
 
 function readStringList(value: unknown, where: string): readonly string[] | undefined {
   if (value === undefined) return undefined;
@@ -37,16 +32,9 @@ function readKinds(raw: unknown): { rows: Record<string, KindRow>; rawKinds: Rec
     if (entry.webFirst !== undefined && typeof entry.webFirst !== 'string') {
       throw new Error(`kinds.json: ${kind}.webFirst must be a string.`);
     }
-    rows[kind] = {
-      unity: readStringList(entry.unity, `${kind}.unity`),
-      web: readStringList(entry.web, `${kind}.web`),
-      webDirs: readStringList(entry.webDirs, `${kind}.webDirs`),
-      kit: readStringList(entry.kit, `${kind}.kit`),
-      core: readStringList(entry.core, `${kind}.core`),
-      skinForms: readStringList(entry.skinForms, `${kind}.skinForms`),
-      containerForms: readStringList(entry.containerForms, `${kind}.containerForms`),
-      webFirst: entry.webFirst,
-    };
+    const lists: KindLists = {};
+    for (const field of LIST_FIELDS) lists[field] = readStringList(entry[field], `${kind}.${field}`);
+    rows[kind] = { ...lists, webFirst: entry.webFirst };
   }
   return { rows, rawKinds: raw.kinds };
 }
