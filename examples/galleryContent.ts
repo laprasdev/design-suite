@@ -1,8 +1,5 @@
-export type GalleryPalette = 'rose' | 'blue';
-
 export const galleryCopy = {
   title: 'Bloom Design',
-  subtitle: 'Dialogs, portraits and controls',
   description: 'One package, composed with your own content and theme.',
   open: 'Open Dialog',
   close: 'Close Dialog',
@@ -13,17 +10,14 @@ export const galleryCopy = {
   portrait: 'Select Portrait',
   selected: 'Portrait Selected',
   theme: 'Theme',
-  progress: 'Progress',
   status: 'Active Status',
   photo: 'Sample Portrait',
 } as const;
 
-export const galleryColors: Readonly<Record<GalleryPalette, string>> = {
-  rose: '#c4678f',
-  blue: '#69b8f4',
-};
-
-export const themes: readonly { value: GalleryPalette; label: string; color: string }[] = [
-  { value: 'rose', label: 'Rose', color: galleryColors.rose },
-  { value: 'blue', label: 'Blue', color: galleryColors.blue },
-];
+/** The palettes the Theme cycle offers, in order; the first is the default. */
+export const galleryPalettes = [
+  { label: 'Rose', color: '#c4678f' },
+  { label: 'Blue', color: '#69b8f4' },
+] as const;
+export type GalleryPalette = (typeof galleryPalettes)[number];
+export const paletteOptions = galleryPalettes.map(palette => ({ value: palette, label: palette.label }));

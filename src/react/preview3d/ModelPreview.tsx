@@ -4,7 +4,7 @@ import {ActionBar, ActionNotice} from '../ActionBar.tsx';
 import {ListboxSelect} from '../ListboxSelect.tsx';
 import {LoadingIndicator} from '../Pokeball.tsx';
 import {SegmentedControl} from '../SegmentedControl.tsx';
-import {createTheme, themeVariables} from '../../theme.ts';
+import {colorVariables, createTheme, themeVariables} from '../../theme.ts';
 import {Typography} from '../../tokens.ts';
 import {MODEL_ACTOR_ANIMATION, MODEL_READY_ATTRIBUTE, MODEL_PREVIEW_REVIEW, MODEL_REST_POSE,
   ModelPreviewElement as element} from './model.ts';
@@ -36,11 +36,9 @@ export interface ModelPreviewProps {
 }
 function previewTheme(theme: ModelStageTheme): CSSProperties {
   const value = createTheme({colors: theme.colors});
-  const colors = Object.fromEntries(Object.entries(value.colors).map(([key, color]) =>
-    [`--color-${key.replace(/[A-Z]/g, letter => '-' + letter.toLowerCase())}`, color]));
   const variables = themeVariables(value);
   variables['--caption-size'] = `${Typography.moduleLabel.fontSize}px`;
-  return {...variables, ...colors};
+  return {...variables, ...colorVariables(value)};
 }
 
 // Each field takes a share of its row equal to its option count, so every segment in the row is one width.

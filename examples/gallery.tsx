@@ -1,10 +1,10 @@
-import { useRef, useState, type CSSProperties } from 'react';
+import { useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { createTheme } from '@looms/bloom-design';
+import { colorVariables, createTheme } from '@looms/bloom-design';
 import { Button, Cycle, Label, Modal, PlayerIcon } from '@looms/bloom-design/react';
 import '@looms/bloom-design/react/styles.css';
 import './gallery.css';
-import { galleryColors, galleryCopy, themes, type GalleryPalette } from './galleryContent.ts';
+import { galleryCopy, galleryPalettes, paletteOptions, type GalleryPalette } from './galleryContent.ts';
 
 const PORTRAIT_SIZES = [40, 64, 96] as const;
 
@@ -21,21 +21,16 @@ function SamplePortrait() {
 function Gallery() {
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState(false);
-  const [palette, setPalette] = useState<GalleryPalette>('rose');
+  const [palette, setPalette] = useState<GalleryPalette>(galleryPalettes[0]);
   const opener = useRef<HTMLElement | null>(null);
-  const theme = createTheme({ colors: { accent: galleryColors[palette] } });
-  const style: CSSProperties = {};
-  for (const [key, value] of Object.entries(theme.colors)) {
-    const variable: `--color-${string}` = `--color-${key.replace(/[A-Z]/g, ch => `-${ch.toLowerCase()}`)}`;
-    style[variable] = value;
-  }
+  const theme = createTheme({ colors: { accent: palette.color } });
   return (
-    <main className="bloom-gallery" style={style}>
+    <main className="bloom-gallery" style={colorVariables(theme)}>
       <header>
         <Label kind="name">Component Library</Label>
         <h1>{galleryCopy.title}</h1>
         <p>{galleryCopy.description}</p>
-        <Cycle label={galleryCopy.theme} options={themes} value={palette} onChange={setPalette} />
+        <Cycle label={galleryCopy.theme} options={paletteOptions} value={palette} onChange={setPalette} />
       </header>
       <div className="gallery-grid">
         <section>
