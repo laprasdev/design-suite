@@ -3,10 +3,10 @@
 // (scripts/baseline/baselinedFiles.ts): the type gate refuses a file that holds more, and writes the lower numbers.
 import { readFileSync, writeFileSync } from 'node:fs';
 import ts from '../gateTools/node_modules/typescript/lib/typescript.js';
-import { isRecord } from '../../src/valueChecks.ts';
+import { isRecordOf, type ShapeOf } from '../../src/valueChecks.ts';
 import {
   OBJECT, anyRose, baselineText, fileEntries, holdsNumbers, jsonBlock, lowest, parseFiles, ratchetedFiles, takenFields,
-  type BaselineRead, type BaselineRule, type BaselinedFiles, type Reading,
+  type BaselineRead, type BaselineRule,
 } from '../baseline/baselinedFiles.ts';
 
 export const CAST_BASELINE = 'scripts/cast-baseline.json';
@@ -14,37 +14,38 @@ export const CAST_KINDS = ['casts', 'nonNullAssertions'] as const;
 export type CastKind = typeof CAST_KINDS[number];
 export type CastNumbers = Readonly<Record<CastKind, number>>;
 export type CastSite = { readonly kind: CastKind; readonly file: string; readonly line: number };
-export type CastBaseline = { readonly files: BaselinedFiles<CastNumbers> };
 
 const CAST_LABEL: Readonly<Record<CastKind, string>> = { casts: 'casts', nonNullAssertions: 'non-null assertions' };
 /** What a file the baseline does not name may hold. */
 export const NO_CASTS: CastNumbers = Object.freeze({ casts: 0, nonNullAssertions: 0 });
 
 const isCastNumbers = holdsNumbers(CAST_KINDS);
+/** A cast baseline's one record, as its fields and their checks; its type and its reader derive from it. */
+export const CAST_BASELINE_SHAPE = Object.freeze({ files: isRecordOf(isCastNumbers) });
+export type CastBaseline = ShapeOf<typeof CAST_BASELINE_SHAPE>;
 
 export const CAST_RULE: BaselineRule<CastNumbers, CastNumbers> = {
-  fields: { takes: CAST_KINDS, retired: [] },
+  kinds: CAST_KINDS,
   isNumbers: isCastNumbers,
   withinLimits: measured => CAST_KINDS.every(kind => measured[kind] === 0),
   lowered: lowest(CAST_KINDS),
   rose: anyRose,
 };
 
-/** A cast baseline from its decoded JSON, read as `reading` says; `file` names where it was read, for the refusal. */
-export function parseCastBaseline(value: unknown, file: string, reading: Reading): CastBaseline {
+/** A cast baseline from its decoded JSON; `file` names where it was read, for the refusal. */
+export function parseCastBaseline(value: unknown, file: string): CastBaseline {
   const refuse = (why: string): never => {
     throw new Error(`type gate: ${file} ${why}.`);
   };
   const read: BaselineRead = {
-    reading, refuse, invalid: () => refuse(`isn't a cast baseline: it needs files of {${CAST_KINDS.join(', ')}}`),
+    refuse, invalid: () => refuse(`isn't a cast baseline: it needs files of {${CAST_KINDS.join(', ')}}`),
   };
-  if (!isRecord(value)) return read.invalid();
-  const baseline = takenFields(value, { takes: ['files'], retired: [] }, 'the baseline', read);
+  const baseline = takenFields(value, Object.keys(CAST_BASELINE_SHAPE), 'the baseline', read);
   return { files: parseFiles(baseline.files, CAST_RULE, read) };
 }
 
-export const readCastBaseline = (file: string, reading: Reading): CastBaseline =>
-  parseCastBaseline(JSON.parse(readFileSync(file, 'utf8')), file, reading);
+export const readCastBaseline = (file: string): CastBaseline =>
+  parseCastBaseline(JSON.parse(readFileSync(file, 'utf8')), file);
 
 export const castBaselineText = (baseline: CastBaseline): string =>
   baselineText({ files: jsonBlock(fileEntries(baseline.files), OBJECT) });

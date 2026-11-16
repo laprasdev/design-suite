@@ -2,7 +2,6 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { Reading } from '../scripts/baseline/baselinedFiles.ts';
 import { SUITE_BASELINE } from '../scripts/size-gate.ts';
 import { readBaseline } from '../scripts/sizeGate/baselineFile.ts';
 import { CAST_BASELINE, castBaselineText, type CastNumbers } from '../scripts/typeGate/castBaseline.ts';
@@ -37,7 +36,7 @@ const REPO_CONFIG = readConfig('tsconfig.repo.json');
 
 /** A fixture's cast baseline, which names no file unless a case gives its numbers. */
 const castBaseline = (files: Record<string, CastNumbers>) => ({ [CAST_BASELINE]: castBaselineText({ files }) });
-const SIZE_SCOPE = readBaseline(fileURLToPath(new URL(`../${SUITE_BASELINE}`, import.meta.url)), Reading.CURRENT).scope;
+const SIZE_SCOPE = readBaseline(fileURLToPath(new URL(`../${SUITE_BASELINE}`, import.meta.url))).scope;
 const types = (files: Record<string, string>) =>
   runGate(GATE.types, { base: {}, head: { ...castBaseline({}), ...files } }, process.env);
 

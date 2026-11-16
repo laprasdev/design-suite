@@ -9,33 +9,21 @@ export type FileNumbers = Readonly<Record<string, number>>;
 /** The numbers of each file a baseline names, by path. */
 export type BaselinedFiles<Numbers extends FileNumbers> = Readonly<Record<string, Numbers>>;
 
-/** The fields one record of a baseline takes, and those an earlier format recorded, which only a rewrite drops. */
-export interface RecordFields {
-  readonly takes: readonly string[];
-  readonly retired: readonly string[];
-}
-
-/** How a baseline is read: as it stands, refusing a retired field, or as its gate's --rewrite reads it, dropping it. */
-export const Reading = Object.freeze({ CURRENT: 'current', REWRITE: 'rewrite' } as const);
-export type Reading = typeof Reading[keyof typeof Reading];
-export const REWRITE_FLAG = '--rewrite';
-
 /**
- * One read of a baseline: how it is read, and its refusals, which add the gate and the file. `refuse` says why;
- * `invalid` says what the baseline needs, for a record that is not of its shape.
+ * One read of a baseline: its refusals, which add the gate and the file. `refuse` says why; `invalid` says what the
+ * baseline needs, for a record that is not of its shape.
  */
 export interface BaselineRead {
-  readonly reading: Reading;
   readonly refuse: (why: string) => never;
   readonly invalid: () => never;
 }
 
 /**
- * One gate's reading of its numbers: the fields and the check of a file's numbers, what holds the limits, what a pass
+ * One gate's reading of its numbers: the kinds and the check of a file's numbers, what holds the limits, what a pass
  * keeps, and when a baseline's numbers rose from another's.
  */
 export interface BaselineRule<Numbers extends FileNumbers, Measured> {
-  readonly fields: RecordFields;
+  readonly kinds: readonly string[];
   readonly isNumbers: (value: unknown) => value is Numbers;
   readonly withinLimits: (measured: Measured) => boolean;
   readonly lowered: (base: Numbers, measured: Measured) => Numbers;
@@ -62,38 +50,30 @@ export const anyRose = <Numbers extends FileNumbers>(base: Numbers, head: Number
 export const OBJECT = ['{', '}'] as const;
 export const LIST = ['[', ']'] as const;
 
-/**
- * `record`, read at `where`, with only the fields `fields` takes. It refuses any other field by name, but a retired one
- * under a rewrite, which drops it.
- */
+/** `value`, read at `where`, as a record holding only `fields`; it refuses any other field by name. */
 export function takenFields(
-  record: Readonly<Record<string, unknown>>,
-  fields: RecordFields,
+  value: unknown,
+  fields: readonly string[],
   where: string,
-  { reading, refuse }: BaselineRead,
+  { refuse, invalid }: BaselineRead,
 ): Record<string, unknown> {
-  const taken: Record<string, unknown> = {};
-  for (const [field, value] of Object.entries(record)) {
-    if (fields.takes.includes(field)) taken[field] = value;
-    else if (!fields.retired.includes(field)) refuse(`${where} holds ${field}; it takes ${fields.takes.join(', ')}`);
-    else if (reading === Reading.CURRENT) {
-      refuse(`${where} holds ${field}, which only an earlier format recorded; rewrite the baseline with its gate's `
-        + `${REWRITE_FLAG}, which keeps every number`);
-    }
+  if (!isRecord(value)) return invalid();
+  for (const field of Object.keys(value)) {
+    if (!fields.includes(field)) refuse(`${where} holds ${field}; it takes ${fields.join(', ')}`);
   }
-  return taken;
+  return value;
 }
 
 /** A baseline's `files`, refused through `invalid` when any entry is not a file's numbers, and by name for a field. */
 export function parseFiles<Numbers extends FileNumbers>(
   value: unknown,
-  { fields, isNumbers }: Pick<BaselineRule<Numbers, unknown>, 'fields' | 'isNumbers'>,
+  { kinds, isNumbers }: Pick<BaselineRule<Numbers, unknown>, 'kinds' | 'isNumbers'>,
   read: BaselineRead,
 ): BaselinedFiles<Numbers> {
   if (!isRecord(value)) return read.invalid();
   const files: Record<string, Numbers> = {};
   for (const [file, entry] of Object.entries(value)) {
-    const numbers = isRecord(entry) ? takenFields(entry, fields, `files[${JSON.stringify(file)}]`, read) : entry;
+    const numbers = takenFields(entry, kinds, `files[${JSON.stringify(file)}]`, read);
     if (!isNumbers(numbers)) return read.invalid();
     files[file] = numbers;
   }

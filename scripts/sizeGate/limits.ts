@@ -1,4 +1,7 @@
 // The size rules this repo and the web synth hold their code to.
+import { holdsShape, isListOf, isRecordOf, isString, isStringList, type ShapeOf } from '../../src/valueChecks.ts';
+import { holdsNumbers } from '../baseline/baselinedFiles.ts';
+
 export const FILE_LINE_LIMIT = 200;
 export const LINE_CHARACTER_LIMIT = 120;
 
@@ -17,27 +20,22 @@ export interface FileMeasurement extends BaselineNumbers {
   readonly long: readonly LongLine[];
 }
 
-export interface SizeSkip {
-  readonly directories: readonly string[];
-  readonly suffixes: readonly string[];
-}
+/** Each record of a size baseline, as its fields and their checks; its type and its reader derive from it. */
+export const SKIP_SHAPE = Object.freeze({ directories: isStringList, suffixes: isStringList });
+export type SizeSkip = ShapeOf<typeof SKIP_SHAPE>;
 
-export interface SizeScope {
-  readonly dirs: readonly string[];
-  readonly files: readonly string[];
-  readonly extensions: readonly string[];
-  readonly skip: SizeSkip;
-}
+export const SCOPE_SHAPE = Object.freeze({
+  dirs: isStringList, files: isStringList, extensions: isStringList, skip: holdsShape(SKIP_SHAPE),
+});
+export type SizeScope = ShapeOf<typeof SCOPE_SHAPE>;
+export const isSizeScope = holdsShape(SCOPE_SHAPE);
 
-export interface AllowanceGrant {
-  readonly path: string;
-  readonly step: string;
-  readonly reason: string;
-  readonly date: string;
-}
+export const ALLOWANCE_SHAPE = Object.freeze({ path: isString, step: isString, reason: isString, date: isString });
+export type AllowanceGrant = ShapeOf<typeof ALLOWANCE_SHAPE>;
+export const isAllowance = holdsShape(ALLOWANCE_SHAPE);
+export const isBaselineNumbers = holdsNumbers(SIZE_KINDS);
 
-export interface SizeBaseline {
-  readonly scope: SizeScope;
-  readonly files: Readonly<Record<string, BaselineNumbers>>;
-  readonly allowances: readonly AllowanceGrant[];
-}
+export const SIZE_BASELINE_SHAPE = Object.freeze({
+  scope: isSizeScope, files: isRecordOf(isBaselineNumbers), allowances: isListOf(isAllowance),
+});
+export type SizeBaseline = ShapeOf<typeof SIZE_BASELINE_SHAPE>;

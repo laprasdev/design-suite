@@ -2,8 +2,6 @@
 //   node scripts/size-gate.ts           check, and on a pass write any lower numbers (the ratchet)
 //   node scripts/size-gate.ts --check   check only, writing nothing
 //   node scripts/size-gate.ts --init    write a first baseline; refused once one exists
-//   node scripts/size-gate.ts --rewrite  rewrite the baseline to the current format, dropping only the fields an
-//     earlier format recorded and keeping every number and allowance as it is; nothing is measured
 //   node scripts/size-gate.ts --allow <path> --step <step> --reason "<why>"   import lines a split added, nothing else,
 //     measured against the file as origin/main holds it
 // Consumers run it on their own files through their own scripts/size-gate entry, which calls `run`.
@@ -11,17 +9,16 @@ import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { BASE_BRANCH, baseBranchAbsence } from './baseline/baseBranch.ts';
-import { REWRITE_FLAG, Reading } from './baseline/baselinedFiles.ts';
 import { allowed, freshBaseline, ratcheted, readBaseline, writeBaseline } from './sizeGate/baselineFile.ts';
 import { compare } from './sizeGate/compare.ts';
 import type { SizeScope } from './sizeGate/limits.ts';
 import { measureCommitted, measureScope } from './sizeGate/measure.ts';
 
 const Flag = Object.freeze({
-  CHECK: '--check', INIT: '--init', REWRITE: REWRITE_FLAG, ALLOW: '--allow', STEP: '--step', REASON: '--reason',
+  CHECK: '--check', INIT: '--init', ALLOW: '--allow', STEP: '--step', REASON: '--reason',
 } as const);
-type ModeFlag = typeof Flag.CHECK | typeof Flag.INIT | typeof Flag.REWRITE | typeof Flag.ALLOW;
-const MODES: readonly ModeFlag[] = [Flag.CHECK, Flag.INIT, Flag.REWRITE, Flag.ALLOW];
+type ModeFlag = typeof Flag.CHECK | typeof Flag.INIT | typeof Flag.ALLOW;
+const MODES: readonly ModeFlag[] = [Flag.CHECK, Flag.INIT, Flag.ALLOW];
 const today = (): string => new Date().toISOString().slice(0, 10);
 
 /** This repo's baseline, from its root, whose scope names the repository's source for every gate. */
@@ -59,7 +56,7 @@ function modeOf(argv: readonly string[]): ModeFlag | undefined {
 }
 
 function gate({ root, baselinePath, say }: GateJob, write: boolean): number {
-  const baseline = readBaseline(baselinePath, Reading.CURRENT);
+  const baseline = readBaseline(baselinePath);
   const measured = measureScope(root, baseline.scope);
   const { problems, notices } = compare(measured, baseline);
   [...problems, ...notices].forEach(say);
@@ -76,17 +73,9 @@ function init({ root, baselinePath, scope, say }: GateJob): number {
   return 0;
 }
 
-function rewrite({ baselinePath, say }: GateJob): number {
-  const baseline = readBaseline(baselinePath, Reading.REWRITE);
-  writeBaseline(baselinePath, baseline);
-  const kept = `${Object.keys(baseline.files).length} files and ${baseline.allowances.length} allowances`;
-  say(`rewrote ${baselinePath} to the current format, keeping ${kept} as they were`);
-  return 0;
-}
-
 function allow(job: GateJob): number {
   const { root, baselinePath, argv, say } = job;
-  const baseline = readBaseline(baselinePath, Reading.CURRENT);
+  const baseline = readBaseline(baselinePath);
   const file = flagValue(argv, Flag.ALLOW), step = flagValue(argv, Flag.STEP), reason = flagValue(argv, Flag.REASON);
   const absence = baseBranchAbsence(root);
   if (absence) throw new Error(`size-gate: ${absence}.`);
@@ -102,7 +91,6 @@ export function run({ root, baselinePath, scope, argv = [], log = console.log }:
   const job: GateJob = { root, baselinePath, scope, argv, say: line => log(`size-gate: ${line}`) };
   const mode = modeOf(argv);
   if (mode === Flag.INIT) return init(job);
-  if (mode === Flag.REWRITE) return rewrite(job);
   if (mode === Flag.ALLOW) return allow(job);
   return gate(job, mode !== Flag.CHECK);
 }
