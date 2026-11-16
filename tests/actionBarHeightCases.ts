@@ -5,7 +5,9 @@
 export const ACTION_BAR_BUTTONS=Object.freeze({left:'Play',center:'Centre',right:'Reset'} as const);
 export const NOTICE_BUTTONS=Object.freeze({inBar:'Retry',alone:'Reload'} as const);
 export const NOTICE_MESSAGES=Object.freeze({withButton:'Failed',bare:'Saved'} as const);
-export const FOOTER_ACTIONS=Object.freeze({set:'Continue',flat:'Proceed'} as const);
+// The set footer's label is short enough to sit under its min width in any system font, so at a phone width the min
+// width, not the label, sets the action's width; Linux's fonts set 'Continue' wider than it.
+export const FOOTER_ACTIONS=Object.freeze({set:'Next',flat:'Proceed'} as const);
 export const FOOTER_SETTING=Object.freeze({label:'Palette',options:[{value:'day',label:'Day'}]} as const);
 // A page surface may scale its bars' vertical chrome with its window (page-bar.css); at none, only the controls keep
 // their size.
