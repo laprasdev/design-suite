@@ -6,9 +6,8 @@ import { isRecord, isStringList } from '../../src/valueChecks.ts';
 import {
   LIST, OBJECT, baselineText, fileEntries, jsonBlock, parseFiles, ratchetedFiles, type BaselineRule,
 } from '../baseline/baselinedFiles.ts';
-import { withinLimits } from './compare.ts';
+import { allowanceRefusal, withinLimits } from './compare.ts';
 import {
-  FILE_LINE_LIMIT,
   type AllowanceGrant, type AllowanceRecord, type AllowanceSpan, type BaselineNumbers,
   type FileMeasurement, type SizeBaseline, type SizeScope,
 } from './limits.ts';
@@ -107,11 +106,8 @@ function allowanceBasis(
   if (!grant.step || !grant.reason) return refuse('an allowance names the step that caused it and why');
   if (!base) return refuse('only a baselined file takes an allowance');
   if (!measured) return refuse('the file is gone');
-  const cap = Math.max(FILE_LINE_LIMIT, base.lines);
-  if (measured.lines <= cap) return refuse(`it is within its ${cap} lines, so it needs none`);
-  if (measured.longLines > base.longLines) return refuse('it gained a long line, which no allowance covers');
-  const grown = measured.lines - measured.importLines - (cap - base.importLines);
-  return grown > 0 ? refuse(`it grew by ${grown} lines that aren't imports`) : { base, measured };
+  const refusal = allowanceRefusal(base, measured);
+  return refusal ? refuse(refusal) : { base, measured };
 }
 
 /**

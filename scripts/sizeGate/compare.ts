@@ -1,6 +1,7 @@
 // The size gate's rules, read against a baseline that only shrinks. Pure: it measures nothing and writes nothing.
 import {
-  FILE_LINE_LIMIT, LINE_CHARACTER_LIMIT, type BaselineNumbers, type FileMeasurement, type SizeBaseline,
+  FILE_LINE_LIMIT, LINE_CHARACTER_LIMIT,
+  type AllowanceRecord, type AllowanceSpan, type BaselineNumbers, type FileMeasurement, type SizeBaseline,
 } from './limits.ts';
 
 /** Within both limits outright, so a baseline has no reason to name it. */
@@ -37,6 +38,30 @@ function ratchetNotice(file: string, measured: FileMeasurement | undefined, base
 }
 
 /**
+ * The allowance rule, on the lines an allowance records: raising a file from `from` to `to` adds import lines a split
+ * added and nothing else. Says why not, or undefined when it holds.
+ */
+export function importGrowthRefusal(from: AllowanceSpan, to: AllowanceSpan): string | undefined {
+  const cap = Math.max(FILE_LINE_LIMIT, from.lines);
+  if (to.lines <= cap) return `it is within its ${cap} lines, so it needs none`;
+  const grown = to.lines - to.importLines - (cap - from.importLines);
+  return grown > 0 ? `it grew by ${grown} lines that aren't imports` : undefined;
+}
+
+/**
+ * The allowance rule on a file's whole numbers, which `size-gate --allow` and the baseline gate hold a rise to: no long
+ * line, and the import growth above. Says why not, or undefined when it holds.
+ */
+export const allowanceRefusal = (from: BaselineNumbers, to: BaselineNumbers): string | undefined =>
+  to.longLines > from.longLines ? 'it gained a long line, which no allowance covers' : importGrowthRefusal(from, to);
+
+/** Rule 4: each allowance the baseline records holds the allowance rule, so no hand-written record raises a file. */
+function allowanceProblems({ path, step, from, to }: AllowanceRecord): string[] {
+  const refusal = importGrowthRefusal(from, to);
+  return refusal ? [`${path}: the allowance for step ${step} does not hold: ${refusal}`] : [];
+}
+
+/**
  * Every problem and notice for the measured files, a Map of path to numbers, against the baseline.
  * Only problems fail; notices say what the ratchet will lower.
  */
@@ -52,5 +77,6 @@ export function compare(
   for (const [file, base] of Object.entries(baseline.files)) {
     notices.push(...ratchetNotice(file, measuredFiles.get(file), base));
   }
+  problems.push(...baseline.allowances.flatMap(allowanceProblems));
   return { problems, notices };
 }
