@@ -3,44 +3,9 @@ import { execFileSync } from 'node:child_process';
 import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { holdsStringList, refusalBy } from '../scripts/fieldChecks.ts';
-import { isRecord } from '../src/valueChecks.ts';
+import { entryAt, fieldAt } from '../scripts/fieldChecks.ts';
+import { SOURCE_KEYS, parseKindsFile, type SourceKey } from './kindsFile.ts';
 import { scan } from './scan.ts';
-
-/** The sources a kind names its members in; each one is a set the scan finds. */
-const SOURCE_KEYS = ['unity', 'web', 'kit', 'core', 'skinForms', 'containerForms'] as const;
-type SourceKey = typeof SOURCE_KEYS[number];
-/** Every list a kinds.json row may hold: the sources, and the folders its web members live in. */
-const LIST_FIELDS = [...SOURCE_KEYS, 'webDirs'] as const;
-type ListField = typeof LIST_FIELDS[number];
-
-type KindLists = Partial<Record<ListField, readonly string[]>>;
-type KindRow = Readonly<KindLists> & { readonly webFirst?: string };
-
-const refuse = refusalBy(reason => {
-  throw new Error(`kinds.json: ${reason}.`);
-}, 'the catalog');
-
-function readStringList(value: unknown, where: string): readonly string[] | undefined {
-  if (value === undefined) return undefined;
-  holdsStringList(value, where, refuse);
-  return value;
-}
-
-function readKinds(raw: unknown): { rows: Record<string, KindRow>; rawKinds: Record<string, unknown> } {
-  if (!isRecord(raw) || !isRecord(raw.kinds)) throw new Error('kinds.json must state a kinds object.');
-  const rows: Record<string, KindRow> = {};
-  for (const [kind, entry] of Object.entries(raw.kinds)) {
-    if (!isRecord(entry)) throw new Error(`kinds.json: kinds.${kind} must be an object.`);
-    if (entry.webFirst !== undefined && typeof entry.webFirst !== 'string') {
-      throw new Error(`kinds.json: ${kind}.webFirst must be a string.`);
-    }
-    const lists: KindLists = {};
-    for (const field of LIST_FIELDS) lists[field] = readStringList(entry[field], `${kind}.${field}`);
-    rows[kind] = { ...lists, webFirst: entry.webFirst };
-  }
-  return { rows, rawKinds: raw.kinds };
-}
 
 // The slowbro-sports revision the catalog's sources came from; README's route archives them from this checkout.
 function baseballRevision(here: string): string {
@@ -57,7 +22,7 @@ function baseballRevision(here: string): string {
 const here = fileURLToPath(new URL('.', import.meta.url));
 const baseballOriginDev = baseballRevision(here);
 const inv = await scan();
-const { rows: kinds, rawKinds } = readKinds(JSON.parse(await readFile(path.join(here, 'kinds.json'), 'utf8')));
+const { kinds } = parseKindsFile(await readFile(path.join(here, 'kinds.json'), 'utf8'));
 const unityEnums = inv.unity.enums;
 const widgetDisplay = unityEnums.WidgetDisplayGuiComponent;
 const moduleTypes = unityEnums.SynthModuleType;
@@ -74,7 +39,7 @@ const missing: string[] = [];
 for (const [kind, row] of Object.entries(kinds)) {
   for (const src of SOURCE_KEYS) {
     for (const name of row[src] ?? []) {
-      if (!sets[src].has(name)) missing.push(`${kind}.${src}: ${name}`);
+      if (!sets[src].has(name)) missing.push(`${fieldAt(entryAt('kinds', kind), src)}: ${name}`);
     }
   }
 }
@@ -97,7 +62,7 @@ const unmapped = {
 const out = {
   generatedFrom: { baseballOriginDev },
   missing,
-  kinds: rawKinds,
+  kinds,
   styleAxes: {
     composableInBoth: inv.web.composableFields.filter(field => inv.unity.styleFields.includes(field)),
     csharpOnly: inv.unity.styleFields.filter(field => !inv.web.composableFields.includes(field)),

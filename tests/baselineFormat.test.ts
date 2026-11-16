@@ -62,6 +62,23 @@ describe('reading a size baseline', () => {
     }
   });
 
+  it('refuses a value of the wrong type in each field, naming its place', () => {
+    const files = (numbers: unknown) => ({ ...CURRENT, files: { 'src/a.ts': numbers } });
+    const skip = { directories: [], suffixes: 'x' };
+    const wrong: readonly (readonly [unknown, RegExp])[] = [
+      [files({ lines: '259', longLines: 1 }), /files\["src\/a\.ts"\]\.lines must be a number\./],
+      [files(null), /files\["src\/a\.ts"\] must be a record\./],
+      [{ ...CURRENT, allowances: [{ ...GRANT, date: 5 }] }, /allowances\[0\]\.date must be a string\./],
+      [{ ...CURRENT, scope: { ...SCOPE, dirs: [3] } }, /scope\.dirs\[0\] must be a string\./],
+      [{ ...CURRENT, scope: { ...SCOPE, skip } }, /scope\.skip\.suffixes must be a list\./],
+    ];
+    for (const read of READS) {
+      for (const [baseline, refusal] of wrong) assert.throws(() => read(baseline, 'b.json'), refusal);
+    }
+    assert.throws(() => parseCastBaseline({ files: { 'src/a.ts': { casts: 1, nonNullAssertions: '0' } } }, 'c.json'),
+      /c\.json files\["src\/a\.ts"\]\.nonNullAssertions must be a number\./);
+  });
+
   it('refuses a cast baseline field it does not take, by name', () => {
     const value = { files: { 'src/a.ts': { casts: 1, nonNullAssertions: 0, importLines: 2 } } };
     assert.throws(() => parseCastBaseline(value, 'casts.json'),

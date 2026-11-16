@@ -118,6 +118,7 @@
     "src",
     "unity",
     "scripts/build.ts",
+    "scripts/fieldChecks.ts",
     "README.md",
     "examples"
   ],

@@ -10,9 +10,9 @@ export type FieldCheck<Value> = (value: unknown, where: string, refuse: Refusal)
 
 /** A record's fields, each with its check. */
 export type CheckShape = Readonly<Record<string, FieldCheck<unknown>>>;
-export type ShapeOf<Shape extends CheckShape> = {
-  readonly [Field in keyof Shape]: Shape[Field] extends FieldCheck<infer Value> ? Value : never;
-};
+/** The value `Check` holds. */
+export type Checked<Check> = Check extends FieldCheck<infer Value> ? Value : never;
+export type ShapeOf<Shape extends CheckShape> = { readonly [Field in keyof Shape]: Checked<Shape[Field]> };
 
 /** What a record may hold beside the fields it names: a stored format holds nothing more; a tool's output may. */
 export const OTHER_FIELDS = Object.freeze({ refused: 'refused', ignored: 'ignored' } as const);
@@ -22,7 +22,7 @@ export type OtherFields = typeof OTHER_FIELDS[keyof typeof OTHER_FIELDS];
 export const refusalBy = (fail: (reason: string) => never, record: string): Refusal =>
   (where, why) => fail(`${where || record} ${why}`);
 
-const fieldAt = (where: string, field: string): string => (where ? `${where}.${field}` : field);
+export const fieldAt = (where: string, field: string): string => (where ? `${where}.${field}` : field);
 export const entryAt = (where: string, key: string): string => `${where}[${JSON.stringify(key)}]`;
 
 /** `check` as a field's check, refusing a value it does not hold as not `expected`. */
@@ -33,6 +33,7 @@ const refusedUnless = <Value>(check: ValueCheck<Value>, expected: string): Field
 
 export const holdsString: FieldCheck<string> = refusedUnless(isString, 'a string');
 export const holdsNonEmptyString: FieldCheck<string> = refusedUnless(isNonEmptyString, 'a non-empty string');
+// The library reads no number through a value check, so this one stays with the scripts' checks.
 const isNumber = (value: unknown): value is number => typeof value === 'number';
 export const holdsNumber: FieldCheck<number> = refusedUnless(isNumber, 'a number');
 export const holdsRecord: FieldCheck<Readonly<Record<string, unknown>>> = refusedUnless(isRecord, 'a record');
@@ -64,13 +65,30 @@ export const holdsShape = <Shape extends CheckShape>(shape: Shape, others: Other
     checkFields(value, where, refuse, { fields: Object.keys(shape), checkOf: field => shape[field], others });
   };
 
-/** A record holding each of `fields`, every one of `check`. */
-export const holdsFields = <Field extends string, Value>(
-  fields: readonly Field[],
-  check: FieldCheck<Value>,
+/** Fields of a record that all take one check. */
+export interface SameFields<Field extends string, Value> {
+  readonly fields: readonly Field[];
+  readonly check: FieldCheck<Value>;
+}
+
+/** A record holding each field `shape` names, of that field's check, and each of `same.fields`, of `same.check`. */
+export function holdsShapeWithFields<Shape extends CheckShape, Field extends string, Value>(
+  shape: Shape,
+  same: SameFields<Field, Value>,
   others: OtherFields,
-): FieldCheck<Readonly<Record<Field, Value>>> =>
-  (value, where, refuse) => checkFields(value, where, refuse, { fields, checkOf: () => check, others });
+): FieldCheck<ShapeOf<Shape> & Readonly<Record<Field, Value>>> {
+  const named = same.fields.filter(field => Object.hasOwn(shape, field));
+  if (named.length) throw new Error(`fieldChecks: ${named.join(', ')} named by both the shape and the same fields.`);
+  const fields = [...Object.keys(shape), ...same.fields];
+  const checkOf = (field: string): FieldCheck<unknown> => (Object.hasOwn(shape, field) ? shape[field] : same.check);
+  return (value, where, refuse) => checkFields(value, where, refuse, { fields, checkOf, others });
+}
+
+/** `check`, or nothing: a field a record may leave out. */
+export const holdsOptional = <Value>(check: FieldCheck<Value>): FieldCheck<Value | undefined> =>
+  (value, where, refuse) => {
+    if (value !== undefined) check(value, where, refuse);
+  };
 
 /** A list whose every entry holds `check`. */
 export const holdsListOf = <Value>(check: FieldCheck<Value>): FieldCheck<readonly Value[]> =>

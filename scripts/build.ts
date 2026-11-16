@@ -6,6 +6,7 @@ import { build } from 'esbuild';
 import {
   OTHER_FIELDS, entryAt, holdsNonEmptyString, holdsRecord, holdsShape, refusalBy, type FieldCheck, type ShapeOf,
 } from './fieldChecks.ts';
+import { isString } from '../src/valueChecks.ts';
 
 /** An export that names its source and its built file; an export given as a bare path is a pattern, not built. */
 const EXPORT_TARGET_SHAPE = Object.freeze({ source: holdsNonEmptyString, default: holdsNonEmptyString });
@@ -22,7 +23,7 @@ const manifest: unknown = JSON.parse(await readFile(resolve(root, 'package.json'
 holdsManifest(manifest, '', refuse);
 const exportEntries = Object.entries(manifest.exports);
 const targets = exportEntries.flatMap(([subpath, value]): ExportTarget[] => {
-  if (typeof value === 'string') return [];
+  if (isString(value)) return [];
   holdsExportTarget(value, entryAt('exports', subpath), refuse);
   return [value];
 });
