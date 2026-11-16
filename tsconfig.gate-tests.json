@@ -11,8 +11,11 @@
     "tests/duplicationGate.test.ts",
     "tests/gateFixture.ts",
     "tests/withoutTypeScript.ts",
-    "tests/modalWidth.test.ts",
-    "tests/modalWidthCases.ts",
-    "tests/modalWidthScene.tsx"
+    "tests/*.browser.test.ts",
+    "tests/*Cases.ts",
+    "tests/*Scene.tsx",
+    "tests/browserScene.ts",
+    "tests/renderScene.tsx",
+    "tests/sceneRoot.ts"
   ]
 }

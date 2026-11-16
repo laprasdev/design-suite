@@ -1,10 +1,13 @@
 import React, { useLayoutEffect, useRef, useState, type RefObject } from 'react';
 import {BarParticipantElement} from '../actionBarElements.ts';
 import {Label} from '../accents.tsx';
+import {ThemeMoonElement} from './themeMoonElements.ts';
 import {namePosition, type SkyFigure} from './skyName.ts';
 
 export const NAME_MS = 4000;
-const OBSTACLES = `${BarParticipantElement.ACTOR.selector},.theme-moon-button,.theme-moon[data-open] .theme-swatches`;
+const OBSTACLES =
+  [BarParticipantElement.ACTOR.selector,ThemeMoonElement.BUTTON.selector,
+    `${ThemeMoonElement.ROOT.selector}[data-open] ${ThemeMoonElement.SWATCHES.selector}`].join();
 
 export function ConstellationName({figure, figures, sky, width, height, onDismiss}: {figure: SkyFigure;
   figures: SkyFigure[]; sky: RefObject<HTMLDivElement>; width: number; height: number; onDismiss(): void}) {

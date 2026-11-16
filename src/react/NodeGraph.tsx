@@ -21,6 +21,7 @@
 // =====================================================
 import React, { useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 import { Node } from "./Node.tsx";
+import { NodeGraphElement } from "./nodeGraphElements.ts";
 import { GraphWires } from "./GraphWires.tsx";
 import { NodeGroups } from "./NodeGroups.tsx";
 import { groupFrames } from "./groupGeometry.ts";
@@ -100,13 +101,13 @@ export function NodeGraph<N extends GraphNode>({
 
   return (
     <div
-      className={`bd-nodegraph-fit ${className}`}
+      className={`${NodeGraphElement.FIT.className} ${className}`}
       ref={ref}
       data-organizing={!!(onMovesChange || onTiesChange || onGroupResize || onOutletsChange) || undefined}
       style={{ height: fit ? height * scale : height }}
     >
       <div
-        className="bd-nodegraph"
+        className={NodeGraphElement.SURFACE.className}
         ref={surface}
         style={{ width, height, transform: fit ? `scale(${scale})` : undefined }}
         {...surfaceProps}
@@ -127,7 +128,7 @@ export function NodeGraph<N extends GraphNode>({
         ))}
         {marquee && (
           <div
-            className="bd-marquee"
+            className={NodeGraphElement.MARQUEE.className}
             style={{ left: marquee.x, top: marquee.y, width: marquee.w, height: marquee.h }}
           />
         )}

@@ -5,9 +5,8 @@ import {createModelRig} from '../src/react/preview3d/rig.ts';
 import {createModelFraming} from '../src/react/preview3d/camera.ts';
 import {disposeModelObject, MODEL_PART_PREFIX, modelObjectBounds, modelParts} from '../src/react/preview3d/asset.ts';
 import {MODEL_STAGE} from '../src/react/preview3d/model.ts';
+import {THEME} from './preview3dActorFixture.ts';
 
-const theme = {colors: {stage: '#000', text: '#fff', surface: '#111', surfaceHi: '#222',
-  accent: '#f8c', accentDeep: '#836', teal: '#6fd'}};
 // A box skinned to two joints, base and tip. The skin also lists an end joint far above them that it weights no
 // vertex to, as a file's end markers are.
 function fixture() {
@@ -29,7 +28,7 @@ function fixture() {
   asset.add(body, hidden);
   asset.updateMatrixWorld(true);
   body.bind(new THREE.Skeleton([base, tip, end]));
-  const rig = createModelRig(asset, theme, []);
+  const rig = createModelRig(asset, THEME, []);
   return {asset, body, hidden, base, tip, end, rig};
 }
 function cleanup(value: ReturnType<typeof fixture>) {
@@ -88,10 +87,10 @@ describe('shared rig display', () => {
     sanitisedOnly.name = `${MODEL_PART_PREFIX}Paw`;
     model.base.add(sanitisedOnly);
     model.asset.updateMatrixWorld(true);
-    const parts = modelParts({scene: model.asset}, theme);
+    const parts = modelParts({scene: model.asset}, THEME);
     assert.deepEqual(parts.map(({name, node}) => [name, node]), [['TailTip', tail]]);
-    assert.ok((parts[0].marker.material as THREE.MeshBasicMaterial).color.equals(new THREE.Color(theme.colors.accent)));
-    const rig = createModelRig(model.asset, theme, parts);
+    assert.ok((parts[0].marker.material as THREE.MeshBasicMaterial).color.equals(new THREE.Color(THEME.colors.accent)));
+    const rig = createModelRig(model.asset, THEME, parts);
     rig.setDisplay('rig');
     rig.update();
     assert.deepEqual([parts[0].marker.visible, parts[0].marker.position.y], [true, 38]);
@@ -184,8 +183,8 @@ describe('shared rig display', () => {
     assert.ok(joints instanceof THREE.InstancedMesh);
     assert.ok(helper.material instanceof THREE.LineBasicMaterial);
     assert.ok(joints.material instanceof THREE.MeshBasicMaterial);
-    assert.ok(helper.material.color.equals(new THREE.Color(theme.colors.teal)));
-    assert.ok(joints.material.color.equals(new THREE.Color(theme.colors.text)));
+    assert.ok(helper.material.color.equals(new THREE.Color(THEME.colors.teal)));
+    assert.ok(joints.material.color.equals(new THREE.Color(THEME.colors.text)));
     assert.equal(helper.material.vertexColors, false);
     assert.equal(helper.material.depthTest, false);
     const disposed: string[] = [];

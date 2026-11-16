@@ -9,7 +9,7 @@ import {modelStagePolicy} from '../src/react/preview3d/model.ts';
 import {modelDrawnMeshCount} from '../src/react/preview3d/asset.ts';
 import {ModelStageRefusal} from '../src/react/preview3d/refusal.ts';
 import {MODEL_STAGE_THEME_LIGHTING} from '../src/react/preview3d/lightingModel.ts';
-import {declaration, describing, makeActor} from './preview3dActorFixture.ts';
+import {THEME, declaration, describing, makeActor} from './preview3dActorFixture.ts';
 import {kindFile, MASK, PULSE, PULSE_PROGRAM, record, RENDERERS} from './preview3dKindFixture.ts';
 
 // A stage's descriptions with everything but WebGL real: its registries, actors and parts. The scene side is a plain
@@ -22,8 +22,7 @@ function stageWith(lightingLoad: () => readonly Promise<void>[] = () => [], refu
     [MASK.path]: new Uint8Array([1, 2, 3])};
   const descriptions = createModelStageDescriptions({
     policy: modelStagePolicy({reviewKey: 'review', clock: 'local', floor: false, grid: false, kinds: [PULSE as never]}),
-    theme: {colors: {stage: '#000000', text: '#ffffff', surface: '#111111', surfaceHi: '#222222', accent: '#ff0000',
-      accentDeep: '#880000', teal: '#00ffff'}},
+    theme: THEME,
     stage: {scene, fog: createModelFog(scene), shared: createModelStageSharedValues(), compile: () => undefined,
       lighting: {load: lightingLoad, attach: () => () => undefined, prepare: value => {
         if (refused(value.time)) throw new ModelStageRefusal(`Time ${value.time}: refused`);

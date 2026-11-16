@@ -1,5 +1,6 @@
 import {forwardRef, type ReactNode} from 'react';
 import {Bar, BarContents, type BarProps, type BarSlots} from './Bar.tsx';
+import {BAR_FILL_ATTRIBUTE} from './barElements.ts';
 import {Button, type ButtonProps} from './Button.tsx';
 import {SegmentedControl, ICON_SEGMENT_VARIANT, type SingleSegmentProps,
   type SegmentValue} from './SegmentedControl.tsx';
@@ -58,7 +59,7 @@ export interface PageFooterProps extends Omit<BarProps, 'as' | 'slots'> {
 export function pageFooterSlots({slots, settings, action}: Pick<PageFooterProps, 'slots' | 'settings' | 'action'>) {
   const {label, className = '', ...button} = action ?? {};
   return {...slots, left: <>{settings && <div className="page-footer-settings">{settings}</div>}{slots?.left}</>,
-    right: <>{slots?.right}{action && <Button {...button} variant="primary"
+    right: <>{slots?.right}{action && <Button {...{[BAR_FILL_ATTRIBUTE]: true}} {...button} variant="primary"
       className={`setup-footer-action ${className}`}>{label}</Button>}</>};
 }
 export function PageFooterContents(props: Pick<PageFooterProps, 'slots' | 'settings' | 'action'>) {

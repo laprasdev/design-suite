@@ -21,7 +21,6 @@ export const MODAL_WIDTH_PX: Readonly<Record<ModalWidthValue,number>>=Object.fre
  [ModalWidth.FILL]:CONTAINED_PARENT.widthPx-2*CONTAINED_PARENT.pageInsetPx,
 });
 export const VIEWPORT_WIDTHS=[ModalWidth.COMPACT,ModalWidth.TITLED,ModalWidth.READING,ModalWidth.STAGE] as const;
-export const VIEWPORT_PX=Object.freeze({width:1280,height:800});
 // The cases besides one per width: a plain and a titled Modal naming none, a frame kept the page's gutter, a frame
 // outside a page surface, a top past the inset and a top within it.
 export const ModalCase=Object.freeze({

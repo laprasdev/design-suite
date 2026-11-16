@@ -30,13 +30,15 @@ export { ApplicationElement, APPLICATION_HOME_ATTRIBUTE } from './applicationEle
 export { Bar, BarContents, type BarProps, type BarSlots } from './Bar.tsx';
 export { BarElement, BarSlotElement, barSlotsWithin } from './barElements.ts';
 export { ActionBar, type ActionBarProps, type ActionBarNotice } from './ActionBar.tsx';
-export { ActionBarElement, ActionBarSlotElement, BarParticipantElement } from './actionBarElements.ts';
+export { ActionBarElement, ActionBarSlotElement, ActionNoticeElement, BarParticipantElement }
+  from './actionBarElements.ts';
 export { HoverDetail, type HoverDetailProps } from './HoverDetail.tsx';
 export { SegmentedControl, TEXT_SEGMENT_VARIANT, JOINED_SEGMENT_VARIANT, ICON_SEGMENT_VARIANT,
   SEGMENT_GROUP_START_ATTRIBUTE, type SegmentValue, type SegmentOption,
   type SingleSegmentProps } from './SegmentedControl.tsx';
 export { type SegmentPending } from './segmentPending.tsx';
-export { HeaderIconButton, HEADER_CONTROL_SIZE, GearIcon, SidePanelIcon, ResetIcon } from './HeaderIconButton.tsx';
+export { HeaderIconButton, GearIcon, SidePanelIcon, ResetIcon } from './HeaderIconButton.tsx';
+export { HEADER_CONTROL_PROPERTY, HEADER_CONTROL_SIZE } from './headerControl.ts';
 export { SegmentDefaultsContext, type SegmentDefaults } from './segmentContext.ts';
 export { BarParticipants, type BarParticipant } from './BarParticipants.tsx';
 export { SelectionMark } from './SelectionMark.tsx';

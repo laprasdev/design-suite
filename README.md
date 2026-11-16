@@ -553,7 +553,7 @@ npm run build
 ```
 
 `npm test` installs the pinned gate tools (`scripts/gateTools`) and Playwright's headless
-Chromium, in which `tests/modalWidth.test.ts` reads each Modal width's computed size.
+Chromium, in which `tests/*.browser.test.ts` read computed sizes, such as each Modal width's.
 
 ## Boundary
 
