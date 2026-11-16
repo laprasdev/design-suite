@@ -12,6 +12,16 @@ export const READING_FONT_FAMILY = "Bloom Inter";
 /** Who holds a face's file: this package (`./fonts/*`), or the private engine repository. */
 export const FONT_HOLDERS = Object.freeze({ suite: "suite", engine: "engine" });
 export type FontHolder = typeof FONT_HOLDERS[keyof typeof FONT_HOLDERS];
+/** Each holder's root on disk, which the host names: this package's root, and the engine repository's checkout. */
+export type FontHolderRoots = Readonly<Record<FontHolder, string>>;
+/** Where each holder keeps its font files under its root: this package builds them into its `./fonts/*` export. */
+const HOLDER_FONT_FOLDERS: Readonly<Record<FontHolder, string>> = Object.freeze({
+  [FONT_HOLDERS.suite]: "dist/fonts",
+  [FONT_HOLDERS.engine]: "packages/com.bloom.state-machine/Runtime/Interface/Fonts",
+});
+/** The folder a holder keeps its font files in, under the root `roots` names for it. */
+export const fontHolderFolder = (holder: FontHolder, roots: FontHolderRoots): string =>
+  `${roots[holder]}/${HOLDER_FONT_FOLDERS[holder]}`;
 /** A face's weight: one cut, or the range a variable file spans. */
 export interface FontWeight { readonly min: number; readonly max: number }
 export interface FontFile {

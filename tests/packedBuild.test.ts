@@ -8,13 +8,11 @@ import { fileURLToPath } from 'node:url';
 import {
   OTHER_FIELDS, holdsListOf, holdsNonEmptyString, holdsShape, refusalBy, type FieldCheck,
 } from '../scripts/build/fieldChecks.ts';
-import { FONT_FILES, FONT_HOLDERS } from '../src/fonts.ts';
+import { FONT_FILES, FONT_HOLDERS, fontHolderFolder } from '../src/fonts.ts';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 /** The folder npm extracts a packed package into. */
 const PACKAGE_FOLDER = 'package';
-/** Where the build puts the font files the package holds, as its `./fonts/*` export names. */
-const BUILT_FONTS = 'dist/fonts';
 /** What `npm pack --json` says of each package it packed, as far as this test reads it. */
 const holdsPackOutput: FieldCheck<readonly { readonly filename: string }[]> =
   holdsListOf(holdsShape({ filename: holdsNonEmptyString }, OTHER_FIELDS.ignored));
@@ -37,8 +35,10 @@ describe('the packed package', () => {
         cwd: shipped, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'],
       });
       assert.match(built, /^Built @looms\/bloom-design@.+: \d+ public entrypoints\.$/m);
+      const roots = { [FONT_HOLDERS.suite]: shipped, [FONT_HOLDERS.engine]: ROOT };
+      const builtFonts = fontHolderFolder(FONT_HOLDERS.suite, roots);
       for (const face of FONT_FILES.filter(file => file.holder === FONT_HOLDERS.suite)) {
-        assert.ok(existsSync(path.join(shipped, BUILT_FONTS, face.file)), `the build ships no ${face.file}`);
+        assert.ok(existsSync(path.join(builtFonts, face.file)), `the build ships no ${face.file}`);
       }
     } finally {
       rmSync(scratch, { recursive: true });
