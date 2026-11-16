@@ -9,14 +9,14 @@ export type Refusal = (where: string, why: string) => never;
 export type FieldCheck<Value> = (value: unknown, where: string, refuse: Refusal) => asserts value is Value;
 
 /** A record's fields, each with its check. */
-export type CheckShape = Readonly<Record<string, FieldCheck<unknown>>>;
+type CheckShape = Readonly<Record<string, FieldCheck<unknown>>>;
 /** The value `Check` holds. */
-export type Checked<Check> = Check extends FieldCheck<infer Value> ? Value : never;
+type Checked<Check> = Check extends FieldCheck<infer Value> ? Value : never;
 export type ShapeOf<Shape extends CheckShape> = { readonly [Field in keyof Shape]: Checked<Shape[Field]> };
 
 /** What a record may hold beside the fields it names: a stored format holds nothing more; a tool's output may. */
 export const OTHER_FIELDS = Object.freeze({ refused: 'refused', ignored: 'ignored' } as const);
-export type OtherFields = typeof OTHER_FIELDS[keyof typeof OTHER_FIELDS];
+type OtherFields = typeof OTHER_FIELDS[keyof typeof OTHER_FIELDS];
 
 /** A refusal that names the record itself `record` and hands each reason to `fail`. */
 export const refusalBy = (fail: (reason: string) => never, record: string): Refusal =>

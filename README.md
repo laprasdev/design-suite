@@ -28,7 +28,7 @@ BASEBALL_ROOT=/tmp/bb node catalog/build.ts
 
 ## Package
 
-This repo publishes `@looms/bloom-design`. Consumers pin a commit of this repo, and the `prepare` script builds `dist` on install. `prepare` runs `node scripts/build/build.ts`, so installing needs the Node that `engines` names, which strips TypeScript types unflagged. `scripts/size-gate.ts` also reads `import.meta.main`, which that Node sets, to tell a run from an import.
+This repo publishes `@looms/bloom-design`. Consumers pin a commit of this repo, and the `prepare` script builds `dist` on install. `prepare` runs `npm run build`, so installing needs the Node that `engines` names, which strips TypeScript types unflagged. `scripts/size-gate.ts` also reads `import.meta.main`, which that Node sets, to tell a run from an import.
 
 **Rule: after pushing to `main`, update every consumer in the same pass.** Baseball pins a commit, so open a pull request there:
 
