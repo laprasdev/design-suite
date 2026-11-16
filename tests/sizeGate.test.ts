@@ -12,7 +12,7 @@ import { allowed, ratcheted, readBaseline } from '../scripts/sizeGate/baselineFi
 import { SUITE_BASELINE, run } from '../scripts/size-gate.ts';
 import { repositoryFiles } from '../scripts/repositoryFiles.ts';
 
-type Numbers = { lines: number; longLines: number; importLines: number };
+type Numbers = { lines: number; longLines: number };
 const SCOPE = {
   dirs: ['src'], files: [], extensions: ['.ts'], skip: { directories: ['__snapshots__'], suffixes: ['.d.ts'] },
 };
@@ -71,7 +71,7 @@ describe('rule 1: a file the baseline does not name', () => {
 });
 
 describe('rule 2: a baselined file', () => {
-  const base = { lines: 300, longLines: 2, importLines: 0 };
+  const base = { lines: 300, longLines: 2 };
   it('passes at its baseline', () => {
     assert.deepEqual(problemsOf({ 'src/a.ts': file(300, [1, 2]) }, { 'src/a.ts': base }), []);
   });
@@ -80,7 +80,7 @@ describe('rule 2: a baselined file', () => {
   });
   it('grows past neither the limit nor its baselined lines', () => {
     assert.match(problemsOf({ 'src/a.ts': file(301, [1, 2]) }, { 'src/a.ts': base })[0], /301 lines, baselined 300/);
-    const longOnly = { 'src/b.ts': { lines: 150, longLines: 1, importLines: 0 } };
+    const longOnly = { 'src/b.ts': { lines: 150, longLines: 1 } };
     assert.deepEqual(problemsOf({ 'src/b.ts': file(FILE_LINE_LIMIT, [1]) }, longOnly), []);
     assert.equal(problemsOf({ 'src/b.ts': file(FILE_LINE_LIMIT + 1, [1]) }, longOnly).length, 1);
   });
@@ -88,9 +88,9 @@ describe('rule 2: a baselined file', () => {
 
 describe('rule 3 and the ratchet', () => {
   const base = {
-    'src/a.ts': { lines: 300, longLines: 2, importLines: 4 },
-    'src/b.ts': { lines: 250, longLines: 0, importLines: 0 },
-    'src/c.ts': { lines: 220, longLines: 0, importLines: 0 },
+    'src/a.ts': { lines: 300, longLines: 2 },
+    'src/b.ts': { lines: 250, longLines: 0 },
+    'src/c.ts': { lines: 220, longLines: 0 },
   };
   const now = measured({ 'src/a.ts': file(280, [9], 3), 'src/b.ts': file(FILE_LINE_LIMIT) });
   it('passes a shrink, a file that now passes and a deleted one, and says so', () => {
@@ -102,38 +102,40 @@ describe('rule 3 and the ratchet', () => {
       'ratchet: src/c.ts is gone',
     ]);
   });
-  it('writes the lower numbers, lines and imports together, and drops what passes or is gone', () => {
-    const fell = { lines: 280, longLines: 1, importLines: 3 };
+  it('writes the lower numbers, and drops what passes or is gone', () => {
+    const fell = { lines: 280, longLines: 1 };
     assert.deepEqual(ratcheted(baselineOf(base), now).files, { 'src/a.ts': fell });
     const fewerLong = measured({ 'src/a.ts': file(300, [9], 2) });
-    const kept = { lines: 300, longLines: 1, importLines: 4 };
+    const kept = { lines: 300, longLines: 1 };
     assert.deepEqual(ratcheted(baselineOf(base), fewerLong).files['src/a.ts'], kept);
   });
 });
 
 describe('an allowance for a split\'s import lines', () => {
-  const base = { 'src/a.ts': { lines: 300, longLines: 1, importLines: 4 } };
-  it('raises the file by the import lines a split added, and records the step and the reason', () => {
+  const base = { 'src/a.ts': { lines: 300, longLines: 1 } };
+  /** src/a.ts as origin/main holds it: 300 lines, 4 of them imports. */
+  const committed = measureText(file(300, [10], 4));
+  it('raises the file by the import lines a split added, as both files measure, and records the step and why', () => {
     const grown = measured({ 'src/a.ts': file(303, [10], 7) });
-    const next = allowed(baselineOf(base), grown, GRANT);
-    assert.deepEqual(next.files['src/a.ts'], { lines: 303, longLines: 1, importLines: 7 });
-    const record = { ...GRANT, from: { lines: 300, importLines: 4 }, to: { lines: 303, importLines: 7 } };
-    assert.deepEqual(next.allowances, [record]);
+    const next = allowed(baselineOf(base), grown, GRANT, committed);
+    assert.deepEqual(next.files['src/a.ts'], { lines: 303, longLines: 1 });
+    assert.deepEqual(next.allowances, [GRANT]);
     assert.deepEqual(compare(grown, next).problems, []);
   });
   it('refuses any line that is not an import', () => {
     const grown = measured({ 'src/a.ts': file(303, [10], 6) });
-    assert.throws(() => allowed(baselineOf(base), grown, GRANT), /1 lines that aren't/);
+    assert.throws(() => allowed(baselineOf(base), grown, GRANT, committed), /1 lines that aren't/);
   });
-  it('refuses a long line, a file the baseline does not name, a missing reason, and a file that needs none', () => {
-    const cases: [Record<string, string>, typeof GRANT, RegExp][] = [
-      [{ 'src/a.ts': file(303, [10, 11], 7) }, GRANT, /long line/],
-      [{ 'src/z.ts': file(303, [], 7) }, { ...GRANT, path: 'src/z.ts' }, /only a baselined file/],
-      [{ 'src/a.ts': file(303, [10], 7) }, { ...GRANT, reason: '' }, /names the step/],
-      [{ 'src/a.ts': file(300, [10], 4) }, GRANT, /needs none/],
+  it('refuses a long line, a file not baselined or not committed, a missing reason, and a file that needs none', () => {
+    const cases: [Record<string, string>, typeof GRANT, typeof committed | undefined, RegExp][] = [
+      [{ 'src/a.ts': file(303, [10, 11], 7) }, GRANT, committed, /long line/],
+      [{ 'src/z.ts': file(303, [], 7) }, { ...GRANT, path: 'src/z.ts' }, committed, /only a baselined file/],
+      [{ 'src/a.ts': file(303, [10], 7) }, GRANT, undefined, /base branch does not hold the file/],
+      [{ 'src/a.ts': file(303, [10], 7) }, { ...GRANT, reason: '' }, committed, /names the step/],
+      [{ 'src/a.ts': file(300, [10], 4) }, GRANT, committed, /needs none/],
     ];
-    for (const [files, grant, refusal] of cases) {
-      assert.throws(() => allowed(baselineOf(base), measured(files), grant), refusal);
+    for (const [files, grant, before, refusal] of cases) {
+      assert.throws(() => allowed(baselineOf(base), measured(files), grant, before), refusal);
     }
   });
 });

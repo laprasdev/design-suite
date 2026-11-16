@@ -2,15 +2,17 @@
 //   node scripts/size-gate.ts           check, and on a pass write any lower numbers (the ratchet)
 //   node scripts/size-gate.ts --check   check only, writing nothing
 //   node scripts/size-gate.ts --init    write a first baseline; refused once one exists
-//   node scripts/size-gate.ts --allow <path> --step <step> --reason "<why>"   import lines a split added, nothing else
+//   node scripts/size-gate.ts --allow <path> --step <step> --reason "<why>"   import lines a split added, nothing else,
+//     measured against the file as origin/main holds it
 // Consumers run it on their own files through their own scripts/size-gate entry, which calls `run`.
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { BASE_BRANCH, baseBranchAbsence } from './baseline/baseBranch.ts';
 import { allowed, freshBaseline, ratcheted, readBaseline, writeBaseline } from './sizeGate/baselineFile.ts';
 import { compare } from './sizeGate/compare.ts';
 import type { SizeScope } from './sizeGate/limits.ts';
-import { measureScope } from './sizeGate/measure.ts';
+import { measureCommitted, measureScope } from './sizeGate/measure.ts';
 
 const Flag = Object.freeze({
   CHECK: '--check', INIT: '--init', ALLOW: '--allow', STEP: '--step', REASON: '--reason',
@@ -75,8 +77,11 @@ function allow(job: GateJob): number {
   const { root, baselinePath, argv, say } = job;
   const baseline = readBaseline(baselinePath);
   const file = flagValue(argv, Flag.ALLOW), step = flagValue(argv, Flag.STEP), reason = flagValue(argv, Flag.REASON);
+  const absence = baseBranchAbsence(root);
+  if (absence) throw new Error(`size-gate: ${absence}.`);
   const grant = { path: file, step, reason, date: today() };
-  writeBaseline(baselinePath, allowed(baseline, measureScope(root, baseline.scope), grant));
+  const committed = measureCommitted(root, BASE_BRANCH, file);
+  writeBaseline(baselinePath, allowed(baseline, measureScope(root, baseline.scope), grant, committed));
   say(`allowed ${file} its import lines for step ${step}`);
   return gate(job, false);
 }

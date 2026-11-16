@@ -7,9 +7,12 @@ export interface LongLine {
   readonly characters: number;
 }
 
-export interface FileMeasurement {
-  readonly lines: number;
-  readonly longLines: number;
+/** The numbers a size baseline records of a file over a limit, each a ceiling the file's measurement may not pass. */
+export const SIZE_KINDS = ['lines', 'longLines'] as const;
+export type BaselineNumbers = Readonly<Record<typeof SIZE_KINDS[number], number>>;
+
+/** A file as read: its baselined numbers, the lines of its import statements, and each line over the limit. */
+export interface FileMeasurement extends BaselineNumbers {
   readonly importLines: number;
   readonly long: readonly LongLine[];
 }
@@ -26,17 +29,6 @@ export interface SizeScope {
   readonly skip: SizeSkip;
 }
 
-export type BaselineNumbers = {
-  readonly lines: number;
-  readonly longLines: number;
-  readonly importLines: number;
-};
-
-export interface AllowanceSpan {
-  readonly lines: number;
-  readonly importLines: number;
-}
-
 export interface AllowanceGrant {
   readonly path: string;
   readonly step: string;
@@ -44,13 +36,8 @@ export interface AllowanceGrant {
   readonly date: string;
 }
 
-export interface AllowanceRecord extends AllowanceGrant {
-  readonly from: AllowanceSpan;
-  readonly to: AllowanceSpan;
-}
-
 export interface SizeBaseline {
   readonly scope: SizeScope;
   readonly files: Readonly<Record<string, BaselineNumbers>>;
-  readonly allowances: readonly AllowanceRecord[];
+  readonly allowances: readonly AllowanceGrant[];
 }

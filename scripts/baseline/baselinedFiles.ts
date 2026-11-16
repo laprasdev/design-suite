@@ -20,6 +20,19 @@ export interface BaselineRule<Numbers extends FileNumbers, Measured> {
   readonly rose: (base: Numbers, head: Numbers) => boolean;
 }
 
+/** Whether `value` holds a number for each of `kinds`, a file's numbers in a baseline that records those kinds. */
+export const holdsNumbers = <Kind extends string>(kinds: readonly Kind[]) =>
+  (value: unknown): value is Readonly<Record<Kind, number>> =>
+    isRecord(value) && kinds.every(kind => typeof value[kind] === 'number');
+
+/** Each of `kinds` at the lower of the baselined and the measured number. */
+export const lowest = <Kind extends string>(kinds: readonly Kind[]) =>
+  (base: Readonly<Record<Kind, number>>, measured: Readonly<Record<Kind, number>>): Readonly<Record<Kind, number>> => {
+    const lower: Record<Kind, number> = { ...base };
+    for (const kind of kinds) lower[kind] = Math.min(base[kind], measured[kind]);
+    return lower;
+  };
+
 /** Whether any one number is higher in `head`, for numbers that each only fall. */
 export const anyRose = <Numbers extends FileNumbers>(base: Numbers, head: Numbers): boolean =>
   Object.entries(head).some(([name, value]) => value > base[name]);

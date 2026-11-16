@@ -1,32 +1,32 @@
 // The size gate's baseline: what it covers, the numbers of each file over a limit, and the allowances granted.
 // The numbers only fall (scripts/baseline/baselinedFiles.ts), except through an allowance that a step records for
-// import lines its split added.
+// import lines its split added. It records no import lines: the allowance rule measures them in both files.
 import { readFileSync, writeFileSync } from 'node:fs';
 import { isRecord, isStringList } from '../../src/valueChecks.ts';
 import {
-  LIST, OBJECT, baselineText, fileEntries, jsonBlock, parseFiles, ratchetedFiles, type BaselineRule,
+  LIST, OBJECT, baselineText, fileEntries, holdsNumbers, jsonBlock, lowest, parseFiles, ratchetedFiles,
+  type BaselineRule,
 } from '../baseline/baselinedFiles.ts';
-import { allowanceRefusal, withinLimits } from './compare.ts';
+import { allowanceRefusal, sizeRose, withinLimits } from './compare.ts';
 import {
-  type AllowanceGrant, type AllowanceRecord, type AllowanceSpan, type BaselineNumbers,
-  type FileMeasurement, type SizeBaseline, type SizeScope,
+  SIZE_KINDS, type AllowanceGrant, type BaselineNumbers, type FileMeasurement, type SizeBaseline, type SizeScope,
 } from './limits.ts';
 
-const numbersOf = ({ lines, longLines, importLines }: BaselineNumbers): BaselineNumbers =>
-  ({ lines, longLines, importLines });
+const numbersOf = ({ lines, longLines }: BaselineNumbers): BaselineNumbers => ({ lines, longLines });
+const grantOf = ({ path, step, reason, date }: AllowanceGrant): AllowanceGrant => ({ path, step, reason, date });
 
-const isNumbers = (value: unknown): value is BaselineNumbers =>
-  isRecord(value) && typeof value.lines === 'number' && typeof value.longLines === 'number'
-  && typeof value.importLines === 'number';
+export const SIZE_RULE: BaselineRule<BaselineNumbers, FileMeasurement> = {
+  isNumbers: holdsNumbers(SIZE_KINDS), withinLimits, lowered: lowest(SIZE_KINDS), rose: sizeRose,
+};
 
-const isSpan = (value: unknown): value is AllowanceSpan =>
-  isRecord(value) && typeof value.lines === 'number' && typeof value.importLines === 'number';
-
-const isAllowance = (value: unknown): value is AllowanceRecord =>
+const isAllowance = (value: unknown): value is AllowanceGrant =>
   isRecord(value) && typeof value.path === 'string' && typeof value.step === 'string'
-  && typeof value.reason === 'string' && typeof value.date === 'string' && isSpan(value.from) && isSpan(value.to);
+  && typeof value.reason === 'string' && typeof value.date === 'string';
 
-/** A size baseline from its decoded JSON; `file` names where it was read, for the refusal. */
+/**
+ * A size baseline from its decoded JSON; `file` names where it was read, for the refusal. It keeps only what the gate
+ * holds, so a baseline written while entries and allowances still recorded import lines reads without them.
+ */
 export function parseBaseline(value: unknown, file: string): SizeBaseline {
   const invalid = (): never => {
     const needs = 'scope {dirs, files, extensions, skip}, files and allowances';
@@ -43,8 +43,9 @@ export function parseBaseline(value: unknown, file: string): SizeBaseline {
       dirs: scope.dirs, files: scope.files, extensions: scope.extensions,
       skip: { directories: scope.skip.directories, suffixes: scope.skip.suffixes },
     },
-    files: parseFiles(value.files, isNumbers, invalid),
-    allowances,
+    files: Object.fromEntries(Object.entries(parseFiles(value.files, SIZE_RULE.isNumbers, invalid))
+      .map(([file, numbers]) => [file, numbersOf(numbers)])),
+    allowances: allowances.map(grantOf),
   };
 }
 
@@ -68,22 +69,6 @@ export function freshBaseline(scope: SizeScope, measuredFiles: ReadonlyMap<strin
   return { scope, files, allowances: [] };
 }
 
-/** Lines and import lines move together, so the two always describe one version of the file. */
-function lowered(base: BaselineNumbers, measured: FileMeasurement): BaselineNumbers {
-  const fell = measured.lines < base.lines;
-  return {
-    lines: fell ? measured.lines : base.lines,
-    longLines: Math.min(base.longLines, measured.longLines),
-    importLines: fell ? measured.importLines : base.importLines,
-  };
-}
-
-/** Import lines may rise as a file's lines fall, since they move together; the lines that are not imports may not. */
-const rose = (base: BaselineNumbers, head: BaselineNumbers): boolean => head.lines > base.lines
-  || head.longLines > base.longLines || head.lines - head.importLines > base.lines - base.importLines;
-
-export const SIZE_RULE: BaselineRule<BaselineNumbers, FileMeasurement> = { isNumbers, withinLimits, lowered, rose };
-
 /** The lower numbers, with files that now pass or are gone dropped, and their allowances with them. */
 export function ratcheted(
   baseline: SizeBaseline,
@@ -94,37 +79,27 @@ export function ratcheted(
   return { ...baseline, files, allowances };
 }
 
-/** The baselined and measured numbers an allowance raises from and to; throws, naming why, when none is due. */
-function allowanceBasis(
-  grant: AllowanceGrant,
-  base: BaselineNumbers | undefined,
-  measured: FileMeasurement | undefined,
-): { base: BaselineNumbers; measured: FileMeasurement } {
-  const refuse = (reason: string): never => {
-    throw new Error(`size-gate: no allowance for ${grant.path}: ${reason}.`);
-  };
-  if (!grant.step || !grant.reason) return refuse('an allowance names the step that caused it and why');
-  if (!base) return refuse('only a baselined file takes an allowance');
-  if (!measured) return refuse('the file is gone');
-  const refusal = allowanceRefusal(base, measured);
-  return refusal ? refuse(refusal) : { base, measured };
-}
-
 /**
- * Raises one baselined file to its current numbers, for import lines a split added and nothing else, and records the
- * step and the reason. Throws, writing nothing, for any other growth.
+ * Raises one baselined file to its current numbers, for import lines a split added and nothing else, measured against
+ * `committed`, the file as the base branch holds it, and records the step and the reason. Throws, writing nothing, for
+ * any other growth.
  */
 export function allowed(
   baseline: SizeBaseline,
   measuredFiles: ReadonlyMap<string, FileMeasurement>,
   grant: AllowanceGrant,
+  committed: FileMeasurement | undefined,
 ): SizeBaseline {
-  const { base, measured } = allowanceBasis(grant, baseline.files[grant.path], measuredFiles.get(grant.path));
-  const record: AllowanceRecord = {
-    path: grant.path, step: grant.step, reason: grant.reason, date: grant.date,
-    from: { lines: base.lines, importLines: base.importLines },
-    to: { lines: measured.lines, importLines: measured.importLines },
+  const refuse = (reason: string): never => {
+    throw new Error(`size-gate: no allowance for ${grant.path}: ${reason}.`);
   };
+  const base = baseline.files[grant.path], measured = measuredFiles.get(grant.path);
+  if (!grant.step || !grant.reason) return refuse('an allowance names the step that caused it and why');
+  if (!base) return refuse('only a baselined file takes an allowance');
+  if (!measured) return refuse('the file is gone');
+  if (!committed) return refuse('the base branch does not hold the file, so nothing measures what the split added');
+  const refusal = allowanceRefusal({ numbers: base, measured: committed }, { numbers: numbersOf(measured), measured });
+  if (refusal) return refuse(refusal);
   const files = { ...baseline.files, [grant.path]: numbersOf(measured) };
-  return { ...baseline, files, allowances: [...baseline.allowances, record] };
+  return { ...baseline, files, allowances: [...baseline.allowances, grantOf(grant)] };
 }

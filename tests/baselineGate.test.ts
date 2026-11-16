@@ -6,10 +6,9 @@ import path from 'node:path';
 import { describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { SUITE_BASELINE } from '../scripts/size-gate.ts';
-import { readBaseline, sizeBaselineText } from '../scripts/sizeGate/baselineFile.ts';
-import { compare } from '../scripts/sizeGate/compare.ts';
+import { SIZE_RULE, readBaseline, sizeBaselineText } from '../scripts/sizeGate/baselineFile.ts';
 import {
-  LINE_CHARACTER_LIMIT, type AllowanceRecord, type BaselineNumbers, type SizeBaseline,
+  FILE_LINE_LIMIT, LINE_CHARACTER_LIMIT, type AllowanceGrant, type SizeBaseline,
 } from '../scripts/sizeGate/limits.ts';
 import { CAST_BASELINE, castBaselineText, type CastNumbers } from '../scripts/typeGate/castBaseline.ts';
 import { GATE, runGate, type GateTree } from './gateFixture.ts';
@@ -20,28 +19,22 @@ const TWO_CASTS = { 'src/a.ts': { casts: 2, nonNullAssertions: 0 } };
 const baselines = (tree: GateTree) => runGate(GATE.baselines, tree, process.env);
 
 const SUITE_SIZE = readBaseline(fileURLToPath(new URL(`../${SUITE_BASELINE}`, import.meta.url)));
-/** The size baseline with `files` and `allowances` in place of this repository's. */
+/** The size baseline with `files` and `allowances` in place of this repository's, and no casts. */
 const sizeBaseline = (change: Pick<SizeBaseline, 'files' | 'allowances'>) =>
-  ({ [SUITE_BASELINE]: sizeBaselineText({ ...SUITE_SIZE, ...change }) });
-const SIZE_BASE = { 'src/a.ts': { lines: 300, longLines: 1, importLines: 4 } };
-const SIZE_HEAD = { 'src/a.ts': { lines: 303, longLines: 1, importLines: 7 } };
-const ALLOWANCE = {
-  path: 'src/a.ts', step: '3', reason: 'a split', date: '2026-11-15',
-  from: { lines: 300, importLines: 4 }, to: { lines: 303, importLines: 7 },
-};
-const SIZE_ORIGIN = { ...casts({}), ...sizeBaseline({ files: SIZE_BASE, allowances: [] }) };
+  ({ ...casts({}), [SUITE_BASELINE]: sizeBaselineText({ ...SUITE_SIZE, ...change }) });
+/** src/a.ts at `lines` lines, opening with `imports` import lines, and one long line. */
+const source = (lines: number, imports: number) => ({
+  'src/a.ts': Array.from({ length: lines }, (_, index) => index < imports ? "import { a } from './a';"
+    : index === imports ? 'x'.repeat(LINE_CHARACTER_LIMIT + 1) : 'x').join('\n') + '\n',
+});
+const entry = (lines: number) => ({ 'src/a.ts': { lines, longLines: 1 } });
+const ALLOWANCE: AllowanceGrant = { path: 'src/a.ts', step: '3', reason: 'a split', date: '2026-11-15' };
+/** origin/main: src/a.ts baselined at 300 lines, 4 of them imports. */
+const SIZE_ORIGIN = { ...sizeBaseline({ files: entry(300), allowances: [] }), ...source(300, 4) };
 
-/** A head that raises src/a.ts to `numbers` through `allowance`, as the baseline gate and size-gate --check read it. */
-function raisedThrough(numbers: BaselineNumbers, allowance: AllowanceRecord) {
-  const change = { files: { 'src/a.ts': numbers }, allowances: [allowance] };
-  const characters = LINE_CHARACTER_LIMIT + 1;
-  const long = Array.from({ length: numbers.longLines }, (_, index) => ({ line: index + 1, characters }));
-  const measured = new Map([['src/a.ts', { ...numbers, long }]]);
-  return {
-    baselineGate: baselines({ base: SIZE_ORIGIN, head: { ...casts({}), ...sizeBaseline(change) } }),
-    sizeCheck: compare(measured, { ...SUITE_SIZE, ...change }).problems,
-  };
-}
+/** The baseline gate on a head that baselines src/a.ts at `lines`, holding `file`, through `allowances`. */
+const raised = (lines: number, file: Record<string, string>, allowances: readonly AllowanceGrant[] = [ALLOWANCE]) =>
+  baselines({ base: SIZE_ORIGIN, head: { ...sizeBaseline({ files: entry(lines), allowances }), ...file } });
 
 describe('the baseline gate', () => {
   it('refuses a cast baseline that rose above origin/main, naming the file', () => {
@@ -61,45 +54,48 @@ describe('the baseline gate', () => {
     assert.match(fresh.output, /cast-baseline\.json is new: origin\/main holds none/);
   });
 
-  it('refuses a size baseline that rose, unless an allowance raised it or its imports rose as lines fell', () => {
-    const base = { ...casts({}), ...sizeBaseline({ files: SIZE_BASE, allowances: [] }) };
-    const raised = baselines({ base, head: { ...casts({}), ...sizeBaseline({ files: SIZE_HEAD, allowances: [] }) } });
-    assert.equal(raised.status, 1, raised.output);
-    assert.match(raised.output, /size-baseline\.json: src\/a\.ts is \{"lines":303/);
-    const allowed = sizeBaseline({ files: SIZE_HEAD, allowances: [ALLOWANCE] });
-    assert.equal(baselines({ base, head: { ...casts({}), ...allowed } }).status, 0);
-    const fewerLines = { 'src/a.ts': { lines: 290, longLines: 1, importLines: 6 } };
-    const shorter = sizeBaseline({ files: fewerLines, allowances: [] });
-    assert.equal(baselines({ base, head: { ...casts({}), ...shorter } }).status, 0, 'imports rise as lines fall');
-    const taller = { 'src/a.ts': { ...SIZE_HEAD['src/a.ts'], lines: 304 } };
-    const beyond = sizeBaseline({ files: taller, allowances: [ALLOWANCE] });
-    assert.equal(baselines({ base, head: { ...casts({}), ...beyond } }).status, 1);
+  it('refuses a size baseline that rose, unless an allowance raised it or it fell', () => {
+    const unallowed = raised(303, source(303, 7), []);
+    assert.equal(unallowed.status, 1, unallowed.output);
+    assert.match(unallowed.output, /size-baseline\.json: src\/a\.ts is \{"lines":303/);
+    assert.equal(raised(303, source(303, 7)).status, 0);
+    assert.equal(raised(290, source(290, 6), []).status, 0, 'it fell');
+    assert.equal(raised(304, source(304, 7)).status, 1, 'one line past what the split added');
+  });
+
+  it('reads a size rise by the size gate\'s own cap, so a baseline may record what its file measures', () => {
+    const longOnly = { lines: 150, longLines: 1 }, over = { lines: 300, longLines: 1 };
+    assert.equal(SIZE_RULE.rose(longOnly, { lines: FILE_LINE_LIMIT, longLines: 1 }), false);
+    assert.equal(SIZE_RULE.rose(longOnly, { lines: FILE_LINE_LIMIT + 1, longLines: 1 }), true);
+    assert.equal(SIZE_RULE.rose(over, { lines: 301, longLines: 1 }), true);
+    assert.equal(SIZE_RULE.rose(over, { lines: 300, longLines: 2 }), true);
   });
 });
 
-describe('an allowance, held to the one allowance rule by the baseline gate and size-gate --check alike', () => {
+describe('an allowance, held to the one allowance rule on import lines measured in both files', () => {
   it('refuses lines that are not imports under a hand-written allowance', () => {
-    const grown = { lines: 464, longLines: 1, importLines: 4 };
-    const { baselineGate, sizeCheck } = raisedThrough(grown, { ...ALLOWANCE, to: { lines: 464, importLines: 4 } });
-    assert.equal(baselineGate.status, 1, baselineGate.output);
-    assert.match(baselineGate.output, /src\/a\.ts is .*; a baseline only falls, and it grew by 164 lines that aren't/);
-    const refusal = 'src/a.ts: the allowance for step 3 does not hold: it grew by 164 lines that aren\'t imports';
-    assert.deepEqual(sizeCheck, [refusal]);
+    const run = raised(464, source(464, 4));
+    assert.equal(run.status, 1, run.output);
+    assert.match(run.output, /src\/a\.ts is .*; a baseline only falls, and it grew by 164 lines that aren't imports/);
   });
 
   it('passes the import lines a split added', () => {
-    const { baselineGate, sizeCheck } = raisedThrough(SIZE_HEAD['src/a.ts'], ALLOWANCE);
-    assert.equal(baselineGate.status, 0, baselineGate.output);
-    assert.deepEqual(sizeCheck, []);
+    const run = raised(303, source(303, 7));
+    assert.equal(run.status, 0, run.output);
   });
 
-  it('refuses an allowance whose from is not origin/main\'s numbers', () => {
-    const { baselineGate, sizeCheck } = raisedThrough(SIZE_HEAD['src/a.ts'], {
-      ...ALLOWANCE, from: { lines: 301, importLines: 4 },
-    });
-    assert.equal(baselineGate.status, 1, baselineGate.output);
-    assert.match(baselineGate.output, /no new allowance raises it from origin\/main's numbers/);
-    assert.deepEqual(sizeCheck, [], 'only origin/main shows the from is not its own');
+  it('refuses a rise that the import lines measured in its file do not cover', () => {
+    const run = raised(303, source(303, 4));
+    assert.equal(run.status, 1, run.output);
+    assert.match(run.output, /and it grew by 3 lines that aren't imports/);
+  });
+
+  it('refuses an allowance origin/main already holds', () => {
+    const allowed = { ...sizeBaseline({ files: entry(300), allowances: [ALLOWANCE] }), ...source(300, 4) };
+    const head = { ...sizeBaseline({ files: entry(303), allowances: [ALLOWANCE] }), ...source(303, 7) };
+    const run = baselines({ base: allowed, head });
+    assert.equal(run.status, 1, run.output);
+    assert.match(run.output, /no allowance origin\/main lacks raises it/);
   });
 });
 

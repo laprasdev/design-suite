@@ -5,7 +5,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import ts from '../gateTools/node_modules/typescript/lib/typescript.js';
 import { isRecord } from '../../src/valueChecks.ts';
 import {
-  OBJECT, anyRose, baselineText, fileEntries, jsonBlock, parseFiles, ratchetedFiles,
+  OBJECT, anyRose, baselineText, fileEntries, holdsNumbers, jsonBlock, lowest, parseFiles, ratchetedFiles,
   type BaselineRule, type BaselinedFiles,
 } from '../baseline/baselinedFiles.ts';
 
@@ -20,16 +20,12 @@ const CAST_LABEL: Readonly<Record<CastKind, string>> = { casts: 'casts', nonNull
 /** What a file the baseline does not name may hold. */
 export const NO_CASTS: CastNumbers = Object.freeze({ casts: 0, nonNullAssertions: 0 });
 
-const isCastNumbers = (value: unknown): value is CastNumbers =>
-  isRecord(value) && CAST_KINDS.every(kind => typeof value[kind] === 'number');
+const isCastNumbers = holdsNumbers(CAST_KINDS);
 
 export const CAST_RULE: BaselineRule<CastNumbers, CastNumbers> = {
   isNumbers: isCastNumbers,
   withinLimits: measured => CAST_KINDS.every(kind => measured[kind] === 0),
-  lowered: (base, measured) => ({
-    casts: Math.min(base.casts, measured.casts),
-    nonNullAssertions: Math.min(base.nonNullAssertions, measured.nonNullAssertions),
-  }),
+  lowered: lowest(CAST_KINDS),
   rose: anyRose,
 };
 

@@ -2,7 +2,7 @@
 // belong to import statements, which a split may add to a file that imports what it moved.
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
-import { repositoryFiles } from '../repositoryFiles.ts';
+import { gitOutput, gitSucceeds, repositoryFiles } from '../repositoryFiles.ts';
 import { LINE_CHARACTER_LIMIT, type FileMeasurement, type SizeScope, type SizeSkip } from './limits.ts';
 
 const IMPORT_START = /^import[\s{*'"]/;
@@ -39,6 +39,12 @@ export function measureText(text: string): FileMeasurement {
     return length > LINE_CHARACTER_LIMIT ? [{ line: index + 1, characters: length }] : [];
   });
   return { lines: lines.length, longLines: long.length, importLines: importLineCount(lines), long };
+}
+
+/** The numbers of `file`, a path from `root`, as the commit `ref` holds it, or undefined when it holds no such file. */
+export function measureCommitted(root: string, ref: string, file: string): FileMeasurement | undefined {
+  const blob = `${ref}:./${file}`;
+  return gitSucceeds(root, ['cat-file', '-e', blob]) ? measureText(gitOutput(root, ['show', blob])) : undefined;
 }
 
 /** Whether a suffix or a folder on the way to `file` puts it out of scope. */
