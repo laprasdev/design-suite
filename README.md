@@ -28,7 +28,7 @@ BASEBALL_ROOT=/tmp/bb node catalog/build.ts
 
 ## Package
 
-This repo publishes `@looms/bloom-design`. Consumers pin a commit of this repo, and the `prepare` script builds `dist` on install.
+This repo publishes `@looms/bloom-design`. Consumers pin a commit of this repo, and the `prepare` script builds `dist` on install. `prepare` runs `node scripts/build.ts`, so installing needs the Node that `engines` names, which strips TypeScript types unflagged and sets `import.meta.main`.
 
 **Rule: after pushing to `main`, update every consumer in the same pass.** Baseball pins a commit, so open a pull request there:
 

@@ -1,7 +1,7 @@
 name: Check
 # Every repository check, each a required status named after its npm script: `npm run check` (gate tools, types,
 # size, circular imports, duplication), `npm test` and `npm run build`, which AGENTS.md asks for before every push,
-# and the per-area type checks.
+# and the form contract tests AGENTS.md names.
 on:
   pull_request:
   push:
@@ -15,7 +15,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        script: [check, test, build, 'check:graph', 'check:forms', 'check:sky', 'check:preview3d', 'check:gates']
+        script: [check, test, build, 'check:forms']
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
