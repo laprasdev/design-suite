@@ -1,7 +1,7 @@
 // Checks that a decoded record (a baseline, a manifest, a tool's output) holds the form its reader expects, each
 // refusing by name: where in the record the value sits and what it must be. A record's shape names each field with
 // its check; the record's type (`ShapeOf`) and its check (`holdsShape`) derive from it, and one walk runs every check.
-import { isNonEmptyString, isRecord, isString, type ValueCheck } from '../src/valueChecks.ts';
+import { isNonEmptyString, isNumber, isRecord, isString, type ValueCheck } from '../../src/valueChecks.ts';
 
 /** Throws, saying where in the record a value sits (empty for the record itself) and why it is refused. */
 export type Refusal = (where: string, why: string) => never;
@@ -33,55 +33,33 @@ const refusedUnless = <Value>(check: ValueCheck<Value>, expected: string): Field
 
 export const holdsString: FieldCheck<string> = refusedUnless(isString, 'a string');
 export const holdsNonEmptyString: FieldCheck<string> = refusedUnless(isNonEmptyString, 'a non-empty string');
-// The library reads no number through a value check, so this one stays with the scripts' checks.
-const isNumber = (value: unknown): value is number => typeof value === 'number';
 export const holdsNumber: FieldCheck<number> = refusedUnless(isNumber, 'a number');
 export const holdsRecord: FieldCheck<Readonly<Record<string, unknown>>> = refusedUnless(isRecord, 'a record');
 
-/** A record's form: the fields it names, the check of each, and what it may hold beside them. */
-interface RecordForm {
-  readonly fields: readonly string[];
-  readonly checkOf: (field: string) => FieldCheck<unknown>;
-  readonly others: OtherFields;
-}
-
-/** The one walk of a record: each field its form names through that field's check, any other as the form says. */
-function checkFields(value: unknown, where: string, refuse: Refusal, { fields, checkOf, others }: RecordForm): void {
-  holdsRecord(value, where, refuse);
-  if (others === OTHER_FIELDS.refused) {
-    for (const field of Object.keys(value)) {
-      if (!fields.includes(field)) refuse(where, `holds ${field}; it takes ${fields.join(', ')}`);
-    }
-  }
-  for (const field of fields) {
-    const check: FieldCheck<unknown> = checkOf(field);
-    check(value[field], fieldAt(where, field), refuse);
-  }
-}
-
-/** A record holding each field `shape` names, of that field's check. */
+/** A record holding each field `shape` names, of that field's check, and any other field as `others` says. */
 export const holdsShape = <Shape extends CheckShape>(shape: Shape, others: OtherFields): FieldCheck<ShapeOf<Shape>> =>
   (value, where, refuse) => {
-    checkFields(value, where, refuse, { fields: Object.keys(shape), checkOf: field => shape[field], others });
+    holdsRecord(value, where, refuse);
+    const fields = Object.keys(shape);
+    if (others === OTHER_FIELDS.refused) {
+      for (const field of Object.keys(value)) {
+        if (!fields.includes(field)) refuse(where, `holds ${field}; it takes ${fields.join(', ')}`);
+      }
+    }
+    for (const field of fields) {
+      const check: FieldCheck<unknown> = shape[field];
+      check(value[field], fieldAt(where, field), refuse);
+    }
   };
 
-/** Fields of a record that all take one check. */
-export interface SameFields<Field extends string, Value> {
-  readonly fields: readonly Field[];
-  readonly check: FieldCheck<Value>;
-}
-
-/** A record holding each field `shape` names, of that field's check, and each of `same.fields`, of `same.check`. */
-export function holdsShapeWithFields<Shape extends CheckShape, Field extends string, Value>(
-  shape: Shape,
-  same: SameFields<Field, Value>,
-  others: OtherFields,
-): FieldCheck<ShapeOf<Shape> & Readonly<Record<Field, Value>>> {
-  const named = same.fields.filter(field => Object.hasOwn(shape, field));
-  if (named.length) throw new Error(`fieldChecks: ${named.join(', ')} named by both the shape and the same fields.`);
-  const fields = [...Object.keys(shape), ...same.fields];
-  const checkOf = (field: string): FieldCheck<unknown> => (Object.hasOwn(shape, field) ? shape[field] : same.check);
-  return (value, where, refuse) => checkFields(value, where, refuse, { fields, checkOf, others });
+/** The shape of a record whose every field in `fields` takes `check`. */
+export function fieldsHolding<Field extends string, Value>(
+  fields: readonly Field[],
+  check: FieldCheck<Value>,
+): Readonly<Record<Field, FieldCheck<Value>>>;
+// `Object.fromEntries` keys what it builds by `string`; the signature above names the keys it holds, exactly `fields`.
+export function fieldsHolding<Value>(fields: readonly string[], check: FieldCheck<Value>): CheckShape {
+  return Object.freeze(Object.fromEntries(fields.map(field => [field, check])));
 }
 
 /** `check`, or nothing: a field a record may leave out. */

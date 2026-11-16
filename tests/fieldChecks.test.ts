@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
-  OTHER_FIELDS, holdsListOf, holdsNonEmptyString, holdsNumber, holdsOptional, holdsRecord, holdsRecordOf,
-  holdsShapeWithFields, holdsString, holdsStringList, refusalBy, type FieldCheck,
-} from '../scripts/fieldChecks.ts';
+  OTHER_FIELDS, fieldsHolding, holdsListOf, holdsNonEmptyString, holdsNumber, holdsOptional, holdsRecord,
+  holdsRecordOf, holdsShape, holdsString, holdsStringList, refusalBy, type FieldCheck,
+} from '../scripts/build/fieldChecks.ts';
 
 const refuse = refusalBy(reason => {
   throw new Error(reason);
@@ -41,15 +41,12 @@ describe('a field check', () => {
     assert.throws(() => read(holdsOptional(holdsString), 5), new Error(`${WHERE} must be a string`));
   });
 
-  it('checks a shape\'s fields and the same fields in one walk, refusing a field the two both name', () => {
-    const check = holdsShapeWithFields({ name: holdsString }, { fields: ['a', 'b'], check: holdsNumber },
-      OTHER_FIELDS.refused);
+  it('checks a shape\'s fields, those of one check among them, in one walk', () => {
+    const check = holdsShape({ name: holdsString, ...fieldsHolding(['a', 'b'], holdsNumber) }, OTHER_FIELDS.refused);
     read(check, { name: 'n', a: 1, b: 2 });
     assert.throws(() => read(check, { name: 3, a: 1, b: 2 }), new Error(`${WHERE}.name must be a string`));
     assert.throws(() => read(check, { name: 'n', a: 1, b: 'c' }), new Error(`${WHERE}.b must be a number`));
     assert.throws(() => read(check, { name: 'n', a: 1, b: 2, c: 3 }),
       new Error(`${WHERE} holds c; it takes name, a, b`));
-    assert.throws(() => holdsShapeWithFields({ a: holdsString }, { fields: ['a'], check: holdsNumber },
-      OTHER_FIELDS.refused), /a named by both the shape and the same fields/);
   });
 });

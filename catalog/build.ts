@@ -3,8 +3,7 @@ import { execFileSync } from 'node:child_process';
 import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { entryAt, fieldAt } from '../scripts/fieldChecks.ts';
-import { SOURCE_KEYS, parseKindsFile, type SourceKey } from './kindsFile.ts';
+import { SOURCE_KEYS, kindListAt, parseKindsFile, type SourceKey } from './kindsFile.ts';
 import { scan } from './scan.ts';
 
 // The slowbro-sports revision the catalog's sources came from; README's route archives them from this checkout.
@@ -39,7 +38,7 @@ const missing: string[] = [];
 for (const [kind, row] of Object.entries(kinds)) {
   for (const src of SOURCE_KEYS) {
     for (const name of row[src] ?? []) {
-      if (!sets[src].has(name)) missing.push(`${fieldAt(entryAt('kinds', kind), src)}: ${name}`);
+      if (!sets[src].has(name)) missing.push(`${kindListAt(kind, src)}: ${name}`);
     }
   }
 }

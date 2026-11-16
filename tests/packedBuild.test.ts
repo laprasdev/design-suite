@@ -7,7 +7,7 @@ import { describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import {
   OTHER_FIELDS, holdsListOf, holdsNonEmptyString, holdsShape, refusalBy, type FieldCheck,
-} from '../scripts/fieldChecks.ts';
+} from '../scripts/build/fieldChecks.ts';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 /** The folder npm extracts a packed package into. */
@@ -30,7 +30,7 @@ describe('the packed package', () => {
       const shipped = path.join(scratch, PACKAGE_FOLDER);
       // The build's own tools come from this checkout's install; every file it imports must come from the pack.
       symlinkSync(path.join(ROOT, 'node_modules'), path.join(shipped, 'node_modules'));
-      const built = execFileSync(process.execPath, ['scripts/build.ts'], {
+      const built = execFileSync('npm', ['run', 'build'], {
         cwd: shipped, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'],
       });
       assert.match(built, /^Built @looms\/bloom-design@.+: \d+ public entrypoints\.$/m);

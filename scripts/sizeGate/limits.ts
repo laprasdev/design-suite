@@ -1,7 +1,7 @@
 // The size rules this repo and the web synth hold their code to.
 import {
   OTHER_FIELDS, holdsListOf, holdsRecordOf, holdsShape, holdsString, holdsStringList, type FieldCheck, type ShapeOf,
-} from '../fieldChecks.ts';
+} from '../build/fieldChecks.ts';
 import { holdsNumbers } from '../baseline/baselinedFiles.ts';
 
 export const FILE_LINE_LIMIT = 200;

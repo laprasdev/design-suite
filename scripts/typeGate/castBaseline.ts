@@ -3,7 +3,7 @@
 // (scripts/baseline/baselinedFiles.ts): the type gate refuses a file that holds more, and writes the lower numbers.
 import { readFileSync, writeFileSync } from 'node:fs';
 import ts from '../gateTools/node_modules/typescript/lib/typescript.js';
-import { OTHER_FIELDS, holdsRecordOf, holdsShape, type FieldCheck, type ShapeOf } from '../fieldChecks.ts';
+import { OTHER_FIELDS, holdsRecordOf, holdsShape, type FieldCheck, type ShapeOf } from '../build/fieldChecks.ts';
 import {
   OBJECT, anyRose, baselineRefusal, baselineText, fileEntries, holdsNumbers, jsonBlock, lowest, ratchetedFiles,
   type BaselineRule,

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { describe, it } from 'node:test';
-import { parseKindsFile, type KindRow } from '../catalog/kindsFile.ts';
+import { kindListAt, parseKindsFile, type KindRow } from '../catalog/kindsFile.ts';
 
 const TEXT = readFileSync(new URL('../catalog/kinds.json', import.meta.url), 'utf8');
 const KIND = 'MultiChoice';
@@ -30,5 +30,10 @@ describe('reading kinds.json', () => {
     for (const [text, refusal] of wrong) {
       assert.throws(() => parseKindsFile(text), new Error(`kinds.json: ${refusal}.`));
     }
+  });
+
+  it('names a kind\'s list where its refusal does', () => {
+    assert.throws(() => parseKindsFile(withRow(row => ({ ...row, web: 'Button' }))),
+      new Error(`kinds.json: ${kindListAt(KIND, 'web')} must be a list.`));
   });
 });

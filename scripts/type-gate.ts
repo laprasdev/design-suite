@@ -13,7 +13,7 @@ import { fileURLToPath } from 'node:url';
 import ts from './gateTools/node_modules/typescript/lib/typescript.js';
 import {
   OTHER_FIELDS, holdsRecord, holdsShape, holdsStringList, refusalBy, type FieldCheck, type ShapeOf,
-} from './fieldChecks.ts';
+} from './build/fieldChecks.ts';
 import { repositoryFiles } from './repositoryFiles.ts';
 import { SUITE_BASELINE } from './size-gate.ts';
 import { readBaseline } from './sizeGate/baselineFile.ts';

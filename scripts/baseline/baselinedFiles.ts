@@ -3,8 +3,8 @@
 // gone; scripts/baseline-gate.ts refuses a baseline that rose above the base branch's. The size and cast baselines are
 // both read, lowered and written here. A reader refuses any field a baseline's format does not take, naming it.
 import {
-  OTHER_FIELDS, holdsNumber, holdsShapeWithFields, refusalBy, type FieldCheck, type Refusal,
-} from '../fieldChecks.ts';
+  OTHER_FIELDS, fieldsHolding, holdsNumber, holdsShape, refusalBy, type FieldCheck, type Refusal,
+} from '../build/fieldChecks.ts';
 
 /** One file's numbers, each named. */
 export type FileNumbers = Readonly<Record<string, number>>;
@@ -25,7 +25,7 @@ export interface BaselineRule<Numbers extends FileNumbers, Measured> {
 
 /** A file's numbers in a baseline that records `kinds`: a number for each, and no other field. */
 export const holdsNumbers = <Kind extends string>(kinds: readonly Kind[]): FieldCheck<Readonly<Record<Kind, number>>> =>
-  holdsShapeWithFields({}, { fields: kinds, check: holdsNumber }, OTHER_FIELDS.refused);
+  holdsShape(fieldsHolding(kinds, holdsNumber), OTHER_FIELDS.refused);
 
 /** Each of `kinds` at the lower of the baselined and the measured number. */
 export const lowest = <Kind extends string>(kinds: readonly Kind[]) =>

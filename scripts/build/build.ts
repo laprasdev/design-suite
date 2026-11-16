@@ -1,4 +1,5 @@
-// The manifest owns the public entrypoints. Build only inside this package.
+// The manifest owns the public entrypoints. Build only inside this package. This folder ships with the package
+// (package.json `files`), so the build and every file it imports from scripts/ live in it.
 import { mkdir, readFile, rm } from 'node:fs/promises';
 import { relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -6,7 +7,7 @@ import { build } from 'esbuild';
 import {
   OTHER_FIELDS, entryAt, holdsNonEmptyString, holdsRecord, holdsShape, refusalBy, type FieldCheck, type ShapeOf,
 } from './fieldChecks.ts';
-import { isString } from '../src/valueChecks.ts';
+import { isString } from '../../src/valueChecks.ts';
 
 /** An export that names its source and its built file; an export given as a bare path is a pattern, not built. */
 const EXPORT_TARGET_SHAPE = Object.freeze({ source: holdsNonEmptyString, default: holdsNonEmptyString });
@@ -18,7 +19,7 @@ const refuse = refusalBy(reason => {
   throw new Error(`package.json: ${reason}.`);
 }, 'the manifest');
 
-const root = fileURLToPath(new URL('..', import.meta.url));
+const root = fileURLToPath(new URL('../..', import.meta.url));
 const manifest: unknown = JSON.parse(await readFile(resolve(root, 'package.json'), 'utf8'));
 holdsManifest(manifest, '', refuse);
 const exportEntries = Object.entries(manifest.exports);

@@ -117,13 +117,12 @@
     "dist",
     "src",
     "unity",
-    "scripts/build.ts",
-    "scripts/fieldChecks.ts",
+    "scripts/build",
     "README.md",
     "examples"
   ],
   "scripts": {
-    "build": "node scripts/build.ts",
+    "build": "node scripts/build/build.ts",
     "prepare": "npm run build",
     "check": "npm run gate-tools && tsc -p . && npm run check:types && node scripts/size-gate.ts && npm run check:baselines && npm run check:cycles && npm run check:duplication",
     "check:types": "node scripts/type-gate.ts",
