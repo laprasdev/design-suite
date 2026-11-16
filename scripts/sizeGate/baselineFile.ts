@@ -1,7 +1,7 @@
 // The size gate's baseline: what it covers, the numbers of each file over a limit, and the allowances granted.
 // The numbers only fall, except through an allowance that a step records for import lines its split added.
 import { readFileSync, writeFileSync } from 'node:fs';
-import { isRecord } from '../../src/valueChecks.ts';
+import { isRecord, isStringList } from '../../src/valueChecks.ts';
 import { withinLimits } from './compare.ts';
 import {
   FILE_LINE_LIMIT,
@@ -12,8 +12,6 @@ import {
 const numbersOf = ({ lines, longLines, importLines }: BaselineNumbers): BaselineNumbers =>
   ({ lines, longLines, importLines });
 
-const isStringList = (value: unknown): value is string[] =>
-  Array.isArray(value) && value.every(entry => typeof entry === 'string');
 
 const isNumbers = (value: unknown): value is BaselineNumbers =>
   isRecord(value) && typeof value.lines === 'number' && typeof value.longLines === 'number'

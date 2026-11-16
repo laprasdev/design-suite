@@ -3,7 +3,7 @@ import { execFileSync } from 'node:child_process';
 import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { isRecord } from '../src/valueChecks.ts';
+import { isRecord, isStringList } from '../src/valueChecks.ts';
 import { scan } from './scan.ts';
 
 type SourceKey = 'unity' | 'web' | 'kit' | 'core' | 'skinForms' | 'containerForms';
@@ -23,7 +23,7 @@ const SOURCE_KEYS: readonly SourceKey[] = ['unity', 'web', 'kit', 'core', 'skinF
 
 function readStringList(value: unknown, where: string): readonly string[] | undefined {
   if (value === undefined) return undefined;
-  if (!Array.isArray(value) || !value.every((item): item is string => typeof item === 'string')) {
+  if (!isStringList(value)) {
     throw new Error(`kinds.json: ${where} must be a list of strings.`);
   }
   return value;
@@ -64,8 +64,8 @@ const here = fileURLToPath(new URL('.', import.meta.url));
 const inv = await scan();
 const { rows: kinds, rawKinds } = readKinds(JSON.parse(await readFile(path.join(here, 'kinds.json'), 'utf8')));
 const unityEnums = inv.unity.enums;
-const widgetDisplay = unityEnums.WidgetDisplayGuiComponent ?? [];
-const moduleTypes = unityEnums.SynthModuleType ?? [];
+const widgetDisplay = unityEnums.WidgetDisplayGuiComponent;
+const moduleTypes = unityEnums.SynthModuleType;
 const sets: Record<SourceKey, Set<string>> = {
   unity: new Set([...widgetDisplay, ...moduleTypes, ...Object.values(unityEnums).flat()]),
   web: new Set([...inv.web.components, ...inv.web.composed]),
@@ -109,7 +109,7 @@ const out = {
     tsOnly: inv.web.composableFields.filter(field => !inv.unity.styleFields.includes(field)),
   },
   skins: inv.unity.skins,
-  interactionStatus: unityEnums.WidgetInteractionStatus ?? [],
+  interactionStatus: unityEnums.WidgetInteractionStatus,
   unmapped,
   inventory: inv,
 };

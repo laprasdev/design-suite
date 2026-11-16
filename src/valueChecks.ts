@@ -6,3 +6,6 @@ export const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
 /** Whether a value is a non-empty string, the form of an id or a name. */
 export const isNonEmptyString = (value: unknown): value is string => typeof value === 'string' && value.length > 0;
+/** Whether a value is a list whose every entry is a string. */
+export const isStringList = (value: unknown): value is string[] =>
+  Array.isArray(value) && value.every(entry => typeof entry === 'string');

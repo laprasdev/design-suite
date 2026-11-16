@@ -12,9 +12,13 @@ export interface SkinSummary {
   readonly components: string[];
 }
 
+/** The enums the catalog reads by name; the scan refuses a widget source that declares any of them no longer. */
+export const CATALOG_ENUMS = ['WidgetDisplayGuiComponent', 'SynthModuleType', 'WidgetInteractionStatus'] as const;
+export type UnityEnums = Readonly<Record<string, string[]> & Record<typeof CATALOG_ENUMS[number], string[]>>;
+
 export interface ScanInventory {
   readonly unity: {
-    readonly enums: Record<string, string[]>;
+    readonly enums: UnityEnums;
     readonly styleFields: string[];
     readonly skins: Record<string, SkinSummary>;
     readonly baseForms: { readonly keys: string[]; readonly containers: string[]; readonly components: string[] };
@@ -56,7 +60,10 @@ function parseJsonRecord(text: string, label: string): Record<string, unknown> {
   return parsed;
 }
 
-function enums(src: string): Record<string, string[]> {
+const declaresCatalogEnums = (found: Record<string, string[]>): found is UnityEnums =>
+  CATALOG_ENUMS.every(name => Object.hasOwn(found, name));
+
+function enums(src: string, file: string): UnityEnums {
   const code = src.replace(/\/\/.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, '');
   const out: Record<string, string[]> = {};
   for (const match of code.matchAll(/enum\s+(\w+)\s*\{/g)) {
@@ -75,6 +82,10 @@ function enums(src: string): Record<string, string[]> {
       .split(',')
       .map(item => item.trim().split(/\s*=/)[0].trim())
       .filter(item => /^[A-Z]\w*$/.test(item));
+  }
+  if (!declaresCatalogEnums(out)) {
+    const missing = CATALOG_ENUMS.filter(name => !Object.hasOwn(out, name));
+    throw new Error(`scan: ${file} declares no enum ${missing.join(', ')}, which the catalog reads.`);
   }
   return out;
 }
@@ -157,7 +168,7 @@ export async function scan(): Promise<ScanInventory> {
   const coreFiles = await list(`${BB}/src/core/views`, /^[A-Z].*\.(tsx|jsx)$/).catch((): string[] => []);
   return {
     unity: {
-      enums: enums(widget),
+      enums: enums(widget, widgetPath),
       styleFields: [...style.matchAll(/^\s*public\s+[\w.<>,?[\] ]+?\s+(\w+);/gm)].map(match => match[1]),
       skins,
       baseForms: {
@@ -183,6 +194,6 @@ export async function scan(): Promise<ScanInventory> {
   };
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (import.meta.main) {
   console.log(JSON.stringify(await scan(), null, 1));
 }
