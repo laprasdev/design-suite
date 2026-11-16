@@ -90,7 +90,7 @@ test(`at ${PHONE_VIEWPORT.width}px, a PageFooter's action is its min width, wide
   return {width:node.getBoundingClientRect().width,content:text.getBoundingClientRect().width
    +parseFloat(style.paddingLeft)+parseFloat(style.paddingRight)+parseFloat(style.borderLeftWidth)};
  });
- assert.ok(content<expected,'the label, not the min width, sets the action\'s width');
+ assert.ok(content<expected,`the label, ${content} wide, not the min width, ${expected}, sets the action's width`);
  assert.ok(Math.abs(width-expected)<LAYOUT_UNIT,`${width} is not ${expected}`);
 });
 test('a PageFooter\'s action pads its block end, not its start, to the bottom safe area',async()=>{
