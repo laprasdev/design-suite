@@ -1,4 +1,5 @@
 /* All @looms/bloom-design/react styles. Import once in the host app. */
+@import "./fonts.css";
 @import "./nodegraph.css";
 @import "./widgets.css";
 @import "./portraits-modal.css";

@@ -56,6 +56,8 @@ import '@looms/bloom-design/react/styles.css';
 
 `createTheme` returns data without touching the document, and `applyTheme` writes it to CSS variables. `src/synth` holds the web synth's controls, which read their colors through `StyleProvider`.
 
+The stylesheet declares every face once, at `FONT_ROUTE` (`/fonts/`): `FONT_FILES` in `src/fonts.ts` lists each file, and `npm run fonts` writes `src/react/fonts.css` from it. A host serves each file on that route: the ones the suite holds from `@looms/bloom-design/fonts/*` (Inter, the reading face, under `OFL.txt`), and SF Pro, the chrome face, from the private engine repository, since this repository is public. A host that bundles the stylesheet with esbuild passes `FONT_ROUTE_FILES` as `external`.
+
 Inside a suite application root (`ApplicationElement.ROOT`), the stylesheet draws every `code` and `pre`, in `src/react/foundation.css`: one skin for a chip and a block, from the theme variables the host applies there (`codeWash`, line, small radius and code type). A page outside a root keeps its own code. A chip keeps its own case, tracking and weight inside a head, and takes the weight of a `strong` around it. A host places code and may map its colour to a state token, as Workbench dims a source path, but never changes its skin: Workbench's `check:styles` refuses a local wash, border, radius, face, weight, tracking or case on `code` or `pre`.
 
 ## Entrypoints
@@ -64,6 +66,8 @@ Inside a suite application root (`ApplicationElement.ROOT`), the stylesheet draw
 | --- | --- |
 | `@looms/bloom-design` | Tokens, layout constants, colors and `createTheme`; no React |
 | `/tokens`, `/layout`, `/color`, `/theme`, `/skins` | Focused framework-independent APIs |
+| `/fonts` | The font route, families and the files each host serves there |
+| `/fonts/*` | The font files the suite holds, with their licence |
 | `/react` | Composed controls: bars, segmented controls, dialogs, portraits, node graphs and the shared kinds |
 | `/modal-room` | Dialog growth and measurement contract |
 | `/modal-input-check` | The source check that refuses a consumer declaring a `Modal`'s own properties |

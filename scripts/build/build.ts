@@ -1,13 +1,17 @@
 // The manifest owns the public entrypoints. Build only inside this package. This folder ships with the package
 // (package.json `files`), so the build and every file it imports from scripts/ live in it.
-import { mkdir, readFile, rm } from 'node:fs/promises';
-import { relative, resolve } from 'node:path';
+import { cp, mkdir, readFile, rm } from 'node:fs/promises';
+import { dirname, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { build } from 'esbuild';
 import {
   OTHER_FIELDS, entryAt, holdsNonEmptyString, holdsRecord, holdsShape, refusalBy, type FieldCheck, type ShapeOf,
 } from './fieldChecks.ts';
 import { isString } from '../../src/valueChecks.ts';
+import { FONT_ROUTE_FILES } from '../../src/fonts.ts';
+
+/** An export whose source ends so is a folder of files shipped as they are, such as the font files. */
+const FOLDER_PATTERN = '/*';
 
 /** An export that names its source and its built file; an export given as a bare path is a pattern, not built. */
 const EXPORT_TARGET_SHAPE = Object.freeze({ source: holdsNonEmptyString, default: holdsNonEmptyString });
@@ -56,7 +60,11 @@ for (const entry of targets.filter(item => item.source.endsWith('.css'))) {
     entryPoints: [resolve(root, entry.source)],
     outfile: resolve(root, entry.default),
     bundle: true,
+    external: [FONT_ROUTE_FILES],
     logLevel: 'warning',
   });
+}
+for (const entry of targets.filter(item => item.source.endsWith(FOLDER_PATTERN))) {
+  await cp(resolve(root, dirname(entry.source)), resolve(root, dirname(entry.default)), { recursive: true });
 }
 console.log(`Built ${manifest.name}@${manifest.version}: ${exportEntries.length} public entrypoints.`);
