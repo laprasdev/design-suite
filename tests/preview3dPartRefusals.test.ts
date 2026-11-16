@@ -11,15 +11,13 @@ import type {ModelActor} from '../src/react/preview3d/actor.ts';
 import {createModelLighting} from '../src/react/preview3d/lighting.ts';
 import {modelStageBuiltInTimes} from '../src/react/preview3d/builtInTimes.ts';
 import {createModelStage} from '../src/react/preview3d/stage.ts';
-import {NO_FILES, describing} from './preview3dActorFixture.ts';
+import {NO_FILES, THEME, describing} from './preview3dActorFixture.ts';
 import {modelStageDescription} from '../src/react/preview3d/descriptionModel.ts';
 import {createModelFog} from '../src/react/preview3d/fog.ts';
 import {ModelStageRefusal} from '../src/react/preview3d/refusal.ts';
 
 const refused = (run: () => unknown, pattern: RegExp) =>
   assert.throws(run, (error: unknown) => error instanceof ModelStageRefusal && pattern.test(error.message));
-const theme = {colors: {stage: '#000000', text: '#ffffff', surface: '#111111', surfaceHi: '#222222',
-  accent: '#ff0000', accentDeep: '#880000', teal: '#00ffff'}};
 
 test('environment.ts: an invalid update is a refusal and moves no box', () => {
   const value = {reflectZ: false, plane: null, boxes: [{id: 'box', position: [1, 2, 3], size: [1, 1, 1],
@@ -58,7 +56,7 @@ test('stageParts.ts: a Surface mode an actor cannot show is a refusal and leaves
 });
 
 test('lightingModel.ts: an unknown time is a refusal and leaves the light', () => {
-  const lighting = createModelLighting(modelStageBuiltInTimes(theme.colors),
+  const lighting = createModelLighting(modelStageBuiltInTimes(THEME.colors),
     {fog: createModelFog(new THREE.Scene()), output: {load: () => [], prepare: () => () => undefined},
       shared: {setLook: () => undefined}});
   const before = lighting.lights[0].intensity;
@@ -70,7 +68,7 @@ test('stage.ts: a theme the stage refuses is refused before any renderer, canvas
   // In node there is no WebGL: anything that reached the renderer would fail with another error than this refusal.
   const host = {append: () => assert.fail('nothing is added to the host')} as unknown as HTMLElement;
   const options = {reviewKey: 'review', clock: 'local', floor: true, grid: true, kinds: []} as const;
-  const short = {colors: {...theme.colors, surface: '#fff'}};
+  const short = {colors: {...THEME.colors, surface: '#fff'}};
   refused(() => createModelStage(host, modelStageDescription(describing()), short, () => undefined, () => undefined,
     options), /The stage theme's surface must be a #rrggbb colour; it is #fff/);
 });

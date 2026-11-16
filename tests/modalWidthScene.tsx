@@ -2,12 +2,10 @@
 // and contained Modals in positioned parents: filling one inside either inset on a page surface, filling one outside
 // any page surface, and placing one past the page's inset and one within it.
 import type {CSSProperties,ReactNode} from 'react';
-import {createRoot} from 'react-dom/client';
 import {Modal,ModalRow} from '../src/react/index.ts';
 import {ModalFrameInset,ModalPlacement,ModalWidth} from '../src/react/modalElements.ts';
-import {applyTheme,createTheme} from '../src/theme.ts';
 import {CASE_ATTRIBUTE,CONTAINED_PARENT,ModalCase,VIEWPORT_WIDTHS} from './modalWidthCases.ts';
-import '../src/react/styles.css';
+import {renderScene} from './renderScene.tsx';
 
 const {widthPx,heightPx,pageInsetPx,pageGutterPx,topPx,topInInsetPx}=CONTAINED_PARENT;
 const PASSAGE='A passage long enough to reach each width a Modal names before it wraps onto another line of text.';
@@ -21,10 +19,7 @@ const Parent=({name,page,children}: {name: string;page: CSSProperties;children: 
  {children}
 </div>;
 
-const root=document.getElementById('root');
-if(!root)throw new Error('The width scene renders into #root, which its page lacks.');
-applyTheme(createTheme());
-createRoot(root).render(<>
+renderScene(<>
  {VIEWPORT_WIDTHS.map(width=><Case key={width} name={width}><Modal open width={width}>{PASSAGE}</Modal></Case>)}
  <Case name={ModalCase.PLAIN}><Modal open>{PASSAGE}</Modal></Case>
  <Case name={ModalCase.TITLED}><Modal open title="Titled"><ModalRow>{PASSAGE}</ModalRow></Modal></Case>

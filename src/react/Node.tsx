@@ -3,6 +3,7 @@
 // consumer supplies position, size, an optional accent flag, and any content.
 // =====================================================
 import React, { type CSSProperties, type HTMLAttributes, type ReactNode } from "react";
+import { NodeGraphElement } from "./nodeGraphElements.ts";
 
 export interface NodeProps extends Omit<HTMLAttributes<HTMLDivElement>, "style" | "className" | "children"> {
   x: number;
@@ -18,7 +19,8 @@ export interface NodeProps extends Omit<HTMLAttributes<HTMLDivElement>, "style" 
 export function Node({ x, y, w, h, accent = false, className = "", style, children, ...rest }: NodeProps) {
   return (
     <div
-      className={`bd-node${accent ? " bd-node--accent" : ""}${className ? " " + className : ""}`}
+      className={[NodeGraphElement.NODE.className, accent && NodeGraphElement.NODE_ACCENT.className, className]
+        .filter(Boolean).join(" ")}
       style={{ position: "absolute", left: x, top: y, width: w, height: h, ...style }}
       {...rest}
     >

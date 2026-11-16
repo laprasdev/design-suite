@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type RefObject } from "react";
 import { useEscapeCancel } from "./controlCancel.ts";
 import { KeyMoment } from "./pageKeys.ts";
 import { nearestGroupOutlet } from "./groupOutlets.ts";
+import { NodeGraphElement } from "./nodeGraphElements.ts";
 import { isPanKeyHeld } from "./panKey.ts";
 import { useDragSession } from "./useDragSession.ts";
 import { snapTie } from "./wireGeometry.ts";
@@ -62,12 +63,12 @@ export function useWireGestures(
     const start = (event: PointerEvent) => {
       suppressClick.current = false;
       if (!onChange || !event.shiftKey || isPanKeyHeld() || event.button !== 0 ||
-        (event.target as Element).closest(`.bd-node,[${GRAPH_NODE_ATTRIBUTE}],button`)) return;
+        (event.target as Element).closest(`${NodeGraphElement.NODE.selector},[${GRAPH_NODE_ATTRIBUTE}],button`)) return;
       event.preventDefault(); event.stopImmediatePropagation();
       element.setPointerCapture(event.pointerId);
       const at = point(event);
       begin({ kind: "collect", pointer: event.pointerId, capture: element, start: at, before: ties,
-        hit: (event.target as Element).closest<SVGElement>(".bd-edge-hit")
+        hit: (event.target as Element).closest<SVGElement>(NodeGraphElement.EDGE_HIT.selector)
           ?.getAttribute(GRAPH_WIRE_ATTRIBUTE) ?? undefined,
         screen: { x: event.clientX, y: event.clientY }, moved: false, points: [at],
         wires: sampleWires(element), picked: new Set() });

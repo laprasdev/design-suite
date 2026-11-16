@@ -11,7 +11,7 @@ import {createModelSurfaceMaterials} from '../src/react/preview3d/surfaceMateria
 import {createModelStageSharedValues} from '../src/react/preview3d/sharedValues.ts';
 import {MODEL_ACTOR_ANIMATION, MODEL_ANIMATION_LAYER, MODEL_STAGE_FRAMING, MODEL_STAGE_ORIGIN, MODEL_STAGE_SIZE,
   MODEL_STAGE_THEME_LIGHTING, modelStagePolicy,
-  type ModelStageActor, type ModelStageClock}
+  type ModelStageActor, type ModelStageClock, type ModelStageTheme}
   from '../src/react/preview3d/model.ts';
 
 export const BONE = 'tip';
@@ -42,12 +42,14 @@ export function actorAsset(clips: readonly ClipSpec[], skeleton = true) {
   return {asset: {scene, animations} as unknown as GLTF, bone, body};
 }
 
+export const THEME: ModelStageTheme = Object.freeze({colors: Object.freeze({stage: '#000000', text: '#ffffff',
+  surface: '#111111', surfaceHi: '#222222', accent: '#ff0000', accentDeep: '#880000', teal: '#00ffff'})});
+
 export function actorContext(clock: ModelStageClock = 'external') {
   const scene = new THREE.Scene(), modes = createModelSurfaceModes();
   const context: ModelActorContext = {
     policy: modelStagePolicy({reviewKey: 'review', clock, floor: false, grid: false, kinds: []}), scene,
-    theme: {colors: {stage: '#000', text: '#fff', surface: '#111', surfaceHi: '#222', accent: '#f00',
-      accentDeep: '#800', teal: '#0ff'}},
+    theme: THEME,
     lighting: {attach: () => () => undefined},
     changes: modelStageChanges(createModelFog(scene).change, modes), surfaceModes: modes,
     surfaces: {materials: createModelSurfaceMaterials({kinds: new Map(), read: () => Promise.reject(new Error('none')),

@@ -1,4 +1,5 @@
 import {Button} from '../Button.tsx';
+import {ThemeMoonElement} from './themeMoonElements.ts';
 import {SegmentedControl, ICON_SEGMENT_VARIANT} from '../SegmentedControl.tsx';
 import {KeyMoment, PageKey, onPageKey} from '../pageKeys.ts';
 // The theme, behind the moon crossing the header's sky. The moon is tonight's: its real phase, lit on the side the sun
@@ -33,9 +34,9 @@ function Swatch({skin}: {skin: PaletteChoice}) {
 const DISC = { cx: 10, cy: 10, r: 8 };
 // The whole disc faintly, its dark side showing as earthshine, and the lit part over it.
 const Moon = ({phase}: {phase: ReturnType<typeof lunarPhase>}) => (
-  <svg className="theme-moon-face" viewBox="0 0 20 20" aria-hidden="true">
-    <circle className="theme-moon-dark" cx={DISC.cx} cy={DISC.cy} r={DISC.r} />
-    <path className="theme-moon-lit" d={litPath(phase, DISC)} />
+  <svg className={ThemeMoonElement.FACE.className} viewBox="0 0 20 20" aria-hidden="true">
+    <circle className={ThemeMoonElement.DARK.className} cx={DISC.cx} cy={DISC.cy} r={DISC.r} />
+    <path className={ThemeMoonElement.LIT.className} d={litPath(phase, DISC)} />
   </svg>
 );
 
@@ -82,15 +83,17 @@ export function ThemeMoon({skins, skin, onSkin, fan, onOpen}: ThemeMoonProps) {
     };
   }, [open]);
   return (
-    <div className="theme-moon" ref={root} data-open={open || undefined}>
-      <div className="theme-swatches" data-side={side} ref={node => {if (node) node.inert = !open;}}>
+    <div className={ThemeMoonElement.ROOT.className} ref={root} data-open={open || undefined}>
+      <div className={ThemeMoonElement.SWATCHES.className} data-side={side}
+        ref={node => {if (node) node.inert = !open;}}>
         <SegmentedControl ariaLabel="Theme" value={skin} onChange={onSkin} variant={ICON_SEGMENT_VARIANT} iconOnly
           cell="var(--swatch-size)"
           options={skins.map((choice, index) => ({value: choice.id, ariaLabel: choice.id, title: choice.id,
-            className: 'theme-swatch', style: {'--swatch-index': index}, label: <Swatch skin={choice}/>}))}/>
+            className: ThemeMoonElement.SWATCH.className, style: {'--swatch-index': index},
+            label: <Swatch skin={choice}/>}))}/>
       </div>
       <Button variant="subtle"
-        type="button" className="theme-moon-button" aria-label="Theme" aria-expanded={open}
+        type="button" className={ThemeMoonElement.BUTTON.className} aria-label="Theme" aria-expanded={open}
         title={`${phase.name}, ${Math.round(phase.illuminated * 100)}% lit`} onClick={() => setOpen(x => !x)}
       >
         <Moon phase={phase} />

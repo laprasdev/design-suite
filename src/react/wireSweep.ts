@@ -1,9 +1,10 @@
+import { NodeGraphElement } from "./nodeGraphElements.ts";
 import { GRAPH_WIRE_ATTRIBUTE, type GraphPoint } from "./nodeGraphTypes.ts";
 
 const SAMPLE_STEP = 6, HIT_SLOP = 3;
 export interface SweepWire { id: string; points: GraphPoint[] }
 export function sampleWires(element: Element): SweepWire[] {
-  return [...element.querySelectorAll<SVGPathElement>(".bd-edge-hit")].map(path => {
+  return [...element.querySelectorAll<SVGPathElement>(NodeGraphElement.EDGE_HIT.selector)].map(path => {
     const length = path.getTotalLength(), steps = Math.max(1, Math.ceil(length / SAMPLE_STEP));
     return { id: path.getAttribute(GRAPH_WIRE_ATTRIBUTE)!, points: Array.from({ length: steps + 1 }, (_, i) => {
       const point = path.getPointAtLength(length * i / steps);
