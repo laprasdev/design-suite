@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { describe, it } from 'node:test';
@@ -9,7 +9,7 @@ import {
   OTHER_FIELDS, holdsListOf, holdsNonEmptyString, holdsShape, refusalBy, type FieldCheck,
 } from '../scripts/build/fieldChecks.ts';
 import { FONT_FILES, FONT_HOLDERS } from '../src/fonts.ts';
-import { heldFontsByExport } from './heldFontsByExport.ts';
+import { HELD_FONT_FILES, heldFontsByExport } from './heldFontsByExport.ts';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 /** The folder npm extracts a packed package into. */
@@ -43,7 +43,9 @@ describe('the packed package', () => {
       const host = path.join(scratch, HOST), installed = path.join(host, INSTALLED);
       mkdirSync(path.dirname(installed), { recursive: true });
       symlinkSync(shipped, installed);
-      const read = heldFontsByExport(host, []);
+      const program = path.join(host, path.basename(HELD_FONT_FILES));
+      copyFileSync(HELD_FONT_FILES, program);
+      const read = heldFontsByExport(program, []);
       assert.equal(read.length, FONT_FILES.filter(face => face.holder === FONT_HOLDERS.suite).length);
       const shippedFolder = realpathSync(shipped);
       for (const font of read) {
