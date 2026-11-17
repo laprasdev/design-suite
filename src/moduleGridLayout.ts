@@ -85,8 +85,7 @@ export const ModuleGridDimensions = {
     // A sensor's distance moves in centimetres, the two decimals it reads in, so what's written is what shows.
     sensorDistanceStep: 0.01,
     inputPadding: 4,
-    // A rail of kinds: wide enough for BLEND SHAPES on one line, an icon-over-name row, and the mode line.
+    // A rail of kinds: its width and its mode line. Its rows are group rows (ModuleGroups' GROUP_ROW).
     railWidth: 112,
-    railRowMin: 44,
     railLine: 4,
 } as const;
