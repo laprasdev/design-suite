@@ -79,7 +79,7 @@
 .seg--icons[data-density=compact] .bd-text-selection { filter:none; }
 /* A vertical joined control is a rail: no frame of its own, rows divided by a rule across, sharing its height, scrolling when they would be shorter than their own minimum. A closed rail floats in its space, so a rule also sits above its first row and below its last. */
 .seg--joined[data-orientation=vertical] { flex-wrap:nowrap;border:0;border-radius:0;background:transparent;box-shadow:none; }
-.seg--joined[data-orientation=vertical]>button+button { border-inline-start:0;border-block-start:var(--line-width) solid var(--segment-divider,var(--line)); }
+.seg--joined[data-orientation=vertical]>button+button,.seg--joined[data-orientation=vertical][data-multiple=true]>button:not(:first-of-type) { border-inline-start:0;border-block-start:var(--line-width) solid var(--segment-divider,var(--line)); }
 .seg--joined[data-orientation=vertical][data-closed]>button:first-of-type { border-block-start:var(--line-width) solid var(--segment-divider,var(--line)); }
 .seg--joined[data-orientation=vertical][data-closed]>button:last-of-type { border-block-end:var(--line-width) solid var(--segment-divider,var(--line)); }
 .seg[data-orientation=vertical][data-fit]>button { flex:1 1 0;min-height:0; }
