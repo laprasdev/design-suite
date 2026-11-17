@@ -20,6 +20,8 @@ const held = FONT_FILES.filter(face => face.holder === FONT_HOLDERS.suite);
 const engineHeld = FONT_FILES.filter(face => face.holder === FONT_HOLDERS.engine);
 /** Folder names a path may hold that a URL escapes or ends on. */
 const AWKWARD_FOLDERS = ['/engine', '/engine/', '/engine 100%', '/engine#1?a'] as const;
+/** Checkouts that are not absolute, which the URL path setter would otherwise root at `/`. */
+const RELATIVE_FOLDERS = ['../engine', 'engine', ''] as const;
 
 describe('the font faces', () => {
   it('are the stylesheet `npm run fonts` writes, unchanged', () => {
@@ -40,6 +42,14 @@ describe('the font faces', () => {
       for (const face of engineHeld) {
         const file = fileURLToPath(fontFileUrl(face, checkout));
         assert.ok(file.startsWith(folder) && file.endsWith(`${path.sep}${face.file}`), `${checkout}: ${file}`);
+      }
+    }
+  });
+  it('refuse an engine checkout that is not absolute, naming it', () => {
+    for (const checkout of RELATIVE_FOLDERS) {
+      for (const face of engineHeld) {
+        const refusal = new RegExp(`absolute folder path.*given "${checkout}"`);
+        assert.throws(() => fontFileUrl(face, checkout), { message: refusal });
       }
     }
   });
