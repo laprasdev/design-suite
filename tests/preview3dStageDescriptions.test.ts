@@ -9,7 +9,7 @@ import {modelStagePolicy} from '../src/react/preview3d/model.ts';
 import {modelDrawnMeshCount} from '../src/react/preview3d/asset.ts';
 import {ModelStageRefusal} from '../src/react/preview3d/refusal.ts';
 import {MODEL_STAGE_THEME_LIGHTING} from '../src/react/preview3d/lightingModel.ts';
-import {THEME, declaration, describing, makeActor} from './preview3dActorFixture.ts';
+import {THEME, declaration, describing, makeActor, stageLook} from './preview3dActorFixture.ts';
 import {kindFile, MASK, PULSE, PULSE_PROGRAM, record, RENDERERS} from './preview3dKindFixture.ts';
 
 // A stage's descriptions with everything but WebGL real: its registries, actors and parts. The scene side is a plain
@@ -41,9 +41,7 @@ function stageWith(lightingLoad: () => readonly Promise<void>[] = () => [], refu
   return {descriptions, signals, closed, reads};
 }
 // A look the stage's lighting check takes (a time the fake lighting above refuses by its id).
-const DUSK = {backdrop: [0, 0, 0], key: {color: [1, 1, 1], strength: 1, direction: [0, 1, 0]},
-  ambient: {sky: [1, 1, 1], ground: [0, 0, 0], strength: 1}, shadow: [0, 0, 0], night: 0,
-  aids: {floor: [0, 0, 0], share: 1}, fog: null, toneCurve: null, glow: null};
+const DUSK = stageLook();
 const tinted = () => describing({surfaceSets: {tinted: {[RENDERERS.body]: record(), [RENDERERS.eyes]: {kind: 'file'},
   [RENDERERS.line]: {kind: 'file'}}}, actors: {focus: 'a', actors: [declaration('a', 'otter',
   {surfaces: {from: 'set', set: 'tinted'}})]}});

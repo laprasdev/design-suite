@@ -9,6 +9,7 @@ import {MODEL_STAGE_THEME_LIGHTING, MODEL_STAGE_TIME, modelStageLighting, modelS
   type ModelStageTime} from '../src/react/preview3d/lightingModel.ts';
 import {modelStageBuiltInTimes} from '../src/react/preview3d/builtInTimes.ts';
 import type {ModelStageTheme} from '../src/react/preview3d/model.ts';
+import {stageLook} from './preview3dActorFixture.ts';
 import {shownBytes} from './preview3dToneCurveOracle.ts';
 
 // What Light and Dark set at 62368ac, before the look became data, read from the Three objects themselves. Their
@@ -40,10 +41,10 @@ function fixture() {
   return {lighting, read, scene, outputs, set, shared};
 }
 const at = (time: string, times: readonly unknown[] = []) => ({time, times}) as never;
-const dusk: ModelStageTime = {id: 'dusk', label: 'Dusk', look: {backdrop: [0.2, 0.1, 0.3],
+const dusk: ModelStageTime = {id: 'dusk', label: 'Dusk', look: stageLook({backdrop: [0.2, 0.1, 0.3],
   key: {color: [1, 0.5, 0], strength: 1.5, direction: [-2, 1, 0]},
   ambient: {sky: [0.4, 0.2, 0.5], ground: [0.1, 0, 0.2], strength: 0.75}, shadow: [0.15, 0.1, 0.25], night: 0.5,
-  aids: {floor: [0.3, 0.2, 0.1], share: 0.5}, fog: null, toneCurve: null, glow: null}};
+  aids: {floor: [0.3, 0.2, 0.1], share: 0.5}})};
 
 describe('stage lighting', () => {
   it('draws Light and Dark with exactly the values they had before the look became data, and no fog', () => {

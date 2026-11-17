@@ -2,10 +2,10 @@ import assert from 'node:assert/strict';
 import {describe, it} from 'node:test';
 import * as THREE from 'three';
 import {createModelFog} from '../src/react/preview3d/fog.ts';
-import {modelStageLook, type ModelStageFog, type ModelStageLook} from '../src/react/preview3d/lookModel.ts';
+import {modelStageLook, type ModelStageFog} from '../src/react/preview3d/lookModel.ts';
 import {extendModelMaterial, extendModelMaterials, modelMaterialChanges, type ModelShader, type ModelShaderChange}
   from '../src/react/preview3d/shading.ts';
-import {makeActor} from './preview3dActorFixture.ts';
+import {makeActor, stageLook} from './preview3dActorFixture.ts';
 
 const FOG: ModelStageFog = {near: {distance: 8, color: [0.22, 0.14, 0.24]},
   far: {distance: 30, color: [0.15, 0.12, 0.24]}, height: {base: 0, top: 2, strength: 0.6}};
@@ -116,9 +116,7 @@ describe('the stage\'s fog', () => {
   });
 
   it('refuses a fog whose distances or height cannot be drawn, by its path', () => {
-    const look = (fog: unknown) => ({backdrop: [0, 0, 0], key: {color: [1, 1, 1], strength: 1, direction: [0, 1, 0]},
-      ambient: {sky: [1, 1, 1], ground: [0, 0, 0], strength: 1}, shadow: [0, 0, 0], night: 0,
-      aids: {floor: [0, 0, 0], share: 1}, fog, toneCurve: null, glow: null}) as unknown as ModelStageLook;
+    const look = (fog: unknown) => ({...stageLook(), fog});
     assert.equal(modelStageLook(look(null), 'L').fog, null);
     assert.deepEqual(modelStageLook(look(FOG), 'L').fog, FOG);
     assert.throws(() => modelStageLook(look({...FOG, near: {...FOG.near, distance: 0}}), 'L'),
@@ -136,9 +134,7 @@ describe('the stage\'s fog', () => {
 
   it('takes a glow as data, refusing what is not a glow: below 0, not finite, or a spread outside 0 to 1', () => {
     const glow = {threshold: 0.2, strength: 3, radius: 0};
-    const look = (value: unknown) => ({...modelStageLook({backdrop: [0, 0, 0], key: {color: [1, 1, 1], strength: 1,
-      direction: [0, 1, 0]}, ambient: {sky: [1, 1, 1], ground: [0, 0, 0], strength: 1}, shadow: [0, 0, 0], night: 0,
-    aids: {floor: [0, 0, 0], share: 1}, fog: null, toneCurve: null, glow: null}, 'L'), glow: value});
+    const look = (value: unknown) => ({...modelStageLook(stageLook(), 'L'), glow: value});
     assert.deepEqual(modelStageLook(look(glow), 'L').glow, glow);
     assert.throws(() => modelStageLook(look({...glow, threshold: -1}), 'L'), /L.glow.threshold must be a finite/);
     assert.throws(() => modelStageLook(look({...glow, strength: Infinity}), 'L'), /L.glow.strength must be a finite/);
