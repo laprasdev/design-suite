@@ -53,7 +53,7 @@ interface SegmentedBase<V extends SegmentValue> extends Pictured<V> {
   density?: string;
   tabs?: boolean;
   orientation?: 'horizontal'|'vertical';
-  /** A vertical rail floating in its space: it keeps the control's frame on all four sides. */
+  /** A vertical rail floating in its space: a rule above its first row and below its last. */
   closed?: boolean;
   /** Square cells, sized in pixels or by a CSS token, with no padding. */
   cell?: number | `var(--${string})`;

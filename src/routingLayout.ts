@@ -38,8 +38,6 @@ export const RoutingDimensions = {
   menuWidth: 233,
   menuOffset: 8,
   panCueSize: 21,
-  panCueIcon: 14,
-  panStep: 0.8,
   moveSlack: 3,
   // How far the canvas zooms, out to 1/φ² and in to φ, and how many wheel pixels zoom it by φ. A trackpad's pinch
   // is a wheel with Control held.
