@@ -4,8 +4,8 @@ import {containerCSS, type HciDataComposable} from './synth/design/Composable.ts
 import {Borders} from './tokens.ts';
 import {D} from './synth/design/index.ts';
 import type {ComponentSkin} from './skinAssignments.ts';
-import {skinForm} from './skinForms.ts';
-import {ContainerForm, containerFormOf, SkinKind, type ContainerFormValue} from './skinKinds.ts';
+import {skinFormOrDefault} from './skinForms.ts';
+import {ContainerForm, containerFormOf, SkinDefault, type ContainerFormValue} from './skinKinds.ts';
 
 const cutoutOf = (style: StyleTheme) => {
   const cutout = style.containers?.cutout;
@@ -30,9 +30,6 @@ export function skinContainerCSS(style: StyleTheme, form: ContainerFormValue): C
     borderRightWidth: surface.borderRightWidth ?? width, borderBottomWidth: surface.borderBottomWidth ?? width,
     borderLeftWidth: surface.borderLeftWidth ?? width};
 }
-/** The module frame under a style and skin: the skin's form, or the page's own frame where it names none. */
-export const skinFrameCSS = (style: StyleTheme, skin: ComponentSkin | undefined): CSSProperties => {
-  const form = skinForm(skin, SkinKind.CONTAINER);
-  return form ? skinContainerCSS(style, containerFormOf(form)) : {background: style.cutoutBackground,
-    border: `${Borders.standard.width}px solid ${style.cutoutBorder}`, borderRadius: D.radius.cutout};
-};
+/** The module frame under a style and skin: the skin's container form, or the cutout where it names none. */
+export const skinFrameCSS = (style: StyleTheme, skin: ComponentSkin | undefined): CSSProperties =>
+  skinContainerCSS(style, containerFormOf(skinFormOrDefault(skin, SkinDefault.CONTAINER)));
