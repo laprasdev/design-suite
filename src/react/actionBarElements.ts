@@ -2,6 +2,10 @@ import {element} from './elementContract.ts';
 import {barSlotsWithin} from './barElements.ts';
 export const ActionBarElement=element('action-bar');
 export const ActionBarSlotElement=Object.freeze(barSlotsWithin(ActionBarElement));
+/** How a notice, or the control a failure marks, reads: something went wrong, or only something to know. */
+export type NoticeTone='error'|'info';
+// The glyph that says a notice's tone, in the notice or on what a failure marks.
+export const NoticeIconElement=element('notice-icon');
 // The notice and the detail beside its message.
 export const ActionNoticeElement=Object.freeze({
  ROOT:element('action-bar-notice'),DETAIL:element('action-bar-notice-detail'),
