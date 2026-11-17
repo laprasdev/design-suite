@@ -174,11 +174,10 @@ export const LayoutDimensions = {
     moduleColumns: 2
   },
 
-  // The synth's page shell: the screen it's drawn for, and how it fits smaller ones
+  // The synth's page shell: the screen it's drawn for
   pageShell: {
     stageWidth: 1920,
     stageHeight: 1080,
-    stageZoomMin: 0.8,
     tileGutter: 3,
     moduleWidth: 320,
     moduleHeight: 194,
