@@ -1,7 +1,6 @@
 import React from 'react';
 import {designTokens} from '../skins.ts';
 import {PHI} from '../layout.ts';
-import {Typography} from '../tokens.ts';
 
 const G = designTokens.controllerGeometry, C = designTokens.controllerControls;
 type Paint = React.SVGAttributes<SVGElement>;
@@ -59,24 +58,13 @@ export function controllerControlPosition(control: string): readonly [number, nu
   }
   return [x, y];
 }
-const NAMES: Record<string, string> = {LeftTrigger: 'LT', RightTrigger: 'RT', LeftBumper: 'LB',
-  RightBumper: 'RB', MoveJoystickPress: 'LS', CameraJoystickPress: 'RS'};
-
-/** Glyphs describe physical controls; gesture bindings remain with the application. */
+/** Glyphs describe physical controls; gesture bindings remain with the application. Only a direction has one, its
+ *  arrow: every other control reads from its drawn shape, and the consumer names it in its hover hint. */
 export function ControllerGlyph({control, color}: {control: string; color: string}) {
-  const [x, y] = controllerControlPosition(control), shoulder = /Trigger|Bumper/.test(control);
-  const band = control.endsWith('Trigger') ? TRIGGER_BAND : SHOULDER_BAND;
-  if (control in ARROWS) {
-    const r = G.metaRadius / 2;
-    return <path data-controller-glyph={control} d={`M ${-r},${r / 2} L 0,${-r} L ${r},${r / 2} Z`}
-      transform={`translate(${x} ${y}) rotate(${ARROWS[control]})`} fill={color} pointerEvents="none"/>;
-  }
-  if (!NAMES[control]) return null;
-  return <text className="bd-label" data-controller-glyph={control} x={x} y={shoulder ? y - band / 2 : y}
-    dominantBaseline="central" textAnchor="middle"
-    fill={color} fontWeight={Typography.title.fontWeight}
-    fontSize={shoulder ? G.bumperHeight : G.faceRadius}
-    pointerEvents="none">{NAMES[control]}</text>;
+  if (!(control in ARROWS)) return null;
+  const [x, y] = controllerControlPosition(control), r = G.metaRadius / 2;
+  return <path data-controller-glyph={control} d={`M ${-r},${r / 2} L 0,${-r} L ${r},${r / 2} Z`}
+    transform={`translate(${x} ${y}) rotate(${ARROWS[control]})`} fill={color} pointerEvents="none"/>;
 }
 
 /** A single perimeter avoids the overlapping seams of the former two rectangles. */
