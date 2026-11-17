@@ -38,7 +38,7 @@ export const Typography = {
     letterSpacing: '0.05em'
   },
   title: {
-    fontSize: 12,
+    fontSize: MODULE_TEXT_SIZE,
     fontWeight: 700,
     letterSpacing: '0.1em'
   },

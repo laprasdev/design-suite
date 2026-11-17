@@ -31,6 +31,9 @@ export const TOOLBAR_LABEL: React.CSSProperties = {
   cursor: 'pointer', userSelect: 'none',
 };
 
+/** A module's or a section's title: the one heading, at a module's text size, apart from a name by weight and case. */
+export const MODULE_TITLE: React.CSSProperties = { ...Typography.title, textTransform: 'uppercase' };
+
 // Constants - eliminates magic strings
 export * from './constants/index.ts';
 
