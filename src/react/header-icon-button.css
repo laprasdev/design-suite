@@ -3,6 +3,10 @@
 .app-root .header-icon-button { --header-control-radius:9px;display:inline-flex;align-items:center;justify-content:center;flex:none;width:var(--header-control);height:var(--header-control);padding:var(--header-control-padding,5px);border:var(--line-width) solid var(--header-border-color,var(--line));border-radius:var(--header-control-radius);background:var(--card);color:var(--pink);text-decoration:none;transition:border-color .18s,background .18s,box-shadow .18s; }
 /* Header icons share one drawn size; the jar reads a touch larger. */
 .header-icon-button>svg { width:var(--header-icon-size);height:var(--header-icon-size); }
+/* A compact control is its glyph at its action label's size, as a compact SegmentedControl draws its icons. */
+.app-root .header-icon-button[data-density=compact] { width:auto;height:auto;padding:0; }
+.header-icon-button[data-density=compact]>.bd-label { display:flex;line-height:0; }
+.header-icon-button[data-density=compact] svg { width:1em;height:1em; }
 /* Hover and focus glow. A button that opts in with data-dim-disabled (the season
    footer's Play and Sim) dims instead while disabled; `:where` leaves the glow's
    specificity as it is for every other icon button. */
