@@ -56,7 +56,9 @@
 /* Bare choices move the selected color through their text or icon glyphs. */
 .seg--text { --segment-padding-block:var(--field-gap);--segment-padding-inline:var(--field-gap);gap:var(--field-gap);padding:0;border:0;border-radius:0;background:transparent;box-shadow:none; }
 .seg--text button,.seg--icons button { border-radius:0;transition:none; }
+/* The first and last options sit on the control's edges, so their text lines up with what is beside the control. */
 .seg--text button:first-of-type { padding-inline-start:0; }
+.seg--text button:last-of-type { padding-inline-end:0; }
 .seg--text button>.bd-label,.seg--icons button>.bd-label { position:relative;text-transform:none;letter-spacing:normal; }
 .seg--text button[data-on=true],.seg--icons button[data-on=true] { --icon-foreground:currentColor;color:var(--dim); }
 .seg--text button[data-on=true] .bd-text-selection,.seg--icons button[data-on=true] .bd-text-selection { opacity:1; }
@@ -75,11 +77,14 @@
    colour alone. */
 .seg[data-density=compact][data-icon-only=true] button svg { width:1em;height:1em; }
 .seg--icons[data-density=compact] .bd-text-selection { filter:none; }
-/* A vertical joined control is a rail: no frame of its own, rows divided by a rule across, sharing its height, scrolling when they would be shorter than their own minimum. A closed rail floats in its space, so a rule also sits above its first row and below its last. */
-.seg--joined[data-orientation=vertical] { flex-wrap:nowrap;border:0;border-radius:0;background:transparent;box-shadow:none; }
+/* A vertical joined control is a rail: rows divided by a rule across, sharing its height, scrolling when they would be shorter than their own minimum. An open rail fills its side and has no frame of its own; a closed rail floats in its space and keeps the control's frame on all four sides. Its first row rounds with the frame's top corners and its last with its bottom ones. */
+.seg--joined[data-orientation=vertical] { flex-wrap:nowrap; }
+.seg--joined[data-orientation=vertical]:not([data-closed]) { border:0;border-radius:0;background:transparent;box-shadow:none; }
 .seg--joined[data-orientation=vertical]>button+button { border-inline-start:0;border-block-start:var(--line-width) solid var(--segment-divider,var(--line)); }
-.seg--joined[data-orientation=vertical][data-closed]>button:first-of-type { border-block-start:var(--line-width) solid var(--segment-divider,var(--line)); }
-.seg--joined[data-orientation=vertical][data-closed]>button:last-of-type { border-block-end:var(--line-width) solid var(--segment-divider,var(--line)); }
+.seg--joined[data-orientation=vertical]>button:first-of-type { border-start-end-radius:inherit; }
+.seg--joined[data-orientation=vertical]>button:last-of-type { border-end-start-radius:inherit; }
+.seg--joined[data-orientation=vertical]>button:first-of-type:not(:last-of-type) { border-end-start-radius:0; }
+.seg--joined[data-orientation=vertical]>button:last-of-type:not(:first-of-type) { border-start-end-radius:0; }
 .seg[data-orientation=vertical][data-fit]>button { flex:1 1 0;min-height:0; }
 /* A cell form: every option a square of the given size, its icon centred, no padding. */
 .seg[data-cell]>button { display:grid;place-items:center;width:var(--segment-cell);height:var(--segment-cell);min-width:var(--segment-cell);min-height:0;padding:0; }
