@@ -174,11 +174,10 @@ export const LayoutDimensions = {
     moduleColumns: 2
   },
 
-  // The synth's page shell: the screen it's drawn for, and how it fits smaller ones
+  // The synth's page shell: the screen it's drawn for
   pageShell: {
     stageWidth: 1920,
     stageHeight: 1080,
-    stageZoomMin: 0.8,
     tileGutter: 3,
     moduleWidth: 320,
     moduleHeight: 194,
@@ -192,7 +191,7 @@ export const LayoutDimensions = {
     guideText: 12,
     guideTagLayer: 1,
     // A closed page's card: one drawing laid out on φ in the larger card's box, drawn smaller in the smaller card.
-    // Text and icons stay these sizes in stage pixels in both, so they read at the smallest zoom; everything else is in the larger card's pixels.
+    // Text and icons stay these sizes in stage pixels in both, so they read in the smaller card; everything else is in the larger card's pixels.
     cardTitle: 14,
     cardText: 13,
     cardIcon: 14,
