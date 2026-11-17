@@ -77,7 +77,7 @@
     "tests/preview3dDescription.test.ts": {"casts":1,"nonNullAssertions":0},
     "tests/preview3dDraw.test.ts": {"casts":6,"nonNullAssertions":3},
     "tests/preview3dEnvironment.test.ts": {"casts":7,"nonNullAssertions":0},
-    "tests/preview3dFog.test.ts": {"casts":9,"nonNullAssertions":0},
+    "tests/preview3dFog.test.ts": {"casts":7,"nonNullAssertions":0},
     "tests/preview3dFrameLoop.test.ts": {"casts":0,"nonNullAssertions":2},
     "tests/preview3dKindActors.test.ts": {"casts":18,"nonNullAssertions":0},
     "tests/preview3dKindFixture.ts": {"casts":2,"nonNullAssertions":0},
