@@ -1,6 +1,6 @@
 import React from 'react';
 import { useStyle } from '../../synth/StyleContext.tsx';
-import { D, T } from '../../synth/design/index.ts';
+import { D, S, T } from '../../synth/design/index.ts';
 import { SegmentedControl, TEXT_SEGMENT_VARIANT } from '../SegmentedControl.tsx';
 import { useStyleThemeVariables } from '../styleTheme.ts';
 
@@ -18,10 +18,15 @@ export const GROUP_ROW: React.CSSProperties = {
 const CONTROL: React.CSSProperties = { ...GROUP_ROW, flexWrap: 'wrap', gap: G.groupGap };
 // The label type every other label on a module wears, so a group reads as part of the same page.
 const LABEL: React.CSSProperties = { ...T.moduleLabel, textTransform: 'uppercase' };
+// Inline, the group being shown stands apart from the ones that only hold something: bold as a title, glowing.
+const shownLabel = (glow: string): React.CSSProperties => ({
+  ...LABEL, fontWeight: T.title.fontWeight, textShadow: S.glow(glow),
+});
 
 /**
  * The groups inside a tab, when it holds more than one grid can: the second level, as the SegmentedControl's text
- * form, so the open one slides as the first level's does. A group with nothing set inside it reads dim.
+ * form, so the open one slides as the first level's does. A group with nothing set inside it reads dim; inline, the
+ * open one is bold and glows.
  */
 export function ModuleGroups<Id extends string>({ groups, value, onChange, ariaLabel, inline, disabled }: {
   groups: { id: Id; label: string; set: boolean }[]; value: Id; onChange: (id: Id) => void; ariaLabel: string;
@@ -29,8 +34,10 @@ export function ModuleGroups<Id extends string>({ groups, value, onChange, ariaL
   inline?: boolean; disabled?: boolean;
 }) {
   const { primaryColor } = useStyle().getEffectiveStyle();
+  const shown = shownLabel(primaryColor);
   const options = groups.map(group => ({
-    value: group.id, label: <span style={LABEL}>{group.label}</span>, ariaLabel: group.label,
+    value: group.id, ariaLabel: group.label,
+    label: <span style={inline && group.id === value ? shown : LABEL}>{group.label}</span>,
     style: group.set ? { color: primaryColor } : undefined,
     data: { 'data-group': group.id, 'data-group-set': group.set },
   }));
