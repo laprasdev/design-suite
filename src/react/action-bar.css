@@ -10,6 +10,9 @@
    notice is as tall with its recovery Button as without one. */
 .action-bar,.action-bar-notice { --header-control:var(--header-control-compact);--button-padding-block:0; }
 .action-bar { --button-min-height:var(--header-control); }
+/* The bar's first glyph sits on its inset, where a page's text starts: a leading icon choice drops its first press
+   area's leading padding, as a text choice drops its first word's. */
+.action-bar>.bar-left>.seg--icons:first-child>button:first-of-type { padding-inline-start:0; }
 /* A compact bar draws its icon buttons' glyphs at the size of its action labels, the bar's text. */
 .action-bar[data-density=compact] { --header-icon-size:var(--label-action-size); }
 .action-bar-notice { --button-min-height:initial; }
