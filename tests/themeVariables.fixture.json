@@ -8,8 +8,8 @@
  },
  "default": {
   "--phi": "1.618033988749895",
-  "--font": "-apple-system,BlinkMacSystemFont,\"Segoe UI\",Inter,system-ui,sans-serif",
-  "--font-reading": "-apple-system,BlinkMacSystemFont,\"Segoe UI\",Inter,system-ui,sans-serif",
+  "--font": "\"Bloom Inter\",-apple-system,BlinkMacSystemFont,\"Segoe UI\",Inter,system-ui,sans-serif",
+  "--font-reading": "\"Bloom Inter\",-apple-system,BlinkMacSystemFont,\"Segoe UI\",Inter,system-ui,sans-serif",
   "--font-chrome": "\"Bloom SF Pro Display\",-apple-system,BlinkMacSystemFont,\"Segoe UI\",Inter,system-ui,sans-serif",
   "--font-code": "ui-monospace,\"SF Mono\",Menlo,monospace",
   "--type-body": "15px",
@@ -68,8 +68,8 @@
  },
  "customVariables": {
   "--phi": "1.618033988749895",
-  "--font": "-apple-system,BlinkMacSystemFont,\"Segoe UI\",Inter,system-ui,sans-serif",
-  "--font-reading": "-apple-system,BlinkMacSystemFont,\"Segoe UI\",Inter,system-ui,sans-serif",
+  "--font": "\"Bloom Inter\",-apple-system,BlinkMacSystemFont,\"Segoe UI\",Inter,system-ui,sans-serif",
+  "--font-reading": "\"Bloom Inter\",-apple-system,BlinkMacSystemFont,\"Segoe UI\",Inter,system-ui,sans-serif",
   "--font-chrome": "\"Bloom SF Pro Display\",-apple-system,BlinkMacSystemFont,\"Segoe UI\",Inter,system-ui,sans-serif",
   "--font-code": "ui-monospace,\"SF Mono\",Menlo,monospace",
   "--type-body": "15px",

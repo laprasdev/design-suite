@@ -34,6 +34,20 @@
       "source": "./src/theme.ts",
       "default": "./dist/theme.js"
     },
+    "./fonts": {
+      "types": "./src/fonts.ts",
+      "source": "./src/fonts.ts",
+      "default": "./dist/fonts.js"
+    },
+    "./fontFiles": {
+      "types": "./src/fontFiles.ts",
+      "source": "./src/fontFiles.ts",
+      "default": "./dist/fontFiles.js"
+    },
+    "./fonts/*": {
+      "source": "./src/fonts/*",
+      "default": "./dist/fonts/*"
+    },
     "./pathNode": {
       "types": "./src/pathNode.ts",
       "source": "./src/pathNode.ts",
@@ -123,6 +137,7 @@
   ],
   "scripts": {
     "build": "node scripts/build/build.ts",
+    "fonts": "node scripts/font-faces.ts",
     "prepare": "npm run build",
     "check": "npm run gate-tools && tsc -p . && npm run check:types && node scripts/size-gate.ts && npm run check:baselines && npm run check:cycles && npm run check:duplication",
     "check:types": "node scripts/type-gate.ts",
