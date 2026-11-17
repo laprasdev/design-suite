@@ -12,4 +12,5 @@
 .app-root .header-icon-button[data-dim-disabled]:disabled { opacity:.55;cursor:default; }
 .app-root .header-icon-button:focus-visible { outline:var(--focus-outline,2px solid var(--pink));outline-offset:3px; }
 @media(prefers-reduced-motion:reduce) { .app-root .header-icon-button { transition:none; } }
+.header-icon-button[data-tone=error] { --header-border-color:var(--scarlet);color:var(--scarlet); }
 .header-icon-button[data-active] { --header-border-color:var(--pink);box-shadow:0 0 8px var(--pink-wash); }

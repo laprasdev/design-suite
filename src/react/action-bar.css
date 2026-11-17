@@ -10,6 +10,8 @@
    notice is as tall with its recovery Button as without one. */
 .action-bar,.action-bar-notice { --header-control:var(--header-control-compact);--button-padding-block:0; }
 .action-bar { --button-min-height:var(--header-control); }
+/* A compact bar draws its icon buttons' glyphs at the size of its action labels, the bar's text. */
+.action-bar[data-density=compact] { --header-icon-size:var(--label-action-size); }
 .action-bar-notice { --button-min-height:initial; }
 .action-bar>.bar-center { container-type:inline-size;--participant-cluster-width:50cqw;--bar-participant-fit:calc((100cqw - var(--participant-clearance) * 2 - var(--field-gap)) / 2); }
 .action-bar>.bar-left,.action-bar>.bar-center:not(:has(.bar-participants)) { overflow:hidden; }
@@ -38,8 +40,9 @@
 .action-bar-notice { --notice-detail-measure:30ch; }
 .action-bar-notice>.bar-left>.bd-label:has(+.action-bar-notice-detail) { flex:none; }
 .action-bar-notice>.bar-left>.action-bar-notice-detail { flex:0 1 auto;min-width:0;max-inline-size:var(--notice-detail-measure);color:var(--dim); }
-.action-bar-notice[data-tone="error"]>.bar-left>svg { color:var(--scarlet);flex-shrink:0; }
-.action-bar-notice[data-tone="info"]>.bar-left>svg { color:var(--dim);flex-shrink:0; }
+.action-bar-notice>.bar-left>svg { flex-shrink:0; }
+.notice-icon[data-tone="error"] { color:var(--scarlet); }
+.notice-icon[data-tone="info"] { color:var(--dim); }
 @media (prefers-reduced-motion:no-preference) {
  .action-bar-notice { animation:action-notice-in .16s ease-out; }
  @keyframes action-notice-in { from { opacity:0;transform:translateY(-30%); } to { opacity:1;transform:translateY(0); } }
