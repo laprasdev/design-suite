@@ -11,10 +11,11 @@ const STRIP: React.CSSProperties = {
 };
 // Inline, the strip sits on the row it is in, as tall as its chips and centred on the row's line.
 const INLINE_STRIP: React.CSSProperties = { ...STRIP, padding: 0 };
-const CONTROL: React.CSSProperties = {
-  flexWrap: 'wrap', gap: G.groupGap,
+/** A group's row: one line of label type between the group padding. A rail whose rows read as groups sets it too. */
+export const GROUP_ROW: React.CSSProperties = {
   '--segment-padding-block': `${G.groupPaddingBlock}px`, '--segment-padding-inline': `${G.groupPaddingInline}px`,
 };
+const CONTROL: React.CSSProperties = { ...GROUP_ROW, flexWrap: 'wrap', gap: G.groupGap };
 // The label type every other label on a module wears, so a group reads as part of the same page.
 const LABEL: React.CSSProperties = { ...T.moduleLabel, textTransform: 'uppercase' };
 
