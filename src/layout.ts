@@ -192,10 +192,7 @@ export const LayoutDimensions = {
     guideText: 12,
     guideTagLayer: 1,
     // A closed page's card: one drawing laid out on φ in the larger card's box, drawn smaller in the smaller card.
-    // Text and icons stay these sizes in stage pixels in both, so they read at the smallest zoom; everything else is in the larger card's pixels.
-    cardTitle: 14,
-    cardText: 13,
-    cardIcon: 14,
+    // Its text and icons are a module's, the same size in stage pixels in both cards; everything else is in the larger card's pixels.
     cardPadding: 8,
     cardStroke: 1.5,
     cardWire: 1,

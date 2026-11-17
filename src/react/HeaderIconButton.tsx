@@ -4,7 +4,10 @@ import {PHI_INVERSE} from '../layout.ts';
 
 // Navigation artwork fills the same square canvas, including its stroke. The
 // drawings share a weight and natural bounds; CSS never stretches a glyph.
-const NAVIGATION_SIDE = 24, NAVIGATION_STROKE = 1.5;
+const NAVIGATION_SIDE = 24;
+// The one stroke every suite glyph is drawn with, in its 24-unit canvas; a consumer's lucide glyph takes it too.
+export const ICON_STROKE = 1.5;
+const NAVIGATION_STROKE = ICON_STROKE;
 const navigationEdge = NAVIGATION_STROKE / 2, navigationCenter = NAVIGATION_SIDE / 2;
 const navigationFrame = {x:String(navigationEdge),y:String(navigationEdge),
  width:String(NAVIGATION_SIDE - NAVIGATION_STROKE),height:String(NAVIGATION_SIDE - NAVIGATION_STROKE)};
