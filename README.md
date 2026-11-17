@@ -19,16 +19,16 @@ A surface can set the form of what's inside it: a `SegmentedControl` in an `Acti
 
 ## Catalog
 
-`catalog/` records which source implements each kind. `kinds.json` is the hand-kept map and `scan.mjs` reads the sources statically, so Unity never has to run. `build.mjs` writes `catalog.json` and exits non-zero if the map names something the sources lack.
+`catalog/` records which source implements each kind. `kinds.json` is the hand-kept map and `scan.ts` reads the sources statically, so Unity never has to run. `build.ts` writes `catalog.json` and exits non-zero if the map names something the sources lack.
 
 ```sh
 git -C ../slowbro-sports archive origin/dev packages src | tar -x -C /tmp/bb
-BASEBALL_ROOT=/tmp/bb node catalog/build.mjs
+BASEBALL_ROOT=/tmp/bb node catalog/build.ts
 ```
 
 ## Package
 
-This repo publishes `@looms/bloom-design`. Consumers pin a commit of this repo, and the `prepare` script builds `dist` on install.
+This repo publishes `@looms/bloom-design`. Consumers pin a commit of this repo, and the `prepare` script builds `dist` on install. `prepare` runs `npm run build`, so installing needs the Node that `engines` names, which strips TypeScript types unflagged. `scripts/size-gate.ts` also reads `import.meta.main`, which that Node sets, to tell a run from an import.
 
 **Rule: after pushing to `main`, update every consumer in the same pass.** Baseball pins a commit, so open a pull request there:
 
@@ -56,6 +56,8 @@ import '@looms/bloom-design/react/styles.css';
 
 `createTheme` returns data without touching the document, and `applyTheme` writes it to CSS variables. `src/synth` holds the web synth's controls, which read their colors through `StyleProvider`.
 
+The stylesheet declares every face once, at `FONT_ROUTE` (`/fonts/`): `FONT_FILES` in `src/fonts.ts` lists each file, and `npm run fonts` writes `src/react/fonts.css` from it. A host serves each file on that route, looking the path up in `FONTS_BY_ROUTE` and sending the face's `format.mediaType`. A host on disk reads each file from `fontFileUrl` (`@looms/bloom-design/fontFiles`), naming only the engine repository's checkout, as the folder path it holds: the suite holds Inter, the reading face, under `OFL.txt` in `@looms/bloom-design/fonts/*`, and SF Pro, the chrome face, stays in the private engine repository, since this repository is public. A host that bundles the stylesheet with esbuild passes `FONT_ROUTE_FILES` as `external`.
+
 Inside a suite application root (`ApplicationElement.ROOT`), the stylesheet draws every `code` and `pre`, in `src/react/foundation.css`: one skin for a chip and a block, from the theme variables the host applies there (`codeWash`, line, small radius and code type). A page outside a root keeps its own code. A chip keeps its own case, tracking and weight inside a head, and takes the weight of a `strong` around it. A host places code and may map its colour to a state token, as Workbench dims a source path, but never changes its skin: Workbench's `check:styles` refuses a local wash, border, radius, face, weight, tracking or case on `code` or `pre`.
 
 ## Entrypoints
@@ -64,6 +66,9 @@ Inside a suite application root (`ApplicationElement.ROOT`), the stylesheet draw
 | --- | --- |
 | `@looms/bloom-design` | Tokens, layout constants, colors and `createTheme`; no React |
 | `/tokens`, `/layout`, `/color`, `/theme`, `/skins` | Focused framework-independent APIs |
+| `/fonts` | The font route, families and the files each host serves there |
+| `/fontFiles` | Where a host on disk reads each font file, given the engine repository's checkout |
+| `/fonts/*` | The font files the suite holds, with their licence |
 | `/react` | Composed controls: bars, segmented controls, dialogs, portraits, node graphs and the shared kinds |
 | `/modal-room` | Dialog growth and measurement contract |
 | `/modal-input-check` | The source check that refuses a consumer declaring a `Modal`'s own properties |

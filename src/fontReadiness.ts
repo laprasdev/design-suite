@@ -1,8 +1,8 @@
-import {DISPLAY_FONT_FAMILY} from './theme.ts';
+import {FONT_FILES} from './fonts.ts';
 
 export interface FontRequirement {readonly family: string; readonly weight: number}
 export const INTERFACE_FONTS: readonly FontRequirement[] = Object.freeze(
- [400,500,600,700].map(weight => Object.freeze({family:DISPLAY_FONT_FAMILY,weight})),
+ FONT_FILES.map(face=>Object.freeze({family:face.family,weight:face.weight.min})),
 );
 export const FONT_LOAD_TIMEOUT_MS=15_000;
 const requests=new WeakMap<FontFaceSet,Map<string,Promise<void>>>();

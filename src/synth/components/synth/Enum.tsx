@@ -25,7 +25,7 @@ function isMultiSelect<T>(props: EnumProps<T>): props is MultiSelectEnumProps<T>
 function useEnumLabel() {
   const { advancedSettings } = useStyle();
   const casing = advancedSettings.enumCasing ?? 'ALL CAPITALS';
-  return (opt: EnumOption<any>) => applyCasing(opt.label || String(opt.value), casing);
+  return <T,>(opt: EnumOption<T>) => applyCasing(opt.label || String(opt.value), casing);
 }
 
 /** What names an option to assistive technology: its tooltip, else its label, else its value. */
@@ -34,9 +34,6 @@ const optionName = (option: EnumOption<unknown>) => option.tooltip ?? option.lab
 const undrawnTitle = (option: EnumOption<unknown>, labelDrawn: boolean) =>
   labelDrawn ? undefined : option.tooltip ?? option.label;
 
-// =====================================================
-// UNIFIED ENUM COMPONENT
-// =====================================================
 export function Enum<T = string>(props: EnumProps<T>) {
   const { options, className = '', color = 'cyan', layout, optionComposition, disabled } = props;
   const { getEffectiveStyle, advancedSettings } = useStyle(), style = getEffectiveStyle();

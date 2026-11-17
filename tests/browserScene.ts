@@ -6,6 +6,7 @@ import {after} from 'node:test';
 import {build} from 'esbuild';
 import playwright from '../scripts/gateTools/node_modules/playwright/index.js';
 import type {Page,ViewportSize} from '../scripts/gateTools/node_modules/playwright/index.js';
+import {FONT_ROUTE_FILES} from '../src/fonts.ts';
 import {Breakpoint} from '../src/react/breakpoints.ts';
 import {SUITE_ROOT} from './bundled.ts';
 import {SCENE_ROOT_ID} from './sceneRoot.ts';
@@ -17,8 +18,8 @@ export const PHONE_VIEWPORT: ViewportSize=Object.freeze({width:Breakpoint.PHONE,
 
 export async function openScene(scene: string,viewport: ViewportSize): Promise<Page> {
  const {outputFiles}=await build({absWorkingDir:SUITE_ROOT,entryPoints:[scene],bundle:true,write:false,outdir:'scene',
-  format:'iife',platform:'browser',jsx:'automatic',loader:{'.css':'css'},define:{'process.env.NODE_ENV':'"production"'},
-  logLevel:'warning'});
+  format:'iife',platform:'browser',jsx:'automatic',loader:{'.css':'css'},external:[FONT_ROUTE_FILES],
+  define:{'process.env.NODE_ENV':'"production"'},logLevel:'warning'});
  const bundledText=(extension: string)=>outputFiles.find(file=>file.path.endsWith(extension))?.text
   ??assert.fail(`esbuild wrote no ${extension} file for ${scene}`);
  const browser=await playwright.chromium.launch();

@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "Bloom Design tokens, theming and composable React controls, dialogs, portraits and node graphs.",
   "type": "module",
+  "engines": {
+    "node": ">=24.3.0"
+  },
   "main": "./dist/index.js",
   "module": "./dist/index.js",
   "exports": {
@@ -30,6 +33,20 @@
       "types": "./src/theme.ts",
       "source": "./src/theme.ts",
       "default": "./dist/theme.js"
+    },
+    "./fonts": {
+      "types": "./src/fonts.ts",
+      "source": "./src/fonts.ts",
+      "default": "./dist/fonts.js"
+    },
+    "./fontFiles": {
+      "types": "./src/fontFiles.ts",
+      "source": "./src/fontFiles.ts",
+      "default": "./dist/fontFiles.js"
+    },
+    "./fonts/*": {
+      "source": "./src/fonts/*",
+      "default": "./dist/fonts/*"
     },
     "./pathNode": {
       "types": "./src/pathNode.ts",
@@ -114,24 +131,23 @@
     "dist",
     "src",
     "unity",
-    "scripts/build.mjs",
+    "scripts/build",
     "README.md",
     "examples"
   ],
   "scripts": {
-    "build": "node scripts/build.mjs",
+    "build": "node scripts/build/build.ts",
+    "fonts": "node scripts/font-faces.ts",
     "prepare": "npm run build",
-    "check": "npm run gate-tools && tsc -p . && node scripts/size-gate.mjs && npm run check:cycles && npm run check:duplication",
+    "check": "npm run gate-tools && tsc -p . && npm run check:types && node scripts/size-gate.ts && npm run check:baselines && npm run check:cycles && npm run check:duplication",
+    "check:types": "node scripts/type-gate.ts",
+    "check:baselines": "node scripts/baseline-gate.ts",
     "check:cycles": "node scripts/cycle-gate.ts",
     "check:duplication": "scripts/gateTools/node_modules/.bin/jscpd",
     "gate-tools": "npm ci --prefix scripts/gateTools --no-audit --no-fund --loglevel=error",
     "gate-browser": "scripts/gateTools/node_modules/.bin/playwright install --only-shell chromium",
     "test": "npm run gate-tools && npm run gate-browser && node --test tests/*.test.ts",
-    "check:graph": "tsc -p tsconfig.graph-tests.json",
-    "check:preview3d": "tsc -p tsconfig.preview3d-tests.json",
-    "check:forms": "tsc -p tsconfig.form-tests.json && node --test tests/photos.test.ts tests/pipRowForm.test.ts tests/formTypes.test.ts tests/loading.test.ts tests/playerRing.test.ts tests/modalDismissal.test.ts tests/modalPress.test.ts tests/escapeOrder.test.ts tests/pageInputOwners.test.ts tests/modalInputCheck.test.ts",
-    "check:sky": "tsc -p tsconfig.sky-tests.json",
-    "check:gates": "npm run gate-tools && tsc -p tsconfig.gate-tests.json"
+    "check:forms": "node --test tests/photos.test.ts tests/pipRowForm.test.ts tests/formTypes.test.ts tests/loading.test.ts tests/playerRing.test.ts tests/modalDismissal.test.ts tests/modalPress.test.ts tests/escapeOrder.test.ts tests/pageInputOwners.test.ts tests/modalInputCheck.test.ts"
   },
   "devDependencies": {
     "@types/react": "^18.3.31",

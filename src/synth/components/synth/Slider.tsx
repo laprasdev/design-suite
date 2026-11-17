@@ -9,6 +9,7 @@ import React from 'react';
 import {SliderTrack, SLIDER_TRACK_HEIGHT as TRACK_HEIGHT} from '../../../react/inputs/SliderTrack.tsx';
 import {SliderProgress, type SliderProgressProps} from '../../../react/inputs/SliderProgress.tsx';
 import { useStyle } from '../../StyleContext.tsx';
+import type { StyleTheme } from '../../StyleTypes.ts';
 import { getColorScheme, resolveColorType, getKnobGradient, hexToRgba, type AnyColor } from '../../../color.ts';
 import { D, F, C, O, T, TransitionKeys, P } from '../../design/index.ts';
 import { useControlBehavior } from './base/index.ts';
@@ -16,11 +17,6 @@ import { useTooltipSafe } from './TooltipContext.tsx';
 import {HoverDetail} from '../../../react/HoverDetail.tsx';
 import {ResetIcon} from '../../../react/HeaderIconButton.tsx';
 import {type RangeSliderProps} from './RangeSlider.tsx';
-
-// =====================================================
-// SLIDER - Compact horizontal fader (knob aesthetic)
-// =====================================================
-
 
 const FADER_WIDTH = 6;
 const FADER_HEIGHT = 12;
@@ -44,10 +40,6 @@ export interface SliderProps extends SliderModulationProps {
   sensitivity?: number;
 }
 
-// =====================================================
-// SUB-COMPONENTS
-// =====================================================
-
 function SliderFill({ fraction, zeroFraction, color, glow, active, thin }: {
   fraction: number; zeroFraction: number; color: string; glow: string; active: boolean; thin: boolean;
 }) {
@@ -66,7 +58,7 @@ function SliderFill({ fraction, zeroFraction, color, glow, active, thin }: {
 
 function SliderFader({ fraction, scheme, style, active, thin }: {
   fraction: number; scheme: ReturnType<typeof getColorScheme>;
-  style: any; active: boolean; thin: boolean;
+  style: StyleTheme; active: boolean; thin: boolean;
 }) {
   const glow = active ? `, 0 0 ${D.knob.glowSmall}px ${scheme.glow}` : '';
   return (

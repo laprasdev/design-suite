@@ -1,0 +1,6 @@
+/* Written by `npm run fonts` from src/fonts.ts: edit FONT_FILES there, never this file. */
+@font-face { font-family:"Bloom SF Pro Display"; src:url("/fonts/SF-Pro-Display-Regular.otf") format("opentype"); font-weight:400; font-display:swap; }
+@font-face { font-family:"Bloom SF Pro Display"; src:url("/fonts/SF-Pro-Display-Medium.otf") format("opentype"); font-weight:500; font-display:swap; }
+@font-face { font-family:"Bloom SF Pro Display"; src:url("/fonts/SF-Pro-Display-Semibold.otf") format("opentype"); font-weight:600; font-display:swap; }
+@font-face { font-family:"Bloom SF Pro Display"; src:url("/fonts/SF-Pro-Display-Bold.otf") format("opentype"); font-weight:700; font-display:swap; }
+@font-face { font-family:"Bloom Inter"; src:url("/fonts/InterVariable-Latin.woff2") format("woff2"); font-weight:100 900; font-display:swap; }

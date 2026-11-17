@@ -2,12 +2,14 @@ import assert from 'node:assert/strict';
 import {describe, it} from 'node:test';
 import {flattenSkin, resolveDesignSystem} from '../src/skins.ts';
 import {
-  mergeComposable, resolveBaseComposable, resolveComponentComposable, resolveContainerComposable, type HciDataComposable,
+  mergeComposable, resolveBaseComposable, resolveComponentComposable, resolveContainerComposable,
+  type HciDataComposable,
 } from '../src/synth/design/Composable.ts';
 
 const skin = flattenSkin(resolveDesignSystem('serum'));
 const empty: HciDataComposable = {
-  palette: null, sizing: null, spacing: null, contentShape: null, text: null, edge: null, shadow: null, glyph: null,
+  palette: null, sizing: null, spacing: null, contentShape: null, text: null,
+  edge: null, shadow: null, glyph: null, opacity: null,
 };
 
 describe('resolving composables from a skin', () => {
@@ -33,12 +35,13 @@ describe('merging composables', () => {
     sizing: {scaleOffset: 0, aspectRatio: null},
     spacing: {padding: [4, 4]},
     contentShape: {cornerRadius: 8},
-    text: {kern: 0.05, lead: 1.2, weight: 500},
+    text: {size: null, kern: 0.05, lead: 1.2, weight: 500, family: null},
     edge: {width: 1, outset: 0},
   };
 
   it('a child overrides the parts it declares', () => {
-    const merged = mergeComposable(parent, {...empty, sizing: {scaleOffset: 2, aspectRatio: null}, contentShape: {cornerRadius: 4}});
+    const child = {...empty, sizing: {scaleOffset: 2, aspectRatio: null}, contentShape: {cornerRadius: 4}};
+    const merged = mergeComposable(parent, child);
     assert.equal(merged.sizing?.scaleOffset, 2);
     assert.equal(merged.contentShape?.cornerRadius, 4);
     assert.deepEqual(merged.spacing?.padding, [4, 4]);
