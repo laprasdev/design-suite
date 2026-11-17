@@ -1,5 +1,6 @@
-// A tab's groups: a group holding something wears the theme's one colour, an empty one stays plain, and on an inline
-// row the group being shown is bold, at the title's weight, and glows. Under a header the shown group keeps its look.
+// A tab's groups: under a header a group holding something wears the primary colour and an empty one stays plain; on
+// an inline row the group being shown is primary, bold at the title's weight and glowing, the others holding something
+// are secondary, and empty ones stay plain.
 import assert from 'node:assert/strict';
 import {after, describe, it} from 'node:test';
 import {renderToStaticMarkup} from 'react-dom/server';
@@ -43,14 +44,23 @@ function looks(inline: boolean): Look[] {
 }
 
 describe('a tab\'s groups', () => {
-  it('colours a group that holds something, and only those, in one colour', () => {
-    for (const inline of [true, false]) {
-      const all = looks(inline);
-      const colors = new Set(all.filter(look => look.group.set).map(look => look.color));
-      assert.equal(colors.size, 1);
-      assert.notEqual([...colors][0], undefined);
-      for (const look of all.filter(each => !each.group.set)) assert.equal(look.color, undefined);
-    }
+  it('under a header colours a group that holds something, and only those, in the primary colour', () => {
+    const all = looks(false);
+    const colors = new Set(all.filter(look => look.group.set).map(look => look.color));
+    assert.equal(colors.size, 1);
+    assert.notEqual([...colors][0], undefined);
+    for (const look of all.filter(each => !each.group.set)) assert.equal(look.color, undefined);
+  });
+
+  it('inline colours the shown group primary, the others holding something secondary, empty ones not at all', () => {
+    const primary = looks(false).find(look => look.group.set)?.color;
+    const all = looks(true), others = all.filter(look => look.group.id !== SHOWN);
+    assert.equal(all.find(look => look.group.id === SHOWN)?.color, primary);
+    const secondary = new Set(others.filter(look => look.group.set).map(look => look.color));
+    assert.equal(secondary.size, 1);
+    assert.notEqual([...secondary][0], undefined);
+    assert.notEqual([...secondary][0], primary);
+    for (const look of others.filter(each => !each.group.set)) assert.equal(look.color, undefined);
   });
 
   it('draws the group shown inline bold and glowing, and every other one at the label weight without a glow', () => {
