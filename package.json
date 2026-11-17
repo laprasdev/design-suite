@@ -39,6 +39,11 @@
       "source": "./src/fonts.ts",
       "default": "./dist/fonts.js"
     },
+    "./fontFiles": {
+      "types": "./src/fontFiles.ts",
+      "source": "./src/fontFiles.ts",
+      "default": "./dist/fontFiles.js"
+    },
     "./fonts/*": {
       "source": "./src/fonts/*",
       "default": "./dist/fonts/*"

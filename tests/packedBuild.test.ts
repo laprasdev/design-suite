@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdtempSync, rmSync, symlinkSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { describe, it } from 'node:test';
@@ -8,11 +8,15 @@ import { fileURLToPath } from 'node:url';
 import {
   OTHER_FIELDS, holdsListOf, holdsNonEmptyString, holdsShape, refusalBy, type FieldCheck,
 } from '../scripts/build/fieldChecks.ts';
-import { FONT_FILES, FONT_HOLDERS, fontHolderFolder } from '../src/fonts.ts';
+import { FONT_FILES, FONT_HOLDERS } from '../src/fonts.ts';
+import { heldFontsByExport } from './heldFontsByExport.ts';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 /** The folder npm extracts a packed package into. */
 const PACKAGE_FOLDER = 'package';
+/** A host beside the extracted package, and where it installs it. */
+const HOST = 'host';
+const INSTALLED = 'node_modules/@looms/bloom-design';
 /** What `npm pack --json` says of each package it packed, as far as this test reads it. */
 const holdsPackOutput: FieldCheck<readonly { readonly filename: string }[]> =
   holdsListOf(holdsShape({ filename: holdsNonEmptyString }, OTHER_FIELDS.ignored));
@@ -35,10 +39,16 @@ describe('the packed package', () => {
         cwd: shipped, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'],
       });
       assert.match(built, /^Built @looms\/bloom-design@.+: \d+ public entrypoints\.$/m);
-      const roots = { [FONT_HOLDERS.suite]: shipped, [FONT_HOLDERS.engine]: ROOT };
-      const builtFonts = fontHolderFolder(FONT_HOLDERS.suite, roots);
-      for (const face of FONT_FILES.filter(file => file.holder === FONT_HOLDERS.suite)) {
-        assert.ok(existsSync(path.join(builtFonts, face.file)), `the build ships no ${face.file}`);
+      // A host reads each held font from the file the built package exports it as, and that file is shipped.
+      const host = path.join(scratch, HOST), installed = path.join(host, INSTALLED);
+      mkdirSync(path.dirname(installed), { recursive: true });
+      symlinkSync(shipped, installed);
+      const read = heldFontsByExport(host, []);
+      assert.equal(read.length, FONT_FILES.filter(face => face.holder === FONT_HOLDERS.suite).length);
+      const shippedFolder = realpathSync(shipped);
+      for (const font of read) {
+        assert.equal(font.read, font.exported);
+        assert.ok(font.read.startsWith(shippedFolder) && existsSync(font.read), `the build ships no ${font.read}`);
       }
     } finally {
       rmSync(scratch, { recursive: true });
