@@ -23,10 +23,11 @@ export function skinContainerCSS(style: StyleTheme, form: ContainerFormValue): C
   const width = form === ContainerForm.FLAT ? Borders.standard.width : cutoutWidth(cutout);
   const {padding, opacity, ...surface} = form === ContainerForm.FLAT
     ? {background: style.backgroundColor, border: `${width}px solid ${style.borderColor}`,
-      borderRadius: D.radius.cutout, boxShadow: 'none', padding: undefined, opacity: undefined}
+      boxShadow: 'none', padding: undefined, opacity: undefined}
     : containerCSS(cutout);
+  // The skin sets the border; a module's corners are the page's cutout radius in every form.
   // Both forms keep the same longhands: removing one after a shorthand resets that edge in React.
-  return {...surface, borderTopWidth: surface.borderTopWidth ?? width,
+  return {...surface, borderRadius: D.radius.cutout, borderTopWidth: surface.borderTopWidth ?? width,
     borderRightWidth: surface.borderRightWidth ?? width, borderBottomWidth: surface.borderBottomWidth ?? width,
     borderLeftWidth: surface.borderLeftWidth ?? width};
 }
