@@ -3,14 +3,14 @@
 import * as THREE from 'three';
 import {GLTFExporter} from 'three/addons/exporters/GLTFExporter.js';
 import {
-  MODEL_STAGE, MODEL_STAGE_CLOCK, MODEL_STAGE_SURFACE_MODE,
-  type ModelStageController, type ModelStageDescription,
+  MODEL_STAGE_CLOCK, MODEL_STAGE_SURFACE_MODE,
+  type ModelColor, type ModelStageController, type ModelStageDescription, type ModelVector,
 } from '../src/react/preview3d/model.ts';
 import {createModelStage} from '../src/react/preview3d/stage.ts';
 import {THEME} from './preview3dActorFixture.ts';
 import {
-  CLEAR_ONLY_TIMES, FAR_CENTER, FOG_FRAMING, FOG_HOSTS_ID, FOG_SCENE_TIMES, FOG_TIME_ID, FOG_VIEWPORT,
-  fogStageDescription, NEAR_CENTER, PATCH_BASE_COLOR, PATCH_EMISSIVE, type RgbBytes,
+  CLEAR_ONLY_TIMES, FAR_CENTER, FOG_HOSTS_ID, FOG_SCENE_TIMES, FOG_TIME_ID, FOG_VIEWPORT,
+  fogStageDescription, framingCamera, NEAR_CENTER, PATCH_BASE_COLOR, PATCH_EMISSIVE, type RgbBytes,
 } from './preview3dFogCases.ts';
 import {renderScene} from './renderScene.tsx';
 
@@ -19,7 +19,7 @@ const waitTwoFrames = () => new Promise<void>(next => {
 });
 
 async function makePatchGlbBytes(): Promise<number[]> {
-  const srgb = (rgb: readonly [number, number, number]) => new THREE.Color().setRGB(...rgb, THREE.SRGBColorSpace);
+  const srgb = (rgb: ModelColor) => new THREE.Color().setRGB(...rgb, THREE.SRGBColorSpace);
   const material = new THREE.MeshStandardMaterial({
     color: srgb(PATCH_BASE_COLOR), emissive: srgb(PATCH_EMISSIVE),
     emissiveIntensity: 1, roughness: 1, metalness: 0,
@@ -53,18 +53,8 @@ function glContext(host: HTMLElement): WebGLRenderingContext | WebGL2RenderingCo
   return gl;
 }
 
-function framingCamera(width: number, height: number): THREE.PerspectiveCamera {
-  const camera = new THREE.PerspectiveCamera(
-    MODEL_STAGE.fieldOfView, width / height, MODEL_STAGE.nearPlane, MODEL_STAGE.farPlane,
-  );
-  camera.position.fromArray(FOG_FRAMING.position);
-  camera.lookAt(...FOG_FRAMING.target);
-  camera.updateMatrixWorld();
-  return camera;
-}
-
 function readProjectedPixel(
-  gl: WebGLRenderingContext | WebGL2RenderingContext, center: readonly [number, number, number],
+  gl: WebGLRenderingContext | WebGL2RenderingContext, center: ModelVector,
 ): RgbBytes {
   const ndc = new THREE.Vector3(...center).project(framingCamera(gl.drawingBufferWidth, gl.drawingBufferHeight));
   const x = Math.floor((ndc.x * 0.5 + 0.5) * gl.drawingBufferWidth);

@@ -3,21 +3,24 @@
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import * as THREE from 'three';
-import {MODEL_STAGE_SURFACE_MODE, type ModelStageSurfaceMode} from '../src/react/preview3d/model.ts';
+import {
+  MODEL_STAGE_SURFACE_MODE, type ModelColor, type ModelStageSurfaceMode, type ModelVector,
+} from '../src/react/preview3d/model.ts';
 import {openScene} from './browserScene.ts';
 import {
-  FAR_PATCH_DEPTH, FOG_CURVE, FOG_HOSTS_ID, FOG_PATCH_URL, FOG_SCENE_ENTRY, FOG_SPEC, FOG_TIME_ID, FOG_VIEWPORT,
-  NEAR_PATCH_DEPTH, PATCH_BASE_COLOR, PATCH_EMISSIVE, type FogTimeId, type RgbBytes,
+  FAR_CENTER, FOG_CURVE, FOG_HOSTS_ID, FOG_PATCH_URL, FOG_SCENE_ENTRY, FOG_SPEC, FOG_TIME_ID, FOG_VIEWPORT,
+  framingCamera, NEAR_CENTER, PATCH_BASE_COLOR, PATCH_EMISSIVE, type FogTimeId, type RgbBytes,
 } from './preview3dFogCases.ts';
 import {shownBytes, statedBytes} from './preview3dToneCurveOracle.ts';
 
 // One 8-bit framebuffer rounding step across float32 GPU interpolation and tone mapping.
 const BYTE_TOLERANCE = 1;
 
-const linearColor = (srgb: readonly number[]): THREE.Color =>
-  new THREE.Color().setRGB(srgb[0], srgb[1], srgb[2], THREE.SRGBColorSpace);
+const linearColor = (srgb: ModelColor): THREE.Color => new THREE.Color().setRGB(...srgb, THREE.SRGBColorSpace);
 
-function expectedFoggedBytes(depth: number): readonly number[] {
+function expectedFoggedBytes(center: ModelVector): readonly number[] {
+  const camera = framingCamera(FOG_VIEWPORT.width, FOG_VIEWPORT.height);
+  const depth = -new THREE.Vector3(...center).applyMatrix4(camera.matrixWorldInverse).z;
   const factor = THREE.MathUtils.smoothstep(depth, FOG_SPEC.near.distance, FOG_SPEC.far.distance);
   const fogColor = linearColor(FOG_SPEC.near.color).lerp(linearColor(FOG_SPEC.far.color), factor);
   return shownBytes(linearColor(PATCH_EMISSIVE).lerp(fogColor, factor).toArray(), FOG_CURVE);
@@ -43,8 +46,8 @@ const samplePatch = (time: FogTimeId, mode: ModelStageSurfaceMode) =>
 test('each patch in Lit mode shows the fog factor from near, far and its depth within ±1 byte', async () => {
   const measured = await samplePatch(FOG_TIME_ID.haze, MODEL_STAGE_SURFACE_MODE.lit);
   assert.deepEqual([measured.lighting, measured.surfaceMode], [FOG_TIME_ID.haze, MODEL_STAGE_SURFACE_MODE.lit]);
-  assertBytesWithin(measured.nearRgb, expectedFoggedBytes(NEAR_PATCH_DEPTH), BYTE_TOLERANCE, 'near patch');
-  assertBytesWithin(measured.farRgb, expectedFoggedBytes(FAR_PATCH_DEPTH), BYTE_TOLERANCE, 'far patch');
+  assertBytesWithin(measured.nearRgb, expectedFoggedBytes(NEAR_CENTER), BYTE_TOLERANCE, 'near patch');
+  assertBytesWithin(measured.farRgb, expectedFoggedBytes(FAR_CENTER), BYTE_TOLERANCE, 'far patch');
 });
 
 test('every Surface mode other than Lit shows no fog on either patch', async () => {
