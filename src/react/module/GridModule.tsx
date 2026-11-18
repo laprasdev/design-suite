@@ -1,6 +1,6 @@
 import React from 'react';
 import { useStyle } from '../../synth/StyleContext.tsx';
-import { Borders, D, T } from '../../synth/design/index.ts';
+import { Borders, D, MODULE_TITLE } from '../../synth/design/index.ts';
 import { ModuleHeaderRow } from './ModuleHeaderRow.tsx';
 
 const G = D.moduleGrid;
@@ -19,8 +19,8 @@ export function GridModule({ title, titled = true, group, tabs, children }: {
     paddingInline: G.headerInset, borderBottom: `${Borders.standard.width}px solid ${style.borderColor}`,
   };
   const titleStyle: React.CSSProperties = {
-    ...T.title, margin: 0, lineHeight: `${G.headerLineHeight}px`, color: style.primaryColor,
-    textTransform: 'uppercase', cursor: 'default', whiteSpace: 'nowrap', minWidth: 0,
+    ...MODULE_TITLE, margin: 0, lineHeight: `${G.headerLineHeight}px`, color: style.primaryColor,
+    cursor: 'default', whiteSpace: 'nowrap', minWidth: 0,
     overflow: 'hidden', textOverflow: 'ellipsis',
   };
   return (

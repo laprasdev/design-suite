@@ -1,10 +1,15 @@
 import {forwardRef, type ButtonHTMLAttributes, type ReactNode} from 'react';
 import {createLucideIcon, type IconNode, type LucideProps} from 'lucide-react';
 import {PHI_INVERSE} from '../layout.ts';
+import type {NoticeTone} from './actionBarElements.ts';
+import type {Density} from './density.ts';
 
 // Navigation artwork fills the same square canvas, including its stroke. The
 // drawings share a weight and natural bounds; CSS never stretches a glyph.
-const NAVIGATION_SIDE = 24, NAVIGATION_STROKE = 1.5;
+const NAVIGATION_SIDE = 24;
+// The one stroke every suite glyph is drawn with, in its 24-unit canvas; a consumer's lucide glyph takes it too.
+export const ICON_STROKE = 1.5;
+const NAVIGATION_STROKE = ICON_STROKE;
 const navigationEdge = NAVIGATION_STROKE / 2, navigationCenter = NAVIGATION_SIDE / 2;
 const navigationFrame = {x:String(navigationEdge),y:String(navigationEdge),
  width:String(NAVIGATION_SIDE - NAVIGATION_STROKE),height:String(NAVIGATION_SIDE - NAVIGATION_STROKE)};
@@ -34,14 +39,20 @@ export const LibraryIcon = navigationIcon('Library', [
 ]);
 
 // A header's square icon control. `active` makes it a toggle and marks the panel or mode it holds open; without it the
-// button is an action, announced as one. `bare` draws the glyph alone, without the control's edge and ground.
+// button is an action, announced as one. `bare` draws the glyph alone, without the control's edge and ground. `tone`
+// marks a control whose last action failed, in the notice's colour for that tone. A compact `density` draws the glyph
+// at the action label's size with no box around it, as a compact SegmentedControl draws its icons in a module's header.
 export const HeaderIconButton=forwardRef<HTMLButtonElement,
- ButtonHTMLAttributes<HTMLButtonElement>&{label: string;active?: boolean;bare?: boolean;children: ReactNode}>(
- function HeaderIconButton({label,active,bare=false,children,className='',...rest},ref) {
- return <button type="button" ref={ref} {...rest} className={`header-icon-button${className?` ${className}`:''}`} aria-label={label} aria-pressed={active} title={label} data-active={active||undefined} data-appearance={bare?'bare':undefined}>{children}</button>;
+ ButtonHTMLAttributes<HTMLButtonElement>&
+ {label: string;active?: boolean;bare?: boolean;tone?: NoticeTone;density?: Density;children: ReactNode}>(
+ function HeaderIconButton({label,active,bare=false,tone,density,children,className='',...rest},ref) {
+ return <button type="button" ref={ref} {...rest} className={`header-icon-button${className?` ${className}`:''}`} aria-label={label} aria-pressed={active} title={label} data-active={active||undefined} data-appearance={bare?'bare':undefined}
+  data-tone={tone} data-density={density}>
+  {children}
+ </button>;
 });
 // The gear's teeth meet the ring without a second, heavier stroke.
-export const GearIcon=()=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden="true"><circle cx="12" cy="12" r="5.8"/><circle cx="12" cy="12" r="2.3"/><path d="M12 3v3.2M12 17.8V21M3 12h3.2M17.8 12H21M5.64 5.64l2.26 2.26M16.1 16.1l2.26 2.26M5.64 18.36l2.26-2.26M16.1 7.9l2.26-2.26"/></svg>;
+export const GearIcon=()=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={ICON_STROKE} strokeLinecap="round" aria-hidden="true"><circle cx="12" cy="12" r="5.8"/><circle cx="12" cy="12" r="2.3"/><path d="M12 3v3.2M12 17.8V21M3 12h3.2M17.8 12H21M5.64 5.64l2.26 2.26M16.1 16.1l2.26 2.26M5.64 18.36l2.26-2.26M16.1 7.9l2.26-2.26"/></svg>;
 // A panel opening along the right edge.
 export const SidePanelIcon=()=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><path d="M15 4.5v15"/></svg>;
 export const RESET_SIDE = 16, RESET_STROKE = 1.6;

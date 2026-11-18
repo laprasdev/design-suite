@@ -10,10 +10,11 @@ import { D, O, T } from '../../synth/design/index.ts';
 
 const G = D.moduleGrid;
 
-/** What marks something that opens: the skin's tool icon, or a chevron. */
+/** What marks something that opens: the skin's tool icon at `size`, or a chevron at a module's text size. */
 export function OpensMark({ appearance, size }: { appearance?: string; size: number }) {
   const skin = useStyle().skin;
-  return (appearance ?? skinForm(skin, SkinKind.OPENS)) === OpensSkinForm.TOOL ? <Layers size={size}/> : <>›</>;
+  return (appearance ?? skinForm(skin, SkinKind.OPENS)) === OpensSkinForm.TOOL ? <Layers size={size}/>
+    : <span style={{ fontSize: T.moduleLabel.fontSize, lineHeight: 1 }}>›</span>;
 }
 
 /**

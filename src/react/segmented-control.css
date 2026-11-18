@@ -12,7 +12,7 @@
 /* A scrolling control keeps its frame within the parent's width; its options scroll inside it. */
 .seg[data-scroll] {overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:thin;}
 .seg[data-scroll]>* {flex:none;}
-.seg[data-density=compact] {--label-action-size:var(--caption-size);--segment-padding-block:calc(var(--field-gap) / 4);--segment-padding-inline:calc(var(--field-gap) / 2);}
+.seg[data-density=compact] {--label-action-size:var(--type-caption);--segment-padding-block:calc(var(--field-gap) / 4);--segment-padding-inline:calc(var(--field-gap) / 2);}
 .app-root .seg[data-fit] button {min-width:0;justify-content:center;padding-inline:3px;}
 /* Box + color only — typography comes from the composed <Label kind="action">. */
 .seg button {
@@ -56,7 +56,9 @@
 /* Bare choices move the selected color through their text or icon glyphs. */
 .seg--text { --segment-padding-block:var(--field-gap);--segment-padding-inline:var(--field-gap);gap:var(--field-gap);padding:0;border:0;border-radius:0;background:transparent;box-shadow:none; }
 .seg--text button,.seg--icons button { border-radius:0;transition:none; }
+/* The first and last options sit on the control's edges, so their text lines up with what is beside the control. */
 .seg--text button:first-of-type { padding-inline-start:0; }
+.seg--text button:last-of-type { padding-inline-end:0; }
 .seg--text button>.bd-label,.seg--icons button>.bd-label { position:relative;text-transform:none;letter-spacing:normal; }
 .seg--text button[data-on=true],.seg--icons button[data-on=true] { --icon-foreground:currentColor;color:var(--dim); }
 .seg--text button[data-on=true] .bd-text-selection,.seg--icons button[data-on=true] .bd-text-selection { opacity:1; }
@@ -71,9 +73,15 @@
 .seg[data-icon-only=true] button svg{display:block;flex:none;margin:0}
 /* Intrinsic SVGs need a size; explicit artwork and consumer sizing take precedence. */
 :where(.seg[data-icon-only=true] button svg:not([width]):not([height])) { width:var(--header-icon-size);height:var(--header-icon-size); }
+/* A compact choice draws each glyph at its label's text size, as the word it stands for, and shows the choice by
+   colour alone. A bridge: it sizes the glyph by `1em`, not by `--header-icon-size` as the bar does, because the synth
+   has no type scale, so `--label-action-size` is invalid inside a compact choice there. The owner's decision on the
+   synth's type scale removes it: http://workbench.localhost/#synth:ask:mwlnnu0uy4s9 */
+.seg[data-density=compact][data-icon-only=true] button svg { width:1em;height:1em; }
+.seg--icons[data-density=compact] .bd-text-selection { filter:none; }
 /* A vertical joined control is a rail: no frame of its own, rows divided by a rule across, sharing its height, scrolling when they would be shorter than their own minimum. A closed rail floats in its space, so a rule also sits above its first row and below its last. */
 .seg--joined[data-orientation=vertical] { flex-wrap:nowrap;border:0;border-radius:0;background:transparent;box-shadow:none; }
-.seg--joined[data-orientation=vertical]>button+button { border-inline-start:0;border-block-start:var(--line-width) solid var(--segment-divider,var(--line)); }
+.seg--joined[data-orientation=vertical]>button+button,.seg--joined[data-orientation=vertical][data-multiple=true]>button:not(:first-of-type) { border-inline-start:0;border-block-start:var(--line-width) solid var(--segment-divider,var(--line)); }
 .seg--joined[data-orientation=vertical][data-closed]>button:first-of-type { border-block-start:var(--line-width) solid var(--segment-divider,var(--line)); }
 .seg--joined[data-orientation=vertical][data-closed]>button:last-of-type { border-block-end:var(--line-width) solid var(--segment-divider,var(--line)); }
 .seg[data-orientation=vertical][data-fit]>button { flex:1 1 0;min-height:0; }
