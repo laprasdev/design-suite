@@ -19,9 +19,6 @@ export interface ActionBarNotice {
  detail?: string;
  action?: {label: string;onClick(): void};
 }
-/** What failed in a word or two, and the whole of what happened: a notice's message and detail, both as text, as the
- *  hover hint over what a failure marks says them. */
-export type Failure={readonly [Part in 'message'|'detail']-?: Extract<ActionBarNotice[Part],string>};
 export interface ActionBarProps extends Omit<BarProps,'as'> {
  density?: Density;
  notice?: ActionBarNotice|null;

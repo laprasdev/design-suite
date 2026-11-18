@@ -1,7 +1,11 @@
 import type {CSSProperties, ReactNode} from 'react';
-import {NoticeIcon, type Failure} from '../../../react/ActionBar.tsx';
+import {NoticeIcon, type ActionBarNotice} from '../../../react/ActionBar.tsx';
 import {ICON_STROKE} from '../../../react/HeaderIconButton.tsx';
 import {WithTooltip} from './TooltipContext.tsx';
+
+/** What failed in a word or two, and the whole of what happened: a notice's message and detail, both as text, as the
+ *  hover hint over what a failure marks says them. */
+export type Failure = {readonly [Part in 'message'|'detail']-?: Extract<ActionBarNotice[Part],string>};
 
 /** The marker on a failed element, for checks; it adds no box of its own. */
 const MARKER: CSSProperties = {display: 'contents'};

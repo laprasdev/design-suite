@@ -3,7 +3,8 @@
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import {DESKTOP_VIEWPORT,openScene} from './browserScene.ts';
-import {CompactGlyph,TONES,toneButton,toneIcon} from './headerGlyphCases.ts';
+import {NoticeTone} from '../src/react/actionBarElements.ts';
+import {CompactGlyph,toneButton,toneIcon} from './headerGlyphCases.ts';
 
 const page=await openScene('tests/headerGlyphScene.tsx',DESKTOP_VIEWPORT);
 const named=(name: string)=>page.locator(`[aria-label="${name}"]`).first();
@@ -15,7 +16,8 @@ for(const form of Object.values(CompactGlyph))test(`a ${form}'s glyph is its act
  }).then(async label=>[await glyphOf(form).evaluate(svg=>svg.getBoundingClientRect().width),label]);
  assert.equal(glyph,label,`${form} draws its glyph at ${glyph}px, its label at ${label}px`);
 });
-for(const tone of TONES)test(`the ${tone} tone is one colour on a button and on the notice's glyph`,async()=>{
+for(const tone of Object.values(NoticeTone))test(`the ${tone} tone is one colour on a button and on the notice's glyph`,
+ async()=>{
  const colour=(name: string)=>glyphOf(name).evaluate(svg=>getComputedStyle(svg).color);
  const [button,icon,plain]=await Promise.all([
   colour(toneButton(tone)),colour(toneIcon(tone)),colour(CompactGlyph.BAR),
