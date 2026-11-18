@@ -9,9 +9,9 @@ import {applyModelFrame, createModelActor, type ModelActor, type ModelActorConte
 import {modelFrameScope} from '../src/react/preview3d/frameModel.ts';
 import {createModelSurfaceMaterials} from '../src/react/preview3d/surfaceMaterials.ts';
 import {createModelStageSharedValues} from '../src/react/preview3d/sharedValues.ts';
-import {MODEL_ACTOR_ANIMATION, MODEL_ANIMATION_LAYER, MODEL_STAGE_FRAMING, MODEL_STAGE_ORIGIN, MODEL_STAGE_SIZE,
-  MODEL_STAGE_THEME_LIGHTING, modelStagePolicy,
-  type ModelStageActor, type ModelStageClock, type ModelStageTheme}
+import {MODEL_ACTOR_ANIMATION, MODEL_ANIMATION_LAYER, MODEL_STAGE_DISPLAY, MODEL_STAGE_FRAMING, MODEL_STAGE_ORIGIN,
+  MODEL_STAGE_SIZE, MODEL_STAGE_SURFACE_MODE, MODEL_STAGE_THEME_LIGHTING, modelStagePolicy,
+  type ModelStageActor, type ModelStageClock, type ModelStageLook, type ModelStageTheme}
   from '../src/react/preview3d/model.ts';
 
 export const BONE = 'tip';
@@ -87,11 +87,16 @@ export const entity = (entityId: string, animationLayers: unknown[] = [], positi
 export const frame = (simulationTimeSeconds: number, ...entities: unknown[]) => ({simulationTimeSeconds, entities});
 export const close = (actual: number, expected: number, tolerance = 1e-6) =>
   {if (Math.abs(actual - expected) > tolerance) throw new Error(`Expected ${expected}, read ${actual}.`);};
+// A whole stage look with neutral lighting and no post effects; a test overrides the parts it is about.
+export const stageLook = (changes: Partial<ModelStageLook> = {}): ModelStageLook => ({
+  backdrop: [0, 0, 0], key: {color: [1, 1, 1], strength: 1, direction: [0, 1, 0]},
+  ambient: {sky: [1, 1, 1], ground: [0, 0, 0], strength: 1}, shadow: [0, 0, 0], night: 0,
+  aids: {floor: [0, 0, 0], share: 1}, fog: null, toneCurve: null, glow: null, ...changes});
 // A whole stage description with one declared actor a; a test overrides the parts it is about.
 export const describing = (changes: Record<string, unknown> = {}) => ({
   actors: {focus: 'a', actors: [declaration('a')]}, environment: null, framing: {kind: MODEL_STAGE_FRAMING.focus},
-  orbit: true, lighting: MODEL_STAGE_THEME_LIGHTING, surfaceSets: {}, display: 'model', surfaceMode: 'lit',
-  size: {rule: MODEL_STAGE_SIZE.real}, origin: MODEL_STAGE_ORIGIN.file,
+  orbit: true, lighting: MODEL_STAGE_THEME_LIGHTING, surfaceSets: {}, display: MODEL_STAGE_DISPLAY.model,
+  surfaceMode: MODEL_STAGE_SURFACE_MODE.lit, size: {rule: MODEL_STAGE_SIZE.real}, origin: MODEL_STAGE_ORIGIN.file,
   ...changes});
 // Actors drawn with their files' own materials, as a frame is checked against them: no renderer takes a value.
 export const fileScene = (actors: readonly ModelStageActor[]) =>

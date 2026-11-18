@@ -3,7 +3,7 @@ import {describe, it} from 'node:test';
 import {modelStageDescription} from '../src/react/preview3d/descriptionModel.ts';
 import {modelStageLighting} from '../src/react/preview3d/lightingModel.ts';
 import {ModelStageRefusal} from '../src/react/preview3d/refusal.ts';
-import {describing, held} from './preview3dActorFixture.ts';
+import {describing, held, stageLook} from './preview3dActorFixture.ts';
 
 // Every record of the description states exactly its fields: for each one, by its path, every field it omits and a
 // field it does not have are refused by name. The table is the records' own list, so a record left out of it shows.
@@ -32,11 +32,9 @@ function exact(check: (value: unknown) => unknown, whole: unknown, path: Path, w
   }
 }
 
-const LOOK = {backdrop: [0, 0, 0], key: {color: [1, 1, 1], strength: 1, direction: [0, 1, 0]},
-  ambient: {sky: [1, 1, 1], ground: [0, 0, 0], strength: 1}, shadow: [0, 0, 0], night: 0,
-  aids: {floor: [0, 0, 0], share: 1}, toneCurve: null, glow: {threshold: 1, strength: 1, radius: 0.5},
+const LOOK = stageLook({glow: {threshold: 1, strength: 1, radius: 0.5},
   fog: {near: {distance: 2, color: [0, 0, 0]}, far: {distance: 9, color: [0, 0, 0]},
-    height: {base: 0, top: 1, strength: 0.5}}};
+    height: {base: 0, top: 1, strength: 0.5}}});
 const LIGHTING = {time: 'dusk', times: [{id: 'dusk', label: 'Dusk', look: LOOK}]};
 const TIME = 'Time dusk: look';
 // The fields the description's records of several shapes are told apart by.

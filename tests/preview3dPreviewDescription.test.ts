@@ -11,7 +11,7 @@ import {createModelDescriptionRequests, createModelPreviewChoices, modelPreviewC
   modelPreviewClip, modelPreviewNotice, modelPreviewPick, modelPreviewReady, modelPreviewToggle}
   from '../src/react/preview3d/previewDescription.ts';
 import {NoticeTone} from '../src/react/actionBarElements.ts';
-import {declaration, describing, held, playing, REST, standingAt} from './preview3dActorFixture.ts';
+import {declaration, describing, held, playing, REST, stageLook, standingAt} from './preview3dActorFixture.ts';
 
 describe('the view\'s description', () => {
   const host = modelStageDescription(describing({actors: {focus: 'otter', actors: [
@@ -38,9 +38,7 @@ describe('the view\'s description', () => {
     const posed = modelStageDescription({...host, framing: {kind: 'pose', position: [0, 1, 4], target: [0, 1, 0]}});
     assert.equal(modelPreviewChoices(held, posed), held);
     // A host that changes a time's colours, and not which time is in force, keeps every choice too.
-    const dusk = {id: 'dusk', label: 'Dusk', look: {backdrop: [0, 0, 0], key: {color: [1, 1, 1], strength: 1,
-      direction: [0, 1, 0]}, ambient: {sky: [1, 1, 1], ground: [0, 0, 0], strength: 1}, shadow: [0, 0, 0], night: 1,
-      aids: {floor: [0, 0, 0], share: 1}, fog: null, toneCurve: null, glow: null}};
+    const dusk = {id: 'dusk', label: 'Dusk', look: stageLook({night: 1})};
     const tinted = modelStageDescription({...host, lighting: {...host.lighting, times: [dusk]}});
     assert.equal(modelPreviewChoices(held, tinted), held);
     const relit = modelStageDescription({...host, lighting: {time: 'dark', times: []}});
