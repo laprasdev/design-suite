@@ -7,12 +7,21 @@ import {ModuleKnob, ModuleField} from '../../synth/components/synth/ModuleGrid.t
 import {ModuleNumberInput} from './ModuleNumberInput.tsx';
 import {FieldEmphasis} from '../../fields.ts';
 import {D, T} from '../../synth/design/index.ts';
-const AXES = ['x', 'y', 'z'] as const;
-type Axis = typeof AXES[number];
-type Bounds = {min: number; max: number};
+const PLANAR_AXES = ['x', 'y'] as const;
+export type VectorAxis = 'x' | 'y' | 'z';
+export interface VectorInputValue {
+  readonly x: number;
+  readonly y: number;
+  readonly z?: number;
+}
+type Bounds = {readonly min: number; readonly max: number};
 interface Props {
-  label: string; vector: Record<Axis, number>; onAxis(axis: Axis, value: number): void;
-  disabled?: boolean; appearance?: string; limits?: Record<Axis, Bounds>;
+  label: string; vector: VectorInputValue; onAxis(axis: VectorAxis, value: number): void;
+  disabled?: boolean; appearance?: string; limits?: Partial<Record<VectorAxis, Bounds>>;
+}
+export function vectorAxes(vector: VectorInputValue): readonly {axis: VectorAxis; value: number}[] {
+  const planar: {axis: VectorAxis; value: number}[] = PLANAR_AXES.map(axis => ({axis, value: vector[axis]}));
+  return vector.z === undefined ? planar : [...planar, {axis: 'z', value: vector.z}];
 }
 function AxisInput({label, value, onChange, disabled, bounds}: {
   label: string; value: number; onChange(value: number): void; disabled?: boolean; bounds?: Bounds;
@@ -32,12 +41,13 @@ function AxisInput({label, value, onChange, disabled, bounds}: {
 }
 export function ModuleVectorInput({label, vector, onAxis, disabled, appearance, limits}: Props) {
   const context = useStyle(), form = appearance ?? skinForm(context.skin, SkinKind.VECTOR);
-  return <div data-field-vector style={{display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+  const axes = vectorAxes(vector);
+  return <div data-field-vector style={{display: 'grid', gridTemplateColumns: `repeat(${axes.length}, minmax(0, 1fr))`,
     gap: D.moduleGrid.fieldGap, width: '100%'}}>
-    {AXES.map(axis => <div key={axis} data-vector-axis={axis} style={{minWidth: 0}}>
+    {axes.map(({axis, value}) => <div key={axis} data-vector-axis={axis} style={{minWidth: 0}}>
       {form !== VectorSkinForm.KNOBS && <span style={T.moduleLabel}>{axis.toUpperCase()}</span>}
-      <AxisInput label={`${label} ${axis}`} value={vector[axis]} disabled={disabled}
-        bounds={form === VectorSkinForm.KNOBS ? limits?.[axis] : undefined} onChange={value => onAxis(axis, value)}/>
+      <AxisInput label={`${label} ${axis}`} value={value} disabled={disabled}
+        bounds={form === VectorSkinForm.KNOBS ? limits?.[axis] : undefined} onChange={next => onAxis(axis, next)}/>
     </div>)}
   </div>;
 }
