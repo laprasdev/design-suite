@@ -5,12 +5,12 @@
    the rest. `fit` fills the available width: true uses equal segments; "content" gives longer labels more room.
    Without it the control ends where its options do. `scroll` keeps a wider row of options within the parent's
    width: they scroll inside the control's own frame, and the selected one stays in view.
-   `density="compact"` uses caption text and tighter spacing.
+   `density={Density.COMPACT}` uses caption text and tighter spacing.
    A multiple choice draws as joined cells, each filling its cell when chosen. A single choice saving: `pending`. */
 import {useContext,useLayoutEffect,useRef,type CSSProperties,type KeyboardEvent,type ReactElement,type ReactNode} from 'react';
 import {springAnimate,SegmentIndicator,SEGMENT_MOTION,sweepText,TextSweepElement,TEXT_SELECTION_MOVING_ATTRIBUTE} from './motion.ts';
 import {Label} from './accents.tsx';
-import {SegmentDefaultsContext} from './segmentContext.ts';
+import {SegmentDefaultsContext,type SegmentDefaults} from './segmentContext.ts';
 import {wrapVariables,type WrapGrid,type Pictured} from './segmentWrap.ts';
 import {HoverDetail} from './HoverDetail.tsx';
 import {PALETTE_CHANGE_EVENT} from '../theme.ts';
@@ -44,14 +44,11 @@ export interface SegmentOption<V extends SegmentValue> {
   // The option's own data attributes, for a consumer that reads its options back from the page.
   data?: Readonly<Record<`data-${string}`,string|number|boolean|undefined>>;
 }
-interface SegmentedBase<V extends SegmentValue> extends Pictured<V> {
+interface SegmentedBase<V extends SegmentValue> extends Pictured<V>, SegmentDefaults {
   options: readonly SegmentOption<V>[];
   ariaLabel?: string;
   className?: string;
   style?: CSSProperties;
-  variant?: string;
-  density?: string;
-  tabs?: boolean;
   orientation?: 'horizontal'|'vertical';
   /** A vertical rail floating in its space: a rule above its first row and below its last. */
   closed?: boolean;
@@ -60,7 +57,6 @@ interface SegmentedBase<V extends SegmentValue> extends Pictured<V> {
   wrap?: WrapGrid;
   iconOnly?: boolean;
   fit?: boolean|'content';
-  scroll?: boolean;
   disabled?: boolean;
   children?: ReactNode;
 }

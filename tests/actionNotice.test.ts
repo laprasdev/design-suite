@@ -10,9 +10,9 @@ type Module = typeof import('../src/react/ActionBar.tsx') & typeof import('../sr
   & typeof import('../src/react/actionBarElements.ts') & typeof import('../src/react/barElements.ts');
 const {module, dispose} = await bundled<Module>(['src/react/ActionBar.tsx', 'src/react/pageBarElements.ts',
   'src/react/actionBarElements.ts', 'src/react/barElements.ts']);
-const {ActionBarElement, ActionNoticeElement, BarElement, BarSlotElement, HeaderNoticesElement} = module;
+const {ActionBarElement, ActionNoticeElement, BarElement, BarSlotElement, HeaderNoticesElement, NoticeTone} = module;
 after(dispose);
-const NOTICE = Object.freeze({tone: 'error', message: 'Not applied',
+const NOTICE = Object.freeze({tone: NoticeTone.ERROR, message: 'Not applied',
   detail: 'Actor second: clip swim is not an animation in the model file.'} as const);
 
 describe('the action notice', () => {
@@ -22,7 +22,8 @@ describe('the action notice', () => {
     assert.match(markup, detail);
     assert.match(markup, new RegExp(`title="${NOTICE.detail}"`));
     assert.match(markup, />Not applied</);
-    const bare = renderToStaticMarkup(createElement(module.ActionNotice, {notice: {tone: 'info', message: 'Saving…'}}));
+    const bare = renderToStaticMarkup(
+      createElement(module.ActionNotice, {notice: {tone: NoticeTone.INFO, message: 'Saving…'}}));
     assert.doesNotMatch(bare, new RegExp(ActionNoticeElement.DETAIL.className));
   });
 

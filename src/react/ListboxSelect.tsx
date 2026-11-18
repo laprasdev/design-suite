@@ -7,6 +7,7 @@ import {useEffect,useId,useLayoutEffect,useRef,useState,type KeyboardEvent,type 
 import {createPortal} from 'react-dom';
 import {useAnchoredPopover} from './useAnchoredPopover.ts';
 import {SearchField} from './SearchField.tsx';
+import {Density} from './density.ts';
 import {searchCopy} from './interfaceCopy.ts';
 import {ListboxElement} from './listboxSelectElements.ts';
 import {LISTBOX_MOVES,LISTBOX_OPENS,typesText,typeahead,searching,typeaheadMatch,matchesOption,type TypeaheadSearch} from './listboxNavigation.ts';
@@ -88,7 +89,11 @@ export function ListboxSelect<V extends string|number>({options,value,onChange,l
   {open&&createPortal(<Modal open placement={ModalPlacement.ANCHORED} anchor={trigger} onClose={()=>{setOpen(false);setQuery('');}}
    panelRef={panel} role="presentation" className={ListboxElement.POPOVER.className} data-icon-only={iconOnly||undefined}
    style={position}>
-   {searchSubject&&<SearchField density="compact" size={searchSize} style={searchSize?{width:`calc(${searchSize}ch + 2 * var(--field-gap))`}:undefined} ref={input} subject={searchSubject} value={query} onChange={value=>{setQuery(value);setActive(0);}} role="combobox" aria-expanded="true" aria-controls={listId} aria-activedescendant={shown.length?optionId(active):undefined} onKeyDown={openKey}/>}
+   {searchSubject&&<SearchField density={Density.COMPACT} size={searchSize}
+    style={searchSize?{width:`calc(${searchSize}ch + 2 * var(--field-gap))`}:undefined} ref={input}
+    subject={searchSubject} value={query} onChange={value=>{setQuery(value);setActive(0);}} role="combobox"
+    aria-expanded="true" aria-controls={listId} aria-activedescendant={shown.length?optionId(active):undefined}
+    onKeyDown={openKey}/>}
    <ul ref={list} id={listId} role="listbox" aria-label={label} className={ListboxElement.LIST.className}>
     {shown.map((option,index)=><li key={option.value} id={optionId(index)} role="option" aria-label={option.label} title={option.title??(iconOnly?option.label:undefined)} aria-selected={option.value===value} data-active={index===active||undefined} className={ListboxElement.OPTION.className}
      onMouseDown={e=>e.preventDefault()} onMouseMove={()=>setActive(index)} onClick={()=>choose(index)}>{renderOption?renderOption(option):<span className={ListboxElement.CONTENT.className}>{option.leading}<Label kind="action" className={ListboxElement.LABEL.className}>{option.label}</Label>{option.trailing&&<span className={ListboxElement.IMPACT.className}>{option.trailing}</span>}</span>}{index===active&&option.description&&<small className={ListboxElement.DETAIL.className}>{option.description}</small>}</li>)}

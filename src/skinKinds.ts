@@ -48,4 +48,5 @@ export interface DefaultedKind {readonly kind: string; readonly form: string}
 export const SkinDefault = {
   SLIDER: {kind: SkinKind.SLIDER, form: SliderSkinForm.TRACK},
   YES_NO: {kind: SkinKind.YES_NO, form: YesNoSkinForm.DOT},
+  CONTAINER: {kind: SkinKind.CONTAINER, form: ContainerForm.CUTOUT},
 } as const satisfies Record<string, DefaultedKind>;

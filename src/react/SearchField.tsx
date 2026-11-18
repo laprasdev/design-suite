@@ -1,5 +1,6 @@
 import {forwardRef,type InputHTMLAttributes} from 'react';
 import {searchCopy} from './interfaceCopy.ts';
+import type {Density} from './density.ts';
 
 // The subject is the only placeholder input; labels can name a narrower context.
 // A search's subject (its placeholder), its narrower label, its text and its density.
@@ -8,7 +9,7 @@ export interface SearchFieldProps extends Omit<InputHTMLAttributes<HTMLInputElem
  label?: string;
  value: string;
  onChange(value: string): void;
- density?: string;
+ density?: Density;
 }
 export const SearchField=forwardRef<HTMLInputElement,SearchFieldProps>(function SearchField({subject,label,value,onChange,className='',density,...props},ref) {
  const placeholder=searchCopy.placeholder(subject);

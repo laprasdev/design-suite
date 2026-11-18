@@ -30,7 +30,7 @@ export { ApplicationElement, APPLICATION_HOME_ATTRIBUTE } from './applicationEle
 export { Bar, BarContents, type BarProps, type BarSlots } from './Bar.tsx';
 export { BarElement, BarSlotElement, barSlotsWithin } from './barElements.ts';
 export { ActionBar, type ActionBarProps, type ActionBarNotice } from './ActionBar.tsx';
-export { ActionBarElement, ActionBarSlotElement, ActionNoticeElement, BarParticipantElement }
+export { ActionBarElement, ActionBarSlotElement, ActionNoticeElement, BarParticipantElement, NoticeTone }
   from './actionBarElements.ts';
 export { HoverDetail, type HoverDetailProps } from './HoverDetail.tsx';
 export { SegmentedControl, TEXT_SEGMENT_VARIANT, JOINED_SEGMENT_VARIANT, ICON_SEGMENT_VARIANT,
@@ -40,6 +40,7 @@ export { type SegmentPending } from './segmentPending.tsx';
 export { HeaderIconButton, GearIcon, SidePanelIcon, ResetIcon } from './HeaderIconButton.tsx';
 export { HEADER_CONTROL_PROPERTY, HEADER_CONTROL_SIZE } from './headerControl.ts';
 export { SegmentDefaultsContext, type SegmentDefaults } from './segmentContext.ts';
+export { Density } from './density.ts';
 export { BarParticipants, type BarParticipant } from './BarParticipants.tsx';
 export { SelectionMark } from './SelectionMark.tsx';
 export { SearchField, type SearchFieldProps } from './SearchField.tsx';

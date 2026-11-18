@@ -3,6 +3,7 @@ import {useStyle} from '../../synth/StyleContext.tsx';
 import {D, O, T} from '../../synth/design/index.ts';
 import {SegmentedControl, ICON_SEGMENT_VARIANT} from '../SegmentedControl.tsx';
 import {useStyleThemeVariables} from '../styleTheme.ts';
+import {Density} from '../density.ts';
 
 export interface ModuleTab<Id extends string> {id: Id; label: string; content: React.ReactNode; authored: boolean}
 
@@ -13,7 +14,7 @@ export function ModuleTabs<Id extends string>({tabs, value, onChange, ariaLabel,
   const {primaryColor} = useStyle().getEffectiveStyle();
   return <div style={{display: 'flex', alignItems: 'stretch', flex: 'none',
     minWidth: 0, maxWidth: '100%', ...useStyleThemeVariables()}}>
-    <SegmentedControl<Id> tabs scroll variant={ICON_SEGMENT_VARIANT} density="compact" iconOnly={!labelActive}
+    <SegmentedControl<Id> tabs scroll variant={ICON_SEGMENT_VARIANT} density={Density.COMPACT} iconOnly={!labelActive}
       ariaLabel={ariaLabel} value={value} onChange={onChange} options={tabs.map(tab => ({
         value: tab.id, ariaLabel: tab.label, title: tab.label,
         data: {'data-tab': tab.id, 'data-tab-set': tab.authored},
