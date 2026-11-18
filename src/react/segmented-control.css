@@ -73,8 +73,10 @@
 .seg[data-icon-only=true] button svg{display:block;flex:none;margin:0}
 /* Intrinsic SVGs need a size; explicit artwork and consumer sizing take precedence. */
 :where(.seg[data-icon-only=true] button svg:not([width]):not([height])) { width:var(--header-icon-size);height:var(--header-icon-size); }
-/* A compact control draws each glyph at its label's text size, as the word it stands for, and shows the choice by
-   colour alone. */
+/* A compact choice draws each glyph at its label's text size, as the word it stands for, and shows the choice by
+   colour alone. A bridge: it sizes the glyph by `1em`, not by `--header-icon-size` as the bar does, because the synth
+   has no type scale, so `--label-action-size` is invalid inside a compact choice there. The owner's decision on the
+   synth's type scale removes it: http://workbench.localhost/#synth:ask:mwlnnu0uy4s9 */
 .seg[data-density=compact][data-icon-only=true] button svg { width:1em;height:1em; }
 .seg--icons[data-density=compact] .bd-text-selection { filter:none; }
 /* A vertical joined control is a rail: no frame of its own, rows divided by a rule across, sharing its height, scrolling when they would be shorter than their own minimum. A closed rail floats in its space, so a rule also sits above its first row and below its last. */

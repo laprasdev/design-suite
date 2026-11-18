@@ -1,5 +1,6 @@
 import type {CSSProperties, ReactNode} from 'react';
 import {NoticeIcon, type ActionBarNotice} from '../../../react/ActionBar.tsx';
+import {NoticeTone} from '../../../react/actionBarElements.ts';
 import {ICON_STROKE} from '../../../react/HeaderIconButton.tsx';
 import {WithTooltip} from './TooltipContext.tsx';
 
@@ -13,7 +14,7 @@ const MARKER: CSSProperties = {display: 'contents'};
 const TEXT_SIZE = '1em';
 
 /** The glyph that marks an element whose failure has no icon of its own to colour, at its text's size. */
-export const FailureGlyph = () => <NoticeIcon tone="error" size={TEXT_SIZE} strokeWidth={ICON_STROKE}/>;
+export const FailureGlyph = () => <NoticeIcon tone={NoticeTone.ERROR} size={TEXT_SIZE} strokeWidth={ICON_STROKE}/>;
 
 /** The element a failure marks, laid out in `box`: with the pointer over it, the hover hint says what failed, then
  *  what happened. Unmarked, it is only the element. */

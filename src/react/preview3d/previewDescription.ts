@@ -1,4 +1,5 @@
 import type {ActionBarNotice} from '../ActionBar.tsx';
+import {NoticeTone} from '../actionBarElements.ts';
 import {MODEL_PREVIEW_TEXT, MODEL_REST_POSE} from './model.ts';
 import type {ModelStageController, ModelStageDisplay} from './model.ts';
 import {MODEL_ACTOR_ANIMATION, modelStageFocus, type ModelStageActorAnimation} from './actorModel.ts';
@@ -178,6 +179,6 @@ export function modelPreviewReady(loaded: boolean, external: boolean, poseStatus
 export function modelPreviewNotice(failure: ModelStageFailure | null, retry: () => void): ActionBarNotice | null {
   if (!failure) return null;
   const stopped = failure.kind === MODEL_STAGE_FAILURE.unusable;
-  return {message: stopped ? MODEL_PREVIEW_TEXT.stopped : MODEL_PREVIEW_TEXT.refused, tone: 'error',
+  return {message: stopped ? MODEL_PREVIEW_TEXT.stopped : MODEL_PREVIEW_TEXT.refused, tone: NoticeTone.ERROR,
     detail: failure.message, ...(stopped && {action: {label: MODEL_PREVIEW_TEXT.retry, onClick: retry}})};
 }

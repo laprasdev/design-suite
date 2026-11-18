@@ -4,7 +4,7 @@ import {Bar,type BarProps} from './Bar.tsx';
 import {BAR_FILL_ATTRIBUTE} from './barElements.ts';
 import {Label} from './accents.tsx';
 import {Button} from './Button.tsx';
-import {ActionBarElement,ActionNoticeElement,NoticeIconElement,type NoticeTone} from './actionBarElements.ts';
+import {ActionBarElement,ActionNoticeElement,NoticeIconElement,NoticeTone} from './actionBarElements.ts';
 import {HeaderNoticesElement} from './pageBarElements.ts';
 import {SegmentDefaultsContext,type SegmentDefaults} from './segmentContext.ts';
 import {TEXT_SEGMENT_VARIANT} from './SegmentedControl.tsx';
@@ -40,14 +40,14 @@ export const ActionBar=forwardRef<HTMLDivElement,ActionBarProps>(function Action
 
 // A notice's tone as its glyph, coloured by the tone: in the notice, or alone on the element a failure marks.
 export function NoticeIcon({tone,...props}: LucideProps&{tone: NoticeTone}) {
- const Icon=tone==='error'?AlertTriangle:Info;
+ const Icon=tone===NoticeTone.ERROR?AlertTriangle:Info;
  return <Icon {...props} className={NoticeIconElement.className} data-tone={tone} aria-hidden="true"/>;
 }
 
 // What failed in a word or two, then the start of its detail, cut to a few words; the whole detail is the hover hint.
 export function ActionNotice({notice}: {notice?: ActionBarNotice|null}) {
  return notice?<Bar className={ActionNoticeElement.ROOT.className} data-tone={notice.tone}
-   role={notice.tone==='error'?'alert':'status'} title={notice.detail} slots={{
+   role={notice.tone===NoticeTone.ERROR?'alert':'status'} title={notice.detail} slots={{
     left:<><NoticeIcon tone={notice.tone} size={16}/><Label kind="action">{notice.message}</Label>
      {notice.detail&&<Label kind="action" className={ActionNoticeElement.DETAIL.className}>{notice.detail}</Label>}</>,
     right:notice.action&&<Button {...{[BAR_FILL_ATTRIBUTE]: true}} variant="subtle" onClick={notice.action.onClick}>

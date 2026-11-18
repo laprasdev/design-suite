@@ -10,6 +10,7 @@ import {createModelDescriptionRequests, createModelPreviewChoices, modelPreviewC
   modelPreviewFailure, modelPreviewSelectionOf,
   modelPreviewClip, modelPreviewNotice, modelPreviewPick, modelPreviewReady, modelPreviewToggle}
   from '../src/react/preview3d/previewDescription.ts';
+import {NoticeTone} from '../src/react/actionBarElements.ts';
 import {declaration, describing, held, playing, REST, standingAt} from './preview3dActorFixture.ts';
 
 describe('the view\'s description', () => {
@@ -181,9 +182,9 @@ describe('the view\'s description', () => {
     const retry = () => undefined;
     assert.equal(modelPreviewNotice(null, retry), null);
     assert.deepEqual(modelPreviewNotice({kind: MODEL_STAGE_FAILURE.refused, message: 'Actor a: clip swim'}, retry),
-      {message: MODEL_PREVIEW_TEXT.refused, tone: 'error', detail: 'Actor a: clip swim'});
+      {message: MODEL_PREVIEW_TEXT.refused, tone: NoticeTone.ERROR, detail: 'Actor a: clip swim'});
     assert.deepEqual(modelPreviewNotice({kind: MODEL_STAGE_FAILURE.unusable, message: 'Missing bone'}, retry),
-      {message: MODEL_PREVIEW_TEXT.stopped, tone: 'error', detail: 'Missing bone',
+      {message: MODEL_PREVIEW_TEXT.stopped, tone: NoticeTone.ERROR, detail: 'Missing bone',
         action: {label: MODEL_PREVIEW_TEXT.retry, onClick: retry}});
   });
 });
