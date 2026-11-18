@@ -14,8 +14,9 @@
    root (--sd-modal-layer); these are defaults at :where(:root), so a host's own root value wins whatever the order.
    The widths a dialog's `width` names (ModalWidth): a short dialog's, a titled dialog's and a passage's to read. A
    stage spans 24 control hit sizes, and fill takes a contained frame's whole width inside its inset. An anchored panel
-   is at most --modal-width-anchored wide and keeps --modal-anchored-edge from each side of the window, the edge
-   useAnchoredPopover places it within (VIEWPORT_EDGE). A viewport frame keeps its panel --modal-viewport-inset in. */
+   naming no width is at most --modal-width-anchored wide; named or not, it keeps --modal-anchored-edge from each side
+   of the window, the edge useAnchoredPopover places it within (VIEWPORT_EDGE). A viewport frame keeps its panel
+   --modal-viewport-inset in. */
 :where(:root) {
   --modal-width-compact: 380px; --modal-width-titled: 420px; --modal-width-reading: 520px; --modal-width-anchored: 360px;
   --modal-anchored-edge: 8px; --modal-viewport-inset: 16px;
@@ -48,7 +49,8 @@
 .sd-modal-bg[data-modal-frame-inset=gutter] { --sd-modal-frame-inset:var(--page-gutter); }
 .sd-modal[data-modal-placement=contained] { width:max-content;max-width:min(var(--sd-modal-width),100%);max-height:100%;pointer-events:auto;transform:none; }
 .sd-modal[data-modal-placement=contained][data-modal-width=fill] { width:100%; }
-.sd-modal[data-modal-placement=anchored] { position:fixed;width:max-content;max-width:min(var(--modal-width-anchored),calc(100vw / var(--css-zoom,1) - 2 * var(--modal-anchored-edge)));z-index:var(--popover-layer,var(--sd-modal-layer));transform:none;transition:none; }
+.sd-modal[data-modal-placement=anchored] { --sd-modal-anchored-room:calc(100vw / var(--css-zoom,1) - 2 * var(--modal-anchored-edge));position:fixed;width:max-content;max-width:min(var(--modal-width-anchored),var(--sd-modal-anchored-room));z-index:var(--popover-layer,var(--sd-modal-layer));transform:none;transition:none; }
+.sd-modal[data-modal-placement=anchored][data-modal-width] { width:var(--sd-modal-width);max-width:var(--sd-modal-anchored-room); }
 .sd-modal[data-modal-form=media] {width:auto;max-width:calc(96vw / var(--css-zoom,1));max-height:calc(96vh / var(--css-zoom,1));padding:0;background:var(--stage);}
 /* A titled dialog: the title, the rows on two shared columns (the label's, sized to
    the widest, and the control's), and the actions row, which stays in view while the

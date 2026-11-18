@@ -2,14 +2,15 @@
 // in the viewport, a stage of 24 control hit sizes, and a contained Modal filling its frame inside the page's inset or
 // gutter, or outside a page surface the theme's inset. A Modal naming no width keeps the width every Modal had before
 // it could name one, and a contained Modal given a top sits that far below its frame's top edge, past the inset or
-// within it; a negative top is refused.
+// within it; a negative top is refused. An anchored Modal naming a width is that wide, and one naming none keeps its
+// content's width.
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import type {Locator} from '../scripts/gateTools/node_modules/playwright/index.js';
 import {ModalElement,ModalForm,ModalPlacement,MODAL_WIDTH_ATTRIBUTE,ModalWidth,modalShape}
  from '../src/react/modalElements.ts';
 import {DESKTOP_VIEWPORT,openScene} from './browserScene.ts';
-import {CASE_ATTRIBUTE,CONTAINED_PARENT,MODAL_WIDTH_PX,ModalCase,THEME_INSET_PX,VIEWPORT_WIDTHS}
+import {ANCHORED_WIDTH,CASE_ATTRIBUTE,CONTAINED_PARENT,MODAL_WIDTH_PX,ModalCase,THEME_INSET_PX,VIEWPORT_WIDTHS}
  from './modalWidthCases.ts';
 
 const page=await openScene('tests/modalWidthScene.tsx',DESKTOP_VIEWPORT);
@@ -48,4 +49,13 @@ for(const [name,top] of TOPS)
 test('a contained Modal refuses a negative or non-finite top',()=>{
  for(const top of [-1,Number.NaN,Number.POSITIVE_INFINITY])assert.throws(()=>modalShape({form:ModalForm.DIALOG,
   placement:ModalPlacement.CONTAINED,titled:false,top}),RangeError,String(top));
+});
+const anchoredPx=MODAL_WIDTH_PX[ANCHORED_WIDTH];
+test(`an anchored Modal named ${ANCHORED_WIDTH} is ${anchoredPx}px wide, though its content is narrower`,async()=>{
+ assert.equal(await panel(ModalCase.ANCHORED_NAMED).getAttribute(MODAL_WIDTH_ATTRIBUTE),ANCHORED_WIDTH);
+ assert.equal(await computedWidth(ModalCase.ANCHORED_NAMED),anchoredPx);
+});
+test('an anchored Modal naming no width takes its content\'s',async()=>{
+ assert.equal(await panel(ModalCase.ANCHORED_CONTENT).getAttribute(MODAL_WIDTH_ATTRIBUTE),null);
+ assert.ok(await computedWidth(ModalCase.ANCHORED_CONTENT)<anchoredPx);
 });

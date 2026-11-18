@@ -1,10 +1,11 @@
 // The page the width test measures in a browser: every width a viewport Modal names and each default, open at once,
 // and contained Modals in positioned parents: filling one inside either inset on a page surface, filling one outside
-// any page surface, and placing one past the page's inset and one within it.
+// any page surface, and placing one past the page's inset and one within it; and an anchored Modal naming a width and
+// one taking its content's.
 import type {CSSProperties,ReactNode} from 'react';
 import {Modal,ModalRow} from '../src/react/index.ts';
 import {ModalFrameInset,ModalPlacement,ModalWidth} from '../src/react/modalElements.ts';
-import {CASE_ATTRIBUTE,CONTAINED_PARENT,ModalCase,VIEWPORT_WIDTHS} from './modalWidthCases.ts';
+import {ANCHORED_WIDTH,CASE_ATTRIBUTE,CONTAINED_PARENT,ModalCase,VIEWPORT_WIDTHS} from './modalWidthCases.ts';
 import {renderScene} from './renderScene.tsx';
 
 const {widthPx,heightPx,pageInsetPx,pageGutterPx,topPx,topInInsetPx}=CONTAINED_PARENT;
@@ -40,4 +41,8 @@ renderScene(<>
  <Parent name={ModalCase.TOP_IN_INSET} page={PAGE_SURFACE}>
   <Modal open placement={ModalPlacement.CONTAINED} top={topInInsetPx}>{PASSAGE}</Modal>
  </Parent>
+ <Case name={ModalCase.ANCHORED_NAMED}>
+  <Modal open placement={ModalPlacement.ANCHORED} width={ANCHORED_WIDTH}>{WORD}</Modal>
+ </Case>
+ <Case name={ModalCase.ANCHORED_CONTENT}><Modal open placement={ModalPlacement.ANCHORED}>{WORD}</Modal></Case>
 </>);

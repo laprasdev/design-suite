@@ -39,12 +39,14 @@ type Contained={frameInset?: ModalFrameInsetValue;top?: number};
 type NotContained={[Key in keyof Contained]?: never};
 type NotAnchored={anchor?: never;group?: never};
 // Where a Modal sits. Only an anchored Modal names an anchor, the element it opens from, which is part of its region,
-// and a group, of which one is open at a time; it takes its content's width. Only a contained Modal fills its frame.
+// and a group, of which one is open at a time; naming no width, it takes its content's. Only a contained Modal fills
+// its frame.
+// A width a panel names of its own: any but fill, which only a contained frame gives.
+type PanelWidth={width?: Exclude<ModalWidthValue,typeof ModalWidth.FILL>};
 export type ModalPlacementProps=
- |{placement?: typeof ModalPlacement.VIEWPORT;width?: Exclude<ModalWidthValue,typeof ModalWidth.FILL>}
-  &NotAnchored&NotContained
+ |{placement?: typeof ModalPlacement.VIEWPORT}&PanelWidth&NotAnchored&NotContained
  |{placement: typeof ModalPlacement.CONTAINED;width?: ModalWidthValue}&NotAnchored&Contained
- |{placement: typeof ModalPlacement.ANCHORED;anchor?: RefObject<HTMLElement|null>;group?: string;width?: never}
+ |{placement: typeof ModalPlacement.ANCHORED;anchor?: RefObject<HTMLElement|null>;group?: string}&PanelWidth
   &NotContained;
 // Media takes its content's size, so it names no width.
 export type ModalFormProps={form?: typeof ModalForm.DIALOG}|{form: typeof ModalForm.MEDIA;width?: never};
@@ -63,11 +65,12 @@ interface ModalShape extends Contained {
  width?: ModalWidthValue;
 }
 // What a Modal's stylesheet sizes and places it by. A dialog's panel names its width: its own, or else titled when it
-// has a title and compact when it has none. A media or anchored panel takes its content's. A contained frame names its
-// inset, and a contained panel given a top sits that far below its frame's top edge, still centred across the frame.
+// has a title and compact when it has none. A media panel, and an anchored one naming no width, takes its content's.
+// A contained frame names its inset, and a contained panel given a top sits that far below its frame's top edge, still
+// centred across the frame.
 export function modalShape({form,placement,titled,width,frameInset=ModalFrameInset.PAGE,top}: ModalShape) {
  const contained=placement===ModalPlacement.CONTAINED;
- const sized=form===ModalForm.DIALOG&&placement!==ModalPlacement.ANCHORED;
+ const sized=form===ModalForm.DIALOG&&(placement!==ModalPlacement.ANCHORED||width!==undefined);
  const panelStyle=contained&&top!==undefined?placedAt(top):{};
  return {
   panel:{[MODAL_PLACEMENT_ATTRIBUTE]:placement,[MODAL_TITLED_ATTRIBUTE]:titled,

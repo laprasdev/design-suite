@@ -22,8 +22,12 @@ export const MODAL_WIDTH_PX: Readonly<Record<ModalWidthValue,number>>=Object.fre
 });
 export const VIEWPORT_WIDTHS=[ModalWidth.COMPACT,ModalWidth.TITLED,ModalWidth.READING,ModalWidth.STAGE] as const;
 // The cases besides one per width: a plain and a titled Modal naming none, a frame kept the page's gutter, a frame
-// outside a page surface, a top past the inset and a top within it.
+// outside a page surface, a top past the inset and a top within it, and an anchored Modal naming a width and one
+// naming none.
 export const ModalCase=Object.freeze({
  PLAIN:'plain-default',TITLED:'titled-default',GUTTER:'gutter-fill',OUTSIDE_PAGE:'outside-page-fill',
  TOP:'contained-top',TOP_IN_INSET:'contained-top-in-inset',
+ ANCHORED_NAMED:'anchored-named',ANCHORED_CONTENT:'anchored-content',
 } as const);
+// The width the anchored case names.
+export const ANCHORED_WIDTH=ModalWidth.COMPACT;

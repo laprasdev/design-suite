@@ -150,9 +150,10 @@ A dialog names its `width` (`ModalWidth`): `compact` (380px), `titled` (420px), 
 inside the frame's inset). A Modal naming none is `compact`, or `titled` when it has a title.
 The panel carries it as `data-modal-width`, which the stylesheet backs with the
 `--modal-width-compact`, `--modal-width-titled` and `--modal-width-reading` tokens and the
-theme's `--control-hit-size`. An anchored or media (`ModalForm.MEDIA`) Modal takes its
-content's width; an anchored one is at most `--modal-width-anchored` wide and keeps
-`--modal-anchored-edge` from each side of the window, and a viewport frame keeps its panel
+theme's `--control-hit-size`. An anchored Modal names a width the same way, all but `fill`;
+naming none, it takes its content's width, as a media (`ModalForm.MEDIA`) Modal does, at
+most `--modal-width-anchored`. An anchored one keeps `--modal-anchored-edge` from each side
+of the window, and a viewport frame keeps its panel
 `--modal-viewport-inset` in. These tokens are defaults at `:where(:root)` in the Modal's
 stylesheet, beside the public tokens it reads (`--modal-inset`) and the one it sets
 (`--sd-modal-layer`), so a host's own root value wins. A contained Modal's `frameInset`

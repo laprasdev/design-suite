@@ -31,13 +31,14 @@ describe('opt-in forms at the type check', () => {
 });
 
 // What a Modal's placement and form take: only a contained Modal fills its frame, keeps its frame's inset or sits at a
-// top, and an anchored or media Modal names no width. Each row's accepted usage passes and its refused one fails.
+// top, and a media Modal names no width. Each row's accepted usage passes and its refused one fails.
 const MODAL_SHAPES = [
   {accepted: 'placement={ModalPlacement.CONTAINED} width={ModalWidth.FILL}', refused: 'width={ModalWidth.FILL}'},
   {accepted: 'placement={ModalPlacement.CONTAINED} frameInset={ModalFrameInset.GUTTER}',
     refused: 'frameInset={ModalFrameInset.GUTTER}'},
   {accepted: 'placement={ModalPlacement.CONTAINED} top={8}', refused: 'top={8}'},
-  {accepted: 'width={ModalWidth.STAGE}', refused: 'placement={ModalPlacement.ANCHORED} width={ModalWidth.STAGE}'},
+  {accepted: 'placement={ModalPlacement.ANCHORED} width={ModalWidth.COMPACT}',
+    refused: 'placement={ModalPlacement.ANCHORED} width={ModalWidth.FILL}'},
   {accepted: 'form={ModalForm.MEDIA}', refused: 'form={ModalForm.MEDIA} width={ModalWidth.READING}'},
 ] as const;
 
