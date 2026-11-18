@@ -1,6 +1,7 @@
 import {useMemo, type CSSProperties, type ReactNode} from 'react';
 import {Button} from '../Button.tsx';
 import {ActionBar, ActionNotice} from '../ActionBar.tsx';
+import {Density} from '../density.ts';
 import {ListboxSelect} from '../ListboxSelect.tsx';
 import {LoadingIndicator} from '../Pokeball.tsx';
 import {SegmentedControl} from '../SegmentedControl.tsx';
@@ -88,7 +89,7 @@ function PreviewContents({description, asset, assets, onSelectAsset, theme, revi
             onChange={lighting => choose({lighting})} ariaLabel={lighting.label} fit disabled={!view.ready}/>
         </div>
       </div>}
-      <ActionBar compact className="model-preview-actions" notice={view.notice} slots={{
+      <ActionBar density={Density.COMPACT} className="model-preview-actions" notice={view.notice} slots={{
         left: !view.external && <Button variant="primary"
           disabled={!view.ready || clip === MODEL_REST_POSE || held} onClick={view.togglePlayback}>
           {held && view.hold !== null ? copy.held[view.hold] : playing ? copy.pause : copy.play}</Button>,

@@ -5,6 +5,9 @@
  --header-icon-size:20px;--page-gutter:0px;--page-inset:var(--inset);--popover-layer:10000;
  --label-action-size:12px;--surface-chrome:var(--card);
 }
+/* The one rule that sizes a header glyph to its label: a compact bar or button draws its header glyphs at its action
+   label's size. */
+[data-density=compact] { --header-icon-size:var(--label-action-size); }
 /* Reset plain buttons, but not composable ones. `:where` keeps the exclusion at zero
    specificity so component button styles still win. */
 .app-root button:where(:not(.bd-btn)) { font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer; }

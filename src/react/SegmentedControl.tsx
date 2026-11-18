@@ -10,7 +10,7 @@
 import {useContext,useLayoutEffect,useRef,type CSSProperties,type KeyboardEvent,type ReactElement,type ReactNode} from 'react';
 import {springAnimate,SegmentIndicator,SEGMENT_MOTION,sweepText,TextSweepElement,TEXT_SELECTION_MOVING_ATTRIBUTE} from './motion.ts';
 import {Label} from './accents.tsx';
-import {SegmentDefaultsContext} from './segmentContext.ts';
+import {SegmentDefaultsContext,type SegmentDefaults} from './segmentContext.ts';
 import {wrapVariables,type WrapGrid,type Pictured} from './segmentWrap.ts';
 import {HoverDetail} from './HoverDetail.tsx';
 import {PALETTE_CHANGE_EVENT} from '../theme.ts';
@@ -50,7 +50,7 @@ interface SegmentedBase<V extends SegmentValue> extends Pictured<V> {
   className?: string;
   style?: CSSProperties;
   variant?: string;
-  density?: string;
+  density?: SegmentDefaults['density'];
   tabs?: boolean;
   orientation?: 'horizontal'|'vertical';
   /** A vertical rail floating in its space: a rule above its first row and below its last. */

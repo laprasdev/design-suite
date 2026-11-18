@@ -8,28 +8,33 @@ import {ActionBarElement,ActionNoticeElement,NoticeIconElement,type NoticeTone} 
 import {HeaderNoticesElement} from './pageBarElements.ts';
 import {SegmentDefaultsContext,type SegmentDefaults} from './segmentContext.ts';
 import {TEXT_SEGMENT_VARIANT} from './SegmentedControl.tsx';
+import {Density} from './density.ts';
 
 // A segmented control in an action bar takes the text form. Its own props still win.
 const ACTION_BAR_SEGMENTS: SegmentDefaults=Object.freeze({variant:TEXT_SEGMENT_VARIANT});
-const COMPACT_ACTION_BAR_SEGMENTS: SegmentDefaults=Object.freeze({...ACTION_BAR_SEGMENTS,density:'compact'});
+const COMPACT_ACTION_BAR_SEGMENTS: SegmentDefaults=Object.freeze({...ACTION_BAR_SEGMENTS,density:Density.COMPACT});
 export interface ActionBarNotice {
  message: ReactNode;
  tone: NoticeTone;
  detail?: string;
  action?: {label: string;onClick(): void};
 }
+/** What failed in a word or two, and the whole of what happened: a notice's message and detail, both as text, as the
+ *  hover hint over what a failure marks says them. */
+export type Failure={readonly [Part in 'message'|'detail']-?: Extract<ActionBarNotice[Part],string>};
 export interface ActionBarProps extends Omit<BarProps,'as'> {
- compact?: boolean;
+ density?: Density;
  notice?: ActionBarNotice|null;
 }
 // Feedback is a second bar that floats below the bar, over what is beneath it, in the suite's header-notices
 // container: showing or clearing a notice never moves the content below the bar.
 export const ActionBar=forwardRef<HTMLDivElement,ActionBarProps>(function ActionBar({
- className='',compact=false,notice,slots,...props
+ className='',density,notice,slots,...props
 },ref) {
- return <SegmentDefaultsContext.Provider value={compact?COMPACT_ACTION_BAR_SEGMENTS:ACTION_BAR_SEGMENTS}>
+ return <SegmentDefaultsContext.Provider
+  value={density===Density.COMPACT?COMPACT_ACTION_BAR_SEGMENTS:ACTION_BAR_SEGMENTS}>
   <Bar {...props} ref={ref} className={`${ActionBarElement.className}${className?` ${className}`:''}`}
-   data-density={compact?'compact':undefined} slots={{
+   data-density={density} slots={{
    ...slots,right:<>{slots.right}{notice&&<div className={HeaderNoticesElement.className}>
     <ActionNotice notice={notice}/></div>}</>,
   }}/>

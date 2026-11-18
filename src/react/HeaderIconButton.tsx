@@ -2,7 +2,7 @@ import {forwardRef, type ButtonHTMLAttributes, type ReactNode} from 'react';
 import {createLucideIcon, type IconNode, type LucideProps} from 'lucide-react';
 import {PHI_INVERSE} from '../layout.ts';
 import type {NoticeTone} from './actionBarElements.ts';
-import {Label} from './accents.tsx';
+import type {Density} from './density.ts';
 
 // Navigation artwork fills the same square canvas, including its stroke. The
 // drawings share a weight and natural bounds; CSS never stretches a glyph.
@@ -40,15 +40,15 @@ export const LibraryIcon = navigationIcon('Library', [
 
 // A header's square icon control. `active` makes it a toggle and marks the panel or mode it holds open; without it the
 // button is an action, announced as one. `bare` draws the glyph alone, without the control's edge and ground. `tone`
-// marks a control whose last action failed, in the notice's colour for that tone. `density="compact"` draws the glyph
+// marks a control whose last action failed, in the notice's colour for that tone. A compact `density` draws the glyph
 // at the action label's size with no box around it, as a compact SegmentedControl draws its icons in a module's header.
 export const HeaderIconButton=forwardRef<HTMLButtonElement,
  ButtonHTMLAttributes<HTMLButtonElement>&
- {label: string;active?: boolean;bare?: boolean;tone?: NoticeTone;density?: 'compact';children: ReactNode}>(
+ {label: string;active?: boolean;bare?: boolean;tone?: NoticeTone;density?: Density;children: ReactNode}>(
  function HeaderIconButton({label,active,bare=false,tone,density,children,className='',...rest},ref) {
  return <button type="button" ref={ref} {...rest} className={`header-icon-button${className?` ${className}`:''}`} aria-label={label} aria-pressed={active} title={label} data-active={active||undefined} data-appearance={bare?'bare':undefined}
   data-tone={tone} data-density={density}>
-  {density ? <Label kind="action">{children}</Label> : children}
+  {children}
  </button>;
 });
 // The gear's teeth meet the ring without a second, heavier stroke.

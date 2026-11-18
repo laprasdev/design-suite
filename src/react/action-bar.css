@@ -13,8 +13,6 @@
 /* The bar's first glyph sits on its inset, where a page's text starts: a leading icon choice drops its first press
    area's leading padding, as a text choice drops its first word's. */
 .action-bar>.bar-left>.seg--icons:first-child>button:first-of-type { padding-inline-start:0; }
-/* A compact bar draws its icon buttons' glyphs at the size of its action labels, the bar's text. */
-.action-bar[data-density=compact] { --header-icon-size:var(--label-action-size); }
 .action-bar-notice { --button-min-height:initial; }
 .action-bar>.bar-center { container-type:inline-size;--participant-cluster-width:50cqw;--bar-participant-fit:calc((100cqw - var(--participant-clearance) * 2 - var(--field-gap)) / 2); }
 .action-bar>.bar-left,.action-bar>.bar-center:not(:has(.bar-participants)) { overflow:hidden; }
@@ -44,8 +42,10 @@
 .action-bar-notice>.bar-left>.bd-label:has(+.action-bar-notice-detail) { flex:none; }
 .action-bar-notice>.bar-left>.action-bar-notice-detail { flex:0 1 auto;min-width:0;max-inline-size:var(--notice-detail-measure);color:var(--dim); }
 .action-bar-notice>.bar-left>svg { flex-shrink:0; }
-.notice-icon[data-tone="error"] { color:var(--scarlet); }
-.notice-icon[data-tone="info"] { color:var(--dim); }
+/* A tone's colour, for everything that wears one: a notice's glyph, and the control a failure marks. */
+:where([data-tone=error]) { --tone-color:var(--scarlet); }
+:where([data-tone=info]) { --tone-color:var(--dim); }
+.notice-icon { color:var(--tone-color); }
 @media (prefers-reduced-motion:no-preference) {
  .action-bar-notice { animation:action-notice-in .16s ease-out; }
  @keyframes action-notice-in { from { opacity:0;transform:translateY(-30%); } to { opacity:1;transform:translateY(0); } }
