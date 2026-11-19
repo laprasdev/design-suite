@@ -8,6 +8,7 @@ import {SkinDefault, SkinId, SkinKind, SliderSkinForm, ContainerForm, KnobSkinFo
   LayersSkinForm, ReferenceSkinForm, CurveSkinForm, PhasesSkinForm, ReadoutSkinForm} from '../src/skinKinds.ts';
 import {GalleryGroup, ModulationForm} from '../src/react/gallery/elementCatalog.ts';
 import {GraphForm} from '../src/synth/components/synth/graphForm.ts';
+import {GraphFillForm} from '../src/react/graphFillForm.ts';
 import {IncrementerForm} from '../src/synth/components/synth/incrementerForm.ts';
 
 const optionIds = (kind: string) => groups.find(group => group.id === kind)?.options.map(option => option.id);
@@ -56,6 +57,7 @@ test('each kind\'s form owner lists exactly its catalog group\'s option ids', ()
     [SkinKind.TEXT]: TextSkinForm, [SkinKind.LAYERS]: LayersSkinForm, [SkinKind.REFERENCE]: ReferenceSkinForm,
     [SkinKind.CURVE]: CurveSkinForm, [SkinKind.PHASES]: PhasesSkinForm, [SkinKind.OPENS]: OpensSkinForm,
     [SkinKind.READOUT]: ReadoutSkinForm, [SkinKind.CONTAINER]: ContainerForm, [GalleryGroup.GRAPH]: GraphForm,
+    [GalleryGroup.GRAPH_FILL]: GraphFillForm,
     [GalleryGroup.MODULATION]: ModulationForm,
   };
   for (const kind of Object.values(SkinKind)) assert.ok(owners[kind], `no form owner for ${kind}`);

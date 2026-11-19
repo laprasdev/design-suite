@@ -6,6 +6,7 @@ import {O, SCALE} from '../synth/design/index.ts';
 import {graphDots, graphEdgeFade, type GraphEdge} from './graphSurface.ts';
 import {usePanZoom, detailAt, ZOOM, type GraphViewport} from './usePanZoom.ts';
 import {Button} from './Button.tsx';
+import {GraphFillForm, type GraphFillFormValue} from './graphFillForm.ts';
 const FRAME = {min: 260, max: 640, readableMax: 800, inset: 48};
 const CANVAS_FADE = {left: '5%', right: '5%', top: '7%', bottom: '12%'};
 export type GraphDisplayProps = Omit<HTMLAttributes<HTMLDivElement>, 'children'> & {
@@ -50,15 +51,22 @@ export const GraphDisplay = forwardRef<HTMLDivElement, GraphDisplayProps>(
     </div>;
   });
 
-/** A sampled curve's fill. Calculation remains with its owning model. */
-export function GraphFill({path}: {path: string}) {
+/** Each fill form's gradient, from the curve down: top, middle and bottom opacity. Lit is the plain fill a step
+ *  brighter at every stop, so the running part reads as the same curve, lit. */
+const GRAPH_FILL_STOPS: Readonly<Record<GraphFillFormValue, readonly [number, number, number]>> = {
+  [GraphFillForm.PLAIN]: [O.low, O.faint, O.ghost],
+  [GraphFillForm.LIT]: [O.high, O.low, O.faint],
+};
+const STOP_OFFSETS = ['0%', '50%', '100%'] as const;
+
+/** A sampled curve's fill in its form. Calculation remains with its owning model. */
+export function GraphFill({path, form}: {path: string; form: GraphFillFormValue}) {
   const id = `graph-fill-${useId().replace(/:/g, '')}`, {primaryColor} = useStyle().getEffectiveStyle();
   return <>
     <defs><linearGradient id={id} x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stopColor={primaryColor} stopOpacity={O.low}/>
-      <stop offset="50%" stopColor={primaryColor} stopOpacity={O.faint}/>
-      <stop offset="100%" stopColor={primaryColor} stopOpacity={O.ghost}/>
+      {GRAPH_FILL_STOPS[form].map((opacity, index) =>
+        <stop key={STOP_OFFSETS[index]} offset={STOP_OFFSETS[index]} stopColor={primaryColor} stopOpacity={opacity}/>)}
     </linearGradient></defs>
-    <path d={path} fill={`url(#${id})`}/>
+    <path data-graph-fill={form} d={path} fill={`url(#${id})`}/>
   </>;
 }

@@ -10,12 +10,16 @@ import {ModuleField, ModuleKnob} from '../../synth/components/synth/ModuleGrid.t
 import {Graph} from '../../synth/components/synth/Graph.tsx';
 import {GraphForm} from '../../synth/components/synth/graphForm.ts';
 import {GridModule} from '../module/GridModule.tsx';
+import {GraphDisplay, GraphFill} from '../GraphDisplay.tsx';
+import {GraphFillForm} from '../graphFillForm.ts';
 import {useStyle} from '../../synth/StyleContext.tsx';
 import {FieldEmphasis} from '../../fields.ts';
 import {containerFormOf, SkinKind} from '../../skinKinds.ts';
 import {GalleryGroup, SampleState, type ElementSampleProps} from './elementCatalog.ts';
 
 const CURVE = [{x: 0, y: 0}, {x: 0.25, y: 1}, {x: 0.55, y: 0.65}, {x: 0.8, y: 0.65}, {x: 1, y: 0}];
+/** The sample curve closed along its baseline, in a 100-unit square with y up. */
+const CURVE_AREA = `M ${CURVE.map(point => `${point.x * 100},${100 - point.y * 100}`).join(' L ')} Z`;
 
 export function DetailSample({group, option, state}: ElementSampleProps) {
   const style = useStyle().getEffectiveStyle();
@@ -35,6 +39,11 @@ export function DetailSample({group, option, state}: ElementSampleProps) {
   if (group === GalleryGroup.GRAPH) return <Graph
     variant={option === GraphForm.BIPOLAR ? GraphForm.BIPOLAR : GraphForm.UNIPOLAR}
     data={CURVE} width={220} height={100} color="secondary" />;
+  if (group === GalleryGroup.GRAPH_FILL) return <GraphDisplay style={{width: 220, height: 100}}>
+    <svg viewBox="0 0 100 100" preserveAspectRatio="none" width="100%" height="100%">
+      <GraphFill path={CURVE_AREA} form={option === GraphFillForm.LIT ? GraphFillForm.LIT : GraphFillForm.PLAIN}/>
+    </svg>
+  </GraphDisplay>;
   if (group === SkinKind.OPENS) return <div className="element-open">
     <ModuleOpenButton ariaLabel="Details" appearance={option} onPress={() => setOpen(!open)} disabled={disabled}/>
     {open && <ModuleNumberInput ariaLabel="Detail value" value={alpha} onChange={setAlpha} />}
