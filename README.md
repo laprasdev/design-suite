@@ -600,6 +600,8 @@ modules, and the shared table provides assignment, feedback and comparison behav
 `GooExpander` is the Activity side-tab form: it animates an absolute fused shape, supports left expansion with a
 stationary icon, keeps closed controls inert, and respects reduced motion. Workbench supplies facts/tone; Synth
 supplies output terminals. `GraphDisplay`, `GraphFill` and `graphEdgeFade` share the classic graph treatment.
+`GraphFill` takes a `GraphFillForm`: plain for the curve as drawn, lit for the part of it running now, a step brighter
+at each stop.
 
 `StyleProvider` accepts optional controlled `skin` and `palette` inputs. A component skin changes presentation,
 not values, bounds, bitmasks, graph polarity or authoring states. The palette-only projection uses canonical base

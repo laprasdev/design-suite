@@ -102,6 +102,7 @@ export {GooExpander, GooForm, type GooExpanderProps} from './GooExpander.tsx';
 export {useDoubleTap} from './useDoubleTap.ts';
 export {graphDots, graphEdgeFade, nodeFrame} from './graphSurface.ts';
 export {GraphDisplay, GraphFill} from './GraphDisplay.tsx';
+export {GraphFillForm, type GraphFillFormValue} from './graphFillForm.ts';
 export {animateCardFlip} from './cardFlip.ts';
 
 export {ControllerShoulder, ControllerDpad} from './controllerShapes.tsx';

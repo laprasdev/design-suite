@@ -28,7 +28,7 @@ export const ModulationForm = {SINGLE: 'single', STACKED: 'stacked', BIPOLAR: 'b
 /** The footer's setting: no modulation, one of the group's forms, or the stacked sources drawn blended. */
 export const SampleModulation = {OFF: 'off', ...ModulationForm, BLENDED: 'blended'} as const;
 /** The gallery's groups that are not a skin's kinds. Each group's forms have an owner: the graph's is Graph's. */
-export const GalleryGroup = {MODULATION: 'modulation', GRAPH: 'graph'} as const;
+export const GalleryGroup = {MODULATION: 'modulation', GRAPH: 'graph', GRAPH_FILL: 'graphFill'} as const;
 export type SampleModulationValue = typeof SampleModulation[keyof typeof SampleModulation];
 /** The palette a gallery previews in: the host's own, or a skin's by name. */
 export const PalettePick = {HOST: 'host'} as const;

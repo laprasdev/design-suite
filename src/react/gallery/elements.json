@@ -356,6 +356,23 @@
     ]
   },
   {
+    "id": "graphFill",
+    "label": "Graph fills",
+    "sample": "detail",
+    "options": [
+      {
+        "id": "plain",
+        "label": "Plain",
+        "assignable": false
+      },
+      {
+        "id": "lit",
+        "label": "Lit",
+        "assignable": false
+      }
+    ]
+  },
+  {
     "id": "container",
     "label": "Module frames",
     "sample": "detail",

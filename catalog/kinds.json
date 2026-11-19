@@ -127,7 +127,8 @@
    "kitGap": true,
    "kit": [
     "Graph"
-   ]
+   ],
+   "note": "Forms: unipolar, bipolar. GraphFill's forms: plain, and lit for the part of a curve running now."
   },
   "RenderTextureView": {
    "data": "live render",
