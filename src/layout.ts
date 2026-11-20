@@ -1,10 +1,9 @@
 import { RoutingDimensions } from './routingLayout.ts';
-import { MODULE_CONTROL_MAX, MODULE_TEXT_SIZE, ModuleGridDimensions } from './moduleGridLayout.ts';
+import { PageShellDimensions } from './pageShellLayout.ts';
+import { MODULE_TEXT_SIZE, ModuleGridDimensions } from './moduleGridLayout.ts';
+import { PHI, PHI_CUBED } from './goldenRatio.ts';
 
-export const PHI = 1.618033988749895;
-export const PHI_INVERSE = 0.618033988749895; // 1 / PHI
-export const PHI_SQUARED = 2.618033988749895; // PHI * PHI
-export const PHI_CUBED = PHI_SQUARED * PHI;
+export { PHI, PHI_INVERSE, PHI_SQUARED, PHI_CUBED } from './goldenRatio.ts';
 
 const ICON_CHOICE_BOX = Math.ceil(MODULE_TEXT_SIZE * PHI), ICON_CHOICE_GLYPH = ICON_CHOICE_BOX / PHI;
 
@@ -174,71 +173,12 @@ export const LayoutDimensions = {
     moduleColumns: 2
   },
 
-  // The synth's page shell: the screen it's drawn for
-  pageShell: {
-    stageWidth: 1920,
-    stageHeight: 1080,
-    tileGutter: 3,
-    moduleWidth: 320,
-    moduleHeight: 194,
-    envelopeMinWidth: 453,
-    envelopeMinHeight: 255,
-    previewMinWidth: 280,
-    previewMinHeight: 157,
-    scrollCueHeight: 18,
-    scrollCueIcon: 12,
-    barLineHeight: 1.4,
-    guideText: 12,
-    guideTagLayer: 1,
-    // A closed page's card: one drawing laid out on φ in the larger card's box, drawn smaller in the smaller card.
-    // Its text and icons are a module's, the same size in stage pixels in both cards; everything else is in the larger card's pixels.
-    cardPadding: 8,
-    cardStroke: 1.5,
-    cardWire: 1,
-    cardGateRadius: 9,
-    cardNodeRadius: 3,
-    // The dash of a line a card draws for what has no length of its own, such as an Envelope sustain held until the state is left.
-    cardDash: 3,
-    // What a drawing weighs against a list when a card shares its room out, in text rows; and the narrowest a list's column gets, in stage pixels.
-    cardDrawingRows: 4,
-    // The fewest text rows of height a condition's drawing is drawn in. With less, a pad or a sensor reads as a dash, so its row says its title instead.
-    cardDrawingLeastRows: 2,
-    cardLineWidth: 120,
-    // A card's title and live mark beside its drawing, when there they leave it more room than above it.
-    cardHeaderWidth: 104,
-    guideRemeasureMs: 1000,
-    guideClipSlack: 1,
-    overlayLayer: 2000,
-    // A flip: twice the suite's .17s, long enough to watch a page and its card trade places around the still Preview.
-    flipMs: 340,
-    flipEase: 'cubic-bezier(.22,1,.36,1)',
-    // The first half of a flip: the card you pressed fades as its page grows out of it, and the card taking its place waits for it to go.
-    // In the second half that card slides in. The page you left stays whole until it lands on its card, which shows only then.
-    flipCardFadeDelayMs: 170,
-    // A flip's stack, bottom to top: cards on their way to their places, the page arriving, the card you pressed fading off it, and the page you
-    // leave, whole and over all of them, so nothing reads through it on its way into its card. The frame stays above the lot.
-    flipCardLayer: 0,
-    flipArrivingLayer: 1,
-    flipPressedCardLayer: 2,
-    flipLeavingLayer: 3,
-    frameLayer: 4,
-    arrangeLayer: 6,
-    // Arranging: how near a tile's edge a drop cuts in, what a gutter takes the mouse over, and where a cut can rest, so a layout stays on the ratio.
-    dropEdgeZone: 36,
-    gutterHit: 10,
-    gutterLine: 2,
-    arrangeText: 13,
-    cutStops: [(1 - PHI_INVERSE) * PHI_INVERSE, 1 - PHI_INVERSE, PHI_INVERSE, 1 - (1 - PHI_INVERSE) * PHI_INVERSE],
-    // The smallest window an arrangement has to stay usable in, whichever window it's made in.
-    smallestWindowWidth: 1366,
-    smallestWindowHeight: 650,
-  },
+  // The synth's page shell, in its own file.
+  pageShell: PageShellDimensions,
 
   // A module on the four-column grid: its fixed size in the rack, and how it fills a page's tile
   moduleGrid: {
     ...ModuleGridDimensions,
-    // On a page a column grows with its tile only to φ of the largest knob, so a few fields stay together rather than spreading across a wide tile.
-    fillColumnMax: Math.round(MODULE_CONTROL_MAX * PHI),
     iconChoiceBox: ICON_CHOICE_BOX, // φ of its glyph, so the glyph is never under a module's words
     iconChoiceGlyph: ICON_CHOICE_GLYPH,
   },

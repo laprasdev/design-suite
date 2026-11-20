@@ -6,12 +6,12 @@ import {O} from '../../design/index.ts';
 import {useOwnedControlGesture as useControlGesture} from '../../../react/inputs/useOwnedControlGesture.ts';
 import {VALUE_THICKNESS, type SliderModulationProps} from './modulation.ts';
 import {ModulationTracks} from '../../../react/inputs/ModulationTracks.tsx';
+import {zoomOf} from '../../../react/cssZoom.ts';
 import {skinFormOrDefault} from '../../../skinForms.ts';
 import {SkinDefault, SliderSkinForm, type SliderSkinFormValue} from '../../../skinKinds.ts';
 
-// A range as one rounded bar on a track you can see, with a dot at each end you can move. Each modulator is a thinner line above the end it moves, pointing where the value goes. The box stays at its track's height, so modulators never move the track: lines overflow above it, and blended, one line and a circle a source sit inside the box's lower padding.
+// A range as one rounded bar on a track, with a dot at each end. Modulators sit above or blended below the track.
 const HIT_PADDING = 6;
-const NEAR_END_PX = 10;
 const THUMB_SIZE = 14;
 const THUMB_DOT = THUMB_SIZE / 2;
 const BAR_GLOW = 6;
@@ -64,19 +64,20 @@ export function RangeSlider({appearance, low, high, min, max, onChange, step = 0
   const clamp = (value: number) => Math.min(max, Math.max(min, value));
   const percent = (value: number) => (clamp(value) - min) / span * 100;
   const snap = (value: number) => (step > 0 ? onUnit(value, step) : value);
-  const valueAt = (clientX: number) => {
-    const box = track.current!.getBoundingClientRect();
-    return min + Math.min(1, Math.max(0, (clientX - box.left) / box.width)) * span;
-  };
-  // A press on an end grabs it where it is. Anywhere else the end jumps there first, and the fine drag starts from that.
-  const nearEnd = (clientX: number, value: number) => Math.abs(clientX - track.current!.getBoundingClientRect().left - percent(value) / 100 * track.current!.getBoundingClientRect().width) <= NEAR_END_PX;
-  const coarse = () => perPixel !== undefined && span / track.current!.getBoundingClientRect().width > perPixel;
+  const trackBox = () => track.current!.getBoundingClientRect();
+  const valueAt = (clientX: number, box = trackBox()) =>
+    min + Math.min(1, Math.max(0, (clientX - box.left) / box.width)) * span;
+  // A press on an end grabs it where it is; anywhere else the end jumps there first.
+  const endRadius = () => (THUMB_SIZE / 2) * zoomOf(track.current!);
+  const nearEnd = (clientX: number, value: number, box = trackBox()) =>
+    Math.abs(clientX - box.left - (percent(value) / 100) * box.width) <= endRadius();
+  const coarse = () => perPixel !== undefined && span / trackBox().width > perPixel;
   const gripAt = (clientX: number): GripValue => {
     if (singleEnded) return Grip.HIGH;
-    const box = track.current!.getBoundingClientRect(), x = clientX - box.left;
-    const lowX = percent(low) / 100 * box.width, highX = percent(high) / 100 * box.width;
-    if (Math.abs(x - lowX) <= NEAR_END_PX && Math.abs(x - lowX) <= Math.abs(x - highX)) return Grip.LOW;
-    if (Math.abs(x - highX) <= NEAR_END_PX) return Grip.HIGH;
+    const box = trackBox(), x = clientX - box.left, radius = endRadius();
+    const lowX = (percent(low) / 100) * box.width, highX = (percent(high) / 100) * box.width;
+    if (Math.abs(x - lowX) <= radius && Math.abs(x - lowX) <= Math.abs(x - highX)) return Grip.LOW;
+    if (Math.abs(x - highX) <= radius) return Grip.HIGH;
     if (x > lowX && x < highX) return Grip.BOTH;
     return x <= lowX ? Grip.LOW : Grip.HIGH;
   };

@@ -4,7 +4,7 @@
    content that opens inside it (Modal's `keepRoomFor`). That room is the content's
    height, as far as the dialog's maximum allows without its resting height falling
    below the golden share; the dialog publishes it as KEPT_ROOM_ATTRIBUTE. */
-import {PHI_INVERSE} from '../layout.ts';
+import {PHI_INVERSE} from '../goldenRatio.ts';
 
 export const KEPT_ROOM_ATTRIBUTE = "data-kept-room";
 export const keptRoom = (contentHeight: number, maxHeight: number, parentHeight: number) =>

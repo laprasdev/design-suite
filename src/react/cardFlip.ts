@@ -1,4 +1,5 @@
-import {LayoutDimensions, PHI_SQUARED} from '../layout.ts';
+import {LayoutDimensions} from '../layout.ts';
+import {PHI_SQUARED} from '../goldenRatio.ts';
 import {reducedMotion} from './motion.ts';
 import type {PageMotion} from './pageMotion.ts';
 

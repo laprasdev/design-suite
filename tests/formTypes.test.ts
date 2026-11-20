@@ -12,6 +12,10 @@ const FORMS = [
     props: 'value={1} max={3} segments={3}', member: 'COMPACT'},
   {component: 'Modal', form: 'ModalWidth', prop: 'width', from: 'src/react/index.ts', props: 'open children=""',
     member: 'READING'},
+  {component: 'ModuleFieldRows', form: 'RowsForm', prop: 'form', from: 'src/react/grid/ModuleFieldRows.tsx',
+    props: 'children=""', member: 'LEAD'},
+  {component: 'ModuleNotice', form: 'NoticeForm', prop: 'form', from: 'src/react/module/ModuleNotice.tsx',
+    props: 'children=""', member: 'EMPTY'},
 ] as const;
 /** A word no form has. */
 const OUTSIDE = "'wide'";

@@ -12,7 +12,7 @@ import {test} from 'node:test';
 import type {Locator} from '../scripts/gateTools/node_modules/playwright/index.js';
 import {ActionBarElement,ActionNoticeElement} from '../src/react/actionBarElements.ts';
 import {HEADER_CONTROL_PROPERTY} from '../src/react/headerControl.ts';
-import {PHI_SQUARED} from '../src/layout.ts';
+import {PHI_SQUARED} from '../src/goldenRatio.ts';
 import {DESKTOP_VIEWPORT,PHONE_VIEWPORT,openScene,SCENE_GL} from './browserScene.ts';
 import {ACTION_BAR_BUTTONS,FOOTER_ACTIONS,LAYOUT_UNIT,NOTICE_BUTTONS,OUTSIDE_BUTTON,SAFE_AREA}
  from './actionBarHeightCases.ts';
