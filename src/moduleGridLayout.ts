@@ -1,11 +1,17 @@
 // A module on the four-column grid: its fixed size in the rack, and how it fills a page's tile.
-// LayoutDimensions.moduleGrid is this, kept in its own file so layout.ts holds its size. Its fillColumnMax, which
-// needs φ, is added there.
+// LayoutDimensions.moduleGrid is this, kept in its own file so layout.ts holds its size.
+import { PHI, PHI_INVERSE, PHI_SQUARED } from './goldenRatio.ts';
 
 // A module's words: every field name, value and label on a page's module, and the owner's text floor.
 export const MODULE_TEXT_SIZE = 12;
-// The largest a knob on a page's module grows, which the grid's columns are measured against.
-export const MODULE_CONTROL_MAX = 88;
+// A knob on a page's module: one golden step below the 88 px it was first drawn at, as the owner asked, and one more
+// step below that at the least.
+const MODULE_KNOB = 88 / PHI;
+const MODULE_KNOB_MAX = Math.round(MODULE_KNOB);
+const MODULE_KNOB_MIN = Math.round(MODULE_KNOB / PHI);
+// A page's column grows with its tile only so far, so a few fields stay together across a wide tile: two golden steps
+// above its largest knob.
+const MODULE_COLUMN_MAX = Math.round(MODULE_KNOB * PHI_SQUARED);
 
 export const ModuleGridDimensions = {
     columns: 4,
@@ -28,9 +34,11 @@ export const ModuleGridDimensions = {
     tabIconHeight: 12,
     fieldGap: 6,
     fieldTextRoom: 44,
-    controlShare: 0.85,
-    controlMin: 44,
-    controlMax: MODULE_CONTROL_MAX,
+    controlMin: MODULE_KNOB_MIN,
+    fillColumnMax: MODULE_COLUMN_MAX,
+    // A knob takes φ⁻¹ of its column's room, one golden step below it, within its two sizes.
+    controlShare: PHI_INVERSE,
+    controlMax: MODULE_KNOB_MAX,
     knobDragPx: 200,
     // A whole-number field, like a frame count, moves at most this many per pixel dragged, so it can be dragged
     // onto any value.
@@ -74,7 +82,6 @@ export const ModuleGridDimensions = {
     swatchWidth: 44,
     ringNumeralSize: 12,
     crumbGap: 8,
-    statesRowGap: 8,
     gesturePhaseHeight: 20,
     gestureColumnWidth: 200,
     toolIconHeight: 20,
