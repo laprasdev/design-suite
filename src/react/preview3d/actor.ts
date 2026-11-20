@@ -1,5 +1,4 @@
 import * as THREE from 'three';
-import type {GLTF} from 'three/addons/loaders/GLTFLoader.js';
 import type {ModelStageDisplay, ModelStagePolicy, ModelStageTheme} from './model.ts';
 import {MODEL_STAGE_DISPLAY} from './displayModel.ts';
 import {MODEL_STAGE_ORIGIN, MODEL_STAGE_SIZE, type ModelStageOrigin, type ModelStageSize} from './sizeModel.ts';
@@ -10,8 +9,8 @@ import {createModelPlayback} from './playback.ts';
 import type {ModelStageChanges, ModelSurfaceModes} from './materials.ts';
 import {createModelActorSurfaces, type ModelActorSurfacesContext} from './actorSurfaces.ts';
 import {markModelStageAids} from './layers.ts';
-import {bindModelRuntimeMaterials} from './runtimeMaterialBinding.ts';
-import {MODEL_STAGE_DRIVER, modelRuntimeAssetProfile} from './actorModel.ts';
+import {MODEL_STAGE_DRIVER, modelActorDrawsFile, modelActorHost} from './actorModel.ts';
+import type {ModelDrawn} from './drawn.ts';
 import type {ModelStageActor, ModelStageActorSnapshot, ModelStageDriver} from './actorModel.ts';
 import {modelPreviewFrame, type ModelFrameScope} from './frameModel.ts';
 import type {ModelPreviewEntity} from './presentation.ts';
@@ -40,33 +39,35 @@ export const MODEL_ACTOR_TEXT = Object.freeze({unlit: 'Runtime presentation requ
 export const modelRenderableVisible = (authored: boolean, display: ModelStageDisplay, engineHidden: boolean) =>
   authored && display !== MODEL_STAGE_DISPLAY.rig && !engineHidden;
 
-// One loaded model and every owner it composes. Every actor is built alike; its declaration is applied through the
-// same prepare a later declaration uses.
-export function createModelActor(asset: GLTF, declaration: ModelStageActor, context: ModelActorContext) {
-  const {id, asset: source} = declaration, acquired: Array<() => void> = [];
+// What an actor draws, from either source, and every owner it composes. Every actor is built alike; its declaration
+// is applied through the same prepare a later declaration uses.
+export function createModelActor(drawn: ModelDrawn, declaration: ModelStageActor, context: ModelActorContext) {
+  const {id} = declaration, acquired: Array<() => void> = [];
   const release = () => {for (const dispose of acquired.splice(0).reverse()) dispose();};
   try {
-    acquired.push(() => {asset.scene.parent?.removeFromParent(); disposeModelObject(asset.scene);});
-    const profile = modelRuntimeAssetProfile(declaration);
-    const {placement, size: sized} = prepareModelAsset(asset);
-    const points = modelParts(asset, context.theme);
+    acquired.push(() => {drawn.scene.parent?.removeFromParent(); disposeModelObject(drawn.scene);});
+    const {placement, prepareSize} = prepareModelAsset(drawn, id);
+    const points = modelParts(drawn, context.theme);
     acquired.push(() => points.forEach(({marker}) => {marker.removeFromParent(); disposeModelObject(marker);}));
-    extendModelMaterials(asset.scene, context.changes);
-    const surfaces = createModelActorSurfaces(asset, {actor: id, path: source.path}, context.surfaces);
+    extendModelMaterials(drawn.scene, context.changes);
+    const surfaces = createModelActorSurfaces(drawn, id, context.surfaces);
     acquired.push(() => surfaces.dispose());
-    const runtimeMaterials = profile ? bindModelRuntimeMaterials(asset, profile) : undefined;
+    const runtimeMaterials = drawn.runtimeMaterials?.();
     if (runtimeMaterials) acquired.push(() => runtimeMaterials.dispose());
-    const rig = createModelRig(asset.scene, context.theme, points);
+    const rig = createModelRig(drawn.scene, context.theme, points);
     acquired.push(() => {rig.root.removeFromParent(); disposeModelObject(rig.root);});
     acquired.push(context.lighting.attach([rig.root, ...points.map(({marker}) => marker)]));
-    const playback = createModelPlayback(asset.scene, asset.animations, context.policy.clock, id);
+    const playback = createModelPlayback(drawn.scene, drawn.clips, context.policy.clock, id);
     acquired.push(() => playback.dispose());
     let current = declaration, driver: ModelStageDriver = MODEL_STAGE_DRIVER.host;
     // Built at its file's own size and origin; the description's size and origin apply with its other stage-wide parts.
     let sizing: ModelActorSizing = Object.freeze({size: {rule: MODEL_STAGE_SIZE.real},
       origin: MODEL_STAGE_ORIGIN.file});
-    const setSizing = (value: ModelActorSizing) => {rig.setScale(sized(value.size, value.origin)); sizing = value;};
-    setSizing(sizing);
+    const prepareSizing = (value: ModelActorSizing): ModelStageCommit => {
+      const size = prepareSize(value.size, value.origin);
+      return () => {rig.setScale(size()); sizing = value;};
+    };
+    prepareSizing(sizing)();
     // The engine's last record of the renderers it hides; before any frame it hides none.
     let engineHidden: ReadonlySet<THREE.Object3D> = new Set();
     // The one writer of a renderable's visibility, from the person's display and the engine's record. Outputs say
@@ -78,10 +79,10 @@ export function createModelActor(asset: GLTF, declaration: ModelStageActor, cont
     };
     // The host state of a declaration: where the actor stands and what it plays.
     const prepareHost = (next: ModelStageActor): ModelStageCommit => {
-      const animation = playback.prepareAnimation(next.animation);
+      const host = modelActorHost(next), animation = playback.prepareAnimation(host.animation);
       return () => {
         animation();
-        applyModelTransform(placement, next.placement);
+        applyModelTransform(placement, host.placement);
         current = next;
       };
     };
@@ -89,7 +90,7 @@ export function createModelActor(asset: GLTF, declaration: ModelStageActor, cont
     markModelStageAids([rig.root, ...points.map(({marker}) => marker)]);
     context.scene.add(placement, rig.root, ...points.map(({marker}) => marker));
     return {
-      id, asset, placement, points, rig, playback, prepareHost,
+      id, drawn, placement, points, rig, playback, prepareHost,
       /** What draws the file's renderers, as the description's surfaces state it. */
       surfaces,
       /** What the materials the actor draws with allow: the Surface modes, and how many emit. */
@@ -98,7 +99,7 @@ export function createModelActor(asset: GLTF, declaration: ModelStageActor, cont
       get driver() {return driver;},
       setDisplay(value: ModelStageDisplay) {rig.setDisplay(value); showRenderables();},
       get sizing() {return sizing;},
-      setSizing,
+      prepareSizing,
       /** What the actor draws in its display: the model, its rig, or both. */
       bounds: () => rig.display === MODEL_STAGE_DISPLAY.model ? modelObjectBounds(placement) : rig.bounds(),
       // Everything that can refuse runs here; the returned commit only applies.
@@ -120,7 +121,8 @@ export function createModelActor(asset: GLTF, declaration: ModelStageActor, cont
       },
       snapshot(): ModelStageActorSnapshot {
         const {animation, samples} = playback.review();
-        return Object.freeze({id, modelId: source.id, driver, animation, samples,
+        const modelId = modelActorDrawsFile(declaration) ? declaration.asset.id : null;
+        return Object.freeze({id, modelId, driver, animation, samples,
           pose: Object.freeze({position: placement.position.toArray(),
             rotationQuaternion: placement.quaternion.toArray(), scale: placement.scale.toArray()})});
       },

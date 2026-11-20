@@ -7,7 +7,7 @@ import * as THREE from 'three';
 import {
   MODEL_STAGE_SURFACE_MODE, type ModelColor, type ModelStageFog, type ModelStageSurfaceMode, type ModelVector,
 } from '../src/react/preview3d/model.ts';
-import {openScene} from './browserScene.ts';
+import {openScene, SCENE_GL} from './browserScene.ts';
 import {
   FAR_CENTER, FOG_CURVE, FOG_HOSTS_ID, FOG_LAYER_SPEC, FOG_PATCH_URL, FOG_SCENE_ENTRY, FOG_SPEC, FOG_TIME_ID,
   FOG_VIEWPORT, framingCamera, NEAR_CENTER, PATCH_BASE_COLOR, PATCH_EMISSIVE, type FogTimeId, type RgbBytes,
@@ -38,7 +38,7 @@ function assertBytesWithin(actual: RgbBytes, expected: readonly number[], tolera
   );
 }
 
-const page = await openScene(FOG_SCENE_ENTRY, FOG_VIEWPORT);
+const page = await openScene(FOG_SCENE_ENTRY, FOG_VIEWPORT, SCENE_GL.software);
 await page.locator(`#${FOG_HOSTS_ID}`).waitFor({state: 'attached'});
 const glbBytes = Buffer.from(await page.evaluate(() => window.makePatchGlbBytes()));
 await page.route(FOG_PATCH_URL, route => route.fulfill({body: glbBytes, contentType: 'model/gltf-binary'}));

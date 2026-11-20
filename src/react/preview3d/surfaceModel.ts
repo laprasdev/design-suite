@@ -102,6 +102,10 @@ function entry(input: unknown, where: string): ModelSurfaceEntry {
     modelRecord(input, ['kind'], where);
     return MODEL_FILE_ENTRY;
   }
+  return modelSurfaceRecord(input, where);
+}
+/** A record: a supplied kind and a value for each of its parameters, each value's form checked. */
+export function modelSurfaceRecord(input: unknown, where: string): ModelSurfaceRecord {
   const record = modelRecord(input, ['kind', 'values'], where);
   return Object.freeze({kind: modelName(record.kind, `${where}.kind`), values: Object.freeze(Object.fromEntries(
     modelEntries(record.values, `${where}.values`, 'values by parameter name').map(([name, item]) =>
@@ -128,18 +132,27 @@ export function modelActorSurfaces(input: unknown, where: string): ModelActorSur
     Object.freeze({from, set: modelName(record.set, `${where}.set`)});
 }
 
-/** The records of the sets these actors are drawn from, each set once. */
-export function modelSurfaceRecords(sets: Readonly<Record<string, ModelSurfaceSet>>,
-  actors: readonly {readonly surfaces: ModelActorSurfaces}[]): readonly ModelSurfaceRecord[] {
-  const used = new Set(actors.flatMap(({surfaces}) =>
-    surfaces.from === MODEL_ACTOR_SURFACES.set ? [surfaces.set] : []));
-  return [...used].flatMap(name => Object.values(sets[name]).flatMap(entry => 'values' in entry ? [entry] : []));
+/** Where a set's record stands, in the terms its author wrote it in, for a refusal. */
+export type ModelSurfaceWhere = (set: string, renderer: string) => string;
+/** A record of the description's own sets: its set and renderer. */
+export const modelSurfaceSetWhere: ModelSurfaceWhere = (set, renderer) => `Surface set ${set}, renderer ${renderer}`;
+/** What draws one actor's renderers: where its surfaces come from, the sets they may name, and where a record of
+ * those sets stands. */
+export interface ModelSurfaceSource {
+  readonly surfaces: ModelActorSurfaces;
+  readonly sets: Readonly<Record<string, ModelSurfaceSet>>;
+  readonly where: ModelSurfaceWhere;
 }
-/** The texture files named by the sets these actors are drawn from, each file once. */
-export function modelSurfaceFiles(sets: Readonly<Record<string, ModelSurfaceSet>>,
-  actors: readonly {readonly surfaces: ModelActorSurfaces}[]): readonly ModelSurfaceFile[] {
+/** The records of the sets these sources are drawn from, each set once. */
+export function modelSurfaceRecords(sources: readonly ModelSurfaceSource[]): readonly ModelSurfaceRecord[] {
+  const used = new Set(sources.flatMap(({surfaces, sets}) =>
+    surfaces.from === MODEL_ACTOR_SURFACES.set ? [sets[surfaces.set]] : []));
+  return [...used].flatMap(set => Object.values(set).flatMap(entry => 'values' in entry ? [entry] : []));
+}
+/** The texture files named by the sets these sources are drawn from, each file once. */
+export function modelSurfaceFiles(sources: readonly ModelSurfaceSource[]): readonly ModelSurfaceFile[] {
   const files = new Map<string, ModelSurfaceFile>();
-  for (const entry of modelSurfaceRecords(sets, actors)) for (const item of Object.values(entry.values)) {
+  for (const entry of modelSurfaceRecords(sources)) for (const item of Object.values(entry.values)) {
     if ('texture' in item && 'sha256' in item.texture) {
       files.set(item.texture.sha256, Object.freeze({path: item.texture.path, sha256: item.texture.sha256}));
     }
@@ -169,10 +182,10 @@ export function modelSurfaceValueFits(item: ModelSurfaceValue, kind: ModelSurfac
 }
 /** Every record against its kind: the kind was given, its parameters are exactly the record's, each value fits. */
 export function modelSurfaceRecordsFit(sets: Readonly<Record<string, ModelSurfaceSet>>,
-  kinds: ReadonlyMap<string, ModelSurfaceKind>) {
+  kinds: ReadonlyMap<string, ModelSurfaceKind>, at: ModelSurfaceWhere) {
   for (const [name, set] of Object.entries(sets)) for (const [id, entry] of Object.entries(set)) {
     if (!('values' in entry)) continue;
-    const where = `Surface set ${name}, renderer ${id}`, kind = kinds.get(entry.kind);
+    const where = at(name, id), kind = kinds.get(entry.kind);
     if (!kind) throw new ModelStageRefusal(refusal.kind(where, entry.kind, [...kinds.keys()]));
     modelRecord(entry.values, Object.keys(kind.parameters), `${where}, kind ${kind.id}: values`);
     for (const parameter of Object.keys(kind.parameters)) {

@@ -10,7 +10,8 @@ import {modelStageCommit, prepareWhole, type ModelStageCommit, type ModelStagePr
 import type {ModelStagedLoad} from './fileCache.ts';
 import {ModelStageRefusal} from './refusal.ts';
 import type {ModelShaderChange} from './shading.ts';
-import {modelSurfaceFiles, modelSurfaceRecords, modelSurfaceRecordsFit} from './surfaceModel.ts';
+import {modelSurfaceFiles, modelSurfaceRecords, modelSurfaceRecordsFit, modelSurfaceSetWhere} from './surfaceModel.ts';
+import {modelActorSurfaceSource, modelActorSurfaceSources} from './actorSurfaceModel.ts';
 import type {ModelTextures} from './textures.ts';
 import type {ModelSurfaceKind} from './surfaceKindModel.ts';
 import type {ModelSurfaceModes} from './materials.ts';
@@ -54,7 +55,7 @@ export function createModelStageParts(surface: ModelStageSurface) {
   const sizing = (next: ModelStageDescription, actors: readonly ModelActor[]): ModelStagePrepare[] => {
     const value: ModelActorSizing = Object.freeze({size: next.size, origin: next.origin});
     const changing = actors.filter(actor => JSON.stringify(actor.sizing) !== JSON.stringify(value));
-    return changing.length ? [modelStageCommit(() => {for (const actor of changing) actor.setSizing(value);})] : [];
+    return changing.length ? [() => prepareWhole(changing.map(actor => () => actor.prepareSizing(value)))] : [];
   };
   // The Surface mode is the stage's, shown by every actor alike. A mode other than Lit is refused while an engine
   // drives an actor, and for any actor whose materials cannot show it, including one the description adds.
@@ -81,7 +82,7 @@ export function createModelStageParts(surface: ModelStageSurface) {
     actors: readonly ModelActor[]): ModelStagePrepare[] => {
     if (!changed.has('surfaceSets') && !changed.has('actors')) return [];
     return [() => prepareWhole(next.actors.actors.map((declared, index) =>
-      () => actors[index].surfaces.prepare(declared.surfaces, next.surfaceSets)))];
+      () => actors[index].surfaces.prepare(modelActorSurfaceSource(declared, next.surfaceSets))))];
   };
   const scenery = (value: ModelStageDescription['environment']) => modelStageCommit(() => {
     if (value !== null && environment?.update(value)) return;
@@ -104,9 +105,13 @@ export function createModelStageParts(surface: ModelStageSurface) {
      * refused without loading anything (every record against its kind) is refused first, so no read starts for it.
      */
     loads(next: ModelStageDescription): ModelStagedLoad {
-      modelSurfaceRecordsFit(next.surfaceSets, surface.kinds);
-      const records = modelSurfaceRecords(next.surfaceSets, next.actors.actors);
-      const files = [surface.textures.load(modelSurfaceFiles(next.surfaceSets, next.actors.actors)),
+      const sources = modelActorSurfaceSources(next.actors, next.surfaceSets);
+      // The description's sets and each terrain's own, each fitted once and refused where its author wrote it.
+      const fitted = new Map([[next.surfaceSets, modelSurfaceSetWhere], ...sources.map(({sets, where}) =>
+        [sets, where] as const)]);
+      for (const [sets, where] of fitted) modelSurfaceRecordsFit(sets, surface.kinds, where);
+      const records = modelSurfaceRecords(sources);
+      const files = [surface.textures.load(modelSurfaceFiles(sources)),
         surface.materials.load(records)];
       return {pending: [...surface.lighting.load(next.lighting), ...files.flatMap(({pending}) => pending)],
         release() {for (const file of files) file.release();}};
@@ -115,7 +120,7 @@ export function createModelStageParts(surface: ModelStageSurface) {
      * name. (A kind's program, once read, is held for the stage's life: surfaceMaterials.ts.) */
     keep(next: ModelStageDescription) {
       surface.materials.sweep();
-      surface.textures.keep(modelSurfaceFiles(next.surfaceSets, next.actors.actors));
+      surface.textures.keep(modelSurfaceFiles(modelActorSurfaceSources(next.actors, next.surfaceSets)));
     },
     prepares(next: ModelStageDescription, changed: ReadonlySet<ModelStageDescriptionPart>,
       actors: readonly ModelActor[]): ModelStagePrepare[] {

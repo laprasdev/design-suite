@@ -1,5 +1,6 @@
 // Synthetic actors for the stage's actor and layer tests: no file, no renderer. Each clip moves one bone's x so that
 // clip k at time t reads clipValue(k, t), which makes every blended value predictable.
+import {modelFileDrawn} from '../src/react/preview3d/drawn.ts';
 import * as THREE from 'three';
 import {createModelFog} from '../src/react/preview3d/fog.ts';
 import {createModelSurfaceModes, modelStageChanges} from '../src/react/preview3d/materials.ts';
@@ -11,7 +12,7 @@ import {createModelSurfaceMaterials} from '../src/react/preview3d/surfaceMateria
 import {createModelStageSharedValues} from '../src/react/preview3d/sharedValues.ts';
 import {MODEL_ACTOR_ANIMATION, MODEL_ANIMATION_LAYER, MODEL_STAGE_DISPLAY, MODEL_STAGE_FRAMING, MODEL_STAGE_ORIGIN,
   MODEL_STAGE_SIZE, MODEL_STAGE_SURFACE_MODE, MODEL_STAGE_THEME_LIGHTING, modelStagePolicy,
-  type ModelStageActor, type ModelStageClock, type ModelStageLook, type ModelStageTheme}
+  type ModelFileActor, type ModelStageActor, type ModelStageClock, type ModelStageLook, type ModelStageTheme}
   from '../src/react/preview3d/model.ts';
 
 export const BONE = 'tip';
@@ -67,14 +68,15 @@ export const STANDING = Object.freeze({position: [0, 0, 0], rotationQuaternion: 
   scale: [1, 1, 1]} as const);
 export const standingAt = (position: readonly [number, number, number]) => ({...STANDING, position});
 export const FILE_SURFACES = Object.freeze({from: 'file'} as const);
-export const declaration = (id: string, modelId = 'otter', extra: Partial<ModelStageActor> = {}): ModelStageActor =>
+export const declaration = (id: string, modelId = 'otter', extra: Partial<ModelFileActor> = {}): ModelFileActor =>
   ({id, asset: {id: modelId, path: `${modelId}.glb`}, placement: STANDING, animation: REST,
     surfaces: FILE_SURFACES, ...extra});
 
-export function makeActor(id: string, clips: readonly ClipSpec[], extra: Partial<ModelStageActor> = {},
+export function makeActor(id: string, clips: readonly ClipSpec[], extra: Partial<ModelFileActor> = {},
   context = actorContext().context) {
   const {asset, bone, body} = actorAsset(clips);
-  return {actor: createModelActor(asset, declaration(id, 'otter', extra), context), bone, body};
+  return {actor: createModelActor(modelFileDrawn(asset, {actor: id, path: 'otter.glb'}, undefined),
+    declaration(id, 'otter', extra), context), bone, body};
 }
 
 export const sample = (clipId: string, timeSeconds: number, weight = 1, sampleId = `base/${clipId}#0`) =>

@@ -7,6 +7,7 @@ import {ModelStageRefusal} from '../src/react/preview3d/refusal.ts';
 import {kindFile, kindMaterials, kinds, MASK, record, RENDERERS, sets} from './preview3dKindFixture.ts';
 import {modelStageDescription, modelStageDescriptionChanges} from '../src/react/preview3d/descriptionModel.ts';
 import {declaration, describing} from './preview3dActorFixture.ts';
+import {modelFileDrawn} from '../src/react/preview3d/drawn.ts';
 
 const SET = Object.freeze({from: 'set', set: 'tinted'} as const), FILE = Object.freeze({from: 'file'} as const);
 const refused = (run: () => unknown, message: string) => assert.throws(run, (error: unknown) =>
@@ -17,7 +18,8 @@ const linear = (value: number) => Math.fround(new THREE.Color().setRGB(value, 0,
 async function actorWith(registry?: Awaited<ReturnType<typeof kindMaterials>>) {
   const held = registry ?? await kindMaterials(), file = kindFile(), compiled: THREE.Material[] = [];
   let failing: string | undefined;
-  const surfaces = createModelActorSurfaces(file.asset, {actor: 'a', path: 'a.glb'}, {materials: held.materials,
+  const drawn = modelFileDrawn(file.asset, {actor: 'a', path: 'a.glb'}, undefined);
+  const surfaces = createModelActorSurfaces(drawn, 'a', {materials: held.materials,
     kinds: kinds(),
     compile: object => {
       compiled.push((object as THREE.Mesh).material as THREE.Material);
@@ -33,12 +35,12 @@ describe('an actor drawn by surface kinds', () => {
   it('draws a set\'s records with shared kind materials, compiled on each renderer before the commit', async () => {
     const a = await actorWith(), b = await actorWith(a);
     const own = a.body.material;
-    const commit = a.surfaces.prepare(SET, sets());
+    const commit = a.surfaces.prepare({surfaces: SET, sets: sets()});
     const surface = a.materials.material(sets().tinted[RENDERERS.body] as never);
     assert.deepEqual(a.compiled, [surface.material], 'compiled as the renderer draws it, before any frame');
     assert.equal(a.body.material, own, 'the renderer shows its own material until the commit');
     commit();
-    b.surfaces.prepare(SET, sets())();
+    b.surfaces.prepare({surfaces: SET, sets: sets()})();
     assert.deepEqual([a.body.material, b.body.material], [surface.material, surface.material]);
     assert.deepEqual([a.eyes.material instanceof THREE.MeshStandardMaterial, a.line.material instanceof
       THREE.LineBasicMaterial], [true, true], 'the file\'s own material where the set says file');
@@ -48,14 +50,14 @@ describe('an actor drawn by surface kinds', () => {
   it('refuses what a renderer cannot draw, naming the actor, the renderer and the kind', async () => {
     const a = await actorWith(), own = a.body.material;
     const at = (id: string) => `Actor a, renderer ${id}, kind test-pulse`;
-    refused(() => a.surfaces.prepare(SET, {tinted: {...sets().tinted,
-      [RENDERERS.line]: record()}} as never), TEXT.mesh(at(RENDERERS.line)));
+    refused(() => a.surfaces.prepare({surfaces: SET, sets: {tinted: {...sets().tinted,
+      [RENDERERS.line]: record()}} as never}), TEXT.mesh(at(RENDERERS.line)));
     a.fail('ERROR: 0:1434: \'kindSurface\' : no matching overloaded function found');
-    refused(() => a.surfaces.prepare(SET, sets()), TEXT.program(at(RENDERERS.body),
+    refused(() => a.surfaces.prepare({surfaces: SET, sets: sets()}), TEXT.program(at(RENDERERS.body),
       'ERROR: 0:1434: \'kindSurface\' : no matching overloaded function found'));
     assert.equal(a.body.material, own, 'a refused program leaves the renderer as it was');
     a.body.geometry.deleteAttribute('uv');
-    refused(() => a.surfaces.prepare(SET, sets()), TEXT.attribute(at(RENDERERS.body), 'uv'));
+    refused(() => a.surfaces.prepare({surfaces: SET, sets: sets()}), TEXT.attribute(at(RENDERERS.body), 'uv'));
   });
 
   it('takes two records equal by value as one, whatever order their fields were written in', async () => {
@@ -65,9 +67,9 @@ describe('an actor drawn by surface kinds', () => {
       [name, 'texture' in value ? {texture: {offset, scale, wrap, sha256, path}} : value])), kind: written.kind};
     assert.equal(materials.material(reordered as never), materials.material(written as never), 'one material');
     const a = await actorWith();
-    a.surfaces.prepare(SET, sets(written))();
+    a.surfaces.prepare({surfaces: SET, sets: sets(written)})();
     const drawn = a.body.material;
-    a.surfaces.prepare(SET, sets(reordered))();
+    a.surfaces.prepare({surfaces: SET, sets: sets(reordered)})();
     assert.deepEqual([a.body.material, a.compiled.length], [drawn, 1], 'kept, not compiled again');
     const as = (value: unknown) => modelStageDescription(describing({surfaceSets: sets(value), actors: {focus: 'a',
       actors: [declaration('a', 'otter', {surfaces: SET})]}}));
@@ -76,21 +78,21 @@ describe('an actor drawn by surface kinds', () => {
 
   it('applies a kept actor\'s change of surfaces: a new record is a new material, and no model reloads', async () => {
     const a = await actorWith(), own = a.body.material;
-    a.surfaces.prepare(SET, sets())();
+    a.surfaces.prepare({surfaces: SET, sets: sets()})();
     const first = a.body.material as unknown as THREE.ShaderMaterial;
     let freed = 0;
     first.addEventListener('dispose', () => freed++);
-    a.surfaces.prepare(SET, sets(record([0, 0, 1, 1])))();
+    a.surfaces.prepare({surfaces: SET, sets: sets(record([0, 0, 1, 1]))})();
     a.materials.sweep();
     assert.notEqual(a.body.material, first);
     assert.equal(freed, 1, 'the old record\'s material, used by nobody, is freed');
     const tweaked = a.body.material;
-    a.surfaces.prepare(SET, sets(record([0, 0, 1, 1])))();
+    a.surfaces.prepare({surfaces: SET, sets: sets(record([0, 0, 1, 1]))})();
     assert.equal(a.body.material, tweaked, 'an unchanged record keeps its material, compiled once');
     assert.equal(a.compiled.length, 2);
-    a.surfaces.prepare(FILE, sets())();
+    a.surfaces.prepare({surfaces: FILE, sets: sets()})();
     assert.deepEqual([a.body.material, a.body.onBeforeRender], [own, THREE.Object3D.prototype.onBeforeRender]);
-    a.surfaces.prepare(SET, sets())();
+    a.surfaces.prepare({surfaces: SET, sets: sets()})();
     a.surfaces.dispose();
     assert.equal(a.body.material, own, 'its own material is back before the model is freed');
   });
@@ -98,7 +100,7 @@ describe('an actor drawn by surface kinds', () => {
   it('hands each renderer\'s values to the shared material as it is drawn; an omitted name shows the record\'s',
     async () => {
       const a = await actorWith(), b = await actorWith(a);
-      for (const actor of [a, b]) actor.surfaces.prepare(SET, sets())();
+      for (const actor of [a, b]) actor.surfaces.prepare({surfaces: SET, sets: sets()})();
       const shared = a.body.material as unknown as THREE.ShaderMaterial, values = shared.uniforms.surfaceValues;
       const frame = modelSurfaceOutputs([{rendererId: RENDERERS.body, slot: 0, visible: false, floats: {},
         colors: {_Color: [0, 0.5, 0, 1]}}], modelSurfaceTakes(SET, sets(), kinds()), 'Entity a');

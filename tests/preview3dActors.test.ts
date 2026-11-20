@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import {describe, it} from 'node:test';
 import {modelRenderableVisible} from '../src/react/preview3d/actor.ts';
+import {modelActorHost} from '../src/react/preview3d/actorModel.ts';
 import {MODEL_REST_POSE, MODEL_STAGE_DRIVER, MODEL_STAGE_ORIGIN, MODEL_STAGE_SIZE, modelStageActorSet}
   from '../src/react/preview3d/model.ts';
 import {applyFrame, actorContext, BIND, clipValue,
@@ -50,9 +51,9 @@ describe('declared actors under one frame', () => {
     const {a} = pair(), {context} = actorContext();
     // Built at its file's own size and origin; a description's origin centres it over its placement.
     const centred = makeActor('c', CLIPS, {}, context);
-    assert.equal(centred.actor.asset.scene.position.y, 0);
-    centred.actor.setSizing({size: {rule: MODEL_STAGE_SIZE.real}, origin: MODEL_STAGE_ORIGIN.centred});
-    assert.equal(centred.actor.asset.scene.position.y, 0.5);
+    assert.equal(centred.actor.drawn.scene.position.y, 0);
+    centred.actor.prepareSizing({size: {rule: MODEL_STAGE_SIZE.real}, origin: MODEL_STAGE_ORIGIN.centred})();
+    assert.equal(centred.actor.drawn.scene.position.y, 0.5);
     a.actor.setDisplay('rig');
     assert.equal(a.body.visible, false);
     a.actor.setDisplay('both');
@@ -137,7 +138,7 @@ describe('declared actor sets', () => {
     assert.deepEqual(valid.actors[0].placement, placement);
     const a = {id: 'a', asset, placement: STANDING, animation, surfaces};
     for (const shape of [REST, playing('run'), held('run', 0.5)]) {
-      assert.deepEqual(modelStageActorSet(set({...a, animation: shape})).actors[0].animation, shape);
+      assert.deepEqual(modelActorHost(modelStageActorSet(set({...a, animation: shape})).actors[0]).animation, shape);
     }
     const refusals: Array<[unknown, RegExp]> = [
       [set(a, a), /Actor a is declared twice/],

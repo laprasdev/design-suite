@@ -3,10 +3,10 @@
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import {D} from '../src/synth/design/index.ts';
-import {DESKTOP_VIEWPORT, PHONE_VIEWPORT, openScene} from './browserScene.ts';
+import {DESKTOP_VIEWPORT, PHONE_VIEWPORT, openScene, SCENE_GL} from './browserScene.ts';
 import {MODULE_FRAME_CASES, ModuleFrameElement} from './moduleFrameCases.ts';
 
-const page = await openScene('tests/moduleFrameScene.tsx', DESKTOP_VIEWPORT);
+const page = await openScene('tests/moduleFrameScene.tsx', DESKTOP_VIEWPORT, SCENE_GL.software);
 const frames = page.locator(ModuleFrameElement.selector);
 await frames.first().waitFor();
 

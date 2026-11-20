@@ -80,7 +80,7 @@ export function createModelStage(
         position: node.getWorldPosition(new THREE.Vector3()).toArray(),
         rotationQuaternion: node.getWorldQuaternion(new THREE.Quaternion()).toArray()}));
       const poses: Record<string, THREE.QuaternionTuple> = {};
-      model.asset.scene.traverse(node => {
+      model.drawn.scene.traverse(node => {
         if (node instanceof THREE.Bone) poses[node.name] = node.quaternion.toArray();
       });
       const {animation, time, playing} = model.playback.review();
@@ -91,7 +91,7 @@ export function createModelStage(
         emissiveMaterialCount: model.materials.emissiveMaterialCount,
         lighting: stage.lighting.time,
         parts: points, poses, triangles: stage.triangles(),
-        renderedModelMeshes: modelDrawnMeshCount(actors.actors.map(actor => actor.asset.scene), stage.camera),
+        renderedModelMeshes: modelDrawnMeshCount(actors.actors.map(actor => actor.drawn.scene), stage.camera),
         canvas: {width: stage.renderer.domElement.width, height: stage.renderer.domElement.height},
         actors: actors.actors.map(actor => actor.snapshot()), actorsPending: actors.pending,
       };

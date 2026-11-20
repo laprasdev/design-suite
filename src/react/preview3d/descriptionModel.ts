@@ -1,6 +1,7 @@
 import {modelStageDisplay} from './displayModel.ts';
 import type {ModelStageDisplay} from './displayModel.ts';
-import {MODEL_ACTOR_ANIMATION, modelStageActorSet, modelStageFocus, type ModelStageActorSet} from './actorModel.ts';
+import {MODEL_ACTOR_ANIMATION, modelActorDrawsFile, modelActorHost, modelActorIdentity, modelStageActorSet,
+  modelStageFocus, type ModelStageActorSet} from './actorModel.ts';
 import {modelEnvironment, type ModelEnvironment} from './environmentModel.ts';
 import {MODEL_STAGE_FRAMING, modelStageFraming, modelStageOrbit, type ModelStageFraming} from './framingModel.ts';
 import {modelStageLighting, type ModelStageLighting} from './lightingModel.ts';
@@ -34,7 +35,7 @@ export type ModelStageDescriptionPart = typeof MODEL_STAGE_DESCRIPTION_PARTS[num
 /** Every actor drawn from a set names one of the description's sets; the one refused names the actor and the sets. */
 export function modelStageActorSets(actors: ModelStageActorSet,
   surfaceSets: Readonly<Record<string, ModelSurfaceSet>>) {
-  for (const {id, surfaces} of actors.actors) {
+  for (const {id, surfaces} of actors.actors.filter(modelActorDrawsFile)) {
     if (surfaces.from === MODEL_ACTOR_SURFACES.set && !modelStates(surfaceSets, surfaces.set)) {
       throw new ModelStageRefusal(MODEL_SURFACE_REFUSAL.unknownSet(`Actor ${id}.surfaces.set`, surfaces.set,
         Object.keys(surfaceSets)));
@@ -78,7 +79,10 @@ export function modelStageFramed(value: ModelStageDescription) {
 export function modelStageRefit(applied: ModelStageDescription | undefined, next: ModelStageDescription) {
   if (!applied) return true;
   const framed = (value: ModelStageDescription) => JSON.stringify([value.framing, value.display, value.size,
-    value.origin, modelStageFramed(value).map(({id, asset, placement, animation}) =>
-      [id, asset, placement, animation.kind === MODEL_ACTOR_ANIMATION.rest ? null : animation.name])]);
+    value.origin, modelStageFramed(value).map(actor => {
+      const {placement, animation} = modelActorHost(actor);
+      return [modelActorIdentity(actor), placement, animation.kind === MODEL_ACTOR_ANIMATION.rest ? null :
+        animation.name];
+    })]);
   return framed(applied) !== framed(next);
 }

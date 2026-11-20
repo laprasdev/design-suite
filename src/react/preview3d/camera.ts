@@ -13,6 +13,12 @@ export function createModelFraming(camera: THREE.PerspectiveCamera, controls: Ca
   let fitRequested = true, held = false;
   // The orbit's reach never stops short of the framed distance, so the controls never pull the framing in.
   const reach = (distance: number) => {if (maximum !== undefined) controls.maxDistance = Math.max(maximum, distance);};
+  // Nor does the far plane stop short of the far side of what the fit framed: a wide fit on a narrow view stands the
+  // camera further off than the stage's own far plane reaches, which would draw nothing.
+  const depth = (distance: number) => {
+    camera.far = Math.max(settings.farPlane, distance);
+    camera.updateProjectionMatrix();
+  };
   return {
     requestFit() {if (!held) fitRequested = true;},
     frame(framing: ModelStageFraming, orbit: boolean) {
@@ -29,7 +35,9 @@ export function createModelFraming(camera: THREE.PerspectiveCamera, controls: Ca
     /** Fits what is drawn, measured only when a fit is due. */
     fit(measure: () => THREE.Box3) {
       if (!fitRequested) return;
-      reach(fitModelCamera(measure(), camera, controls));
+      const bounds = measure(), fitted = fitModelCamera(bounds, camera, controls);
+      reach(fitted);
+      depth(fitted + bounds.getBoundingSphere(new THREE.Sphere()).radius);
       if (controls.enabled) controls.update();
       else camera.lookAt(controls.target);
       camera.updateMatrixWorld(true);

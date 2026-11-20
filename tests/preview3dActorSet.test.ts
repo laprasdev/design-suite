@@ -3,7 +3,7 @@ import {describe, it} from 'node:test';
 import {createModelActor} from '../src/react/preview3d/actor.ts';
 import {createModelActorSet} from '../src/react/preview3d/actorSet.ts';
 import {ModelStageRefusal} from '../src/react/preview3d/model.ts';
-import type {ModelStageActor} from '../src/react/preview3d/model.ts';
+import type {ModelFileActor} from '../src/react/preview3d/model.ts';
 import {NO_LOAD, actorContext, applyFrame, declaration, entity, frame, held}
   from './preview3dActorFixture.ts';
 

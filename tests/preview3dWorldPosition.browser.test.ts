@@ -3,7 +3,7 @@
 // geometry. Measured in headless Chromium through the stage's own kind program.
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
-import {openScene} from './browserScene.ts';
+import {openScene, SCENE_GL} from './browserScene.ts';
 import {expectedBytes, WORLD_PLACEMENT, WORLD_SCENE_ENTRY, WORLD_VIEWPORT, type WorldPlacement}
   from './preview3dWorldPositionCases.ts';
 
@@ -12,7 +12,7 @@ const BYTE_TOLERANCE = 1;
 const CHANNELS = 3, STRIDE = 4;
 const {width} = WORLD_VIEWPORT, centre = width / 2;
 
-const page = await openScene(WORLD_SCENE_ENTRY, WORLD_VIEWPORT);
+const page = await openScene(WORLD_SCENE_ENTRY, WORLD_VIEWPORT, SCENE_GL.software);
 const draw = (placement: WorldPlacement) => page.evaluate(arg => window.drawWorldPlacement(arg), placement);
 const rgbAt = (pixels: readonly number[], x: number, y: number) =>
   pixels.slice((y * width + x) * STRIDE, (y * width + x) * STRIDE + CHANNELS);

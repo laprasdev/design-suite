@@ -4,10 +4,10 @@
 // width, once its notice shows that the model's file failed to load.
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
-import {DESKTOP_VIEWPORT,PHONE_VIEWPORT,openScene} from './browserScene.ts';
+import {DESKTOP_VIEWPORT,PHONE_VIEWPORT,openScene,SCENE_GL} from './browserScene.ts';
 import {PADDING_TOKEN,PREVIEW_ASSET,PREVIEW_BUTTONS} from './modelPreviewButtonsCases.ts';
 
-const page=await openScene('tests/modelPreviewButtonsScene.tsx',DESKTOP_VIEWPORT);
+const page=await openScene('tests/modelPreviewButtonsScene.tsx',DESKTOP_VIEWPORT,SCENE_GL.software);
 const button=(label: string)=>page.getByRole('button',{name:label});
 await Promise.all(PREVIEW_BUTTONS.map(({label})=>button(label).waitFor()));
 

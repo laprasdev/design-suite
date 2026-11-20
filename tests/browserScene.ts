@@ -16,17 +16,31 @@ import {SCENE_ROOT_ID} from './sceneRoot.ts';
 export const DESKTOP_VIEWPORT: ViewportSize=Object.freeze({width:1280,height:800});
 export const PHONE_VIEWPORT: ViewportSize=Object.freeze({width:Breakpoint.PHONE,height:DESKTOP_VIEWPORT.height});
 
-export async function openScene(scene: string,viewport: ViewportSize): Promise<Page> {
+// The GL a scene draws with: the gate's software rasteriser, which every machine running the gate has, or this
+// machine's GPU through ANGLE's Metal backend, which a frame's cost is measured on.
+export const SCENE_GL=Object.freeze({software:Object.freeze([]),
+ metal:Object.freeze(['--use-angle=metal','--enable-gpu','--ignore-gpu-blocklist'])});
+export type SceneGl=typeof SCENE_GL[keyof typeof SCENE_GL];
+
+// The page's origin: localhost is a secure context, so the scene has what only one has (crypto.subtle's digests, which
+// the stage's file reads check); every file a scene reads is routed by its test.
+const SCENE_ORIGIN='http://localhost/';
+
+export async function openScene(scene: string,viewport: ViewportSize,gl: SceneGl): Promise<Page> {
  const {outputFiles}=await build({absWorkingDir:SUITE_ROOT,entryPoints:[scene],bundle:true,write:false,outdir:'scene',
   format:'iife',platform:'browser',jsx:'automatic',loader:{'.css':'css'},external:[FONT_ROUTE_FILES],
   define:{'process.env.NODE_ENV':'"production"'},logLevel:'warning'});
  const bundledText=(extension: string)=>outputFiles.find(file=>file.path.endsWith(extension))?.text
   ??assert.fail(`esbuild wrote no ${extension} file for ${scene}`);
- const browser=await playwright.chromium.launch();
+ const browser=await playwright.chromium.launch({args:[...gl]});
  after(()=>browser.close());
  const page=await browser.newPage({viewport,reducedMotion:'reduce'});
  page.on('pageerror',error=>assert.fail(`${scene} threw: ${error.message}`));
- await page.setContent(`<!doctype html><body><div id="${SCENE_ROOT_ID}"></div></body>`);
+ // A file the scene's test does not route is one the origin does not hold.
+ await page.route(`${SCENE_ORIGIN}**`,route=>route.fulfill({status:404}));
+ await page.route(SCENE_ORIGIN,route=>route.fulfill({contentType:'text/html',
+  body:`<!doctype html><body><div id="${SCENE_ROOT_ID}"></div></body>`}));
+ await page.goto(SCENE_ORIGIN);
  await page.addStyleTag({content:bundledText('.css')});
  await page.addScriptTag({content:bundledText('.js')});
  return page;

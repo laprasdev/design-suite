@@ -3,10 +3,10 @@
 // Read in Chromium from verticalRailScene.tsx.
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
-import {DESKTOP_VIEWPORT,openScene} from './browserScene.ts';
+import {DESKTOP_VIEWPORT,openScene,SCENE_GL} from './browserScene.ts';
 import {RAIL_OPTIONS,RailLabel} from './verticalRailCases.ts';
 
-const page=await openScene('tests/verticalRailScene.tsx',DESKTOP_VIEWPORT);
+const page=await openScene('tests/verticalRailScene.tsx',DESKTOP_VIEWPORT,SCENE_GL.software);
 
 for(const label of Object.values(RailLabel))test(`the ${label}`,async()=>{
  const rail=page.getByRole('group',{name:label});

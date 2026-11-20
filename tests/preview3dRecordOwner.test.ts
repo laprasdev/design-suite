@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {describe, it} from 'node:test';
 import {modelSurfaceKinds} from '../src/react/preview3d/surfaceKindModel.ts';
-import {modelSurfaceRecordsFit, modelSurfaceSets} from '../src/react/preview3d/surfaceModel.ts';
+import {modelSurfaceRecordsFit, modelSurfaceSets, modelSurfaceSetWhere} from '../src/react/preview3d/surfaceModel.ts';
 import {modelStageDescription} from '../src/react/preview3d/descriptionModel.ts';
 import {modelFileRenderers} from '../src/react/preview3d/renderers.ts';
 import {ModelStageRefusal} from '../src/react/preview3d/refusal.ts';
@@ -18,10 +18,11 @@ const set = (values: Record<string, unknown>) => modelSurfaceSets({s: {[RENDERER
 describe('records keyed by the data\'s own names', () => {
   it('takes a parameter named as an inherited name, and refuses a record that leaves one out', () => {
     const kinds = kind({valueOf: {type: 'float'}, toString: {type: 'float'}});
-    modelSurfaceRecordsFit(set({valueOf: {float: 2}, toString: {float: 3}}), kinds);
-    refused(() => modelSurfaceRecordsFit(set({valueOf: {float: 2}}), kinds), /values omits toString; it states/);
+    modelSurfaceRecordsFit(set({valueOf: {float: 2}, toString: {float: 3}}), kinds, modelSurfaceSetWhere);
+    refused(() => modelSurfaceRecordsFit(set({valueOf: {float: 2}}), kinds, modelSurfaceSetWhere),
+      /values omits toString; it states/);
     refused(() => modelSurfaceRecordsFit(set({valueOf: {float: 2}, toString: {float: 3}, hasOwnProperty: {float: 1}}),
-      kinds), /does not state hasOwnProperty/);
+      kinds, modelSurfaceSetWhere), /does not state hasOwnProperty/);
   });
 
   it('finds no surface set by an inherited name', () => {
