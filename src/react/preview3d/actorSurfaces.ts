@@ -1,7 +1,7 @@
 import * as THREE from 'three';
-import type {GLTF} from 'three/addons/loaders/GLTFLoader.js';
-import {modelFileRenderers, modelSurfaceSetCovers, type ModelRenderer} from './renderers.ts';
-import {MODEL_ACTOR_SURFACES, type ModelActorSurfaces, type ModelSurfaceRecord, type ModelSurfaceSet}
+import {modelSurfaceSetCovers, type ModelRenderer} from './renderers.ts';
+import type {ModelDrawn} from './drawn.ts';
+import {MODEL_ACTOR_SURFACES, type ModelSurfaceRecord, type ModelSurfaceSource}
   from './surfaceModel.ts';
 import type {ModelMaterialOutput} from './surfaceOutputModel.ts';
 import {MODEL_SURFACE_PARAMETER, modelAttributeName, type ModelSurfaceKind} from './surfaceKindModel.ts';
@@ -30,8 +30,8 @@ export const MODEL_ACTOR_SURFACES_TEXT = Object.freeze({
 });
 const SLOT = 4;
 /** A renderer a kind draws, with the values it shows: the record's, or the engine's where this tick states one. */
-interface Drawn {readonly record: string; readonly surface: ModelSurfaceMaterial; readonly effective: Float32Array;
-  changed: boolean}
+interface HeldSurface {readonly record: string; readonly surface: ModelSurfaceMaterial;
+  readonly effective: Float32Array; changed: boolean}
 const NOTHING_BEFORE_RENDER = THREE.Object3D.prototype.onBeforeRender;
 
 // What draws one actor's renderers: its file's own materials throughout, or its set's entries, each the file's own
@@ -39,21 +39,18 @@ const NOTHING_BEFORE_RENDER = THREE.Object3D.prototype.onBeforeRender;
 // can refuse (the set's coverage, a kind's mesh and attributes, its program) is checked while preparing; a commit only
 // swaps. Engine values are per renderer: each drawn renderer has its own copy of its record's values, and just before
 // it is drawn hands that copy to the shared material when the material holds another's or the copy changed.
-export function createModelActorSurfaces(asset: GLTF, file: {readonly actor: string; readonly path: string},
+export function createModelActorSurfaces(source: Pick<ModelDrawn, 'scene' | 'renderers'>, actor: string,
   context: ModelActorSurfacesContext) {
-  const {actor} = file;
-  // Each mesh's own material, as the file and the stage's changes made it at build.
+  // Each mesh's own material, as its source and the stage's changes made it at build.
   const originals = new Map<THREE.Mesh, THREE.Material | THREE.Material[]>();
-  asset.scene.traverse(node => {
+  source.scene.traverse(node => {
     if (node instanceof THREE.Mesh) originals.set(node, node.material);
   });
   // The renderers a moving kind draws, each with what gives three its own culling bounds back.
   const padded = new Map<THREE.Mesh, () => void>();
-  // The renderers by id, read from the loader's associations the first time a set or a frame's values need them.
-  let ids: ReadonlyMap<string, ModelRenderer> | undefined;
-  const renderers = () => ids ??= modelFileRenderers(asset, actor, file.path);
-  let drawn = new Map<THREE.Mesh, Drawn>();
-  const draw = (node: THREE.Mesh, held: Drawn) => {
+  const {renderers} = source;
+  let heldSurfaces = new Map<THREE.Mesh, HeldSurface>();
+  const draw = (node: THREE.Mesh, held: HeldSurface) => {
     const {material} = held.surface, uniform = material.uniforms[MODEL_SURFACE_GLSL.values];
     node.material = material;
     // A kind that moves vertices draws up to its reach beyond the mesh's own bounds, which three culls by: the bounds
@@ -77,7 +74,7 @@ export function createModelActorSurfaces(asset: GLTF, file: {readonly actor: str
     padded.delete(node);
     node.onBeforeRender = NOTHING_BEFORE_RENDER;
   };
-  const prepareRecord = (id: string, node: ModelRenderer, record: ModelSurfaceRecord): Drawn => {
+  const prepareRecord = (id: string, node: ModelRenderer, record: ModelSurfaceRecord): HeldSurface => {
     const kind = context.kinds.get(record.kind)!, where = `Actor ${actor}, renderer ${id}, kind ${kind.id}`;
     if (!(node instanceof THREE.Mesh)) throw new ModelStageRefusal(MODEL_ACTOR_SURFACES_TEXT.mesh(where));
     for (const attribute of kind.attributes) {
@@ -104,7 +101,7 @@ export function createModelActorSurfaces(asset: GLTF, file: {readonly actor: str
   };
   // What a mesh is drawn with by the actor's surfaces: a kind's material where a record draws it, else its file's own.
   const shown = (node: THREE.Mesh) => {
-    const held = drawn.get(node);
+    const held = heldSurfaces.get(node);
     return held ? [held.surface.material] : [originals.get(node)!].flat();
   };
   return {
@@ -114,30 +111,30 @@ export function createModelActorSurfaces(asset: GLTF, file: {readonly actor: str
     inspection: createModelMaterialInspection(() => [...originals.keys()].flatMap(shown), context.materials.made),
     /** The actor's surfaces as described: a set covers the file's renderers exactly, and every renderer whose record
      * changed has its kind's material ready, compiled on the renderer; the commit swaps the changed ones only. */
-    prepare(surfaces: ModelActorSurfaces, sets: Readonly<Record<string, ModelSurfaceSet>>): ModelStageCommit {
-      const next = new Map<THREE.Mesh, Drawn>();
+    prepare({surfaces, sets}: Omit<ModelSurfaceSource, 'where'>): ModelStageCommit {
+      const next = new Map<THREE.Mesh, HeldSurface>();
       if (surfaces.from === MODEL_ACTOR_SURFACES.set) {
         const set = sets[surfaces.set];
         modelSurfaceSetCovers(actor, surfaces.set, set, renderers());
         for (const [id, entry] of Object.entries(set)) {
           if (!('values' in entry)) continue;
-          const node = renderers().get(id)!, held = node instanceof THREE.Mesh ? drawn.get(node) : undefined;
+          const node = renderers().get(id)!, held = node instanceof THREE.Mesh ? heldSurfaces.get(node) : undefined;
           const ready = held?.record === modelRecordIdentity(entry) ? held : prepareRecord(id, node, entry);
           next.set(node as THREE.Mesh, ready);
         }
       }
       return () => {
-        for (const [node, held] of drawn) {
+        for (const [node, held] of heldSurfaces) {
           if (next.get(node) === held) continue;
           context.materials.unuse(held.surface);
           restore(node);
         }
         for (const [node, held] of next) {
-          if (drawn.get(node) === held) continue;
+          if (heldSurfaces.get(node) === held) continue;
           context.materials.use(held.surface);
           draw(node, held);
         }
-        drawn = next;
+        heldSurfaces = next;
       };
     },
     /** A frame's values and visibility for this actor, already checked against what its renderers take: every drawn
@@ -145,7 +142,7 @@ export function createModelActorSurfaces(asset: GLTF, file: {readonly actor: str
     prepareValues(outputs: readonly ModelMaterialOutput[]): () => ReadonlySet<THREE.Object3D> {
       const named = outputs.map(output => ({output, node: renderers().get(output.rendererId)!}));
       return () => {
-        for (const held of drawn.values()) {
+        for (const held of heldSurfaces.values()) {
           held.effective.set(held.surface.declared);
           held.changed = true;
         }
@@ -153,7 +150,7 @@ export function createModelActorSurfaces(asset: GLTF, file: {readonly actor: str
         for (const {output, node} of named) {
           if (!output.visible) hidden.add(node);
           // A renderer drawn with its file's own material takes visibility only (the frame check refuses a value).
-          const held = node instanceof THREE.Mesh ? drawn.get(node) : undefined;
+          const held = node instanceof THREE.Mesh ? heldSurfaces.get(node) : undefined;
           if (!held) continue;
           for (const [name, value] of Object.entries(output.colors)) {
             const {index, parameter} = held.surface.slots.get(name)!;
@@ -169,8 +166,8 @@ export function createModelActorSurfaces(asset: GLTF, file: {readonly actor: str
     },
     /** The file's own materials go back on every renderer before the model is freed; kinds' materials are shared. */
     dispose() {
-      for (const [node, held] of drawn) {context.materials.unuse(held.surface); restore(node);}
-      drawn = new Map();
+      for (const [node, held] of heldSurfaces) {context.materials.unuse(held.surface); restore(node);}
+      heldSurfaces = new Map();
     },
   };
 }

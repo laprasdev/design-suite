@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import {describe, it} from 'node:test';
 import * as THREE from 'three';
 import {modelSurfaceKind, modelSurfaceKinds} from '../src/react/preview3d/surfaceKindModel.ts';
-import {MODEL_FILE_ENTRY, modelSurfaceRecordsFit, modelSurfaceSets} from '../src/react/preview3d/surfaceModel.ts';
+import {MODEL_FILE_ENTRY, modelSurfaceRecordsFit, modelSurfaceSets, modelSurfaceSetWhere}
+  from '../src/react/preview3d/surfaceModel.ts';
 import {modelFileRenderers, modelSurfaceSetCovers} from '../src/react/preview3d/renderers.ts';
 import {modelStageDescription, modelStageDescriptionChanges} from '../src/react/preview3d/descriptionModel.ts';
 import {createModelStageParts} from '../src/react/preview3d/stageParts.ts';
@@ -12,6 +13,7 @@ import {ModelStageRefusal} from '../src/react/preview3d/refusal.ts';
 import {modelStagePolicy} from '../src/react/preview3d/model.ts';
 import {NO_FILES, actorAsset, actorContext, declaration, describing} from './preview3dActorFixture.ts';
 import {createModelActor} from '../src/react/preview3d/actor.ts';
+import {modelFileDrawn} from '../src/react/preview3d/drawn.ts';
 import {MODEL_ACTOR_REFUSAL} from '../src/react/preview3d/actorModel.ts';
 import {prepareWhole} from '../src/react/preview3d/commit.ts';
 import {kindFile, kindMaterials, kinds as kindKinds, RENDERERS as KIND_RENDERERS, sets as kindSets}
@@ -94,16 +96,17 @@ describe('surface kinds, records and sets', () => {
   });
 
   it('fits a record to its kind: every parameter, of its type and size, in range, and inert ones held', () => {
-    assert.doesNotThrow(() => modelSurfaceRecordsFit(sets(RECORD), kinds()));
+    assert.doesNotThrow(() => modelSurfaceRecordsFit(sets(RECORD), kinds(), modelSurfaceSetWhere));
     const fit = (values: object, pattern: RegExp) =>
-      refused(() => modelSurfaceRecordsFit(sets({...RECORD, values: {...RECORD.values, ...values}}), kinds()), pattern);
+      refused(() => modelSurfaceRecordsFit(sets({...RECORD, values: {...RECORD.values, ...values}}), kinds(),
+        modelSurfaceSetWhere), pattern);
     const at = `renderer ${RENDERER}, kind test-pulse`;
     fit({_Color: {color: [2, 0, 0, 1]}}, new RegExp(`${at}: _Color is not HDR: each channel is from 0 to 1`));
     fit({_Pulse: {color: [1, 1, 1, 1]}}, /_Pulse is a float; it states a color/);
     fit({_Offset: {vector: [0, 1, 2]}}, /_Offset is a vector of 2/);
     fit({_Rim: {float: 1}}, /_Rim is drawn only at 0/);
     fit({_Extra: {float: 1}}, /kind test-pulse: values does not state _Extra/);
-    refused(() => modelSurfaceRecordsFit(sets({...RECORD, kind: 'toon'}), kinds()),
+    refused(() => modelSurfaceRecordsFit(sets({...RECORD, kind: 'toon'}), kinds(), modelSurfaceSetWhere),
       new RegExp(`renderer ${RENDERER} names kind toon; the stage was given test-pulse`));
   });
 
@@ -123,7 +126,8 @@ describe('surface kinds, records and sets', () => {
   it('checks, while preparing, that an actor drawn from a set names exactly its file\'s renderers', () => {
     const {asset, body} = actorAsset([{name: 'run', duration: 1}]);
     const associated = {...asset, parser: {associations: new Map([[body, {nodes: 0, meshes: 0, primitives: 0}]])}};
-    const actor = createModelActor(associated as never, declaration('a', 'otter',
+    const actor = createModelActor(modelFileDrawn(associated as never, {actor: 'a', path: 'otter.glb'}, undefined),
+      declaration('a', 'otter',
       {surfaces: {from: 'set', set: 'own'}}), actorContext().context);
     const parts = createModelStageParts({...NO_FILES,
       scene: new THREE.Scene(), kinds: kinds(), modes: createModelSurfaceModes(),
@@ -151,7 +155,8 @@ describe('surface kinds, records and sets', () => {
       new RegExp(MODEL_ACTOR_REFUSAL.routes('a').replace(/[.?]/g, '\\$&')));
       const {materials} = await kindMaterials(), {asset, body} = kindFile();
       const context = {...actorContext().context, surfaces: {materials, kinds: kindKinds(), compile: () => undefined}};
-      const actor = createModelActor(asset, declaration('a', 'otter', {surfaces: {from: 'set', set: 'tinted'}}),
+      const actor = createModelActor(modelFileDrawn(asset, {actor: 'a', path: 'otter.glb'}, undefined),
+        declaration('a', 'otter', {surfaces: {from: 'set', set: 'tinted'}}),
         context);
       const parts = createModelStageParts({...NO_FILES, scene: new THREE.Scene(), kinds: kindKinds(),
         modes: createModelSurfaceModes(), frame: () => undefined, fog: createModelFog(new THREE.Scene()),

@@ -1,3 +1,4 @@
+import {modelFileDrawn} from '../src/react/preview3d/drawn.ts';
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import * as THREE from 'three';
@@ -116,7 +117,8 @@ test('a display change after a frame leaves the engine\'s hidden renderer hidden
     const associations = new Map<THREE.Object3D, {nodes?: number; meshes?: number; primitives?: number}>([
       [node, {nodes: 65, meshes: 0}], [mesh, {meshes: 0, primitives: 0}]]);
     const asset = {scene, animations: [], parser: {associations}} as unknown as GLTF;
-    const model = createModelActor(asset, actor(), actorContext().context);
+    const model = createModelActor(modelFileDrawn(asset, {actor: 'a', path: 'a.glb'},
+      modelRuntimeAssetProfile(actor())), actor(), actorContext().context);
     const parts = createModelStageParts({...NO_FILES,
       scene: new THREE.Scene(), fog: {change: FOG}, kinds: new Map(),
       modes: createModelSurfaceModes(),

@@ -1,5 +1,5 @@
 import type {ModelStageActor, ModelStageActorSet} from './actorModel.ts';
-import {MODEL_ACTOR_REFUSAL as refusal, modelRuntimeAssetProfile} from './actorModel.ts';
+import {MODEL_ACTOR_REFUSAL as refusal, modelActorDrawsFile, modelRuntimeAssetProfile} from './actorModel.ts';
 import {MODEL_PREVIEW_ENTITY_REFUSAL, modelPreviewEntity, type ModelPreviewEntity} from './presentation.ts';
 import {isNonEmptyString as named, isRecord as object} from '../../valueChecks.ts';
 import {ModelStageRefusal} from './refusal.ts';
@@ -25,7 +25,7 @@ export function modelFrameScope(value: {readonly actors: ModelStageActorSet;
   readonly surfaceSets: Readonly<Record<string, ModelSurfaceSet>>},
 kinds: ReadonlyMap<string, ModelSurfaceKind>): ModelFrameScope {
   const {actors} = value.actors;
-  return Object.freeze({actors, takes: new Map(actors.map(actor => [actor.id,
+  return Object.freeze({actors, takes: new Map(actors.filter(modelActorDrawsFile).map(actor => [actor.id,
     modelRuntimeAssetProfile(actor) ?? modelSurfaceTakes(actor.surfaces, value.surfaceSets, kinds)]))});
 }
 
@@ -54,6 +54,7 @@ export function modelPreviewFrame(value: unknown, scope: ModelFrameScope): Model
     const actor = declared.get(id);
     if (!actor) throw new ModelStageRefusal(refusal.undeclared(id));
     if (seen.has(id)) throw new ModelStageRefusal(refusal.twice(id));
+    if (!modelActorDrawsFile(actor)) throw new ModelStageRefusal(refusal.terrainFrame(id));
     seen.add(id);
     return modelPreviewEntity(entity, actor.asset.id, scope.takes.get(id));
   });

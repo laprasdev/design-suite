@@ -9,8 +9,10 @@ import {modelStagePolicy} from '../src/react/preview3d/model.ts';
 import {modelDrawnMeshCount} from '../src/react/preview3d/asset.ts';
 import {ModelStageRefusal} from '../src/react/preview3d/refusal.ts';
 import {MODEL_STAGE_THEME_LIGHTING} from '../src/react/preview3d/lightingModel.ts';
-import {THEME, declaration, describing, makeActor, stageLook} from './preview3dActorFixture.ts';
+import {THEME, declaration, describing, makeActor, stageLook, standingAt} from './preview3dActorFixture.ts';
 import {kindFile, MASK, PULSE, PULSE_PROGRAM, record, RENDERERS} from './preview3dKindFixture.ts';
+import {TERRAIN_GRID, TERRAIN_ID, terrainActor} from './preview3dTerrainFixture.ts';
+import {MODEL_TERRAIN_SPLIT, modelTerrainChunks, modelStageTerrain} from '../src/react/preview3d/terrainModel.ts';
 
 // A stage's descriptions with everything but WebGL real: its registries, actors and parts. The scene side is a plain
 // scene whose lighting load the test holds; files are read from memory, and every read and model load records its
@@ -62,7 +64,7 @@ describe('the stage\'s descriptions, composed', () => {
   it('frees, when disposed, every registry: what a drawn kind holds, and every read still in flight', async () => {
     const {descriptions, signals, closed} = stageWith();
     await descriptions.set(tinted());
-    const body = descriptions.actors.actors[0].asset.scene.getObjectByProperty('type', 'Mesh') as THREE.Mesh;
+    const body = descriptions.actors.actors[0].drawn.scene.getObjectByProperty('type', 'Mesh') as THREE.Mesh;
     const material = body.material as THREE.ShaderMaterial;
     let freed = 0;
     material.addEventListener('dispose', () => freed++);
@@ -121,4 +123,54 @@ describe('what the snapshot reads, and only when asked', () => {
     assert.equal(at(), bone.getWorldPosition(new THREE.Vector3()).x);
     assert.notEqual(at(), before);
   });
+});
+
+describe('a terrain on the stage', () => {
+  const grounded = (...args: Parameters<typeof terrainActor>) =>
+    describing({actors: {focus: 'a', actors: [declaration('a'), terrainActor(...args)]}});
+  const terrainOf = (descriptions: ReturnType<typeof stageWith>['descriptions']) =>
+    descriptions.actors.actors.find(actor => actor.id === TERRAIN_ID) ?? assert.fail('no terrain actor drawn');
+
+  it('is built from its record and draws one mesh per chunk, each with the record\'s kind', async () => {
+    const {descriptions} = stageWith();
+    await descriptions.set(grounded());
+    const chunks = terrainOf(descriptions).drawn.scene.children, ids = modelTerrainChunks(
+      modelStageTerrain(TERRAIN_GRID, 'T')).map(({id}) => id);
+    assert.ok(ids.length > 1, 'a grid of several chunks');
+    assert.deepEqual(chunks.map(node => node.name), ids);
+    assert.deepEqual(chunks.map(node => node instanceof THREE.Mesh && node.material.name),
+      ids.map(() => `surface kind ${PULSE.id}`));
+  });
+
+  it('is moved without a rebuild when only its placement changes', async () => {
+    const {descriptions} = stageWith();
+    await descriptions.set(grounded());
+    const first = terrainOf(descriptions);
+    await descriptions.set(grounded(TERRAIN_GRID, record(), standingAt([3, 0, 0])));
+    assert.equal(terrainOf(descriptions), first);
+    assert.deepEqual(first.snapshot().pose.position, [3, 0, 0]);
+  });
+
+  // Each field of the grid alone changes what is drawn, so each alone rebuilds the actor. Eight triangles to a chunk
+  // draw the fixture's grid as one chunk.
+  for (const [field, changed] of Object.entries({heights: [1, 2, -2, 4, 6, 8], size: [6, 2], heightScale: 0.25,
+    split: MODEL_TERRAIN_SPLIT.descending, chunkTriangles: 8})) {
+    it(`is rebuilt when only its ${field} changes`, async () => {
+      const {descriptions} = stageWith();
+      await descriptions.set(grounded());
+      const first = terrainOf(descriptions);
+      await descriptions.set(grounded({...TERRAIN_GRID, [field]: changed}));
+      assert.notEqual(terrainOf(descriptions), first);
+      assert.equal(terrainOf(descriptions).drawn.scene.children[0] instanceof THREE.Mesh, true);
+    });
+  }
+
+  it('has its surface refused by the one checker every set\'s records go through, before anything loads',
+    async () => {
+      const {descriptions, reads} = stageWith();
+      assert.throws(() => descriptions.set(grounded(TERRAIN_GRID, {...record(), kind: 'toon'})), (error: unknown) =>
+        error instanceof ModelStageRefusal && error.message.startsWith(
+          `Actor ${TERRAIN_ID}.surface names kind toon;`), 'the kind refusal');
+      assert.deepEqual(reads, []);
+    });
 });

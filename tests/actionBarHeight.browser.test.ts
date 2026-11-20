@@ -13,11 +13,11 @@ import type {Locator} from '../scripts/gateTools/node_modules/playwright/index.j
 import {ActionBarElement,ActionNoticeElement} from '../src/react/actionBarElements.ts';
 import {HEADER_CONTROL_PROPERTY} from '../src/react/headerControl.ts';
 import {PHI_SQUARED} from '../src/layout.ts';
-import {DESKTOP_VIEWPORT,PHONE_VIEWPORT,openScene} from './browserScene.ts';
+import {DESKTOP_VIEWPORT,PHONE_VIEWPORT,openScene,SCENE_GL} from './browserScene.ts';
 import {ACTION_BAR_BUTTONS,FOOTER_ACTIONS,LAYOUT_UNIT,NOTICE_BUTTONS,OUTSIDE_BUTTON,SAFE_AREA}
  from './actionBarHeightCases.ts';
 
-const page=await openScene('tests/actionBarHeightScene.tsx',DESKTOP_VIEWPORT);
+const page=await openScene('tests/actionBarHeightScene.tsx',DESKTOP_VIEWPORT,SCENE_GL.software);
 const bar=page.locator(ActionBarElement.selector);
 await bar.waitFor();
 const notices=page.locator(ActionNoticeElement.ROOT.selector);

@@ -30,9 +30,11 @@ export {MODEL_SURFACE_PARAMETER, MODEL_COLOR_SPACE, MODEL_SURFACE_LIGHT, MODEL_S
   from './surfaceKindModel.ts';
 export type {ModelColorSpace, ModelSurfaceKind, ModelSurfaceParameter} from './surfaceKindModel.ts';
 export {MODEL_ACTOR_SURFACES, MODEL_FILE_ENTRY, MODEL_SURFACE_REFUSAL, MODEL_TEXTURE_FORMATS, MODEL_TEXTURE_WRAP,
-  MODEL_TEXTURE_CONSTANT, modelActorSurfaces, modelRendererId, modelSurfaceFiles, modelSurfaceRecordsFit,
+  MODEL_TEXTURE_CONSTANT, modelActorSurfaces, modelRendererId, modelSurfaceFiles, modelSurfaceRecord,
+  modelSurfaceRecordsFit, modelSurfaceSetWhere,
   modelSurfaceSets} from './surfaceModel.ts';
 export type {ModelActorSurfaces, ModelSurfaceEntry, ModelSurfaceFile, ModelSurfaceRecord, ModelSurfaceSet,
+  ModelSurfaceSource, ModelSurfaceWhere,
   ModelSurfaceTexture, ModelSurfaceValue} from './surfaceModel.ts';
 export {MODEL_RENDERER_SLOT, MODEL_SURFACE_OUTPUT_REFUSAL, modelSurfaceTakes} from './surfaceOutputModel.ts';
 export type {ModelSurfaceTakes} from './surfaceOutputModel.ts';
@@ -47,9 +49,13 @@ export {ModelStageRefusal, MODEL_STAGE_FAILURE, modelStageFailure} from './refus
 export type {ModelStageFailure, ModelStageFailureKind} from './refusal.ts';
 export {MODEL_ANIMATION_LAYER, MODEL_ANIMATION_REFUSAL, modelAnimationLayers} from './animationLayerModel.ts';
 export type {ModelAnimationLayer, ModelAnimationSample} from './animationLayerModel.ts';
-export {MODEL_ACTOR_ANIMATION, MODEL_ACTOR_REFUSAL, MODEL_STAGE_DRIVER, modelStageActorSet} from './actorModel.ts';
-export type {ModelStageActor, ModelStageActorAnimation, ModelStageActorSet, ModelStageActorSnapshot,
-  ModelStageAsset, ModelStageDriver} from './actorModel.ts';
+export {MODEL_ACTOR_ANIMATION, MODEL_ACTOR_REFUSAL, MODEL_STAGE_DRIVER, modelActorDrawsFile, modelStageActorSet}
+  from './actorModel.ts';
+export type {ModelFileActor, ModelStageActor, ModelStageActorAnimation, ModelStageActorSet, ModelStageActorSnapshot,
+  ModelStageAsset, ModelStageDriver, ModelTerrainActor} from './actorModel.ts';
+// A terrain: a height grid the stage draws in chunks, checked here with no renderer.
+export {MODEL_TERRAIN_REFUSAL, MODEL_TERRAIN_SPLIT, modelStageTerrain, modelTerrainChunks} from './terrainModel.ts';
+export type {ModelStageTerrain, ModelTerrainChunk, ModelTerrainSplit} from './terrainModel.ts';
 // The whole description, checked with no renderer: every part, and every actor's set against the description's sets.
 export {MODEL_STAGE_DESCRIPTION_PARTS, modelStageActorSets, modelStageDescription} from './descriptionModel.ts';
 export type {ModelStageDescription, ModelStageDescriptionPart} from './descriptionModel.ts';

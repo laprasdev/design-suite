@@ -7,10 +7,10 @@ import {test} from 'node:test';
 import {GROUP_SPACE} from '../src/react/groupGeometry.ts';
 import {NODE_HEADING_HEIGHT_PROPERTY,NodeGraphElement} from '../src/react/nodeGraphElements.ts';
 import {TIE_SIZE,tieWidth} from '../src/react/wireGeometry.ts';
-import {DESKTOP_VIEWPORT,PHONE_VIEWPORT,openScene} from './browserScene.ts';
+import {DESKTOP_VIEWPORT,PHONE_VIEWPORT,openScene,SCENE_GL} from './browserScene.ts';
 import {SizedButtonElement,TIED_EDGES} from './buttonSurfacesCases.ts';
 
-const page=await openScene('tests/buttonSurfacesScene.tsx',DESKTOP_VIEWPORT);
+const page=await openScene('tests/buttonSurfacesScene.tsx',DESKTOP_VIEWPORT,SCENE_GL.software);
 const tie=page.locator(SizedButtonElement.TIE.selector);
 await tie.waitFor();
 

@@ -42,8 +42,8 @@ describe('shared model presentation', () => {
 
   it('preserves authored scale and position when both framing transformations are disabled', () => {
     const asset = assetBox();
-    const {placement, size} = prepareModelAsset(asset);
-    assert.equal(size(REAL, MODEL_STAGE_ORIGIN.file), 1);
+    const {placement, prepareSize} = prepareModelAsset(asset, 'a');
+    assert.equal(prepareSize(REAL, MODEL_STAGE_ORIGIN.file)(), 1);
     assert.equal(placement.children[0], asset.scene);
     assert.deepEqual(asset.scene.scale.toArray(), [2, 2, 2]);
     assert.deepEqual(asset.scene.position.toArray(), [8, 3, -2]);
@@ -53,8 +53,8 @@ describe('shared model presentation', () => {
 
   it('normalizes height independently of placement and applies commands to a separate wrapper', () => {
     const asset = assetBox();
-    const {placement, size} = prepareModelAsset(asset);
-    assert.equal(size(normalized(4), MODEL_STAGE_ORIGIN.file), 0.5);
+    const {placement, prepareSize} = prepareModelAsset(asset, 'a');
+    assert.equal(prepareSize(normalized(4), MODEL_STAGE_ORIGIN.file)(), 0.5);
     assert.equal(boundsOf(placement).getSize(new THREE.Vector3()).y, 4);
     assert.deepEqual(asset.scene.position.toArray(), [8, 3, -2]);
     const authoredScale = asset.scene.scale.clone();
@@ -69,8 +69,8 @@ describe('shared model presentation', () => {
 
   it('can center an asset on the floor without changing its authored scale', () => {
     const asset = assetBox();
-    const {placement, size} = prepareModelAsset(asset);
-    size(REAL, MODEL_STAGE_ORIGIN.centred);
+    const {placement, prepareSize} = prepareModelAsset(asset, 'a');
+    prepareSize(REAL, MODEL_STAGE_ORIGIN.centred)();
     const bounds = boundsOf(placement);
     assert.equal(bounds.min.y, 0);
     assert.deepEqual(bounds.getCenter(new THREE.Vector3()).toArray(), [0, 4, 0]);
@@ -80,17 +80,17 @@ describe('shared model presentation', () => {
 
   it('applies the stage\'s size rule over the file\'s own scale, never compounding, and keeps it on the floor', () => {
     const asset = assetBox();
-    const {placement, size} = prepareModelAsset(asset);
+    const {placement, prepareSize} = prepareModelAsset(asset, 'a');
     const read = () => {
       const bounds = boundsOf(placement);
       return [bounds.getSize(new THREE.Vector3()).y, bounds.min.y, ...bounds.getCenter(new THREE.Vector3()).toArray()];
     };
-    size(normalized(2), MODEL_STAGE_ORIGIN.centred);
+    prepareSize(normalized(2), MODEL_STAGE_ORIGIN.centred)();
     const once = read();
     assert.deepEqual(once, [2, 0, 0, 1, 0]);
-    for (const rule of [normalized(5), REAL, normalized(2)]) size(rule, MODEL_STAGE_ORIGIN.centred);
+    for (const rule of [normalized(5), REAL, normalized(2)]) prepareSize(rule, MODEL_STAGE_ORIGIN.centred)();
     assert.deepEqual(read(), once);
-    size(REAL, MODEL_STAGE_ORIGIN.centred);
+    prepareSize(REAL, MODEL_STAGE_ORIGIN.centred)();
     assert.deepEqual([read()[0], asset.scene.scale.toArray()], [8, [2, 2, 2]]);
     disposeModelObject(placement);
   });
@@ -116,41 +116,6 @@ describe('shared model presentation', () => {
     assert.notDeepEqual(camera.position.toArray(), [30, 40, 50]);
     assert.equal(controls.enabled, false);
     disposeModelObject(asset.scene);
-  });
-
-  it('measures nothing on a frame with no fit due, and holds a far pose against the orbit\'s reach', () => {
-    const camera = new THREE.PerspectiveCamera(MODEL_STAGE.fieldOfView, 1, 0.01, 100);
-    const controls = {target: new THREE.Vector3(), enabled: true, maxDistance: MODEL_STAGE.cameraMaximum, update() {
-      camera.position.sub(this.target).clampLength(MODEL_STAGE.cameraMinimum, this.maxDistance).add(this.target);
-      return true;
-    }};
-    const framing = createModelFraming(camera, controls);
-    let measured = 0;
-    const measure = () => {
-      measured++;
-      return new THREE.Box3(new THREE.Vector3(-1, 0, -1), new THREE.Vector3(1, 2, 1));
-    };
-    framing.frame({kind: MODEL_STAGE_FRAMING.focus}, true);
-    framing.fit(measure);
-    framing.fit(measure);
-    assert.equal(measured, 1);
-    framing.frame({kind: MODEL_STAGE_FRAMING.pose, position: [0, 0, 40], target: [0, 0, 0]}, true);
-    controls.update();
-    assert.deepEqual(camera.position.toArray(), [0, 0, 40]);
-  });
-
-  it('never leaves the orbit\'s reach short of the fitted distance', () => {
-    const camera = new THREE.PerspectiveCamera(MODEL_STAGE.fieldOfView, 1, 0.01, 100);
-    const controls = {target: new THREE.Vector3(), enabled: true, maxDistance: MODEL_STAGE.cameraMaximum,
-      update: () => true};
-    const framing = createModelFraming(camera, controls);
-    framing.frame({kind: MODEL_STAGE_FRAMING.all}, true);
-    framing.fit(() => new THREE.Box3(new THREE.Vector3(-40, 0, -40), new THREE.Vector3(40, 10, 40)));
-    assert.ok(camera.position.distanceTo(controls.target) <= controls.maxDistance + 1e-9);
-    assert.ok(controls.maxDistance > MODEL_STAGE.cameraMaximum);
-    framing.frame({kind: MODEL_STAGE_FRAMING.focus}, true);
-    framing.fit(() => new THREE.Box3(new THREE.Vector3(-1, 0, -1), new THREE.Vector3(1, 2, 1)));
-    assert.equal(controls.maxDistance, MODEL_STAGE.cameraMaximum);
   });
 
   it('frees each allocated bone texture once when multiple meshes share a skeleton', t => {

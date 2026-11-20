@@ -103,7 +103,7 @@ describe('the stage\'s fog', () => {
   it('reaches a file\'s own materials, and none of the stage\'s aids', () => {
     const {actor} = makeActor('a', [{name: 'run', duration: 1}]);
     // The fixture's skinned box draws three's basic material, which the Surface modes do not cover: fog alone.
-    actor.asset.scene.traverse(node => {
+    actor.drawn.scene.traverse(node => {
       if (node instanceof THREE.Mesh) for (const material of [node.material].flat()) {
         assert.deepEqual(modelMaterialChanges(material).map(({key}) => key), ['model-stage-fog']);
       }

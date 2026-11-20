@@ -4,10 +4,11 @@
 // surface pads it.
 import {modelStageDescription} from '../src/react/preview3d/descriptionModel.ts';
 import {MODEL_PREVIEW_TEXT} from '../src/react/preview3d/model.ts';
+import {modelStageFocus} from '../src/react/preview3d/actorModel.ts';
 import {describing} from './preview3dActorFixture.ts';
 
 export const PREVIEW_DESCRIPTION=modelStageDescription(describing());
-export const PREVIEW_ASSET=PREVIEW_DESCRIPTION.actors.actors[0].asset;
+export const PREVIEW_ASSET=modelStageFocus(PREVIEW_DESCRIPTION.actors).asset;
 
 export const PADDING_TOKEN='--button-padding-inline';
 export const PREVIEW_BUTTONS=Object.freeze([

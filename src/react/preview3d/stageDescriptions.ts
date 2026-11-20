@@ -4,7 +4,9 @@ import type {ModelStageTheme} from './model.ts';
 import type {ModelStagePolicy} from './stageOptionsModel.ts';
 import {createModelActor, type ModelActor, type ModelActorContext} from './actor.ts';
 import {createModelActorSet} from './actorSet.ts';
-import {modelAssetDigest} from './actorModel.ts';
+import {modelActorDrawsFile, modelAssetDigest, modelRuntimeAssetProfile, type ModelStageActor} from './actorModel.ts';
+import {modelFileDrawn, type ModelDrawn} from './drawn.ts';
+import {createModelTerrain} from './terrain.ts';
 import {modelFrameScope, type ModelFrameScope} from './frameModel.ts';
 import {modelStageDescription, modelStageDescriptionChanges, modelStageFramed, modelStageRefit,
   type ModelStageDescription} from './descriptionModel.ts';
@@ -51,8 +53,12 @@ export function createModelStageDescriptions(context: ModelStageDescriptionsCont
     shared: stage.shared, changes});
   const actorContext: ModelActorContext = {policy, theme: context.theme, scene: stage.scene, lighting: stage.lighting,
     changes, surfaceModes: modes, surfaces: {materials, kinds: policy.kinds, compile: stage.compile}};
-  const actors = createModelActorSet((declaration, signal) => context.load(declaration.asset.path,
-    modelAssetDigest(declaration), signal), (asset, declaration) => createModelActor(asset, declaration, actorContext));
+  // Loading picks by source: a file is read through the one loader, a terrain is built from its record.
+  const draw = (declaration: ModelStageActor, signal: AbortSignal): Promise<ModelDrawn> =>
+    modelActorDrawsFile(declaration) ? context.load(declaration.asset.path, modelAssetDigest(declaration), signal)
+      .then(asset => modelFileDrawn(asset, {actor: declaration.id, path: declaration.asset.path},
+        modelRuntimeAssetProfile(declaration))) : Promise.resolve(createModelTerrain(declaration.terrain));
+  const actors = createModelActorSet(draw, (drawn, declaration) => createModelActor(drawn, declaration, actorContext));
   const parts = createModelStageParts({...stage, kinds: policy.kinds, modes, textures, materials});
   let applied: ModelStageDescription | undefined, scope = NO_ACTORS;
   // The actors the framing fits, taken when a description is shown.

@@ -8,10 +8,11 @@ import {createModelActorSurfaces, MODEL_ACTOR_SURFACES_TEXT as TEXT} from '../sr
 import {createModelSurfaceMaterials} from '../src/react/preview3d/surfaceMaterials.ts';
 import {createModelStageSharedValues} from '../src/react/preview3d/sharedValues.ts';
 import {modelSurfaceKinds} from '../src/react/preview3d/surfaceKindModel.ts';
-import {modelSurfaceRecordsFit, modelSurfaceSets} from '../src/react/preview3d/surfaceModel.ts';
+import {modelSurfaceRecordsFit, modelSurfaceSets, modelSurfaceSetWhere} from '../src/react/preview3d/surfaceModel.ts';
 import {padModelBoundsByReach} from '../src/react/preview3d/reachBounds.ts';
 import {ModelStageRefusal} from '../src/react/preview3d/refusal.ts';
 import {kindFile, PULSE, RENDERERS} from './preview3dKindFixture.ts';
+import {modelFileDrawn} from '../src/react/preview3d/drawn.ts';
 
 // What a kind may be beyond a lit surface over uv and colour: unlit, moving its vertices, reading the file's own
 // attributes. Test kinds only, beside the seam's own (preview3dKindFixture.ts).
@@ -78,7 +79,8 @@ describe('a kind\'s forms beyond a lit surface', () => {
     assert.throws(() => kind({attributes: ['uv', {name: 'uv', size: 2}]}), /K.attributes lists uv twice/);
     assert.throws(() => kind({attributes: [{name: '__depth', size: 1}]}), /which is not a GLSL name/);
     assert.doesNotThrow(() => modelSurfaceDrawable(DEPTH));
-    const {asset, body} = kindFile(), surfaces = createModelActorSurfaces(asset, {actor: 'a', path: 'a.glb'},
+    const {asset, body} = kindFile(), drawn = modelFileDrawn(asset, {actor: 'a', path: 'a.glb'}, undefined);
+    const surfaces = createModelActorSurfaces(drawn, 'a',
       {materials: createModelSurfaceMaterials({kinds: modelSurfaceKinds([DEPTH]), changes: () => [],
         shared: createModelStageSharedValues(), read: async () => new ArrayBuffer(0),
         textures: {acquire: () => new THREE.Texture(), release: () => undefined}}), kinds: modelSurfaceKinds([DEPTH]),
@@ -86,10 +88,10 @@ describe('a kind\'s forms beyond a lit surface', () => {
     const sets = modelSurfaceSets({s: {[RENDERERS.body]: {kind: 'test-form', values: {_Color: {color: [1, 1, 1, 1]},
       _Reach: {float: 0}}}, [RENDERERS.eyes]: {kind: 'file'}, [RENDERERS.line]: {kind: 'file'}}});
     const where = `Actor a, renderer ${RENDERERS.body}, kind test-form`;
-    assert.throws(() => surfaces.prepare({from: 'set', set: 's'}, sets), (error: unknown) =>
+    assert.throws(() => surfaces.prepare({surfaces: {from: 'set', set: 's'}, sets: sets}), (error: unknown) =>
       error instanceof ModelStageRefusal && error.message === TEXT.attribute(where, '_depth'));
     body.geometry.setAttribute('_depth', new THREE.Float32BufferAttribute(new Float32Array(48), 2));
-    assert.throws(() => surfaces.prepare({from: 'set', set: 's'}, sets), (error: unknown) =>
+    assert.throws(() => surfaces.prepare({surfaces: {from: 'set', set: 's'}, sets: sets}), (error: unknown) =>
       error instanceof ModelStageRefusal && error.message === TEXT.size(where, '_depth', 1, 2));
   });
 
@@ -103,7 +105,8 @@ describe('a kind\'s forms beyond a lit surface', () => {
         {color: [1, 1, 1, 1]}, _Reach: {float: reach}}}, [RENDERERS.eyes]: {kind: 'file'}, [RENDERERS.line]:
         {kind: 'file'}}});
       await Promise.all(materials.load([sets(0.5).s[RENDERERS.body] as never]).pending);
-      const surfaces = createModelActorSurfaces(asset, {actor: 'a', path: 'a.glb'}, {materials, kinds,
+      const drawn = modelFileDrawn(asset, {actor: 'a', path: 'a.glb'}, undefined);
+      const surfaces = createModelActorSurfaces(drawn, 'a', {materials, kinds,
         compile: () => undefined});
       // A view whose near side is a plane `edge` metres left of the unit box's centre: the box's own sphere is 0.87.
       const seen = (edge: number) => {
@@ -113,7 +116,7 @@ describe('a kind\'s forms beyond a lit surface', () => {
           .intersectsObject(body);
       };
       assert.equal(seen(1.2), false, 'drawn with its file\'s material, culled by its own bounds');
-      surfaces.prepare({from: 'set', set: 's'}, sets(0.5))();
+      surfaces.prepare({surfaces: {from: 'set', set: 's'}, sets: sets(0.5)})();
       assert.deepEqual([body.frustumCulled, seen(1.2), seen(1.4)], [true, true, false], 'grown by the reach, 0.5');
       surfaces.prepareValues([{rendererId: RENDERERS.body, slot: 0, visible: true, colors: {},
         floats: {_Reach: 0.2}}])();
@@ -121,10 +124,11 @@ describe('a kind\'s forms beyond a lit surface', () => {
       body.scale.setScalar(0.5);
       assert.deepEqual([seen(0.6), seen(0.7)], [true, false], 'in metres, whatever the renderer\'s scale');
       body.scale.setScalar(1);
-      surfaces.prepare({from: 'file'}, sets(0.5))();
+      surfaces.prepare({surfaces: {from: 'file'}, sets: sets(0.5)})();
       assert.deepEqual([seen(0.8), seen(1.0)], [true, false], 'its own bounds back');
       assert.equal(Object.hasOwn(body, 'boundingSphere'), false);
-      refused(() => modelSurfaceRecordsFit(sets(-0.1), kinds), /_Reach is how far the kind moves a vertex/);
+      refused(() => modelSurfaceRecordsFit(sets(-0.1), kinds, modelSurfaceSetWhere),
+        /_Reach is how far the kind moves a vertex/);
     });
 
   it('grows the sphere a mesh keeps of its own, as three would compute it, and gives that sphere back', () => {

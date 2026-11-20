@@ -4,7 +4,7 @@
 import * as THREE from 'three';
 import {
   MODEL_STAGE, MODEL_STAGE_FRAMING, MODEL_STAGE_TONE_CURVE, modelStageDescription,
-  type ModelColor, type ModelStageActor, type ModelStageDescription, type ModelStageFog,
+  type ModelColor, type ModelFileActor, type ModelStageDescription, type ModelStageFog,
   type ModelStageSurfaceMode, type ModelStageTime, type ModelVector,
 } from '../src/react/preview3d/model.ts';
 import {declaration, describing, stageLook, standingAt} from './preview3dActorFixture.ts';
@@ -102,7 +102,7 @@ export function framingCamera(width: number, height: number): THREE.PerspectiveC
 export function fogStageDescription(
   assetUrl: string, time: FogTimeId, surfaceMode: ModelStageSurfaceMode, times: readonly ModelStageTime[],
 ): ModelStageDescription {
-  const patch = (id: string, center: ModelVector, scaleXY: number): ModelStageActor => {
+  const patch = (id: string, center: ModelVector, scaleXY: number): ModelFileActor => {
     const actor = declaration(id, 'patch', {placement: {...standingAt(center), scale: [scaleXY, scaleXY, 1]}});
     return {...actor, asset: {...actor.asset, path: assetUrl}};
   };

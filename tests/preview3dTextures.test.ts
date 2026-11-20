@@ -7,6 +7,7 @@ import {createModelTextures, MODEL_TEXTURE_TEXT} from '../src/react/preview3d/te
 import {ModelStageRefusal} from '../src/react/preview3d/refusal.ts';
 import {MODEL_FILE_CACHE_TEXT} from '../src/react/preview3d/fileCache.ts';
 import {modelSurfaceFiles, modelSurfaceSets} from '../src/react/preview3d/surfaceModel.ts';
+import {modelActorSurfaceSource} from '../src/react/preview3d/actorSurfaceModel.ts';
 import {modelSurfaceKinds} from '../src/react/preview3d/surfaceKindModel.ts';
 import {createModelStageParts} from '../src/react/preview3d/stageParts.ts';
 import {createModelSurfaceModes} from '../src/react/preview3d/materials.ts';
@@ -174,8 +175,8 @@ describe('the stage\'s textures', () => {
     const sets = modelSurfaceSets({used: {'gltf-node:0/primitive:0': {kind: 'test-mask', values: {_Mask: MASK}}},
       unused: {'gltf-node:0/primitive:0': {kind: 'test-mask', values: {_Mask: {texture: sampled('ramp')}}}}});
     const actors = [declaration('a', 'otter', {surfaces: {from: 'set', set: 'used'}})];
-    assert.deepEqual(modelSurfaceFiles(sets, actors), [file('mask')]);
-    assert.deepEqual(modelSurfaceFiles(sets, [declaration('a')]), []);
+    assert.deepEqual(modelSurfaceFiles(actors.map(actor => modelActorSurfaceSource(actor, sets))), [file('mask')]);
+    assert.deepEqual(modelSurfaceFiles([modelActorSurfaceSource(declaration('a'), sets)]), []);
     const asked: unknown[] = [];
     const parts = (kinds: unknown[]) => createModelStageParts({scene: new THREE.Scene(),
       kinds: modelSurfaceKinds(kinds),

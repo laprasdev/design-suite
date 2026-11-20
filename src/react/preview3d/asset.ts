@@ -6,6 +6,7 @@ import {MODEL_STAGE_ORIGIN, MODEL_STAGE_SIZE, type ModelStageOrigin, type ModelS
 import type {ModelPresentationPose} from './placementModel.ts';
 import {modelIsRenderer, modelRendererMaterials} from './renderers.ts';
 import {readModelFile} from './files.ts';
+import {ModelStageRefusal} from './refusal.ts';
 
 export function disposeModelObject(object: THREE.Object3D) {
   const skeletons = new Set<THREE.Skeleton>();
@@ -47,26 +48,35 @@ export function modelObjectBounds(object: THREE.Object3D) {
   return new THREE.Box3().setFromObject(object);
 }
 
-// The asset at its file's own size inside a placement group. `size` applies the stage's size rule over the file's
-// scale, never compounding, centres the model over its placement when the origin asks, and returns the factor.
-export function prepareModelAsset(asset: Pick<GLTF, 'scene'>) {
+export const MODEL_ASSET_TEXT = Object.freeze({
+  height: (actor: string) => `Actor ${actor} draws nothing of measurable height; the normalized size rule scales a ` +
+    'height to the one it states, so it applies to an actor with height. The real size rule draws it as it is.',
+});
+
+// The asset at its file's own size inside a placement group. `prepareSize` applies the stage's size rule over the
+// file's scale, never compounding, centres the model over its placement when the origin asks, and its commit returns
+// the factor. Only the normalized rule needs a height: flat ground stands at its real size. `actor` names a refusal.
+export function prepareModelAsset(asset: Pick<GLTF, 'scene'>, actor: string) {
   const bounds = new THREE.Box3().setFromObject(asset.scene);
   const height = bounds.getSize(new THREE.Vector3()).y;
-  if (!(height > 0)) throw new Error('The model has no measurable height.');
   const scale = asset.scene.scale.clone(), origin = asset.scene.position.clone();
   const placement = new THREE.Group();
   placement.add(asset.scene);
-  return {placement, size(rule: ModelStageSize, standing: ModelStageOrigin) {
-    const factor = rule.rule === MODEL_STAGE_SIZE.real ? 1 : rule.height / height;
-    asset.scene.scale.copy(scale).multiplyScalar(factor);
-    asset.scene.position.copy(origin);
-    if (standing === MODEL_STAGE_ORIGIN.centred) {
-      // The file's bounds scale about the scene's own origin.
-      const center = bounds.getCenter(new THREE.Vector3()).sub(origin).multiplyScalar(factor).add(origin);
-      const floor = origin.y + (bounds.min.y - origin.y) * factor;
-      asset.scene.position.sub(new THREE.Vector3(center.x, floor, center.z));
-    }
-    return factor;
+  return {placement, prepareSize(rule: ModelStageSize, standing: ModelStageOrigin): () => number {
+    const real = rule.rule === MODEL_STAGE_SIZE.real;
+    if (!real && !(height > 0)) throw new ModelStageRefusal(MODEL_ASSET_TEXT.height(actor));
+    const factor = real ? 1 : rule.height / height;
+    return () => {
+      asset.scene.scale.copy(scale).multiplyScalar(factor);
+      asset.scene.position.copy(origin);
+      if (standing === MODEL_STAGE_ORIGIN.centred) {
+        // The file's bounds scale about the scene's own origin.
+        const center = bounds.getCenter(new THREE.Vector3()).sub(origin).multiplyScalar(factor).add(origin);
+        const floor = origin.y + (bounds.min.y - origin.y) * factor;
+        asset.scene.position.sub(new THREE.Vector3(center.x, floor, center.z));
+      }
+      return factor;
+    };
   }};
 }
 
