@@ -10,6 +10,7 @@ import {MODEL_SURFACE_PARAMETER, type ModelSurfaceKind, type ModelSurfaceParamet
 export const MODEL_SURFACE_GLSL = Object.freeze({accessor: 'surfaceParameter', values: 'surfaceValues',
   texture: 'surfaceTexture', surface: 'kindSurface', attribute: 'surfaceAttribute', emissive: 'kindEmissive',
   vertexStage: 'KIND_VERTEX_STAGE', normal: 'kindNormal', view: 'kindViewDirection', object: 'kindObjectPosition',
+  world: 'kindWorldPosition', objectToWorld: 'kindObjectToWorld',
   tiling: 'surfaceTiling', sample: 'surfaceSample', viewNormal: 'kindViewNormal',
   fromMap: 'kindNormalFromTangentSpace', occlusion: 'kindOcclusion', roughness: 'kindRoughness',
   metalness: 'kindMetalness', coverage: 'kindCoverage'});

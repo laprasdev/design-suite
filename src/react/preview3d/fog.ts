@@ -2,6 +2,8 @@ import * as THREE from 'three';
 import {writeModelColor} from './color.ts';
 import type {ModelStageFog} from './lookModel.ts';
 import {modelShaderChunk, modelShaderUniforms, type ModelShaderChange} from './shading.ts';
+import {MODEL_SURFACE_GLSL} from './surfaceGlsl.ts';
+import {modelSurfaceObjectToWorld} from './surfaceReads.ts';
 
 // The stage's fog rule, stated once. Every term is a field of a look's fog (lookModel.ts); depth is the fragment's
 // distance along the view, as three's own fog measures it, and y its world height:
@@ -24,16 +26,11 @@ const HEIGHT_VARYING = 'vModelStageFogY';
 // distance term alone; its base and top are any range smoothstep accepts (GLSL leaves base >= top undefined, even
 // when multiplied by 0). This is the rule's own statement of "no layer", not a value standing in for missing data.
 const NO_LAYER = Object.freeze({base: 0, top: 1, strength: 0});
+// The fragment's world height, through the object's world transform as a kind's world position reads it.
+const {objectToWorld} = MODEL_SURFACE_GLSL;
 const VERTEX = `
 #ifdef USE_FOG
-  vec4 modelStageFogWorld = vec4( transformed, 1.0 );
-  #ifdef USE_BATCHING
-    modelStageFogWorld = batchingMatrix * modelStageFogWorld;
-  #endif
-  #ifdef USE_INSTANCING
-    modelStageFogWorld = instanceMatrix * modelStageFogWorld;
-  #endif
-  ${HEIGHT_VARYING} = ( modelMatrix * modelStageFogWorld ).y;
+  ${modelSurfaceObjectToWorld(`${HEIGHT_VARYING} = ( ${objectToWorld} * vec4( transformed, 1.0 ) ).y;`)}
 #endif`;
 const FRAGMENT = `
 #ifdef USE_FOG

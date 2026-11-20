@@ -1,5 +1,6 @@
 // The stage fog scene's shared constants and types (preview3dFogScene.tsx, preview3dFog.browser.test.ts): one flat
-// patch mesh placed at two depths under a time with fog and a twin time with fog: null.
+// patch mesh placed at two depths under a time with fog, a time with fog and a height layer, and a twin time with
+// fog: null.
 import * as THREE from 'three';
 import {
   MODEL_STAGE, MODEL_STAGE_FRAMING, MODEL_STAGE_TONE_CURVE, modelStageDescription,
@@ -15,7 +16,9 @@ export const FOG_VIEWPORT = Object.freeze({width: 320, height: 200});
 export const FOG_CURVE = MODEL_STAGE_TONE_CURVE.acesFilmic;
 export const PATCH_BASE_COLOR: ModelColor = Object.freeze([0.2, 0.6, 0.8]);
 export const PATCH_EMISSIVE: ModelColor = Object.freeze([0.2, 0.8, 0.2]);
-export const NEAR_CENTER: ModelVector = Object.freeze([-1.8, 0, -9]);
+// The near patch is raised by its placement: its centre's object height is 0 and its world height is not, so the
+// height layer shows which of the two the fog reads.
+export const NEAR_CENTER: ModelVector = Object.freeze([-1.8, 1.2, -9]);
 export const FAR_CENTER: ModelVector = Object.freeze([3.8, 0, -19]);
 const POSE_POSITION: ModelVector = Object.freeze([0, 0, 0]);
 const POSE_TARGET: ModelVector = Object.freeze([0, 0, -10]);
@@ -31,8 +34,11 @@ export const FOG_SPEC: ModelStageFog = Object.freeze({
   far: {distance: 24, color: FAR_FOG_COLOR},
   height: null,
 });
+// A layer far wider than one pixel's height on the near patch, so the read pixel's offset from the centre stays within
+// a byte, while the patch's object and world heights draw layers bytes apart.
+export const FOG_LAYER_SPEC: ModelStageFog = Object.freeze({...FOG_SPEC, height: {base: -4, top: 6, strength: 0.8}});
 
-export const FOG_TIME_ID = Object.freeze({haze: 'haze', clear: 'clear'} as const);
+export const FOG_TIME_ID = Object.freeze({haze: 'haze', layered: 'layered', clear: 'clear'} as const);
 export type FogTimeId = typeof FOG_TIME_ID[keyof typeof FOG_TIME_ID];
 
 const DEFAULT_LOOK = stageLook();
@@ -52,7 +58,10 @@ export const CLEAR_TIME: ModelStageTime = Object.freeze({
 export const HAZE_TIME: ModelStageTime = Object.freeze({
   id: FOG_TIME_ID.haze, label: 'Haze', look: unlitSceneLook(FOG_SPEC),
 });
-export const FOG_SCENE_TIMES: readonly ModelStageTime[] = Object.freeze([HAZE_TIME, CLEAR_TIME]);
+export const LAYERED_TIME: ModelStageTime = Object.freeze({
+  id: FOG_TIME_ID.layered, label: 'Layered', look: unlitSceneLook(FOG_LAYER_SPEC),
+});
+export const FOG_SCENE_TIMES: readonly ModelStageTime[] = Object.freeze([HAZE_TIME, LAYERED_TIME, CLEAR_TIME]);
 export const CLEAR_ONLY_TIMES: readonly ModelStageTime[] = Object.freeze([CLEAR_TIME]);
 
 export type RgbBytes = readonly [number, number, number];

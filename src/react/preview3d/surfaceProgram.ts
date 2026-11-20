@@ -4,7 +4,7 @@ import {MODEL_SURFACE_COVERAGE, MODEL_SURFACE_LIGHT, MODEL_SURFACE_PARAMETER, MO
 import {ModelStageRefusal} from './refusal.ts';
 import {modelShaderChunk, modelShaderReplace, modelShaderUniforms, type ModelShaderReplace} from './shading.ts';
 import {MODEL_SURFACE_GLSL, modelSurfaceAccessor, modelSurfaceSlots} from './surfaceGlsl.ts';
-import {MODEL_SURFACE_OWN_ATTRIBUTES, modelSurfaceReads} from './surfaceReads.ts';
+import {MODEL_SURFACE_OWN_ATTRIBUTES, modelSurfaceObjectToWorld, modelSurfaceReads} from './surfaceReads.ts';
 
 // A kind's web program placed into three's own program, the one way the stage makes a kind's material. The kind's GLSL
 // defines `kindSurface`; the stage declares what it may read before it (its parameters' accessors, surfaceGlsl.ts; the
@@ -16,7 +16,7 @@ import {MODEL_SURFACE_OWN_ATTRIBUTES, modelSurfaceReads} from './surfaceReads.ts
 const CHUNK = Object.freeze({declarations: 'clipping_planes_pars_fragment', emission: 'emissivemap_fragment',
   basic: 'specularmap_fragment', output: 'envmap_fragment', vertexDeclarations: 'clipping_planes_pars_vertex',
   begin: 'begin_vertex', project: 'project_vertex', occlusion: 'aomap_fragment'});
-const {occlusion, roughness, metalness, coverage: coverageOf} = MODEL_SURFACE_GLSL;
+const {occlusion, roughness, metalness, coverage: coverageOf, objectToWorld} = MODEL_SURFACE_GLSL;
 /**
  * The one place a kind moves vertices: after three's morphs and skinning, before its projection. The kind is given
  * the vertex's world position and returns how far it moves, in world space (metres); the stage takes that offset to
@@ -24,17 +24,8 @@ const {occlusion, roughness, metalness, coverage: coverageOf} = MODEL_SURFACE_GL
  * shader graph's world-to-object transform does, so everything three computes from the position follows: the
  * projection, the fog's depth and height, a world position. Normals are not moved.
  */
-const DISPLACE = `{
-  mat4 kindObjectToWorld = modelMatrix;
-  #ifdef USE_INSTANCING
-    kindObjectToWorld = kindObjectToWorld * instanceMatrix;
-  #endif
-  #ifdef USE_BATCHING
-    kindObjectToWorld = kindObjectToWorld * batchingMatrix;
-  #endif
-  vec3 kindWorld = ( kindObjectToWorld * vec4( transformed, 1.0 ) ).xyz;
-  transformed += inverse( mat3( kindObjectToWorld ) ) * kindDisplacement( kindWorld );
-}`;
+const DISPLACE = modelSurfaceObjectToWorld(`vec3 kindWorld = ( ${objectToWorld} * vec4( transformed, 1.0 ) ).xyz;
+  transformed += inverse( mat3( ${objectToWorld} ) ) * kindDisplacement( kindWorld );`);
 // The kind's surface called, between what the stage writes for it just before and takes from it just after; and what
 // the stage applies of it once the light is computed.
 interface Around {readonly before: string; readonly after: string; readonly lit: string}
