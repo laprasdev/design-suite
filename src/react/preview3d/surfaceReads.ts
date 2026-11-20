@@ -13,9 +13,11 @@ import {modelShaderChunk} from './shading.ts';
 //   `kindNormalFromTangentSpace`), and three's lighting then uses it. Fragment stage only.
 // - 'position': `kindObjectPosition`, the fragment's position in the renderer's own space: the space the model file
 //   states the mesh's vertices in (glTF: right-handed, Y up, metres), before the mesh's node, an instance's or a
-//   batch's transform, after its morphs, skinning and the kind's own displacement. Fragment stage only.
+//   batch's transform, after its morphs, skinning and the kind's own displacement; and `kindWorldPosition`, the same
+//   point in world space, the stage's space (metres, Y up), through the object's world transform: three's own world
+//   position, so the same placed geometry reads the same point whatever transform places it. Fragment stage only.
 // A file's own attribute is read in both stages as `surfaceAttribute` and its name.
-const {normal, view, object, attribute: fileVarying} = MODEL_SURFACE_GLSL;
+const {normal, view, object, world, objectToWorld, attribute: fileVarying} = MODEL_SURFACE_GLSL;
 const GLSL_TYPE = Object.freeze({1: 'float', 2: 'vec2', 3: 'vec3', 4: 'vec4'});
 /** The GLSL of what a kind reads, by stage. */
 export interface ModelSurfaceReads {
@@ -32,6 +34,18 @@ export interface ModelSurfaceReads {
   readonly beforeSurface: readonly string[];
   readonly afterSurface: readonly string[];
 }
+/** Vertex-stage statements in a block that holds the object's world transform: its model, instance and batch matrices,
+ * multiplied as three's own world position multiplies them, after its batching and before its projection. */
+export const modelSurfaceObjectToWorld = (statements: string) => `{
+  mat4 ${objectToWorld} = modelMatrix;
+  #ifdef USE_INSTANCING
+    ${objectToWorld} = ${objectToWorld} * instanceMatrix;
+  #endif
+  #ifdef USE_BATCHING
+    ${objectToWorld} = ${objectToWorld} * batchingMatrix;
+  #endif
+  ${statements}
+}`;
 type Read = Partial<Omit<ModelSurfaceReads, 'defines'>> & {readonly defines?: Readonly<Record<string, string>>};
 // Three's basic program draws no normal: an unlit kind that reads one is given three's own normal chunks, computed as
 // its standard program computes them, where the basic program has not (it does so only with an environment map or
@@ -71,7 +85,9 @@ const OWN: Readonly<Record<string, (light: ModelSurfaceKind['light']) => readonl
   uv: () => [{defines: {USE_UV: ''}}],
   color: () => [{vertexColors: true}],
   normal: light => light === MODEL_SURFACE_LIGHT.unlit ? [UNLIT_NORMAL, FACING] : [FACING, LIT_NORMAL],
-  position: () => [{varyings: [`varying vec3 ${object};`], projected: [`${object} = transformed;`]}],
+  position: () => [{varyings: [`varying vec3 ${object};`, `varying vec3 ${world};`],
+    projected: [`${object} = transformed;`,
+      modelSurfaceObjectToWorld(`${world} = ( ${objectToWorld} * vec4( transformed, 1.0 ) ).xyz;`)]}],
 });
 /** Three's own attributes a kind may read, by name. */
 export const MODEL_SURFACE_OWN_ATTRIBUTES: readonly string[] = Object.freeze(Object.keys(OWN));

@@ -475,7 +475,9 @@ vec3 kindDisplacement( vec3 world ) { ... }
 - With `'position'` (fragment stage only): `kindObjectPosition`, the fragment's position in the space the model file
   states the mesh in (glTF: right-handed, Y up, metres), before the node's, an instance's or a batch's transform and
   after morphs, skinning and displacement. It is a source engine's object space only through the converter's axis
-  change.
+  change. Also `kindWorldPosition`, the same point in world space (metres, Y up) through the node's, instance's and
+  batch's transforms: three's own world position, the same for the same placed geometry whatever transform places it.
+  A source shader that samples in world space (triplanar from its world position) reads this.
 - The look's light, for any kind: `stageKeyDirection` (unit, toward the key, world space), `stageKeyColor` (linear
   colour times strength), `stageAmbientSky` and `stageAmbientGround` (linear colours times strength; the sky is +Y) and
   `stageShadow` (the time's shadow colour, linear). These are the values three hands its own lit programs. Three's
@@ -488,11 +490,12 @@ Names a kind must not declare: anything starting `surfaceParameter`, `surfaceVal
 `surfaceAttribute`, `surfaceTiling`, `surfaceSample` or `stageNumbers`; `stageDecorativeSeconds`, `stageNight`,
 `stageShadow`, `stageKeyDirection`, `stageKeyColor`, `stageAmbientSky`, `stageAmbientGround`; `kindSurface` and
 `kindDisplacement` beyond its one definition of each; `kindEmissive`, `kindWorld`, `kindObjectToWorld`, `kindNormal`,
-`kindViewDirection`, `kindObjectPosition`, `kindViewNormal`, `kindNormalFromTangentSpace`, `kindOcclusion`,
-`kindRoughness`, `kindMetalness`, `kindCoverage`, `KIND_VERTEX_STAGE`; a file attribute's own name; and three's names.
+`kindViewDirection`, `kindObjectPosition`, `kindWorldPosition`, `kindViewNormal`, `kindNormalFromTangentSpace`,
+`kindOcclusion`, `kindRoughness`, `kindMetalness`, `kindCoverage`, `KIND_VERTEX_STAGE`; a file attribute's own name;
+and three's names.
 
-The stage does not yet state an engine-to-stage space convention, so a kind cannot yet sample world space in its
-source engine's basis.
+The stage does not yet state an engine-to-stage space convention: `kindWorldPosition` is the stage's world space, a
+source engine's world space only through the converter's axis change.
 
 #### Refusals
 

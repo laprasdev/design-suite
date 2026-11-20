@@ -61,6 +61,19 @@ describe('what a kind reads beyond its parameters', () => {
     assert.equal(moving.vertexShader.split('varying vec3 kindObjectPosition;').length, 2);
   });
 
+  it('reads the same point in world space, through the object\'s model, instance and batch transforms', () => {
+    const {vertexShader, fragmentShader} = built({attributes: ['position']});
+    for (const stage of [vertexShader, fragmentShader]) {
+      assert.equal(stage.split('varying vec3 kindWorldPosition;').length, 2, 'declared once in each stage');
+    }
+    const written = 'kindWorldPosition = ( kindObjectToWorld * vec4( transformed, 1.0 ) ).xyz;';
+    assert.ok(at(vertexShader, 'kindObjectPosition = transformed;') < at(vertexShader, written), 'after projection');
+    for (const factor of ['instanceMatrix', 'batchingMatrix']) {
+      assert.ok(at(vertexShader, `kindObjectToWorld = kindObjectToWorld * ${factor};`) < at(vertexShader, written));
+    }
+    assert.ok(!built({}).fragmentShader.includes('kindWorldPosition'), 'not declared, not read');
+  });
+
   it('adds nothing a kind does not declare: its programs are what they were', () => {
     const plain = built({});
     assert.equal(plain.vertexShader, THREE.ShaderLib.standard.vertexShader);
