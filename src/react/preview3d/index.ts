@@ -3,7 +3,7 @@ export {MODEL_REST_POSE, MODEL_STAGE, MODEL_STAGE_FRAMING, MODEL_STAGE_ORIGIN, M
   from './model.ts';
 export type {
   ModelStageAsset, ModelStageTheme, ModelStageOptions, ModelPresentationPose, ModelStageFraming, ModelStageOrigin,
-  ModelStageSize, ModelActorMaterialMap,
+  ModelStageSize, ModelStageCameraSnapshot,
   ModelStageController, ModelStageSnapshot, ModelStageClock, ModelStageDisplay, ModelPreviewAsset,
   ModelVector, ModelRotation, ModelStageSurfaceMode, ModelStageLighting, ModelStageDescription, ModelStageActor,
   ModelStageActorSet, ModelStageActorAnimation, ModelPreviewCamera, ModelPreviewFrame,

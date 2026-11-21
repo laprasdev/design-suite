@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import {modelSurfaceSetCovers, type ModelRenderer} from './renderers.ts';
 import type {ModelDrawn} from './drawn.ts';
-import {MODEL_ACTOR_SURFACES, type ModelActorSurfaces, type ModelSurfaceRecord, type ModelSurfaceSource}
+import {MODEL_ACTOR_SURFACES, type ModelSurfaceRecord, type ModelSurfaceSource}
   from './surfaceModel.ts';
 import type {ModelMaterialOutput} from './surfaceOutputModel.ts';
 import {MODEL_SURFACE_PARAMETER, modelAttributeName, type ModelSurfaceKind} from './surfaceKindModel.ts';
@@ -27,8 +27,6 @@ export const MODEL_ACTOR_SURFACES_TEXT = Object.freeze({
   size: (where: string, name: string, size: number, held: number) =>
     `${where}: the kind reads ${name} as ${size} numbers a vertex; the mesh holds ${held}.`,
   program: (where: string, why: string) => `${where}: the kind's web program cannot be drawn: ${why}`,
-  materialMaps: (actor: string) =>
-    `Actor ${actor} has active material maps; clear them with null before applying a surface set.`,
 });
 const SLOT = 4;
 /** A renderer a kind draws, with the values it shows: the record's, or the engine's where this tick states one. */
@@ -42,7 +40,7 @@ const NOTHING_BEFORE_RENDER = THREE.Object3D.prototype.onBeforeRender;
 // swaps. Engine values are per renderer: each drawn renderer has its own copy of its record's values, and just before
 // it is drawn hands that copy to the shared material when the material holds another's or the copy changed.
 export function createModelActorSurfaces(source: Pick<ModelDrawn, 'scene' | 'renderers'>, actor: string,
-  context: ModelActorSurfacesContext, hasMaterialMaps?: () => boolean) {
+  context: ModelActorSurfacesContext) {
   // Each mesh's own material, as its source and the stage's changes made it at build.
   const originals = new Map<THREE.Mesh, THREE.Material | THREE.Material[]>();
   source.scene.traverse(node => {
@@ -52,7 +50,6 @@ export function createModelActorSurfaces(source: Pick<ModelDrawn, 'scene' | 'ren
   const padded = new Map<THREE.Mesh, () => void>();
   const {renderers} = source;
   let heldSurfaces = new Map<THREE.Mesh, HeldSurface>();
-  let from: ModelActorSurfaces['from'] | undefined;
   const draw = (node: THREE.Mesh, held: HeldSurface) => {
     const {material} = held.surface, uniform = material.uniforms[MODEL_SURFACE_GLSL.values];
     node.material = material;
@@ -110,8 +107,6 @@ export function createModelActorSurfaces(source: Pick<ModelDrawn, 'scene' | 'ren
   return {
     /** The file's renderers by id, as a surface set names them. */
     renderers,
-    /** The surface route last committed ('file' or 'set'), or undefined before the first prepare commits. */
-    get from() {return from;},
     /** What the materials the actor draws with allow: the Surface modes, and how many emit. */
     inspection: createModelMaterialInspection(() => [...originals.keys()].flatMap(shown), context.materials.made),
     /** The actor's surfaces as described: a set covers the file's renderers exactly, and every renderer whose record
@@ -119,7 +114,6 @@ export function createModelActorSurfaces(source: Pick<ModelDrawn, 'scene' | 'ren
     prepare({surfaces, sets}: Omit<ModelSurfaceSource, 'where'>): ModelStageCommit {
       const next = new Map<THREE.Mesh, HeldSurface>();
       if (surfaces.from === MODEL_ACTOR_SURFACES.set) {
-        if (hasMaterialMaps?.()) throw new ModelStageRefusal(MODEL_ACTOR_SURFACES_TEXT.materialMaps(actor));
         const set = sets[surfaces.set];
         modelSurfaceSetCovers(actor, surfaces.set, set, renderers());
         for (const [id, entry] of Object.entries(set)) {
@@ -141,7 +135,6 @@ export function createModelActorSurfaces(source: Pick<ModelDrawn, 'scene' | 'ren
           draw(node, held);
         }
         heldSurfaces = next;
-        from = surfaces.from;
       };
     },
     /** A frame's values and visibility for this actor, already checked against what its renderers take: every drawn
@@ -175,7 +168,6 @@ export function createModelActorSurfaces(source: Pick<ModelDrawn, 'scene' | 'ren
     dispose() {
       for (const [node, held] of heldSurfaces) {context.materials.unuse(held.surface); restore(node);}
       heldSurfaces = new Map();
-      from = undefined;
     },
   };
 }

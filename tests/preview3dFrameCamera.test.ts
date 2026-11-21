@@ -23,22 +23,23 @@ const framingHarness = () => {
 };
 
 describe('preview camera and framing fieldOfView validation', () => {
-  it('validates optional fieldOfView strictly in (0, 180), omits it when unstated, and keeps capabilities', () => {
+  it('validates optional fieldOfView strictly in (0, 180), omits it when unstated, and names where it failed', () => {
     assert.deepEqual(MODEL_PREVIEW_CAPABILITIES,
       {pose: true, animationLayers: true, partPoses: false, materials: false});
-    const plain = modelPreviewCamera({position: [1, 2, 3], target: [0, 0, 0]});
+    const plain = modelPreviewCamera({position: [1, 2, 3], target: [0, 0, 0]}, 'Camera');
     assert.deepEqual(plain, {position: [1, 2, 3], target: [0, 0, 0]});
     assert.equal('fieldOfView' in plain, false);
     assert.ok(Object.isFrozen(plain));
-    const wide = modelPreviewCamera({position: [1, 2, 3], target: [0, 0, 0], fieldOfView: 62.5});
+    const wide = modelPreviewCamera({position: [1, 2, 3], target: [0, 0, 0], fieldOfView: 62.5}, 'Camera');
     assert.deepEqual(wide, {position: [1, 2, 3], target: [0, 0, 0], fieldOfView: 62.5});
     assert.ok(Object.isFrozen(wide));
     for (const bad of [0, -1, 180, 181, NaN, Infinity, -Infinity, '45', null, {}, undefined]) {
-      refused(() => modelPreviewCamera({position: [1, 2, 3], target: [0, 0, 0], fieldOfView: bad}), /fieldOfView/);
+      refused(() => modelPreviewCamera({position: [1, 2, 3], target: [0, 0, 0], fieldOfView: bad}, 'The framing'),
+        /^The framing\.fieldOfView must be a finite number strictly between 0 and 180\.$/);
     }
   });
 
-  it('validates framing pose fieldOfView and detects framing changes by value', () => {
+  it('validates framing pose through modelShape and detects framing changes by value', () => {
     const base = modelStageDescription(describing({framing: {kind: 'pose', position: [0, 2, 5], target: [0, 0, 0]}}));
     assert.equal('fieldOfView' in base.framing, false);
     const zoomed = modelStageDescription(describing({
@@ -46,6 +47,8 @@ describe('preview camera and framing fieldOfView validation', () => {
     }));
     assert.deepEqual(zoomed.framing, {kind: 'pose', position: [0, 2, 5], target: [0, 0, 0], fieldOfView: 52});
     assert.deepEqual([...modelStageDescriptionChanges(base, zoomed)], ['framing']);
+    refused(() => modelStageDescription(describing({framing: {kind: 'unknown'}})),
+      /^The framing\.kind is one of focus, all, pose\.$/);
     refused(() => modelStageDescription(describing({
       framing: {kind: 'pose', position: [0, 2, 5], target: [0, 0, 0], fieldOfView: undefined},
     })), /stated with no value/);
@@ -58,7 +61,7 @@ describe('preview camera and framing fieldOfView validation', () => {
       /does not state fieldOfView/);
   });
 
-  it('validates optional frame.camera, freezes it, and refuses stated undefined or invalid values', () => {
+  it('validates optional frame.camera, freezes it, and refuses undefined, stray fields or bad values', () => {
     const scope = modelFrameScope(fileScene([declaration('a')]), new Map());
     const withoutCamera = modelPreviewFrame(frame(0), scope);
     assert.equal('camera' in withoutCamera, false);
@@ -68,25 +71,29 @@ describe('preview camera and framing fieldOfView validation', () => {
     tgt[1] = 99;
     assert.deepEqual(withCamera.camera, {position: [4, 5, 6], target: [0, 1, 0], fieldOfView: 48});
     assert.ok(Object.isFrozen(withCamera.camera) && Object.isFrozen(withCamera.camera?.position));
+    refused(() => modelPreviewFrame({...frame(0), camera: {position: [0, 0, 5], target: [0, 0, 0], fieldOfView: 0}},
+      scope), /^Frame camera\.fieldOfView must be a finite number strictly between 0 and 180\.$/);
+    refused(() => modelPreviewFrame({...frame(0), camera: {position: [0, 0, 5], target: [0, 0, 0], extra: 1}},
+      scope), /^Frame camera does not state extra/);
     for (const camera of [undefined, null, {}, {position: [0, 0, 0], target: [0, 0, 0]},
-      {position: [0, 0, 5], target: [0, 0, 0], fieldOfView: 0},
       {position: [0, 0, 5], target: [0, 0, 0], fieldOfView: undefined}]) {
       refused(() => modelPreviewFrame({...frame(0), camera}, scope));
     }
   });
 });
 
-describe('camera pose, fieldOfView updates and reset restore', () => {
-  it('updates projection matrix only when fov changes, holds against fit, and restores on focus/all/reset', t => {
+describe('camera pose, fieldOfView updates, snapshot reporting and reset restore', () => {
+  it('updates projection matrix only when fov changes, reports held snapshot, and restores on focus/all/reset', t => {
     const {camera, controls, framing} = framingHarness();
+    assert.equal(framing.cameraSnapshot().held, false);
     const updateProj = t.mock.method(camera, 'updateProjectionMatrix');
     framing.pose({position: [0, 3, 25], target: [0, 1, 0]});
-    assert.deepEqual([camera.position.toArray(), controls.target.toArray(), camera.fov],
-      [[0, 3, 25], [0, 1, 0], MODEL_STAGE.fieldOfView]);
+    assert.deepEqual(framing.cameraSnapshot(),
+      {position: [0, 3, 25], target: [0, 1, 0], fieldOfView: MODEL_STAGE.fieldOfView, held: true});
     assert.equal(updateProj.mock.callCount(), 0, 'unchanged fov skips projection matrix rebuild');
     assert.ok(controls.maxDistance >= camera.position.distanceTo(controls.target) - 1e-9);
     framing.pose({position: [0, 3, 10], target: [0, 1, 0], fieldOfView: 55});
-    assert.equal(camera.fov, 55);
+    assert.deepEqual([camera.fov, framing.cameraSnapshot().fieldOfView], [55, 55]);
     assert.equal(updateProj.mock.callCount(), 1);
     framing.pose({position: [2, 3, 10], target: [0, 1, 0], fieldOfView: 55});
     assert.equal(updateProj.mock.callCount(), 1, 'same fov on next tick skips projection rebuild');
@@ -94,9 +101,9 @@ describe('camera pose, fieldOfView updates and reset restore', () => {
     framing.requestFit();
     framing.fit(() => {measured++; return new THREE.Box3(new THREE.Vector3(-1, 0, -1), new THREE.Vector3(1, 2, 1));});
     assert.equal(measured, 0, 'held per-frame pose ignores fit requests');
-    // Switching back to focus restores default fov and re-enables fit.
+    // Switching back to focus restores default fov, clears held, and re-enables fit.
     framing.frame({kind: MODEL_STAGE_FRAMING.focus}, true);
-    assert.equal(camera.fov, MODEL_STAGE.fieldOfView);
+    assert.deepEqual([camera.fov, framing.cameraSnapshot().held], [MODEL_STAGE.fieldOfView, false]);
     assert.equal(updateProj.mock.callCount(), 2);
     framing.frame({kind: MODEL_STAGE_FRAMING.all}, true);
     assert.equal(updateProj.mock.callCount(), 2, 'already at default fov: no extra rebuild');
@@ -110,12 +117,12 @@ describe('camera pose, fieldOfView updates and reset restore', () => {
     framing.pose({position: [1, 2, 3], target: [0, 0, 0], fieldOfView: 70});
     assert.equal(camera.fov, 70);
     parts.resetCamera(describedFocus);
-    assert.equal(camera.fov, MODEL_STAGE.fieldOfView);
+    assert.deepEqual([camera.fov, framing.cameraSnapshot().held], [MODEL_STAGE.fieldOfView, false]);
     const describedPose = modelStageDescription(describing({
       framing: {kind: 'pose', position: [0, 4, 8], target: [0, 1, 0], fieldOfView: 44},
     }));
     parts.resetCamera(describedPose);
-    assert.deepEqual([camera.position.toArray(), controls.target.toArray(), camera.fov], [[0, 4, 8], [0, 1, 0], 44]);
+    assert.deepEqual(framing.cameraSnapshot(), {position: [0, 4, 8], target: [0, 1, 0], fieldOfView: 44, held: true});
   });
 });
 

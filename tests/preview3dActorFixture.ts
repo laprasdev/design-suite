@@ -111,8 +111,10 @@ export const describing = (changes: Record<string, unknown> = {}) => ({
 export const fileScene = (actors: readonly ModelStageActor[]) =>
   ({actors: {focus: actors[0].id, actors}, surfaceSets: {}});
 /** A frame applied as the stage applies it, to actors drawn with their files' own materials. */
-export const applyFrame = (actors: readonly ModelActor[], value: unknown) =>
-  applyModelFrame(actors, modelFrameScope(fileScene(actors.map(actor => actor.declaration)), new Map()), value);
+export const applyFrame = (actors: readonly ModelActor[], value: unknown,
+  onCamera = () => {throw new Error('Unexpected frame camera.');}) =>
+  applyModelFrame(actors, modelFrameScope(fileScene(actors.map(actor => actor.declaration)), new Map()), value,
+    onCamera);
 /** A staged load that waits on nothing. */
 export const NO_LOAD = Object.freeze({pending: [], release: () => undefined});
 /** The parts' file registries, for a test that loads no file. */

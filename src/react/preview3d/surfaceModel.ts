@@ -1,9 +1,14 @@
 import {isRecord} from '../../valueChecks.ts';
-import {modelDigest, modelEntries, modelFlag, modelName, modelNumber, modelNumbers, modelOneOf,
-  modelOption, modelRecord, modelShape, modelStates} from './recordModel.ts';
+import {modelEntries, modelFlag, modelName, modelNumber, modelNumbers, modelOneOf,
+  modelRecord, modelShape, modelStates} from './recordModel.ts';
 import {ModelStageRefusal} from './refusal.ts';
 import {MODEL_FILE_SURFACE, MODEL_SURFACE_PARAMETER, MODEL_VECTOR_SIZE, type ModelSurfaceKind}
   from './surfaceKindModel.ts';
+import {MODEL_SURFACE_TEXTURE_REFUSAL, modelSurfaceTexture, type ModelSurfaceFile, type ModelSurfaceTexture}
+  from './surfaceTextureModel.ts';
+export {isModelImageSource, MODEL_IMAGE_SOURCES, MODEL_TEXTURE_CONSTANT, MODEL_TEXTURE_FORMATS, MODEL_TEXTURE_WRAP,
+  modelSurfaceTexture} from './surfaceTextureModel.ts';
+export type {ModelSurfaceFile, ModelSurfaceTexture, ModelTextureSampling} from './surfaceTextureModel.ts';
 
 // What draws a model's renderers. An actor states where its surfaces come from, one of two whole forms: the file's own
 // materials throughout, or a named set of the description's, whose keys are the file's renderers, every one exactly
@@ -15,16 +20,6 @@ export type ModelActorSurfaces = {readonly from: typeof MODEL_ACTOR_SURFACES.fil
   | {readonly from: typeof MODEL_ACTOR_SURFACES.set; readonly set: string};
 const ACTOR_SURFACES = Object.freeze({[MODEL_ACTOR_SURFACES.file]: ['from'],
   [MODEL_ACTOR_SURFACES.set]: ['from', 'set']});
-export const MODEL_TEXTURE_WRAP = Object.freeze({repeat: 'repeat', clamp: 'clamp', mirror: 'mirror'} as const);
-export const MODEL_TEXTURE_CONSTANT = Object.freeze({white: 'white', black: 'black'} as const);
-type Wrap = typeof MODEL_TEXTURE_WRAP[keyof typeof MODEL_TEXTURE_WRAP];
-type Pair = readonly [number, number];
-/** A texture a record names: a file by path and SHA-256 with its sampling, or a constant for an empty slot. */
-export type ModelSurfaceTexture = {readonly path: string; readonly sha256: string; readonly wrap: readonly [Wrap, Wrap];
-  readonly scale: Pair; readonly offset: Pair} | {readonly constant: typeof MODEL_TEXTURE_CONSTANT[keyof typeof
-  MODEL_TEXTURE_CONSTANT]};
-/** A file a record names, by path and SHA-256. */
-export type ModelSurfaceFile = {readonly path: string; readonly sha256: string};
 export type ModelSurfaceValue = {readonly color: readonly [number, number, number, number]}
   | {readonly vector: readonly number[]} | {readonly float: number} | {readonly keyword: boolean}
   | {readonly texture: ModelSurfaceTexture};
@@ -40,11 +35,8 @@ const RENDERER_ID = /^gltf-node:(0|[1-9]\d*)\/primitive:(0|[1-9]\d*)$/;
 /** A renderer's one address, as the engine, the model files and the hosts agree: a glTF node's primitive. */
 export const modelRendererId = (node: number, primitive: number) => `gltf-node:${node}/primitive:${primitive}`;
 const FORMS = Object.values(MODEL_SURFACE_PARAMETER);
-const TEXTURE_FIELDS = Object.freeze(['path', 'sha256', 'wrap', 'scale', 'offset']);
-/** The image formats the stage decodes (the browser's own decoder, as three's glTF loader uses it), by a path's end. */
-export const MODEL_TEXTURE_FORMATS = Object.freeze(['png', 'jpg', 'jpeg', 'webp']);
-const FORMAT = new RegExp(`\\.(${MODEL_TEXTURE_FORMATS.join('|')})(?:[?#].*)?$`, 'i');
 export const MODEL_SURFACE_REFUSAL = Object.freeze({
+  ...MODEL_SURFACE_TEXTURE_REFUSAL,
   renderer: (where: string, id: string) => `${where}: ${id} is not a renderer id, gltf-node:<n>/primitive:<m>.`,
   unknownSet: (where: string, set: string, sets: readonly string[]) =>
     `${where} names surface set ${set}; the description's sets are ${sets.join(', ') || 'none'}.`,
@@ -57,34 +49,16 @@ export const MODEL_SURFACE_REFUSAL = Object.freeze({
   range: (where: string) => `${where} is not HDR: each channel is from 0 to 1.`,
   inert: (where: string, value: number) => `${where} is drawn only at ${value}.`,
   reach: (where: string) => `${where} is how far the kind moves a vertex, in metres: 0 or more.`,
-  format: (where: string, path: string) =>
-    `${where} ${path} is not a format the stage decodes: ${MODEL_TEXTURE_FORMATS.join(', ')}.`,
-  wrap: (where: string) => `${where} is a pair, [u, v], each one of ${Object.values(MODEL_TEXTURE_WRAP).join(', ')}.`,
 });
 const refusal = MODEL_SURFACE_REFUSAL;
 
-function texture(value: unknown, where: string): ModelSurfaceTexture {
-  if (isRecord(value) && 'constant' in value) return Object.freeze({constant: modelOption(
-    modelRecord(value, ['constant'], where).constant, MODEL_TEXTURE_CONSTANT, `${where}.constant`)});
-  const record = modelRecord(value, TEXTURE_FIELDS, where);
-  if (!Array.isArray(record.wrap) || record.wrap.length !== 2) {
-    throw new ModelStageRefusal(refusal.wrap(`${where}.wrap`));
-  }
-  const wrap: readonly unknown[] = record.wrap;
-  const pair = (name: string) => modelNumbers(record[name], 2, `${where}.${name}`) as unknown as Pair;
-  const path = modelName(record.path, `${where}.path`);
-  if (!FORMAT.test(path)) throw new ModelStageRefusal(refusal.format(`${where}.path`, path));
-  return Object.freeze({path, sha256: modelDigest(record.sha256,
-    `${where}.sha256`), wrap: Object.freeze([0, 1].map(axis => modelOption(wrap[axis], MODEL_TEXTURE_WRAP,
-    `${where}.wrap[${axis}]`))) as unknown as readonly [Wrap, Wrap], scale: pair('scale'), offset: pair('offset')});
-}
 /** A value's form, checked without its kind: exactly one of the forms, its content whole and finite. */
 export function modelSurfaceValue(entry: unknown, where: string): ModelSurfaceValue {
   const {name, content} = modelOneOf(entry, FORMS, where), at = `${where}.${name}`;
   if (name === MODEL_SURFACE_PARAMETER.color) {
-    const color = modelNumbers(content, 4, at);
-    if (color.some(channel => channel < 0)) throw new ModelStageRefusal(refusal.negative(at));
-    return Object.freeze({color: Object.freeze(color) as unknown as readonly [number, number, number, number]});
+    const [r, g, b, a] = modelNumbers(content, 4, at);
+    if (r < 0 || g < 0 || b < 0 || a < 0) throw new ModelStageRefusal(refusal.negative(at));
+    return Object.freeze({color: Object.freeze([r, g, b, a] as const)});
   }
   if (name === MODEL_SURFACE_PARAMETER.vector) {
     const sizes: readonly number[] = Object.values(MODEL_VECTOR_SIZE);
@@ -95,7 +69,7 @@ export function modelSurfaceValue(entry: unknown, where: string): ModelSurfaceVa
     return Object.freeze({float: modelNumber(content, at, -Infinity, Infinity)});
   }
   if (name === MODEL_SURFACE_PARAMETER.keyword) return Object.freeze({keyword: modelFlag(content, at)});
-  return Object.freeze({texture: texture(content, at)});
+  return Object.freeze({texture: modelSurfaceTexture(content, at)});
 }
 function entry(input: unknown, where: string): ModelSurfaceEntry {
   if (isRecord(input) && modelStates(input, 'kind') && input.kind === MODEL_FILE_SURFACE) {

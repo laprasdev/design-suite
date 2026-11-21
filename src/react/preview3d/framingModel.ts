@@ -1,6 +1,5 @@
 import {modelPreviewCamera, type ModelPreviewCamera} from './presentation.ts';
-import {modelFlag, modelOption, modelRecord, modelRecordStating, modelStates} from './recordModel.ts';
-import {isRecord} from '../../valueChecks.ts';
+import {modelFlag, modelShape, type ModelShapeFields} from './recordModel.ts';
 
 export const MODEL_STAGE_FRAMING = Object.freeze({focus: 'focus', all: 'all', pose: 'pose'} as const);
 /**
@@ -13,17 +12,13 @@ export type ModelStageFraming =
   | ({readonly kind: typeof MODEL_STAGE_FRAMING.pose} & ModelPreviewCamera);
 // The fields each framing states, and nothing else; a pose optionally states its vertical field of view.
 const WHERE = 'The framing';
-const FIT_FIELDS = Object.freeze(['kind']);
-const POSE_FIELDS = Object.freeze({stated: ['kind', 'position', 'target'], whenStated: ['fieldOfView']});
+const FIELDS: Readonly<Record<ModelStageFraming['kind'], ModelShapeFields>> = Object.freeze({
+  focus: ['kind'], all: ['kind'], pose: {stated: ['kind', 'position', 'target'], whenStated: ['fieldOfView']}});
 
 export function modelStageFraming(value: unknown): ModelStageFraming {
-  const kind = modelOption(isRecord(value) && modelStates(value, 'kind') ? value.kind : undefined,
-    MODEL_STAGE_FRAMING, `${WHERE}.kind`);
-  if (kind !== MODEL_STAGE_FRAMING.pose) {
-    modelRecord(value, FIT_FIELDS, WHERE);
-    return Object.freeze({kind});
-  }
-  return Object.freeze({kind, ...modelPreviewCamera(modelRecordStating(value, POSE_FIELDS, WHERE))});
+  const {shape: kind, record} = modelShape(value, 'kind', FIELDS, WHERE);
+  return kind === MODEL_STAGE_FRAMING.pose ? Object.freeze({kind, ...modelPreviewCamera(record, WHERE)}) :
+    Object.freeze({kind});
 }
 
 /** Whether the person may orbit away from the framing, stated as true or false. */

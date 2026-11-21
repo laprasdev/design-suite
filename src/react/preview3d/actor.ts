@@ -7,19 +7,16 @@ import {applyModelTransform, disposeModelObject, modelObjectBounds, modelParts, 
 import {createModelRig} from './rig.ts';
 import {createModelPlayback} from './playback.ts';
 import type {ModelStageChanges, ModelSurfaceModes} from './materials.ts';
-import {createModelActorMaterialMaps} from './actorMaterialMaps.ts';
 import {createModelActorSurfaces, type ModelActorSurfacesContext} from './actorSurfaces.ts';
 import {markModelStageAids} from './layers.ts';
 import {MODEL_STAGE_DRIVER, modelActorDrawsFile, modelActorHost} from './actorModel.ts';
 import type {ModelDrawn} from './drawn.ts';
 import type {ModelStageActor, ModelStageActorSnapshot, ModelStageDriver} from './actorModel.ts';
-import {modelPreviewFrame, type ModelFrameScope} from './frameModel.ts';
-import {modelActorMaterialMaps} from './materialMapModel.ts';
-import type {ModelPreviewCamera, ModelPreviewEntity} from './presentation.ts';
-import {modelStageCommit, prepareWhole, type ModelStageCommit} from './commit.ts';
+import {readModelFrameCamera, readModelFrameEntities, type ModelFrameScope} from './frameModel.ts';
+import {CAMERA_COORDS, type ModelPreviewCamera, type ModelPreviewEntity} from './presentation.ts';
+import {MODEL_STAGE_COMMIT_TEXT, modelStageCommit, prepareWhole, type ModelStageCommit} from './commit.ts';
 import {ModelStageRefusal} from './refusal.ts';
 import {extendModelMaterials} from './shading.ts';
-import {MODEL_ACTOR_SURFACES} from './surfaceModel.ts';
 
 // What every actor shares from its stage: the policy, the theme, the scene it joins, the lighting of its aids and the
 // changes its file's materials take.
@@ -39,11 +36,6 @@ export interface ModelActorContext {
 export interface ModelActorSizing {readonly size: ModelStageSize; readonly origin: ModelStageOrigin}
 export const MODEL_ACTOR_TEXT = Object.freeze({
   unlit: 'Runtime presentation requires lit materials.',
-  unknownActor: (id: string) => `Actor ${id || '(unnamed)'} names no declared actor.`,
-  terrainMaps: (id: string) => `Actor ${id} is a terrain; material maps apply only to file actors.`,
-  surfaceSetMaps: (id: string) => `Actor ${id} is drawn by a surface set; material maps apply only to file materials.`,
-  runtimeProfileMaps: (id: string) =>
-    `Actor ${id} uses a runtime material profile; material maps apply only to file materials.`,
 });
 /** A renderable's one visible value: authored, not hidden by the Rig display, and not hidden by the engine. */
 export const modelRenderableVisible = (authored: boolean, display: ModelStageDisplay, engineHidden: boolean) =>
@@ -60,9 +52,7 @@ export function createModelActor(drawn: ModelDrawn, declaration: ModelStageActor
     const points = modelParts(drawn, context.theme);
     acquired.push(() => points.forEach(({marker}) => {marker.removeFromParent(); disposeModelObject(marker);}));
     extendModelMaterials(drawn.scene, context.changes);
-    const materialMaps = createModelActorMaterialMaps(drawn.scene);
-    acquired.push(() => materialMaps.dispose());
-    const surfaces = createModelActorSurfaces(drawn, id, context.surfaces, () => materialMaps.active);
+    const surfaces = createModelActorSurfaces(drawn, id, context.surfaces);
     acquired.push(() => surfaces.dispose());
     const runtimeMaterials = drawn.runtimeMaterials?.();
     if (runtimeMaterials) acquired.push(() => runtimeMaterials.dispose());
@@ -110,16 +100,6 @@ export function createModelActor(drawn: ModelDrawn, declaration: ModelStageActor
       get declaration() {return current;},
       get driver() {return driver;},
       setDisplay(value: ModelStageDisplay) {rig.setDisplay(value); showRenderables();},
-      setMaterialMaps(maps: unknown) {
-        if (!modelActorDrawsFile(declaration)) throw new ModelStageRefusal(MODEL_ACTOR_TEXT.terrainMaps(id));
-        const surfaceFrom = surfaces.from ?? (modelActorDrawsFile(current) ? current.surfaces.from :
-          MODEL_ACTOR_SURFACES.set);
-        if (surfaceFrom === MODEL_ACTOR_SURFACES.set) {
-          throw new ModelStageRefusal(MODEL_ACTOR_TEXT.surfaceSetMaps(id));
-        }
-        if (runtimeMaterials) throw new ModelStageRefusal(MODEL_ACTOR_TEXT.runtimeProfileMaps(id));
-        materialMaps.apply(modelActorMaterialMaps(maps, `Actor ${id} materialMaps`));
-      },
       get sizing() {return sizing;},
       prepareSizing,
       /** What the actor draws in its display: the model, its rig, or both. */
@@ -157,27 +137,38 @@ export function createModelActor(drawn: ModelDrawn, declaration: ModelStageActor
 }
 export type ModelActor = ReturnType<typeof createModelActor>;
 
+const frameCameraCoords = new Float64Array(CAMERA_COORDS.length);
+const heldPosition: [number, number, number] = [0.5, 0.5, 0.5];
+const heldTarget: [number, number, number] = [0.5, 0.5, 0.5];
+const heldCameraWithoutFov: ModelPreviewCamera = {position: heldPosition, target: heldTarget};
+const heldCameraWithFov: {position: [number, number, number]; target: [number, number, number]; fieldOfView: number} =
+  {position: heldPosition, target: heldTarget, fieldOfView: 38.5};
+
 // Validate the frame and prepare every named actor before any commits: a refusal leaves every actor and the camera as
-// they were. An actor the frame does not name keeps what it shows.
+// they were. An actor the frame does not name keeps what it shows. The camera validates into held vectors, allocating
+// nothing per tick.
 export function applyModelFrame(actors: readonly ModelActor[], scope: ModelFrameScope, value: unknown,
-  onCamera?: (camera: ModelPreviewCamera) => void) {
-  const accepted = modelPreviewFrame(value, scope);
-  const named = new Map(accepted.entities.map(entity => [entity.entityId, entity]));
+  onCamera: (camera: ModelPreviewCamera) => void) {
+  const {record, time, entities} = readModelFrameEntities(value, scope);
+  const cameraState = readModelFrameCamera(record, frameCameraCoords);
+  const named = new Map(entities.map(entity => [entity.entityId, entity]));
   const prepares = actors.flatMap(actor => {
     const entity = named.get(actor.id);
     return entity ? [() => actor.prepare(entity)] : [];
   });
-  if (accepted.camera && onCamera) {
-    const {camera} = accepted;
-    prepares.push(modelStageCommit(() => onCamera(camera)));
+  const commitActors = prepareWhole(prepares);
+  commitActors();
+  if (cameraState !== 0) {
+    heldPosition[0] = frameCameraCoords[CAMERA_COORDS.px];
+    heldPosition[1] = frameCameraCoords[CAMERA_COORDS.py];
+    heldPosition[2] = frameCameraCoords[CAMERA_COORDS.pz];
+    heldTarget[0] = frameCameraCoords[CAMERA_COORDS.tx];
+    heldTarget[1] = frameCameraCoords[CAMERA_COORDS.ty];
+    heldTarget[2] = frameCameraCoords[CAMERA_COORDS.tz];
+    if (cameraState === 2) heldCameraWithFov.fieldOfView = frameCameraCoords[CAMERA_COORDS.fov];
+    try {onCamera(cameraState === 2 ? heldCameraWithFov : heldCameraWithoutFov);} catch (error) {
+      throw new Error(MODEL_STAGE_COMMIT_TEXT.partial, {cause: error});
+    }
   }
-  prepareWhole(prepares)();
-  return accepted.simulationTimeSeconds;
-}
-
-/** Applies or clears per-actor material-map overrides for one declared file actor, refusing invalid routes or data. */
-export function applyModelActorMaterialMaps(actors: readonly ModelActor[], actorId: string, maps: unknown) {
-  const actor = actors.find(entry => entry.id === actorId);
-  if (!actor) throw new ModelStageRefusal(MODEL_ACTOR_TEXT.unknownActor(actorId));
-  actor.setMaterialMaps(maps);
+  return time;
 }

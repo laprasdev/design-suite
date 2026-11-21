@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import type {OrbitControls} from 'three/addons/controls/OrbitControls.js';
+import type {ModelStageCameraSnapshot} from './model.ts';
 import {MODEL_STAGE as settings} from './model.ts';
 import {MODEL_STAGE_FRAMING, type ModelStageFraming} from './framingModel.ts';
 import type {ModelPreviewCamera} from './presentation.ts';
@@ -20,8 +21,8 @@ export function createModelFraming(camera: THREE.PerspectiveCamera, controls: Ca
     camera.updateProjectionMatrix();
   };
   const applyPose = (next: ModelPreviewCamera) => {
-    camera.position.fromArray(next.position);
-    controls.target.fromArray(next.target);
+    camera.position.set(next.position[0], next.position[1], next.position[2]);
+    controls.target.set(next.target[0], next.target[1], next.target[2]);
     setFieldOfView(next.fieldOfView ?? settings.fieldOfView);
     reach(camera.position.distanceTo(controls.target));
     camera.lookAt(controls.target);
@@ -60,6 +61,10 @@ export function createModelFraming(camera: THREE.PerspectiveCamera, controls: Ca
       else camera.lookAt(controls.target);
       camera.updateMatrixWorld(true);
       fitRequested = false;
+    },
+    cameraSnapshot(): ModelStageCameraSnapshot {
+      return Object.freeze({position: Object.freeze(camera.position.toArray()),
+        target: Object.freeze(controls.target.toArray()), fieldOfView: camera.fov, held});
     },
   };
 }

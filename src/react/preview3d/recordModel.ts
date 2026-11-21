@@ -47,19 +47,37 @@ export function modelRecord(value: unknown, fields: readonly string[], where: st
   return value;
 }
 
+export type ModelStatingFields = {readonly stated: readonly string[]; readonly whenStated: readonly string[]};
+export type ModelShapeFields = readonly string[] | ModelStatingFields;
+
+function statedWith(value: Record<string, unknown>, fields: ModelStatingFields) {
+  return [...fields.stated, ...fields.whenStated.filter(field => modelStates(value, field))];
+}
+
 /**
  * A record whose `whenStated` fields are each either stated with a value or left out (an asset's revision, a box's
  * rotation): the fields it states are exactly its `stated` ones and those of `whenStated` it names. A field named
- * with no value is refused, never read as left out.
+ * with no value is refused, never read as left out. Written as loops so a frame's camera check allocates nothing.
  */
-export function modelRecordStating(value: unknown, fields: {readonly stated: readonly string[];
-  readonly whenStated: readonly string[]}, where: string): Record<string, unknown> {
-  const all = [...fields.stated, ...fields.whenStated];
-  if (!isRecord(value)) throw new ModelStageRefusal(refusal.record(where, all));
-  const named = fields.whenStated.filter(field => modelStates(value, field));
-  const unstated = named.find(field => value[field] === undefined);
-  if (unstated) throw new ModelStageRefusal(refusal.unstated(where, unstated));
-  exact(value, [...fields.stated, ...named], where);
+export function modelRecordStating(value: unknown, fields: ModelStatingFields,
+  where: string): Record<string, unknown> {
+  if (!isRecord(value)) throw new ModelStageRefusal(refusal.record(where, [...fields.stated, ...fields.whenStated]));
+  for (let index = 0; index < fields.whenStated.length; index++) {
+    const field = fields.whenStated[index];
+    if (modelStates(value, field) && value[field] === undefined) {
+      throw new ModelStageRefusal(refusal.unstated(where, field));
+    }
+  }
+  for (let index = 0; index < fields.stated.length; index++) {
+    if (!modelStates(value, fields.stated[index])) {
+      throw new ModelStageRefusal(refusal.omitted(where, fields.stated[index], statedWith(value, fields)));
+    }
+  }
+  for (const field in value) {
+    if (modelStates(value, field) && !fields.stated.includes(field) && !fields.whenStated.includes(field)) {
+      throw new ModelStageRefusal(refusal.stray(where, field, statedWith(value, fields)));
+    }
+  }
   return value;
 }
 
@@ -68,12 +86,14 @@ export function modelRecordStating(value: unknown, fields: {readonly stated: rea
  * fields. Returns the shape's name with the record.
  */
 export function modelShape<Shape extends string>(value: unknown, field: string,
-  shapes: Readonly<Record<Shape, readonly string[]>>, where: string): {shape: Shape; record: Record<string, unknown>} {
+  shapes: Readonly<Record<Shape, ModelShapeFields>>, where: string): {shape: Shape; record: Record<string, unknown>} {
   const names = Object.keys(shapes) as Shape[];
   const shape = isRecord(value) && modelStates(value, field) ? names.find(name => name === value[field]) :
     undefined;
   if (shape === undefined) throw new ModelStageRefusal(refusal.shape(where, field, names));
-  return {shape, record: modelRecord(value, shapes[shape], where)};
+  const shapeFields = shapes[shape];
+  return {shape, record: 'stated' in shapeFields ? modelRecordStating(value, shapeFields, where) :
+    modelRecord(value, shapeFields, where)};
 }
 
 /** A record whose names are the data's own (a kind's parameters, a description's sets): its own entries. `element`
@@ -91,14 +111,28 @@ export function modelOneOf<Name extends string>(value: unknown, names: readonly 
   return {name, content: modelRecord(value, [name], where)[name]};
 }
 
+const instanceIds = new WeakMap<object, number>();
+let nextInstanceId = 0;
+function instanceTag(value: object): string {
+  const held = instanceIds.get(value);
+  if (held !== undefined) return `\u0000instance:${held}`;
+  const fresh = ++nextInstanceId;
+  instanceIds.set(value, fresh);
+  return `\u0000instance:${fresh}`;
+}
+
 /**
  * A value's identity: its text with every record's fields in one order (sorted), so that two values equal by value
- * are one, whatever order they were written in (a record's values, a texture's fields). Lists keep their order: in the
- * description an order is data (the actors, a colour's channels).
+ * are one, whatever order they were written in (a record's values, a texture's fields), while a host instance (an
+ * image source) keeps its own identity without retaining it. Lists keep their order: in the description an order is
+ * data (the actors, a colour's channels).
  */
-export const modelRecordIdentity = (value: unknown): string => JSON.stringify(value, (_, item: unknown) =>
-  isRecord(item) ? Object.fromEntries(Object.entries(item).sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0)) :
-    item);
+export const modelRecordIdentity = (value: unknown): string => JSON.stringify(value, (_, item: unknown) => {
+  if (!isRecord(item)) return item;
+  const prototype: unknown = Object.getPrototypeOf(item);
+  if (prototype !== Object.prototype && prototype !== null) return instanceTag(item);
+  return Object.fromEntries(Object.entries(item).sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0));
+});
 
 /** Whether a value is a SHA-256 as the description states every file's: 64 lowercase hex digits. */
 export const modelIsDigest = (value: unknown): value is string => typeof value === 'string' && DIGEST.test(value);

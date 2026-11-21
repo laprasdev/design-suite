@@ -33,7 +33,6 @@
     "src/react/preview3d/runtimeMaterials.ts": {"casts":0,"nonNullAssertions":1},
     "src/react/preview3d/stageParts.ts": {"casts":1,"nonNullAssertions":0},
     "src/react/preview3d/surfaceMaterials.ts": {"casts":0,"nonNullAssertions":2},
-    "src/react/preview3d/surfaceModel.ts": {"casts":6,"nonNullAssertions":0},
     "src/react/preview3d/surfaceOutputModel.ts": {"casts":2,"nonNullAssertions":0},
     "src/react/preview3d/surfaceReads.ts": {"casts":1,"nonNullAssertions":0},
     "src/react/preview3d/toneCurve.ts": {"casts":1,"nonNullAssertions":0},

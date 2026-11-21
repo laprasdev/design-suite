@@ -14,9 +14,9 @@ import {NO_FILES, applyFrame, actorContext, close, describing, entity, frame, ma
 // The stage-wide parts a description changes, each prepared beside the actors and applied whole or refused.
 const FOG = createModelFog(new THREE.Scene()).change;
 const MODES = () => createModelSurfaceModes();
-// The controller is one description, one frame, per-actor material maps, one read and one action. Adding an actor, a
-// scene or a kind of scenery is data in the description: this list cannot grow without failing the compile.
-const CONTROLLER = ['setDescription', 'setFrame', 'setActorMaterialMaps', 'resetCamera', 'snapshot'] as const;
+// The controller is one description, one frame, one read and one action. Adding an actor, a scene or a kind of
+// scenery is data in the description: this list cannot grow without failing the compile.
+const CONTROLLER = ['setDescription', 'setFrame', 'resetCamera', 'snapshot'] as const;
 type Exactly<A, B> = [A] extends [B] ? [B] extends [A] ? true : false : false;
 const exact: Exactly<keyof ModelStageController, typeof CONTROLLER[number]> = true;
 

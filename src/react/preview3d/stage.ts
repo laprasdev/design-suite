@@ -5,7 +5,7 @@ import type {ModelStageController, ModelStageHold, ModelStageOptions, ModelStage
 import {MODEL_STAGE_CLOCK} from './stageOptionsModel.ts';
 import {loadModelStageAsset, modelDrawnMeshCount} from './asset.ts';
 import {createModelScene} from './scene.ts';
-import {applyModelActorMaterialMaps, applyModelFrame} from './actor.ts';
+import {applyModelFrame} from './actor.ts';
 import type {ModelStageDescription} from './descriptionModel.ts';
 import {createModelSurfaceModes} from './materials.ts';
 import {decodeModelImage} from './textures.ts';
@@ -73,10 +73,6 @@ export function createModelStage(
       if (!external) throw new ModelStageRefusal(MODEL_STAGE_TEXT.external);
       times[STAGE_TIME.appliedFrame] = applyModelFrame(actors.actors, descriptions.scope, value, stage.pose);
     },
-    setActorMaterialMaps(actorId, maps) {
-      live();
-      applyModelActorMaterialMaps(actors.actors, actorId, maps);
-    },
     resetCamera: () => descriptions.parts.resetCamera(current().applied),
     snapshot() {
       const {focused: model} = current();
@@ -93,7 +89,7 @@ export function createModelStage(
         id: model.id, animation, time, playing, hold: held, ...model.rig.snapshot(),
         surfaceMode: modes.mode, surfaceModesAvailable: model.materials.available,
         emissiveMaterialCount: model.materials.emissiveMaterialCount,
-        lighting: stage.lighting.time,
+        lighting: stage.lighting.time, camera: stage.cameraSnapshot(),
         parts: points, poses, triangles: stage.triangles(),
         renderedModelMeshes: modelDrawnMeshCount(actors.actors.map(actor => actor.drawn.scene), stage.camera),
         canvas: {width: stage.renderer.domElement.width, height: stage.renderer.domElement.height},

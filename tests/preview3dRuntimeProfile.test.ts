@@ -79,11 +79,11 @@ test('glTF node/primitive associations identify bindings independently of names 
   original.emissiveMap.dispose(); original.dispose(); mesh.geometry.dispose();
 });
 test('camera data is finite, nondegenerate and independent of caller arrays', () => {
-  const value = {position: [0, 4, 8], target: [0, 0, 0]}, camera = modelPreviewCamera(value);
+  const value = {position: [0, 4, 8], target: [0, 0, 0]}, camera = modelPreviewCamera(value, 'Camera');
   value.position[0] = 99; assert.deepEqual(camera.position, [0, 4, 8]);
-  assert.throws(() => modelPreviewCamera({...value, target: [NaN, 0, 0]}), /finite/);
-  assert.throws(() => modelPreviewCamera({position: [0, 0, 0], target: [0, 0, 0]}), /distinct/);
-  assert.throws(() => modelPreviewCamera({position: [1e308, 0, 0], target: [-1e308, 0, 0]}), /distinct/);
+  assert.throws(() => modelPreviewCamera({...value, target: [NaN, 0, 0]}, 'Camera'), /Camera\.target.*finite/);
+  assert.throws(() => modelPreviewCamera({position: [0, 0, 0], target: [0, 0, 0]}, 'Camera'), /Camera:.*distinct/);
+  assert.throws(() => modelPreviewCamera({position: [1e308, 0, 0], target: [-1e308, 0, 0]}, 'Camera'), /distinct/);
 });
 test('runtime profiles bind exact source identity and freeze caller-owned data', () => {
   const value = profile(), asset = {id: 'otter', revision: 'tested', path: '/otter.glb', attachments: {},

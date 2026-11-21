@@ -1,9 +1,9 @@
 import type {ModelStageActor, ModelStageActorSet} from './actorModel.ts';
 import {MODEL_ACTOR_REFUSAL as refusal, modelActorDrawsFile, modelRuntimeAssetProfile} from './actorModel.ts';
-import {MODEL_PREVIEW_ENTITY_REFUSAL, modelPreviewCamera, modelPreviewEntity,
+import {MODEL_PREVIEW_ENTITY_REFUSAL, modelPreviewCamera, modelPreviewEntity, readModelPreviewCamera,
   type ModelPreviewCamera, type ModelPreviewEntity} from './presentation.ts';
 import {isNonEmptyString as named, isRecord as object} from '../../valueChecks.ts';
-import {modelStates} from './recordModel.ts';
+import {modelRecordStating, modelStates} from './recordModel.ts';
 import {ModelStageRefusal} from './refusal.ts';
 import type {ModelSurfaceSet} from './surfaceModel.ts';
 import {modelSurfaceTakes, type ModelSurfaceTakes} from './surfaceOutputModel.ts';
@@ -32,14 +32,11 @@ kinds: ReadonlyMap<string, ModelSurfaceKind>): ModelFrameScope {
     modelRuntimeAssetProfile(actor) ?? modelSurfaceTakes(actor.surfaces, value.surfaceSets, kinds)]))});
 }
 
-/**
- * One engine frame, checked against the description in force before anything applies it. Its own record is written
- * out here rather than through the record owner (recordModel.ts): it is the engine's per-tick presentation frame, which
- * carries fields of its own beyond the stage's (an entity's instance and session, the frame's tick) that the stage
- * neither reads nor refuses, and `removedEntities` is the engine's to state or leave out. What the stage does read is
- * checked whole: an entity by `modelPreviewEntity`, its pose by the record owner.
- */
-export function modelPreviewFrame(value: unknown, scope: ModelFrameScope): ModelPreviewFrame {
+const FRAME_CAMERA_WHERE = 'Frame camera';
+const FRAME_CAMERA_FIELDS = Object.freeze({stated: ['position', 'target'], whenStated: ['fieldOfView']});
+
+/** Validates a frame's time and entities against `scope`; shared by `modelPreviewFrame` and `applyModelFrame`. */
+export function readModelFrameEntities(value: unknown, scope: ModelFrameScope) {
   const {actors} = scope;
   const time = object(value) ? value.simulationTimeSeconds : undefined;
   if (!object(value) || typeof time !== 'number' || !Number.isFinite(time) || time < 0 ||
@@ -61,7 +58,29 @@ export function modelPreviewFrame(value: unknown, scope: ModelFrameScope): Model
     seen.add(id);
     return modelPreviewEntity(entity, actor.asset.id, scope.takes.get(id));
   });
-  const camera = modelStates(value, 'camera') ? modelPreviewCamera(value.camera) : undefined;
-  return Object.freeze({simulationTimeSeconds: time, entities: Object.freeze(entities),
-    ...(camera !== undefined && {camera})});
+  return {record: value, time, entities};
+}
+
+/** Validates an optional frame camera into `into` (`CAMERA_COORDS`); returns 0 (absent), 1 (no fov) or 2 (with fov). */
+export function readModelFrameCamera(record: Record<string, unknown>, into: Float64Array): 0 | 1 | 2 {
+  if (!modelStates(record, 'camera')) return 0;
+  modelRecordStating(record.camera, FRAME_CAMERA_FIELDS, FRAME_CAMERA_WHERE);
+  return readModelPreviewCamera(record.camera, FRAME_CAMERA_WHERE, into) ? 2 : 1;
+}
+
+/**
+ * One engine frame, checked against the description in force before anything applies it. Its own record is written
+ * out here rather than through the record owner (recordModel.ts): it is the engine's per-tick presentation frame, which
+ * carries fields of its own beyond the stage's (an entity's instance and session, the frame's tick) that the stage
+ * neither reads nor refuses, and `removedEntities` is the engine's to state or leave out. What the stage does read is
+ * checked whole: an entity by `modelPreviewEntity`, its pose and camera by the record owner.
+ */
+export function modelPreviewFrame(value: unknown, scope: ModelFrameScope): ModelPreviewFrame {
+  const {record, time, entities} = readModelFrameEntities(value, scope);
+  if (!modelStates(record, 'camera')) {
+    return Object.freeze({simulationTimeSeconds: time, entities: Object.freeze(entities)});
+  }
+  modelRecordStating(record.camera, FRAME_CAMERA_FIELDS, FRAME_CAMERA_WHERE);
+  const camera = modelPreviewCamera(record.camera, FRAME_CAMERA_WHERE);
+  return Object.freeze({simulationTimeSeconds: time, entities: Object.freeze(entities), camera});
 }

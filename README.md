@@ -317,19 +317,13 @@ exactly its fields: one it omits or one it does not have is refused by its path 
   and carries `modelId`, a whole `pose`, `animationLayers`, `partPoses: []` and `materials` (values only on a parameter
   its renderer's kind declares). The whole frame — entities and camera together — is refused before anything changes. A
   description may not change, replace or remove an actor a frame has driven.
-- `setActorMaterialMaps(actorId, maps)` overrides named standard materials' base-colour maps on one file actor
-  (`surfaces.from === 'file'`) using browser image sources (`ModelActorMaterialMap`: `{image, colorSpace?, flipY?,
-  color?}`, defaulting to `'srgb'` and `flipY: false`), preserving stage fog and Surface modes; pass `null` to restore
-  the file's own materials and free uploaded clones and textures. Refused for an unknown actor, a terrain, a runtime
-  material profile or an actor drawn by a surface set (and a description refuses switching an actor to a surface set
-  while material maps are active).
 - `resetCamera()` returns a view the person orbited (or a per-frame camera pose) to the described framing, restoring
   `MODEL_STAGE.fieldOfView` for `focus` and `all`.
 - `snapshot()` reports the focused actor at the top level (`animation`, `time`, `playing`, `hold`, `display`,
-  `boneCount`, `parts`, `poses`, `surfaceMode`, `surfaceModesAvailable`, the emission and visibility counts) and
-  every actor under `actors`, each with its `driver` (`'host'` or `'engine'`), `pose` and applied `samples`.
-  `renderedModelMeshes` counts the meshes of the actors on the stage that the last frame drew (shown, and inside
-  the camera's view), read when asked.
+  `boneCount`, `parts`, `poses`, `surfaceMode`, `surfaceModesAvailable`, the emission and visibility counts), `camera`
+  (`{position, target, fieldOfView, held}`), and every actor under `actors`, each with its `driver` (`'host'` or
+  `'engine'`), `pose` and applied `samples`. `renderedModelMeshes` counts the meshes of the actors on the stage that
+  the last frame drew (shown, and inside the camera's view), read when asked.
 
 Under the local clock the stage keeps one presentation time that every playing clip follows; it holds while the
 person asks for reduced motion or the page is hidden, and `hold` says which. Under the external clock only frames
@@ -403,8 +397,10 @@ export const TOON_SURFACE: ModelSurfaceKind = {
 - **Attributes.** Declare only what the program reads; nothing undeclared is added to it. A file's own attribute (a
   glTF custom attribute `_DEPTH`, which three names `_depth`) is `{name, size}` with 1 to 4 numbers a vertex.
 - **Textures.** A record names each by `{path, sha256, wrap: [u, v], scale, offset}` (a PNG, JPEG or WebP; another
-  format is refused where the record is read), or `{constant: 'white' | 'black'}` for an empty slot. Orientation is
-  glTF's (`flipY` false). A kind never reads an image embedded in the model file.
+  format is refused where the record is read), `{image, wrap: [u, v], scale, offset}` (an in-memory `TexImageSource`:
+  `ImageBitmap`, `HTMLImageElement`, `HTMLCanvasElement`, `OffscreenCanvas`, `ImageData`, `VideoFrame` or
+  `HTMLVideoElement`; any other value is refused where the record is read), or `{constant: 'white' | 'black'}` for an
+  empty slot. Orientation is glTF's (`flipY` false). A kind never reads an image embedded in the model file.
 - **Shared GLSL.** `webProgram.includes` lists GLSL files the kind's repository owns, each by path and SHA-256. They are
   read with the program, once, and placed ahead of it in the order listed, so one formula is written once. A file
   listed twice is refused; one whose bytes are not its digest refuses the description, naming the file.
