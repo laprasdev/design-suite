@@ -1,7 +1,7 @@
 import {element} from '../elementContract.ts';
 import type {ModelStageSurfaceMode} from './surfaceModeModel.ts';
 import type {ModelStageActorSnapshot} from './actorModel.ts';
-import type {ModelPreviewFrame} from './frameModel.ts';
+import type {ModelPreviewFrame, ModelValidatedFrame} from './frameModel.ts';
 import type {ModelStageDescription} from './descriptionModel.ts';
 import type {ModelRotation, ModelVector} from './placementModel.ts';
 import {MODEL_STAGE_DISPLAY, type ModelStageDisplay} from './displayModel.ts';
@@ -42,7 +42,7 @@ export type {ModelActorSurfaces, ModelSurfaceEntry, ModelSurfaceRecord, ModelSur
 export {MODEL_RENDERER_SLOT, MODEL_SURFACE_OUTPUT_REFUSAL, modelSurfaceTakes} from './surfaceOutputModel.ts';
 export type {ModelSurfaceTakes} from './surfaceOutputModel.ts';
 export {modelFrameScope, modelPreviewFrame} from './frameModel.ts';
-export type {ModelFrameScope, ModelPreviewFrame} from './frameModel.ts';
+export type {ModelFrameScope, ModelPreviewFrame, ModelValidatedFrame} from './frameModel.ts';
 export {MODEL_PREVIEW_CAMERA_REFUSAL, MODEL_PREVIEW_CAPABILITIES, modelPreviewCamera, modelPreviewEntity}
   from './presentation.ts';
 export {modelPoseForBinding, MODEL_PREVIEW_QUATERNION_TOLERANCE} from './placementModel.ts';
@@ -173,7 +173,7 @@ export interface ModelStageController {
    */
   setDescription(value: ModelStageDescription): Promise<void>;
   /** Applies one host-built frame to every actor it names, or refuses it whole before anything changes. */
-  setFrame(value: ModelPreviewFrame): void;
+  setFrame(value: ModelPreviewFrame | ModelValidatedFrame): void;
   /** An action, not state: returns a view the person orbited to the described framing, a held pose or a fresh fit. */
   resetCamera(): void;
   snapshot(): ModelStageSnapshot;

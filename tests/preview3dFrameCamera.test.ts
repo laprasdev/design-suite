@@ -1,17 +1,14 @@
 import assert from 'node:assert/strict';
 import {describe, it} from 'node:test';
 import * as THREE from 'three';
-import {MODEL_PREVIEW_CAMERA_REFUSAL, MODEL_PREVIEW_CAPABILITIES, MODEL_STAGE, MODEL_STAGE_FRAMING,
+import {MODEL_ACTOR_REFUSAL, MODEL_PREVIEW_CAMERA_REFUSAL, MODEL_PREVIEW_CAPABILITIES, MODEL_STAGE,
   modelFrameScope, modelPreviewFrame, modelStageDescription}
   from '../src/react/preview3d/model.ts';
 import {modelStageDescriptionChanges} from '../src/react/preview3d/descriptionModel.ts';
 import {modelPreviewCamera} from '../src/react/preview3d/presentation.ts';
 import {applyModelFrame} from '../src/react/preview3d/actor.ts';
 import {createModelFrameInbox} from '../src/react/preview3d/frameInbox.ts';
-import {createModelStageParts} from '../src/react/preview3d/stageParts.ts';
-import {createModelFog} from '../src/react/preview3d/fog.ts';
-import {createModelSurfaceModes} from '../src/react/preview3d/materials.ts';
-import {NO_FILES, declaration, describing, entity, fileScene, frame, layer, makeActor, makeFraming, refused, sample}
+import {declaration, describing, entity, fileScene, frame, layer, makeActor, makeFraming, refused, sample}
   from './preview3dActorFixture.ts';
 
 describe('preview camera and framing fieldOfView validation', () => {
@@ -78,50 +75,8 @@ describe('preview camera and framing fieldOfView validation', () => {
   });
 });
 
-describe('camera pose, fieldOfView updates, snapshot reporting and reset restore', () => {
-  it('updates projection matrix only when fov changes, reports held snapshot, and restores on focus/all/reset', t => {
-    const {camera, controls, framing} = makeFraming();
-    assert.equal(framing.cameraSnapshot().held, false);
-    const updateProj = t.mock.method(camera, 'updateProjectionMatrix');
-    framing.pose({position: [0, 3, 25], target: [0, 1, 0]});
-    assert.deepEqual(framing.cameraSnapshot(),
-      {position: [0, 3, 25], target: [0, 1, 0], fieldOfView: MODEL_STAGE.fieldOfView, held: true});
-    assert.equal(updateProj.mock.callCount(), 0, 'unchanged fov skips projection matrix rebuild');
-    assert.ok(controls.maxDistance >= camera.position.distanceTo(controls.target) - 1e-9);
-    framing.pose({position: [0, 3, 10], target: [0, 1, 0], fieldOfView: 55});
-    assert.deepEqual([camera.fov, framing.cameraSnapshot().fieldOfView], [55, 55]);
-    assert.equal(updateProj.mock.callCount(), 1);
-    framing.pose({position: [2, 3, 10], target: [0, 1, 0], fieldOfView: 55});
-    assert.equal(updateProj.mock.callCount(), 1, 'same fov on next tick skips projection rebuild');
-    let measured = 0;
-    framing.requestFit();
-    framing.fit(() => {measured++; return new THREE.Box3(new THREE.Vector3(-1, 0, -1), new THREE.Vector3(1, 2, 1));});
-    assert.equal(measured, 0, 'held per-frame pose ignores fit requests');
-    framing.frame({kind: MODEL_STAGE_FRAMING.focus}, true);
-    assert.deepEqual([camera.fov, framing.cameraSnapshot().held], [MODEL_STAGE.fieldOfView, false]);
-    assert.equal(updateProj.mock.callCount(), 2);
-    framing.frame({kind: MODEL_STAGE_FRAMING.all}, true);
-    assert.equal(updateProj.mock.callCount(), 2, 'already at default fov: no extra rebuild');
-    framing.fit(() => {measured++; return new THREE.Box3(new THREE.Vector3(-1, 0, -1), new THREE.Vector3(1, 2, 1));});
-    assert.equal(measured, 1);
-    const parts = createModelStageParts({...NO_FILES, scene: new THREE.Scene(),
-      fog: {change: createModelFog(new THREE.Scene()).change}, kinds: new Map(), modes: createModelSurfaceModes(),
-      lighting: {load: () => [], prepare: () => () => undefined}, frame: framing.frame});
-    const describedFocus = modelStageDescription(describing());
-    framing.pose({position: [1, 2, 3], target: [0, 0, 0], fieldOfView: 70});
-    assert.equal(camera.fov, 70);
-    parts.resetCamera(describedFocus);
-    assert.deepEqual([camera.fov, framing.cameraSnapshot().held], [MODEL_STAGE.fieldOfView, false]);
-    const describedPose = modelStageDescription(describing({
-      framing: {kind: 'pose', position: [0, 4, 8], target: [0, 1, 0], fieldOfView: 44},
-    }));
-    parts.resetCamera(describedPose);
-    assert.deepEqual(framing.cameraSnapshot(), {position: [0, 4, 8], target: [0, 1, 0], fieldOfView: 44, held: true});
-  });
-});
-
 describe('atomic per-frame camera application and inbox delivery', () => {
-  it('commits actors and camera atomically, resets unstated fov to MODEL_STAGE.fieldOfView, and refuses whole', () => {
+  it('commits actors and camera atomically, orients lookAt, resets unstated fov, and refuses whole', () => {
     const {actor} = makeActor('a', [{name: 'idle', duration: 2}]);
     const scope = modelFrameScope(fileScene([actor.declaration]), new Map());
     const {camera, controls, channel} = makeFraming();
@@ -131,6 +86,8 @@ describe('atomic per-frame camera application and inbox delivery', () => {
       camera: {position: [1, 2, 9], target: [0, 1, 0], fieldOfView: 50},
     }, channel);
     assert.deepEqual(applied(), {pos: [3, 0, 0], cam: [1, 2, 9], fov: 50});
+    const expectedForward = new THREE.Vector3(0, 1, 0).sub(new THREE.Vector3(1, 2, 9)).normalize();
+    assert.ok(camera.getWorldDirection(new THREE.Vector3()).distanceTo(expectedForward) < 1e-6);
     // Invalid camera refuses before actor changes.
     refused(() => applyModelFrame([actor], scope, {
       ...frame(1, entity('a', [], [99, 0, 0])),
@@ -159,15 +116,43 @@ describe('atomic per-frame camera application and inbox delivery', () => {
     actor.dispose();
   });
 
-  it('validates and preserves frame.camera through the frame inbox', () => {
+  it('validates once through the frame inbox without allocating a frozen camera, and re-checks on scope change', () => {
+    const {actor} = makeActor('a', []);
+    const declared = fileScene([actor.declaration]);
+    const scope = modelFrameScope(declared, new Map());
+    const {camera, channel} = makeFraming();
     const inbox = createModelFrameInbox();
-    inbox.describe(fileScene([declaration('a', 'actor-mesh')]), []);
-    const delivered: Array<number | undefined> = [];
-    inbox.attach(value => delivered.push(value.camera?.fieldOfView));
-    assert.equal(inbox.receive({...frame(0), camera: {position: [0, 1, 5], target: [0, 0, 0], fieldOfView: 46}}),
-      'ready');
+    inbox.describe(declared, []);
+    const delivered: unknown[] = [];
+    inbox.attach(value => {
+      delivered.push(value);
+      applyModelFrame([actor], scope, value, channel);
+    });
+    let entityReads = 0, cameraReads = 0;
+    const rawEntities = [entity('a', [], [2, 0, 0])];
+    const rawCamera = {position: [0, 1, 5], target: [0, 0, 0], fieldOfView: 46};
+    const countedFrame = {
+      simulationTimeSeconds: 0,
+      get entities() {entityReads++; return rawEntities;},
+      get camera() {cameraReads++; return rawCamera;},
+    };
+    assert.equal(inbox.receive(countedFrame), 'ready');
+    assert.deepEqual([entityReads, cameraReads, camera.position.toArray(), camera.fov], [1, 1, [0, 1, 5], 46]);
+    assert.equal(typeof delivered[0] === 'object' && delivered[0] !== null && 'camera' in delivered[0], false);
     assert.equal(inbox.receive({...frame(1), camera: {position: [0, 1, 5], target: [0, 0, 0], fieldOfView: -5}}),
       'error');
-    assert.deepEqual(delivered, [46]);
+    inbox.detach();
+    const pendingPos = [4, 2, 7];
+    assert.equal(inbox.receive({...frame(2, entity('a', [], [5, 0, 0])),
+      camera: {position: pendingPos, target: [0, 0, 0]}}), 'pending');
+    pendingPos[0] = 99;
+    assert.equal(inbox.attach(value => applyModelFrame([actor], scope, value, channel)), 'ready');
+    assert.deepEqual([camera.position.toArray(), camera.fov], [[4, 2, 7], MODEL_STAGE.fieldOfView]);
+    inbox.detach();
+    inbox.describe(fileScene([declaration('b', 'actor-mesh')]), []);
+    assert.equal(inbox.receive(frame(3, entity('b', [], [1, 0, 0], 'actor-mesh'))), 'pending');
+    assert.equal(inbox.attach(value => applyModelFrame([actor], scope, value, channel)), 'error');
+    assert.equal(inbox.failure instanceof Error ? inbox.failure.message : '', MODEL_ACTOR_REFUSAL.undeclared('b'));
+    actor.dispose();
   });
 });

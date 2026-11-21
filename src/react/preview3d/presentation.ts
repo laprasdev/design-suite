@@ -66,51 +66,52 @@ export const modelPreviewCameraWhere = (camera: string): ModelPreviewCameraWhere
 export const CAMERA_COORDS = Object.freeze({
   px: 0, py: 1, pz: 2, tx: 3, ty: 4, tz: 5, fov: 6, length: 7,
 } as const);
+export const UNSTATED_FIELD_OF_VIEW = Number.NaN;
+export const cameraStatesFieldOfView = (coords: Float64Array): boolean =>
+  !Number.isNaN(coords[CAMERA_COORDS.fov]);
 export const MODEL_PREVIEW_CAMERA_REFUSAL = Object.freeze({
   camera: (where: string) => `${where} requires position and target.`,
   distinct: (where: string) => `${where}: position and target must be distinct.`,
   fieldOfView: (where: string) => `${where}.fieldOfView must be a finite number strictly between 0 and 180.`,
 });
 
-/** Validates a camera into `into` (`CAMERA_COORDS`), writing `MODEL_STAGE_FIELD_OF_VIEW` when `fieldOfView` is unstated
- * and returning whether `fieldOfView` was stated. Makes no object, array or string on valid input. */
-export function readModelPreviewCamera(value: unknown, where: ModelPreviewCameraWhere, into: Float64Array): boolean {
+/** Validates a camera into `into` (`CAMERA_COORDS`), storing `UNSTATED_FIELD_OF_VIEW` when `fieldOfView` is unstated.
+ * Makes no object, array or string on valid input. */
+export function readModelPreviewCamera(value: unknown, where: ModelPreviewCameraWhere, into: Float64Array): void {
   if (!object(value)) throw new ModelStageRefusal(MODEL_PREVIEW_CAMERA_REFUSAL.camera(where.camera));
   readModelNumbers(value.position, 3, into, CAMERA_COORDS.px, where.position);
   readModelNumbers(value.target, 3, into, CAMERA_COORDS.tx, where.target);
-  const distance = Math.hypot(
-    into[CAMERA_COORDS.px] - into[CAMERA_COORDS.tx],
-    into[CAMERA_COORDS.py] - into[CAMERA_COORDS.ty],
-    into[CAMERA_COORDS.pz] - into[CAMERA_COORDS.tz],
-  );
-  if (!(distance > 0) || !Number.isFinite(distance)) {
+  const dx = into[CAMERA_COORDS.px] - into[CAMERA_COORDS.tx];
+  const dy = into[CAMERA_COORDS.py] - into[CAMERA_COORDS.ty];
+  const dz = into[CAMERA_COORDS.pz] - into[CAMERA_COORDS.tz];
+  const distanceSquared = dx * dx + dy * dy + dz * dz;
+  if (!(distanceSquared > 0) || !Number.isFinite(distanceSquared)) {
     throw new ModelStageRefusal(MODEL_PREVIEW_CAMERA_REFUSAL.distinct(where.camera));
   }
   if (!modelStates(value, 'fieldOfView')) {
-    into[CAMERA_COORDS.fov] = MODEL_STAGE_FIELD_OF_VIEW;
-    return false;
+    into[CAMERA_COORDS.fov] = UNSTATED_FIELD_OF_VIEW;
+    return;
   }
   const {fieldOfView} = value;
   if (typeof fieldOfView !== 'number' || !Number.isFinite(fieldOfView) || fieldOfView <= 0 || fieldOfView >= 180) {
     throw new ModelStageRefusal(MODEL_PREVIEW_CAMERA_REFUSAL.fieldOfView(where.camera));
   }
   into[CAMERA_COORDS.fov] = fieldOfView;
-  return true;
 }
 
-export function freezeModelPreviewCamera(coords: Float64Array, hasFieldOfView: boolean): ModelPreviewCamera {
+export function freezeModelPreviewCamera(coords: Float64Array): ModelPreviewCamera {
   const position: ModelVector = Object.freeze([
     coords[CAMERA_COORDS.px], coords[CAMERA_COORDS.py], coords[CAMERA_COORDS.pz],
   ]);
   const target: ModelVector = Object.freeze([
     coords[CAMERA_COORDS.tx], coords[CAMERA_COORDS.ty], coords[CAMERA_COORDS.tz],
   ]);
-  return hasFieldOfView ? Object.freeze({position, target, fieldOfView: coords[CAMERA_COORDS.fov]}) :
+  return cameraStatesFieldOfView(coords) ? Object.freeze({position, target, fieldOfView: coords[CAMERA_COORDS.fov]}) :
     Object.freeze({position, target});
 }
 
 const cameraScratch = new Float64Array(CAMERA_COORDS.length);
 export function modelPreviewCamera(value: unknown, where: string): ModelPreviewCamera {
-  const hasFov = readModelPreviewCamera(value, modelPreviewCameraWhere(where), cameraScratch);
-  return freezeModelPreviewCamera(cameraScratch, hasFov);
+  readModelPreviewCamera(value, modelPreviewCameraWhere(where), cameraScratch);
+  return freezeModelPreviewCamera(cameraScratch);
 }

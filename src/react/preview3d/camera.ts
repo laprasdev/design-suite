@@ -3,7 +3,8 @@ import type {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import type {ModelStageCameraSnapshot} from './model.ts';
 import {MODEL_STAGE as settings} from './model.ts';
 import {MODEL_STAGE_FRAMING, type ModelStageFraming} from './framingModel.ts';
-import {CAMERA_COORDS, type ModelPreviewCamera} from './presentation.ts';
+import {CAMERA_COORDS, cameraStatesFieldOfView, UNSTATED_FIELD_OF_VIEW, type ModelPreviewCamera}
+  from './presentation.ts';
 
 type CameraControls = Pick<OrbitControls, 'target' | 'enabled' | 'update'>
   & Partial<Pick<OrbitControls, 'maxDistance'>>;
@@ -30,7 +31,7 @@ export function createModelFraming(camera: THREE.PerspectiveCamera, controls: Ca
     fitRequested = false;
     camera.position.set(coords[CAMERA_COORDS.px], coords[CAMERA_COORDS.py], coords[CAMERA_COORDS.pz]);
     controls.target.set(coords[CAMERA_COORDS.tx], coords[CAMERA_COORDS.ty], coords[CAMERA_COORDS.tz]);
-    setFieldOfView(coords[CAMERA_COORDS.fov]);
+    setFieldOfView(cameraStatesFieldOfView(coords) ? coords[CAMERA_COORDS.fov] : settings.fieldOfView);
     reach(camera.position.distanceTo(controls.target));
     camera.lookAt(controls.target);
     camera.updateMatrixWorld(true);
@@ -42,7 +43,7 @@ export function createModelFraming(camera: THREE.PerspectiveCamera, controls: Ca
     poseScratch[CAMERA_COORDS.tx] = next.target[0];
     poseScratch[CAMERA_COORDS.ty] = next.target[1];
     poseScratch[CAMERA_COORDS.tz] = next.target[2];
-    poseScratch[CAMERA_COORDS.fov] = next.fieldOfView ?? settings.fieldOfView;
+    poseScratch[CAMERA_COORDS.fov] = next.fieldOfView ?? UNSTATED_FIELD_OF_VIEW;
     poseCoordinates(poseScratch);
   };
   // Nor does the far plane stop short of the far side of what the fit framed: a wide fit on a narrow view stands the

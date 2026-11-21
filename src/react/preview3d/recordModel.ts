@@ -163,10 +163,9 @@ export function modelNumber(value: unknown, where: string, least: number, most: 
   return value;
 }
 
-/** Writes `count` finite numbers into `into` at `offset` (sparse holes read as missing, never skipped); makes no array
- * or string on valid input. */
-export function readModelNumbers(value: unknown, count: number, into: Float64Array, offset: number,
-  where: string): readonly number[] {
+function readCheckedNumbers<Target extends number[] | Float64Array>(
+  value: unknown, count: number, into: Target, offset: number, where: string,
+): Target {
   if (!Array.isArray(value) || value.length !== count) {
     throw new ModelStageRefusal(refusal.numbers(where, count));
   }
@@ -177,13 +176,17 @@ export function readModelNumbers(value: unknown, count: number, into: Float64Arr
     }
     into[offset + index] = item;
   }
-  return value;
+  return into;
 }
 
-let numberScratch = new Float64Array(16);
+/** Writes `count` finite numbers into `into` at `offset` (sparse holes read as missing, never skipped); makes no array
+ * or string on valid input. */
+export function readModelNumbers(value: unknown, count: number, into: Float64Array, offset: number,
+  where: string): void {
+  readCheckedNumbers(value, count, into, offset, where);
+}
+
 /** Exactly `count` finite numbers, copied (a sparse array's holes read as missing, never skipped), refused by their
  * name otherwise. */
-export function modelNumbers(value: unknown, count: number, where: string): number[] {
-  if (count > numberScratch.length) numberScratch = new Float64Array(count);
-  return readModelNumbers(value, count, numberScratch, 0, where).slice();
-}
+export const modelNumbers = (value: unknown, count: number, where: string): number[] =>
+  readCheckedNumbers(value, count, new Array<number>(count), 0, where);

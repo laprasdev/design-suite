@@ -10,40 +10,42 @@ import {modelActorSurfaceSource} from '../src/react/preview3d/actorSurfaceModel.
 import {createModelTextures, MODEL_TEXTURE_TEXT} from '../src/react/preview3d/textures.ts';
 import {createModelSurfaceMaterials} from '../src/react/preview3d/surfaceMaterials.ts';
 import {createModelActorSurfaces} from '../src/react/preview3d/actorSurfaces.ts';
+import {createModelFog} from '../src/react/preview3d/fog.ts';
+import {createModelSurfaceModes} from '../src/react/preview3d/materials.ts';
 import {createModelStageSharedValues} from '../src/react/preview3d/sharedValues.ts';
+import {createModelStageParts} from '../src/react/preview3d/stageParts.ts';
 import {declaration, describing, refused} from './preview3dActorFixture.ts';
 import {kindFile, RENDERERS} from './preview3dKindFixture.ts';
 
-const ASSET_ID = 'actor-mesh';
-const ASSET_PATH = '/models/actor-mesh.glb';
-const PROGRAM_HASH = 'd'.repeat(64);
-const IMAGE_KIND = {
-  id: 'test-image', parameters: {MainTex: {type: 'texture', space: 'srgb'}}, inert: {}, attributes: ['uv'],
-  light: 'standard', coverage: 'opaque', side: 'front', fog: true, displacement: null,
-  webProgram: {path: '/image.glsl', sha256: PROGRAM_HASH},
-};
+const ASSET_ID = 'actor-mesh', ASSET_PATH = '/models/actor-mesh.glb', PROGRAM_HASH = 'd'.repeat(64);
+const IMAGE_KIND = {id: 'test-image', parameters: {MainTex: {type: 'texture', space: 'srgb'}}, inert: {},
+  attributes: ['uv'], light: 'standard', coverage: 'opaque', side: 'front', fog: true, displacement: null,
+  webProgram: {path: '/image.glsl', sha256: PROGRAM_HASH}};
 const GLSL = 'void kindSurface( inout vec4 diffuse, inout vec3 emissive ) { ' +
   'diffuse = surfaceParameterMainTex( vUv ); }';
 const EXCLUDED_STREAM_SOURCES = Object.freeze(['VideoFrame', 'HTMLVideoElement'] as const);
 
-function withBrowserImageSources<Result>(run: (make: (tag: string) => ModelSurfaceImageSource) => Result): Result {
+function withBrowserImageSources<Result>(
+  run: (make: (tag: string) => ModelSurfaceImageSource, stream: object) => Result,
+): Result {
   const names = [...MODEL_IMAGE_SOURCES, ...EXCLUDED_STREAM_SOURCES];
   const held = new Map<string, unknown>(names.map(name => [name, Reflect.get(globalThis, name)]));
-  class TestCanvas {
-    readonly tag: string;
-    constructor(tag: string) {this.tag = tag;}
-  }
-  for (const name of names) {
+  class TestCanvas {readonly tag: string; constructor(tag: string) {this.tag = tag;}}
+  class TestStream {}
+  for (const name of MODEL_IMAGE_SOURCES) {
     if (typeof Reflect.get(globalThis, name) !== 'function') {
       Reflect.set(globalThis, name, name === 'HTMLCanvasElement' ? TestCanvas : class {});
     }
+  }
+  for (const name of EXCLUDED_STREAM_SOURCES) {
+    if (typeof Reflect.get(globalThis, name) !== 'function') Reflect.set(globalThis, name, TestStream);
   }
   try {
     return run(tag => {
       const candidate: unknown = new TestCanvas(tag);
       if (!isModelImageSource(candidate)) throw new Error('Expected TestCanvas to match HTMLCanvasElement.');
       return candidate;
-    });
+    }, new TestStream());
   } finally {
     for (const [name, previous] of held) {
       if (previous === undefined) Reflect.deleteProperty(globalThis, name);
@@ -58,21 +60,16 @@ const imageTexture = (image: ModelSurfaceImageSource,
 
 describe('in-memory image surface textures', () => {
   it('accepts only static image sources and refuses streaming video sources, plain objects and primitives', () => {
-    withBrowserImageSources(makeImage => {
+    withBrowserImageSources((makeImage, streamInstance) => {
       const valid = makeImage('crest');
       assert.equal(isModelImageSource(valid), true);
       for (const name of MODEL_IMAGE_SOURCES) {
         const Ctor = Reflect.get(globalThis, name);
         assert.equal(typeof Ctor === 'function' && isModelImageSource(Reflect.construct(Ctor, [])), true, name);
       }
-      const streamInstances = EXCLUDED_STREAM_SOURCES.map(name => {
-        const Ctor = Reflect.get(globalThis, name);
-        if (typeof Ctor !== 'function') throw new Error(`Missing stub constructor ${name}.`);
-        return Reflect.construct(Ctor, []);
-      });
       const expectedRefusal = MODEL_SURFACE_TEXTURE_REFUSAL.image(
         `Surface set s, renderer ${RENDERERS.body}.MainTex.texture.image`);
-      for (const bad of [...streamInstances, {}, Object.create(null), [], new Uint8Array(4), new Map(), 'canvas', 42,
+      for (const bad of [streamInstance, {}, Object.create(null), [], new Uint8Array(4), new Map(), 'canvas', 42,
         true, null, undefined]) {
         assert.equal(isModelImageSource(bad), false);
         refused(() => modelSurfaceSets({s: {[RENDERERS.body]: {kind: 'test-image',
@@ -124,6 +121,7 @@ describe('in-memory image surface textures', () => {
       const b = textures.acquire({image: secondImage, wrap: ['repeat', 'clamp'], scale: [2, 3], offset: [0.25, 0.5]},
         'srgb');
       assert.notEqual(a.source, b.source);
+      assert.ok(a.name.startsWith('image ') && a.name === linear.name && a.name !== b.name);
       assert.deepEqual([a.flipY, a.colorSpace, linear.colorSpace, b.wrapS, b.wrapT, b.repeat.toArray(),
         b.offset.toArray(), fileReads], [false, THREE.SRGBColorSpace, THREE.NoColorSpace, THREE.RepeatWrapping,
         THREE.ClampToEdgeWrapping, [2, 3], [0.25, 0.5], 0]);
@@ -133,7 +131,7 @@ describe('in-memory image surface textures', () => {
       assert.equal(disposed, 0);
       textures.release(reordered);
       assert.equal(disposed, 1);
-      assert.throws(() => textures.release(a), new RegExp(MODEL_TEXTURE_TEXT.unheld('image')));
+      assert.throws(() => textures.release(a), new RegExp(MODEL_TEXTURE_TEXT.unheld(a.name)));
       const stillShared = textures.acquire(imageTexture(firstImage), 'srgb');
       assert.equal(stillShared.source, sharedSource);
       textures.release(stillShared);
@@ -160,12 +158,10 @@ describe('in-memory image surface textures', () => {
       assert.deepEqual([...modelStageDescriptionChanges(descA, descSame)], []);
       assert.deepEqual([...modelStageDescriptionChanges(descA, descB)], ['surfaceSets']);
       assert.deepEqual(modelSurfaceFiles([modelActorSurfaceSource(descA.actors.actors[0], descA.surfaceSets)]), []);
-
       const kinds = modelSurfaceKinds([IMAGE_KIND]);
       const textures = createModelTextures(async () => new ArrayBuffer(0),
         async () => ({image: home, close: () => undefined}));
-      const materials = createModelSurfaceMaterials({kinds,
-        read: async () => new TextEncoder().encode(GLSL).buffer,
+      const materials = createModelSurfaceMaterials({kinds, read: async () => new TextEncoder().encode(GLSL).buffer,
         textures, shared: createModelStageSharedValues(), changes: () => []});
       const recordA = descA.surfaceSets.kit[RENDERERS.body];
       if (!('values' in recordA)) throw new Error('Expected surface record.');
@@ -173,19 +169,29 @@ describe('in-memory image surface textures', () => {
       const file = kindFile(), drawn = modelFileDrawn(file.asset, {actor: 'a', path: ASSET_PATH}, undefined);
       const originalBody = file.body.material;
       const actorSurfaces = createModelActorSurfaces(drawn, 'a', {materials, kinds, compile: () => undefined});
+      const parts = createModelStageParts({scene: new THREE.Scene(), kinds, modes: createModelSurfaceModes(),
+        fog: {change: createModelFog(new THREE.Scene()).change}, frame: () => undefined,
+        lighting: {load: () => [], prepare: () => () => undefined}, textures, materials});
       actorSurfaces.prepare({surfaces: {from: 'set', set: 'kit'}, sets: descA.surfaceSets})();
       const firstMat = file.body.material;
       assert.notEqual(firstMat, originalBody);
-      let firstTexDisposed = 0;
+      let firstTexDisposed = 0, homeSource: THREE.Source | undefined;
       if (firstMat instanceof THREE.ShaderMaterial) {
         const tex: unknown = firstMat.uniforms.surfaceTextureMainTex?.value;
-        if (tex instanceof THREE.Texture) tex.addEventListener('dispose', () => {firstTexDisposed++;});
+        if (tex instanceof THREE.Texture) {
+          homeSource = tex.source;
+          tex.addEventListener('dispose', () => {firstTexDisposed++;});
+        }
       }
+      assert.ok(homeSource);
       actorSurfaces.prepare({surfaces: {from: 'set', set: 'kit'}, sets: descB.surfaceSets})();
-      materials.sweep();
+      parts.keep(descB);
       assert.equal(firstTexDisposed, 1);
+      const homeReloaded = textures.acquire(imageTexture(home), 'srgb');
+      assert.notEqual(homeReloaded.source, homeSource, 'description swap drops unused image source without release');
+      textures.release(homeReloaded);
       actorSurfaces.prepare({surfaces: {from: 'file'}, sets: {}})();
-      materials.sweep();
+      parts.keep(modelStageDescription(describing({actors: {focus: 'a', actors: [declaration('a', ASSET_ID)]}})));
       assert.equal(file.body.material, originalBody);
       materials.dispose();
       textures.dispose();

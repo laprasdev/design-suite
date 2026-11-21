@@ -12,7 +12,7 @@ import {markModelStageAids} from './layers.ts';
 import {MODEL_STAGE_DRIVER, modelActorDrawsFile, modelActorHost} from './actorModel.ts';
 import type {ModelDrawn} from './drawn.ts';
 import type {ModelStageActor, ModelStageActorSnapshot, ModelStageDriver} from './actorModel.ts';
-import {MODEL_FRAME_CAMERA, readModelFrameCamera, readModelFrameEntities, type ModelFrameScope} from './frameModel.ts';
+import {validateModelFrame, type ModelFrameScope} from './frameModel.ts';
 import type {ModelPreviewEntity} from './presentation.ts';
 import {MODEL_STAGE_COMMIT_TEXT, modelStageCommit, prepareWhole, type ModelStageCommit} from './commit.ts';
 import {ModelStageRefusal} from './refusal.ts';
@@ -146,19 +146,18 @@ export interface ModelFrameCameraChannel {
 // they were. An actor the frame does not name keeps what it shows.
 export function applyModelFrame(actors: readonly ModelActor[], scope: ModelFrameScope, value: unknown,
   camera: ModelFrameCameraChannel) {
-  const {record, time, entities} = readModelFrameEntities(value, scope);
-  const cameraPresence = readModelFrameCamera(record, camera.coordinates);
-  const named = new Map(entities.map(entity => [entity.entityId, entity]));
+  const checked = validateModelFrame(value, scope, camera.coordinates);
+  const named = new Map(checked.entities.map(entity => [entity.entityId, entity]));
   const prepares = actors.flatMap(actor => {
     const entity = named.get(actor.id);
     return entity ? [() => actor.prepare(entity)] : [];
   });
   const commitActors = prepareWhole(prepares);
   commitActors();
-  if (cameraPresence !== MODEL_FRAME_CAMERA.absent) {
-    try {camera.apply(camera.coordinates);} catch (error) {
+  if (checked.cameraCoordinates !== null) {
+    try {camera.apply(checked.cameraCoordinates);} catch (error) {
       throw new Error(MODEL_STAGE_COMMIT_TEXT.partial, {cause: error});
     }
   }
-  return time;
+  return checked.simulationTimeSeconds;
 }

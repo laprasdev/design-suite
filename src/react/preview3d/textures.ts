@@ -78,7 +78,7 @@ export function createModelTextures(read: ModelFileReader, decode: ModelImageDec
         source = new THREE.Source(value.image);
         images.set(value.image, source);
       }
-      return sampled('image', source, value, space);
+      return sampled(`image ${source.uuid}`, source, value, space);
     }
     return sampled(value.path, sources.get(value).source, value, space);
   };
@@ -108,11 +108,8 @@ export function createModelTextures(read: ModelFileReader, decode: ModelImageDec
       dropUnusedImages();
       texture.dispose();
     },
-    /** The files the description in force names stay read; every other source no texture uses is freed. */
-    keep(files: Parameters<typeof sources.keep>[0]) {
-      sources.keep(files);
-      dropUnusedImages();
-    },
+    /** The files the description in force names stay read; every other file no texture uses is freed. */
+    keep: sources.keep,
     dispose() {
       sources.dispose();
       for (const {texture} of textures.values()) texture.dispose();
