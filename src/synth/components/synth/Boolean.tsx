@@ -8,7 +8,7 @@ import { D, F, C, DC, SYNTH_LABEL, TransitionKeys } from '../../design/index.ts'
 import { controlTooltip, useTooltipSafe } from './TooltipContext.tsx';
 import {HoverDetail} from '../../../react/HoverDetail.tsx';
 import {SelectionMark} from '../../../react/SelectionMark.tsx';
-
+import {pendingStatus} from '../../../react/segmentPending.tsx';
 
 type BooleanSize = 'xs' | 'sm' | 'md' | 'lg';
 type BooleanColor = 'primary' | 'secondary' | 'green' | 'cyan' | 'pink';
@@ -43,12 +43,16 @@ export interface SettingBooleanProps {
   iconOnly?: boolean;
   title?: string;
   disabled?: boolean;
+  pending?: boolean;
   className?: string;
 }
-function SettingBoolean({value,onChange,label,detail,iconOnly=false,title,disabled=false,className=''}: SettingBooleanProps) {
-  const content=<><SelectionMark selected={value}/>{!iconOnly&&<strong>{label}</strong>}</>;
-  const props={className:`${iconOnly?'bd-check':'setting-option'} ${className}`,disabled,title};
-  const activate=onChange ? ()=>onChange(!value) : undefined;
+function SettingBoolean({value,onChange,label,detail,iconOnly=false,title,disabled=false,pending=false,className=''}: SettingBooleanProps) {
+  const mark=<SelectionMark selected={value}/>;
+  const content=iconOnly?(pending?pendingStatus(undefined,true):mark):
+    <>{mark}{pending?pendingStatus(<strong>{label}</strong>):<strong>{label}</strong>}</>;
+  const props={className:`${iconOnly?'bd-check':'setting-option'} ${className}`,disabled,title,
+    'data-pending':pending||undefined,'aria-busy':pending||undefined};
+  const activate=onChange&&!disabled&&!pending ? ()=>onChange(!value) : undefined;
   return detail?<HoverDetail {...props} interactive panelRole="tooltip" triggerProps={{'aria-pressed':value}}
     label={label} content={detail} onActivate={activate}>{content}</HoverDetail>:
     <button type="button" {...props} role={iconOnly?'checkbox':undefined} aria-label={label}
@@ -77,7 +81,6 @@ function CellBoolean({
   const scheme = getColorScheme(color as ColorType, style);
   const { setTooltip, descriptions } = useTooltipSafe();
 
-  // Oscillating state
   const [isGlowing, setIsGlowing] = useState(false);
 
   useEffect(() => {
@@ -89,7 +92,6 @@ function CellBoolean({
     return () => clearInterval(interval);
   }, [variant, value, oscillateSpeed]);
 
-  // Generate auto-tooltip if none provided
   const getTooltipText = useCallback(() => controlTooltip(tooltip, label, descriptions,
     `${label || 'Toggle'} — ${value ? 'Enabled' : 'Disabled'}`), [tooltip, label, value, descriptions]);
 
@@ -100,20 +102,17 @@ function CellBoolean({
   const handleMouseLeave = useCallback(() => {
     setTooltip(null);
   }, [setTooltip]);
-  
-  // Determine active state based on variant
+
   const isActive = variant === 'oscillating' ? isGlowing : value;
-  
-  // Get styles based on variant
   const boolStyles = variant === 'basic'
-    ? (isActive 
+    ? (isActive
         ? { background: scheme.main, boxShadow: `0 0 ${D.spacing.tightGap}px ${scheme.glow}, 0 0 2px ${scheme.main}` }
         : { background: style.cutoutBorder, boxShadow: getInsetShadow('medium') })
     : getBooleanStyles(isActive, scheme, style);
-  
+
   const sizeValue = getSizeMap()[size];
   const borderRadius = rounded ? D.radius.button : D.radius.tiny;
-  
+
   const containerStyle: React.CSSProperties = {
     width: sizeValue,
     height: sizeValue,
@@ -123,7 +122,6 @@ function CellBoolean({
     ...boolStyles
   };
 
-  // Oscillating variant is not interactive
   if (variant === 'oscillating') {
     return (
       <div

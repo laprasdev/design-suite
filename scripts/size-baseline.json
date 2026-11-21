@@ -25,7 +25,7 @@
     "src/react/useParticipantGrass.ts": {"lines":55,"longLines":2},
     "src/skins.ts": {"lines":95,"longLines":5},
     "src/synth/components/synth/40-IntegerIncrementer.tsx": {"lines":119,"longLines":6},
-    "src/synth/components/synth/Boolean.tsx": {"lines":200,"longLines":4},
+    "src/synth/components/synth/Boolean.tsx": {"lines":198,"longLines":4},
     "src/synth/components/synth/Enum.tsx": {"lines":460,"longLines":6},
     "src/synth/components/synth/Graph.tsx": {"lines":573,"longLines":0},
     "src/synth/components/synth/Knob.tsx": {"lines":531,"longLines":10},

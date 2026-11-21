@@ -33,8 +33,6 @@
 .seg[data-pending] button { cursor:progress; }
 .seg[data-pending] button:not([data-pending]) { color:var(--faint); }
 .seg[data-pending][data-scroll] { overflow-y:hidden; }
-.seg-pending { display:inline-flex;align-items:center;gap:inherit; }
-.seg-pending>.loading-pokeball { --loading-size:var(--segment-spinner-size,1.2em); }
 .seg .bd-text-selection>.loading-pokeball { visibility:hidden; }
 .seg-indicator { position:absolute;z-index:-1;pointer-events:none;transform-origin:top left;background:var(--pink);box-shadow:inset 0 1px 0 var(--bevel); }
 /* The options of a group sit together, with a wider space before the next group. */

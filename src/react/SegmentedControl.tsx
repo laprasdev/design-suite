@@ -15,7 +15,7 @@ import {wrapVariables,type WrapGrid,type Pictured} from './segmentWrap.ts';
 import {HoverDetail} from './HoverDetail.tsx';
 import {PALETTE_CHANGE_EVENT} from '../theme.ts';
 import {cssRect} from './cssZoom.ts';
-import {pendingText,type SegmentPending} from './segmentPending.tsx';
+import {pendingStatus,pendingText,type SegmentPending} from './segmentPending.tsx';
 
 // An option: its value and label, hover help (`detail`) or a chosen description,
 // whether it is unavailable, and its own attributes.
@@ -183,7 +183,7 @@ export function SegmentedControl<V extends SegmentValue>(props: SegmentedControl
       {options.map((o,index) => {
         const selected=chosen(o.value),saving=pending?.value===o.value;
         const optionProps={...o.data,className:o.className,style:o.style,id:o.id,title:o.title,role:tabs?'tab':undefined,'aria-selected':tabs?selected:undefined,'aria-pressed':tabs?undefined:multiple&&o.mixed?'mixed' as const:selected,'aria-controls':o.controls,'aria-expanded':o.expanded,tabIndex:tabs?(selected?0:-1):undefined,onMouseEnter:()=>onPoint?.(o.value),onMouseLeave:()=>onPoint?.(null),onFocus:()=>onPoint?.(o.value),onBlur:()=>onPoint?.(null),'data-on':selected,'data-mixed':multiple&&o.mixed||undefined,'data-unavailable':o.disabled||undefined,'data-pending':saving||undefined,[SEGMENT_GROUP_START_ATTRIBUTE]:index>0&&o.group!==options[index-1].group||undefined};
-        const label=<Label kind="action">{saving?<span className="seg-pending" role="status">{pendingText(o,pending)}</span>:o.label}{swept&&<span className={TextSweepElement.className} aria-hidden="true">{pendingText(o,pending)}</span>}</Label>,select=()=>choose(o.value,selected);
+        const label=<Label kind="action">{saving?pendingStatus(pending.label):o.label}{swept&&<span className={TextSweepElement.className} aria-hidden="true">{pendingText(o,pending)}</span>}</Label>,select=()=>choose(o.value,selected);
         // An option's `detail` is hover/focus help, shared with settings through HoverDetail.
         // An option unavailable on its own keeps its help: hovering or pressing it explains why.
         return o.detail
