@@ -24,76 +24,68 @@ export const MODEL_RECORD_REFUSAL = Object.freeze({
   numbers: (where: string, count: number) => `${where} must contain ${count} finite numbers.`,
 });
 const DIGEST = /^[a-f0-9]{64}$/;
+const EMPTY_FIELDS: readonly string[] = Object.freeze([]);
+const INSTANCE_TAG_PREFIX = '\u0000model-instance:';
 const refusal = MODEL_RECORD_REFUSAL;
 
 /** Whether a record states a field of its own. */
 export const modelStates = (value: object, field: string) => Object.hasOwn(value, field);
 
-// Written as loops over the fields, so that a check on a tick's path (a frame's pose) makes no array or closure.
-function exact(value: Record<string, unknown>, fields: readonly string[], where: string) {
-  for (let index = 0; index < fields.length; index++) {
-    if (!modelStates(value, fields[index])) throw new ModelStageRefusal(refusal.omitted(where, fields[index], fields));
-  }
-  for (const field in value) {
-    if (modelStates(value, field) && !fields.includes(field)) {
-      throw new ModelStageRefusal(refusal.stray(where, field, fields));
-    }
-  }
+export interface ModelStatingFields {
+  readonly stated: readonly string[];
+  readonly whenStated: readonly string[];
 }
 
-export function modelRecord(value: unknown, fields: readonly string[], where: string): Record<string, unknown> {
-  if (!isRecord(value)) throw new ModelStageRefusal(refusal.record(where, fields));
-  exact(value, fields, where);
-  return value;
+function statedWith(value: Record<string, unknown>, stated: readonly string[], whenStated: readonly string[]) {
+  return [...stated, ...whenStated.filter(field => modelStates(value, field))];
 }
 
-export type ModelStatingFields = {readonly stated: readonly string[]; readonly whenStated: readonly string[]};
-export type ModelShapeFields = readonly string[] | ModelStatingFields;
-
-function statedWith(value: Record<string, unknown>, fields: ModelStatingFields) {
-  return [...fields.stated, ...fields.whenStated.filter(field => modelStates(value, field))];
-}
-
-/**
- * A record whose `whenStated` fields are each either stated with a value or left out (an asset's revision, a box's
- * rotation): the fields it states are exactly its `stated` ones and those of `whenStated` it names. A field named
- * with no value is refused, never read as left out. Written as loops so a frame's camera check allocates nothing.
- */
-export function modelRecordStating(value: unknown, fields: ModelStatingFields,
+// Written as loops over the fields, so that a check on a tick's path (a frame's pose or camera) makes no array or
+// closure unless it refuses.
+function exact(value: unknown, stated: readonly string[], whenStated: readonly string[],
   where: string): Record<string, unknown> {
-  if (!isRecord(value)) throw new ModelStageRefusal(refusal.record(where, [...fields.stated, ...fields.whenStated]));
-  for (let index = 0; index < fields.whenStated.length; index++) {
-    const field = fields.whenStated[index];
+  if (!isRecord(value)) throw new ModelStageRefusal(refusal.record(where, [...stated, ...whenStated]));
+  for (let index = 0; index < whenStated.length; index++) {
+    const field = whenStated[index];
     if (modelStates(value, field) && value[field] === undefined) {
       throw new ModelStageRefusal(refusal.unstated(where, field));
     }
   }
-  for (let index = 0; index < fields.stated.length; index++) {
-    if (!modelStates(value, fields.stated[index])) {
-      throw new ModelStageRefusal(refusal.omitted(where, fields.stated[index], statedWith(value, fields)));
+  for (let index = 0; index < stated.length; index++) {
+    if (!modelStates(value, stated[index])) {
+      throw new ModelStageRefusal(refusal.omitted(where, stated[index], statedWith(value, stated, whenStated)));
     }
   }
   for (const field in value) {
-    if (modelStates(value, field) && !fields.stated.includes(field) && !fields.whenStated.includes(field)) {
-      throw new ModelStageRefusal(refusal.stray(where, field, statedWith(value, fields)));
+    if (modelStates(value, field) && !stated.includes(field) && !whenStated.includes(field)) {
+      throw new ModelStageRefusal(refusal.stray(where, field, statedWith(value, stated, whenStated)));
     }
   }
   return value;
 }
+
+export const modelRecord = (value: unknown, fields: readonly string[], where: string): Record<string, unknown> =>
+  exact(value, fields, EMPTY_FIELDS, where);
+
+/**
+ * A record whose `whenStated` fields are each either stated with a value or left out (an asset's revision, a box's
+ * rotation, a camera's fieldOfView): the fields it states are exactly its `stated` ones and those of `whenStated` it
+ * names. A field named with no value is refused, never read as left out.
+ */
+export const modelRecordStating = (value: unknown, fields: ModelStatingFields,
+  where: string): Record<string, unknown> => exact(value, fields.stated, fields.whenStated, where);
 
 /**
  * A record of one of several whole shapes: `field` names the shape, and the record then states exactly that shape's
  * fields. Returns the shape's name with the record.
  */
 export function modelShape<Shape extends string>(value: unknown, field: string,
-  shapes: Readonly<Record<Shape, ModelShapeFields>>, where: string): {shape: Shape; record: Record<string, unknown>} {
+  shapes: Readonly<Record<Shape, ModelStatingFields>>, where: string): {shape: Shape; record: Record<string, unknown>} {
   const names = Object.keys(shapes) as Shape[];
   const shape = isRecord(value) && modelStates(value, field) ? names.find(name => name === value[field]) :
     undefined;
   if (shape === undefined) throw new ModelStageRefusal(refusal.shape(where, field, names));
-  const shapeFields = shapes[shape];
-  return {shape, record: 'stated' in shapeFields ? modelRecordStating(value, shapeFields, where) :
-    modelRecord(value, shapeFields, where)};
+  return {shape, record: modelRecordStating(value, shapes[shape], where)};
 }
 
 /** A record whose names are the data's own (a kind's parameters, a description's sets): its own entries. `element`
@@ -111,14 +103,14 @@ export function modelOneOf<Name extends string>(value: unknown, names: readonly 
   return {name, content: modelRecord(value, [name], where)[name]};
 }
 
-const instanceIds = new WeakMap<object, number>();
+const instanceIds = new WeakMap<object, string>();
 let nextInstanceId = 0;
 function instanceTag(value: object): string {
   const held = instanceIds.get(value);
-  if (held !== undefined) return `\u0000instance:${held}`;
-  const fresh = ++nextInstanceId;
+  if (held !== undefined) return held;
+  const fresh = `${INSTANCE_TAG_PREFIX}${++nextInstanceId}`;
   instanceIds.set(value, fresh);
-  return `\u0000instance:${fresh}`;
+  return fresh;
 }
 
 /**
@@ -171,10 +163,27 @@ export function modelNumber(value: unknown, where: string, least: number, most: 
   return value;
 }
 
+/** Writes `count` finite numbers into `into` at `offset` (sparse holes read as missing, never skipped); makes no array
+ * or string on valid input. */
+export function readModelNumbers(value: unknown, count: number, into: Float64Array, offset: number,
+  where: string): readonly number[] {
+  if (!Array.isArray(value) || value.length !== count) {
+    throw new ModelStageRefusal(refusal.numbers(where, count));
+  }
+  for (let index = 0; index < count; index++) {
+    const item: unknown = value[index];
+    if (typeof item !== 'number' || !Number.isFinite(item)) {
+      throw new ModelStageRefusal(refusal.numbers(where, count));
+    }
+    into[offset + index] = item;
+  }
+  return value;
+}
+
+let numberScratch = new Float64Array(16);
 /** Exactly `count` finite numbers, copied (a sparse array's holes read as missing, never skipped), refused by their
  * name otherwise. */
 export function modelNumbers(value: unknown, count: number, where: string): number[] {
-  const copy = Array.isArray(value) ? Array.from(value) : [];
-  if (copy.length !== count || !copy.every(Number.isFinite)) throw new ModelStageRefusal(refusal.numbers(where, count));
-  return copy;
+  if (count > numberScratch.length) numberScratch = new Float64Array(count);
+  return readModelNumbers(value, count, numberScratch, 0, where).slice();
 }

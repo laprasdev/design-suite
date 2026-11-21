@@ -3,7 +3,7 @@ import type {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import type {ModelStageCameraSnapshot} from './model.ts';
 import {MODEL_STAGE as settings} from './model.ts';
 import {MODEL_STAGE_FRAMING, type ModelStageFraming} from './framingModel.ts';
-import type {ModelPreviewCamera} from './presentation.ts';
+import {CAMERA_COORDS, type ModelPreviewCamera} from './presentation.ts';
 
 type CameraControls = Pick<OrbitControls, 'target' | 'enabled' | 'update'>
   & Partial<Pick<OrbitControls, 'maxDistance'>>;
@@ -14,19 +14,36 @@ export function createModelFraming(camera: THREE.PerspectiveCamera, controls: Ca
   const maximum = controls.maxDistance;
   let fitRequested = true, held = false;
   // The orbit's reach never stops short of the framed distance, so the controls never pull the framing in.
-  const reach = (distance: number) => {if (maximum !== undefined) controls.maxDistance = Math.max(maximum, distance);};
+  const reach = (distance: number) => {
+    if (maximum === undefined) return;
+    const nextReach = Math.max(maximum, distance);
+    if (controls.maxDistance !== nextReach) controls.maxDistance = nextReach;
+  };
   const setFieldOfView = (fieldOfView: number) => {
     if (camera.fov === fieldOfView) return;
     camera.fov = fieldOfView;
     camera.updateProjectionMatrix();
   };
-  const applyPose = (next: ModelPreviewCamera) => {
-    camera.position.set(next.position[0], next.position[1], next.position[2]);
-    controls.target.set(next.target[0], next.target[1], next.target[2]);
-    setFieldOfView(next.fieldOfView ?? settings.fieldOfView);
+  const poseScratch = new Float64Array(CAMERA_COORDS.length);
+  const poseCoordinates = (coords: Float64Array) => {
+    held = true;
+    fitRequested = false;
+    camera.position.set(coords[CAMERA_COORDS.px], coords[CAMERA_COORDS.py], coords[CAMERA_COORDS.pz]);
+    controls.target.set(coords[CAMERA_COORDS.tx], coords[CAMERA_COORDS.ty], coords[CAMERA_COORDS.tz]);
+    setFieldOfView(coords[CAMERA_COORDS.fov]);
     reach(camera.position.distanceTo(controls.target));
     camera.lookAt(controls.target);
     camera.updateMatrixWorld(true);
+  };
+  const applyPose = (next: ModelPreviewCamera) => {
+    poseScratch[CAMERA_COORDS.px] = next.position[0];
+    poseScratch[CAMERA_COORDS.py] = next.position[1];
+    poseScratch[CAMERA_COORDS.pz] = next.position[2];
+    poseScratch[CAMERA_COORDS.tx] = next.target[0];
+    poseScratch[CAMERA_COORDS.ty] = next.target[1];
+    poseScratch[CAMERA_COORDS.tz] = next.target[2];
+    poseScratch[CAMERA_COORDS.fov] = next.fieldOfView ?? settings.fieldOfView;
+    poseCoordinates(poseScratch);
   };
   // Nor does the far plane stop short of the far side of what the fit framed: a wide fit on a narrow view stands the
   // camera further off than the stage's own far plane reaches, which would draw nothing.
@@ -36,11 +53,8 @@ export function createModelFraming(camera: THREE.PerspectiveCamera, controls: Ca
   };
   return {
     requestFit() {if (!held) fitRequested = true;},
-    pose(next: ModelPreviewCamera) {
-      held = true;
-      fitRequested = false;
-      applyPose(next);
-    },
+    pose: applyPose,
+    poseCoordinates,
     frame(framing: ModelStageFraming, orbit: boolean) {
       controls.enabled = orbit;
       held = framing.kind === MODEL_STAGE_FRAMING.pose;

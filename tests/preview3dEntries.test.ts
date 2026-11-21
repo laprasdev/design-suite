@@ -29,7 +29,7 @@ describe('optional 3D package boundary', () => {
         'modelActorSurfaces', 'modelSurfaceSets', 'modelSurfaceRecordsFit', 'modelSurfaceSetWhere',
         'modelSurfaceFiles', 'modelSurfaceTakes', 'isModelImageSource', 'MODEL_IMAGE_SOURCES',
         'modelFrameScope', 'modelPreviewFrame', 'modelPreviewCamera', 'modelEnvironment', 'modelStagePolicy',
-        'MODEL_RECORD_REFUSAL', 'MODEL_PREVIEW_CAMERA_REFUSAL',
+        'MODEL_RECORD_REFUSAL', 'MODEL_PREVIEW_CAMERA_REFUSAL', 'MODEL_SURFACE_TEXTURE_REFUSAL',
         'MODEL_SURFACE_KIND_REFUSAL', 'MODEL_SURFACE_REFUSAL', 'MODEL_SURFACE_OUTPUT_REFUSAL'] as const;
       for (const name of checks) assert.ok(name in model, name);
       // A frame scope built from a checked description, and a frame checked against it, with nothing but this entry.

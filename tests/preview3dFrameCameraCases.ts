@@ -21,9 +21,9 @@ export const CAMERA_FOG: ModelStageFog = Object.freeze({
   height: null,
 });
 export const FRAME_CAMERA_POSE = Object.freeze({
-  position: [1.15, 1.55, 3.6] as const,
-  target: [0, 1, 0] as const,
-  fieldOfView: 54,
+  position: [1.35, 1.75, 4.8] as const,
+  target: [0, 0.9, 0] as const,
+  fieldOfView: 50,
 });
 
 export interface CanvasBandsSample {
@@ -34,8 +34,9 @@ export interface CanvasBandsSample {
 }
 
 export interface FrameCameraSceneDriver {
-  showBefore(): Promise<ModelStageCameraSnapshot>;
-  showAfter(): Promise<ModelStageCameraSnapshot>;
+  showFileDefaultCamera(): Promise<ModelStageCameraSnapshot>;
+  showFileFrameCamera(): Promise<ModelStageCameraSnapshot>;
+  showImageDefaultCamera(): Promise<ModelStageCameraSnapshot>;
   showSwappedImage(): Promise<readonly [number, number, number]>;
   resetView(): Promise<ModelStageCameraSnapshot>;
   sampleBands(mode: ModelStageSurfaceMode, fogged: boolean): Promise<CanvasBandsSample>;

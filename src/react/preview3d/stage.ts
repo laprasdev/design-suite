@@ -5,7 +5,8 @@ import type {ModelStageController, ModelStageHold, ModelStageOptions, ModelStage
 import {MODEL_STAGE_CLOCK} from './stageOptionsModel.ts';
 import {loadModelStageAsset, modelDrawnMeshCount} from './asset.ts';
 import {createModelScene} from './scene.ts';
-import {applyModelFrame} from './actor.ts';
+import {applyModelFrame, type ModelFrameCameraChannel} from './actor.ts';
+import {CAMERA_COORDS} from './presentation.ts';
 import type {ModelStageDescription} from './descriptionModel.ts';
 import {createModelSurfaceModes} from './materials.ts';
 import {decodeModelImage} from './textures.ts';
@@ -67,11 +68,15 @@ export function createModelStage(
     return descriptions.set(value);
   };
   const external = policy.clock === MODEL_STAGE_CLOCK.external;
+  const frameCamera: ModelFrameCameraChannel = {
+    coordinates: new Float64Array(CAMERA_COORDS.length),
+    apply: stage.poseCoordinates,
+  };
   const api: ModelStageController = {
     setDescription,
     setFrame(value) {
       if (!external) throw new ModelStageRefusal(MODEL_STAGE_TEXT.external);
-      times[STAGE_TIME.appliedFrame] = applyModelFrame(actors.actors, descriptions.scope, value, stage.pose);
+      times[STAGE_TIME.appliedFrame] = applyModelFrame(actors.actors, descriptions.scope, value, frameCamera);
     },
     resetCamera: () => descriptions.parts.resetCamera(current().applied),
     snapshot() {

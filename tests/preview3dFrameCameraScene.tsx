@@ -119,24 +119,35 @@ async function bootFrameCameraScene(programSha256: string): Promise<void> {
     pose: {position: entityPos, rotationQuaternion: entityRot, scale: entityScale},
     animationLayers: [] as const, partPoses: [] as const, materials: [] as const,
   };
-  const cameraPos: [number, number, number] = [1.15, 1.55, 3.6];
-  const cameraTarget: [number, number, number] = [0, 1, 0];
-  const cameraInput = {position: cameraPos, target: cameraTarget, fieldOfView: 54};
+  const cameraPos: [number, number, number] = [
+    FRAME_CAMERA_POSE.position[0], FRAME_CAMERA_POSE.position[1], FRAME_CAMERA_POSE.position[2],
+  ];
+  const cameraTarget: [number, number, number] = [
+    FRAME_CAMERA_POSE.target[0], FRAME_CAMERA_POSE.target[1], FRAME_CAMERA_POSE.target[2],
+  ];
+  const cameraInput = {position: cameraPos, target: cameraTarget, fieldOfView: FRAME_CAMERA_POSE.fieldOfView};
   const frameWithoutCamera = {simulationTimeSeconds: 0, entities: [entityRecord]};
   const frameWithCamera = {simulationTimeSeconds: 0, entities: [entityRecord], camera: cameraInput};
 
   const driver: FrameCameraSceneDriver = {
-    async showBefore() {
+    async showFileDefaultCamera() {
       await controller.setDescription(buildDescription(
         {image: null, mode: MODEL_STAGE_SURFACE_MODE.lit, fogged: false, frontPose: false}));
       controller.resetCamera();
       await settle();
       return controller.snapshot().camera;
     },
-    async showAfter() {
+    async showFileFrameCamera() {
+      await controller.setDescription(buildDescription(
+        {image: null, mode: MODEL_STAGE_SURFACE_MODE.lit, fogged: false, frontPose: false}));
+      controller.setFrame({simulationTimeSeconds: 0.5, entities: [entityRecord], camera: FRAME_CAMERA_POSE});
+      await settle();
+      return controller.snapshot().camera;
+    },
+    async showImageDefaultCamera() {
       await controller.setDescription(buildDescription(
         {image: primaryCanvas, mode: MODEL_STAGE_SURFACE_MODE.lit, fogged: false, frontPose: false}));
-      controller.setFrame({simulationTimeSeconds: 0.5, entities: [entityRecord], camera: FRAME_CAMERA_POSE});
+      controller.resetCamera();
       await settle();
       return controller.snapshot().camera;
     },
@@ -166,8 +177,8 @@ async function bootFrameCameraScene(programSha256: string): Promise<void> {
         entityRecord.pose.position[0] = (tick % 8) * 0.01;
         if (withCamera) {
           frameWithCamera.simulationTimeSeconds = tick * 0.016;
-          cameraInput.position[0] = 0.85 + (tick % 8) * 0.01;
-          cameraInput.fieldOfView = 50 + (tick % 5);
+          cameraInput.position[0] = FRAME_CAMERA_POSE.position[0] + (tick % 8) * 0.01;
+          cameraInput.target[0] = (tick % 4) * 0.005;
           controller.setFrame(frameWithCamera);
         } else {
           frameWithoutCamera.simulationTimeSeconds = tick * 0.016;

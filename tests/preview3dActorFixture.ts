@@ -5,14 +5,17 @@ import * as THREE from 'three';
 import {createModelFog} from '../src/react/preview3d/fog.ts';
 import {createModelSurfaceModes, modelStageChanges} from '../src/react/preview3d/materials.ts';
 import type {GLTF} from 'three/addons/loaders/GLTFLoader.js';
-import {applyModelFrame, createModelActor, type ModelActor, type ModelActorContext}
+import {applyModelFrame, createModelActor, type ModelActor, type ModelActorContext, type ModelFrameCameraChannel}
   from '../src/react/preview3d/actor.ts';
+import {createModelFraming} from '../src/react/preview3d/camera.ts';
+import {CAMERA_COORDS} from '../src/react/preview3d/presentation.ts';
 import {modelFrameScope} from '../src/react/preview3d/frameModel.ts';
 import {createModelSurfaceMaterials} from '../src/react/preview3d/surfaceMaterials.ts';
 import {createModelStageSharedValues} from '../src/react/preview3d/sharedValues.ts';
-import {MODEL_ACTOR_ANIMATION, MODEL_ANIMATION_LAYER, MODEL_STAGE_DISPLAY, MODEL_STAGE_FRAMING, MODEL_STAGE_ORIGIN,
-  MODEL_STAGE_SIZE, MODEL_STAGE_SURFACE_MODE, MODEL_STAGE_THEME_LIGHTING, ModelStageRefusal, modelStagePolicy,
-  type ModelFileActor, type ModelStageActor, type ModelStageClock, type ModelStageLook, type ModelStageTheme}
+import {MODEL_ACTOR_ANIMATION, MODEL_ANIMATION_LAYER, MODEL_STAGE, MODEL_STAGE_DISPLAY, MODEL_STAGE_FRAMING,
+  MODEL_STAGE_ORIGIN, MODEL_STAGE_SIZE, MODEL_STAGE_SURFACE_MODE, MODEL_STAGE_THEME_LIGHTING, ModelStageRefusal,
+  modelStagePolicy, type ModelFileActor, type ModelStageActor, type ModelStageClock, type ModelStageLook,
+  type ModelStageTheme}
   from '../src/react/preview3d/model.ts';
 
 export const BONE = 'tip';
@@ -89,12 +92,21 @@ export const entity = (entityId: string, animationLayers: unknown[] = [], positi
 export const frame = (simulationTimeSeconds: number, ...entities: unknown[]) => ({simulationTimeSeconds, entities});
 export const close = (actual: number, expected: number, tolerance = 1e-6) =>
   {if (Math.abs(actual - expected) > tolerance) throw new Error(`Expected ${expected}, read ${actual}.`);};
-export function refused(run: () => unknown, pattern?: RegExp) {
-  try {run();} catch (error) {
-    if (error instanceof ModelStageRefusal && (!pattern || pattern.test(error.message))) return;
-    throw error;
+export function refused(run: () => unknown, expected: RegExp | string) {
+  let caught: unknown;
+  let threw = false;
+  try {
+    run();
+  } catch (error) {
+    threw = true;
+    caught = error;
   }
-  throw new Error('Expected a ModelStageRefusal.');
+  if (!threw) throw new Error(`Expected ModelStageRefusal matching ${String(expected)}, nothing threw.`);
+  if (!(caught instanceof ModelStageRefusal)) {
+    throw new Error(`Expected ModelStageRefusal, caught ${String(caught)}.`);
+  }
+  const matches = typeof expected === 'string' ? caught.message === expected : expected.test(caught.message);
+  if (!matches) throw new Error(`Expected ${String(expected)}, caught "${caught.message}".`);
 }
 // A whole stage look with neutral lighting and no post effects; a test overrides the parts it is about.
 export const stageLook = (changes: Partial<ModelStageLook> = {}): ModelStageLook => ({
@@ -112,11 +124,22 @@ export const fileScene = (actors: readonly ModelStageActor[]) =>
   ({actors: {focus: actors[0].id, actors}, surfaceSets: {}});
 /** A frame applied as the stage applies it, to actors drawn with their files' own materials. */
 export const applyFrame = (actors: readonly ModelActor[], value: unknown,
-  onCamera = () => {throw new Error('Unexpected frame camera.');}) =>
+  applyCamera: (coordinates: Float64Array) => void = () => {throw new Error('Unexpected frame camera.');}) =>
   applyModelFrame(actors, modelFrameScope(fileScene(actors.map(actor => actor.declaration)), new Map()), value,
-    onCamera);
+    {coordinates: new Float64Array(CAMERA_COORDS.length), apply: applyCamera});
 /** A staged load that waits on nothing. */
 export const NO_LOAD = Object.freeze({pending: [], release: () => undefined});
 /** The parts' file registries, for a test that loads no file. */
 export const NO_FILES = Object.freeze({textures: {load: () => NO_LOAD, keep: () => undefined},
   materials: {load: () => NO_LOAD, keep: () => undefined, sweep: () => undefined}});
+
+export function makeFraming(aspect = 1, near = 0.01, far = 100, enabled = true) {
+  const camera = new THREE.PerspectiveCamera(MODEL_STAGE.fieldOfView, aspect, near, far);
+  const controls = {target: new THREE.Vector3(), enabled, maxDistance: MODEL_STAGE.cameraMaximum, update: () => true};
+  const framing = createModelFraming(camera, controls);
+  const channel: ModelFrameCameraChannel = {
+    coordinates: new Float64Array(CAMERA_COORDS.length),
+    apply: framing.poseCoordinates,
+  };
+  return {camera, controls, framing, channel};
+}

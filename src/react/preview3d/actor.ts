@@ -12,8 +12,8 @@ import {markModelStageAids} from './layers.ts';
 import {MODEL_STAGE_DRIVER, modelActorDrawsFile, modelActorHost} from './actorModel.ts';
 import type {ModelDrawn} from './drawn.ts';
 import type {ModelStageActor, ModelStageActorSnapshot, ModelStageDriver} from './actorModel.ts';
-import {readModelFrameCamera, readModelFrameEntities, type ModelFrameScope} from './frameModel.ts';
-import {CAMERA_COORDS, type ModelPreviewCamera, type ModelPreviewEntity} from './presentation.ts';
+import {MODEL_FRAME_CAMERA, readModelFrameCamera, readModelFrameEntities, type ModelFrameScope} from './frameModel.ts';
+import type {ModelPreviewEntity} from './presentation.ts';
 import {MODEL_STAGE_COMMIT_TEXT, modelStageCommit, prepareWhole, type ModelStageCommit} from './commit.ts';
 import {ModelStageRefusal} from './refusal.ts';
 import {extendModelMaterials} from './shading.ts';
@@ -137,20 +137,17 @@ export function createModelActor(drawn: ModelDrawn, declaration: ModelStageActor
 }
 export type ModelActor = ReturnType<typeof createModelActor>;
 
-const frameCameraCoords = new Float64Array(CAMERA_COORDS.length);
-const heldPosition: [number, number, number] = [0.5, 0.5, 0.5];
-const heldTarget: [number, number, number] = [0.5, 0.5, 0.5];
-const heldCameraWithoutFov: ModelPreviewCamera = {position: heldPosition, target: heldTarget};
-const heldCameraWithFov: {position: [number, number, number]; target: [number, number, number]; fieldOfView: number} =
-  {position: heldPosition, target: heldTarget, fieldOfView: 38.5};
+export interface ModelFrameCameraChannel {
+  readonly coordinates: Float64Array;
+  apply(coordinates: Float64Array): void;
+}
 
 // Validate the frame and prepare every named actor before any commits: a refusal leaves every actor and the camera as
-// they were. An actor the frame does not name keeps what it shows. The camera validates into held vectors, allocating
-// nothing per tick.
+// they were. An actor the frame does not name keeps what it shows.
 export function applyModelFrame(actors: readonly ModelActor[], scope: ModelFrameScope, value: unknown,
-  onCamera: (camera: ModelPreviewCamera) => void) {
+  camera: ModelFrameCameraChannel) {
   const {record, time, entities} = readModelFrameEntities(value, scope);
-  const cameraState = readModelFrameCamera(record, frameCameraCoords);
+  const cameraPresence = readModelFrameCamera(record, camera.coordinates);
   const named = new Map(entities.map(entity => [entity.entityId, entity]));
   const prepares = actors.flatMap(actor => {
     const entity = named.get(actor.id);
@@ -158,15 +155,8 @@ export function applyModelFrame(actors: readonly ModelActor[], scope: ModelFrame
   });
   const commitActors = prepareWhole(prepares);
   commitActors();
-  if (cameraState !== 0) {
-    heldPosition[0] = frameCameraCoords[CAMERA_COORDS.px];
-    heldPosition[1] = frameCameraCoords[CAMERA_COORDS.py];
-    heldPosition[2] = frameCameraCoords[CAMERA_COORDS.pz];
-    heldTarget[0] = frameCameraCoords[CAMERA_COORDS.tx];
-    heldTarget[1] = frameCameraCoords[CAMERA_COORDS.ty];
-    heldTarget[2] = frameCameraCoords[CAMERA_COORDS.tz];
-    if (cameraState === 2) heldCameraWithFov.fieldOfView = frameCameraCoords[CAMERA_COORDS.fov];
-    try {onCamera(cameraState === 2 ? heldCameraWithFov : heldCameraWithoutFov);} catch (error) {
+  if (cameraPresence !== MODEL_FRAME_CAMERA.absent) {
+    try {camera.apply(camera.coordinates);} catch (error) {
       throw new Error(MODEL_STAGE_COMMIT_TEXT.partial, {cause: error});
     }
   }

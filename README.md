@@ -281,7 +281,8 @@ exactly its fields: one it omits or one it does not have is refused by its path 
   an engine frame's material values are taken only on a parameter the renderer's kind declares. A record's
   `values` give every parameter of its kind one of `{color: [r, g, b, a]}`, `{vector: [...]}`, `{float}`,
   `{keyword}` or `{texture}`, a texture being `{path, sha256, wrap: [u, v], scale: [u, v], offset: [u, v]}` (a PNG,
-  JPEG or WebP) or `{constant: 'white' | 'black'}`: the types `ModelSurfaceValue` and `ModelSurfaceTexture`.
+  JPEG or WebP), `{image, wrap: [u, v], scale: [u, v], offset: [u, v]}` (a static browser image source) or
+  `{constant: 'white' | 'black'}`: the types `ModelSurfaceValue` and `ModelSurfaceTexture`.
 - `environment`: `{reflectZ, plane, boxes}` scenery, or `null`: `plane` is `{position, size, color}` and a `grid`
   `{spacing, color}` when stated, or `null`; each box is `{id, position, size, color}` and a `rotationQuaternion`
   when stated. It is the scene's, fogged, bloomed and curved with the actors.
@@ -397,10 +398,11 @@ export const TOON_SURFACE: ModelSurfaceKind = {
 - **Attributes.** Declare only what the program reads; nothing undeclared is added to it. A file's own attribute (a
   glTF custom attribute `_DEPTH`, which three names `_depth`) is `{name, size}` with 1 to 4 numbers a vertex.
 - **Textures.** A record names each by `{path, sha256, wrap: [u, v], scale, offset}` (a PNG, JPEG or WebP; another
-  format is refused where the record is read), `{image, wrap: [u, v], scale, offset}` (an in-memory `TexImageSource`:
-  `ImageBitmap`, `HTMLImageElement`, `HTMLCanvasElement`, `OffscreenCanvas`, `ImageData`, `VideoFrame` or
-  `HTMLVideoElement`; any other value is refused where the record is read), or `{constant: 'white' | 'black'}` for an
-  empty slot. Orientation is glTF's (`flipY` false). A kind never reads an image embedded in the model file.
+  format is refused where the record is read), `{image, wrap: [u, v], scale, offset}` (a static in-memory image source:
+  `ImageBitmap`, `HTMLImageElement`, `HTMLCanvasElement`, `OffscreenCanvas` or `ImageData`, uploaded once per instance —
+  pass a distinct instance to replace pixels; streaming video sources and any other value are refused where the record is
+  read), or `{constant: 'white' | 'black'}` for an empty slot. Orientation is glTF's (`flipY` false). A kind never reads
+  an image embedded in the model file.
 - **Shared GLSL.** `webProgram.includes` lists GLSL files the kind's repository owns, each by path and SHA-256. They are
   read with the program, once, and placed ahead of it in the order listed, so one formula is written once. A file
   listed twice is refused; one whose bytes are not its digest refuses the description, naming the file.
@@ -508,7 +510,7 @@ source engine's world space only through the converter's axis change.
 |---|---|
 | Declaration | A missing or stray field; an unknown option; a parameter name that is not a GLSL name; an `inert` entry, `reach` or threshold that names no declared float; a threshold outside [0, 1]; an include listed twice; a bad hash. |
 | Stage creation | A three attribute other than `'uv'`, `'color'`, `'normal'` and `'position'` (a file's own states `{name, size}`). |
-| Record, before anything loads | An unknown kind; a parameter missing or stray; a value of the wrong type or size; a non-HDR colour outside [0, 1]; an inert value not met; a reach below 0; a texture format the stage does not decode. |
+| Record, before anything loads | An unknown kind; a parameter missing or stray; a value of the wrong type or size; a non-HDR colour outside [0, 1]; an inert value not met; a reach below 0; a texture format the stage does not decode or a non-static image source. |
 | Actor | A set the description lacks; a surface set together with `asset.runtimeMaterials`. |
 | Staged load | A program, include or texture that cannot be read or decoded, named by path and SHA-256. |
 | Staged build | A set that leaves out a renderer of the file or names one it lacks; a record on a renderer of lines or points; an attribute the mesh lacks or holds at another size; a mesh without normals under `'normal'`; a program that fails to compile or link, with the compiler's log. Each names the actor, renderer and kind, and refuses the description: the one in force stays drawn. |

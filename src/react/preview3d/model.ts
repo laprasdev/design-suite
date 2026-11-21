@@ -5,6 +5,7 @@ import type {ModelPreviewFrame} from './frameModel.ts';
 import type {ModelStageDescription} from './descriptionModel.ts';
 import type {ModelRotation, ModelVector} from './placementModel.ts';
 import {MODEL_STAGE_DISPLAY, type ModelStageDisplay} from './displayModel.ts';
+import {MODEL_STAGE_FIELD_OF_VIEW} from './presentation.ts';
 export {MODEL_RUNTIME_MATERIAL, modelRuntimeMaterialProfile} from './runtimeMaterialModel.ts';
 export type {ModelRuntimeMaterialProfile, ModelMaterialOutput, ModelRendererBinding} from './runtimeMaterialModel.ts';
 export {MODEL_ENVIRONMENT_GRID, MODEL_ENVIRONMENT_REFUSAL, modelEnvironment} from './environmentModel.ts';
@@ -29,12 +30,15 @@ export {MODEL_SURFACE_PARAMETER, MODEL_COLOR_SPACE, MODEL_SURFACE_LIGHT, MODEL_S
   MODEL_VECTOR_SIZE, MODEL_FILE_SURFACE, MODEL_SURFACE_KIND_REFUSAL, modelSurfaceKind, modelSurfaceKinds}
   from './surfaceKindModel.ts';
 export type {ModelColorSpace, ModelSurfaceKind, ModelSurfaceParameter} from './surfaceKindModel.ts';
-export {isModelImageSource, MODEL_ACTOR_SURFACES, MODEL_FILE_ENTRY, MODEL_IMAGE_SOURCES, MODEL_SURFACE_REFUSAL,
-  MODEL_TEXTURE_FORMATS, MODEL_TEXTURE_WRAP, MODEL_TEXTURE_CONSTANT, modelActorSurfaces, modelRendererId,
+export {isModelImageSource, MODEL_IMAGE_SOURCES, MODEL_SURFACE_TEXTURE_REFUSAL, MODEL_TEXTURE_CONSTANT,
+  MODEL_TEXTURE_FORMATS, MODEL_TEXTURE_WRAP, modelSurfaceTexture} from './surfaceTextureModel.ts';
+export type {ModelSurfaceFile, ModelSurfaceImageSource, ModelSurfaceTexture, ModelTextureSampling}
+  from './surfaceTextureModel.ts';
+export {MODEL_ACTOR_SURFACES, MODEL_FILE_ENTRY, MODEL_SURFACE_REFUSAL, modelActorSurfaces, modelRendererId,
   modelSurfaceFiles, modelSurfaceRecord, modelSurfaceRecordsFit, modelSurfaceSetWhere,
   modelSurfaceSets} from './surfaceModel.ts';
-export type {ModelActorSurfaces, ModelSurfaceEntry, ModelSurfaceFile, ModelSurfaceRecord, ModelSurfaceSet,
-  ModelSurfaceSource, ModelSurfaceWhere, ModelSurfaceTexture, ModelSurfaceValue} from './surfaceModel.ts';
+export type {ModelActorSurfaces, ModelSurfaceEntry, ModelSurfaceRecord, ModelSurfaceSet,
+  ModelSurfaceSource, ModelSurfaceWhere, ModelSurfaceValue} from './surfaceModel.ts';
 export {MODEL_RENDERER_SLOT, MODEL_SURFACE_OUTPUT_REFUSAL, modelSurfaceTakes} from './surfaceOutputModel.ts';
 export type {ModelSurfaceTakes} from './surfaceOutputModel.ts';
 export {modelFrameScope, modelPreviewFrame} from './frameModel.ts';
@@ -93,7 +97,7 @@ export const MODEL_PREVIEW_DISPLAY_OPTIONS = Object.freeze([
 ] satisfies {value: ModelStageDisplay; label: string}[]);
 
 export const MODEL_STAGE = Object.freeze({
-  pixelRatioLimit: 2, fieldOfView: 38, nearPlane: 0.01, farPlane: 100,
+  pixelRatioLimit: 2, fieldOfView: MODEL_STAGE_FIELD_OF_VIEW, nearPlane: 0.01, farPlane: 100,
   cameraMinimum: 1, cameraMaximum: 16, cameraDirection: [0.75, 0.4, 1], fitPadding: 1.4,
   floorRadius: 4, floorSegments: 64, floorOffset: -0.025, gridSize: 8, gridDivisions: 16,
   normalizedHeight: 2, markerRadius: 0.035, markerSegments: 12, jointRadiusRatio: 0.008, jointSegments: 8,

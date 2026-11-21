@@ -1,6 +1,7 @@
 import type {ModelStageActor, ModelStageActorSet} from './actorModel.ts';
 import {MODEL_ACTOR_REFUSAL as refusal, modelActorDrawsFile, modelRuntimeAssetProfile} from './actorModel.ts';
-import {MODEL_PREVIEW_ENTITY_REFUSAL, modelPreviewCamera, modelPreviewEntity, readModelPreviewCamera,
+import {CAMERA_COORDS, freezeModelPreviewCamera, MODEL_PREVIEW_CAMERA_FIELDS, MODEL_PREVIEW_ENTITY_REFUSAL,
+  modelPreviewCameraWhere, modelPreviewEntity, readModelPreviewCamera,
   type ModelPreviewCamera, type ModelPreviewEntity} from './presentation.ts';
 import {isNonEmptyString as named, isRecord as object} from '../../valueChecks.ts';
 import {modelRecordStating, modelStates} from './recordModel.ts';
@@ -32,8 +33,14 @@ kinds: ReadonlyMap<string, ModelSurfaceKind>): ModelFrameScope {
     modelRuntimeAssetProfile(actor) ?? modelSurfaceTakes(actor.surfaces, value.surfaceSets, kinds)]))});
 }
 
-const FRAME_CAMERA_WHERE = 'Frame camera';
-const FRAME_CAMERA_FIELDS = Object.freeze({stated: ['position', 'target'], whenStated: ['fieldOfView']});
+export const MODEL_FRAME_CAMERA = Object.freeze({
+  absent: 'absent',
+  defaultFov: 'default-fov',
+  statedFov: 'stated-fov',
+} as const);
+export type ModelFrameCameraPresence = (typeof MODEL_FRAME_CAMERA)[keyof typeof MODEL_FRAME_CAMERA];
+const FRAME_CAMERA_WHERE = modelPreviewCameraWhere('Frame camera');
+const frameCameraScratch = new Float64Array(CAMERA_COORDS.length);
 
 /** Validates a frame's time and entities against `scope`; shared by `modelPreviewFrame` and `applyModelFrame`. */
 export function readModelFrameEntities(value: unknown, scope: ModelFrameScope) {
@@ -61,11 +68,13 @@ export function readModelFrameEntities(value: unknown, scope: ModelFrameScope) {
   return {record: value, time, entities};
 }
 
-/** Validates an optional frame camera into `into` (`CAMERA_COORDS`); returns 0 (absent), 1 (no fov) or 2 (with fov). */
-export function readModelFrameCamera(record: Record<string, unknown>, into: Float64Array): 0 | 1 | 2 {
-  if (!modelStates(record, 'camera')) return 0;
-  modelRecordStating(record.camera, FRAME_CAMERA_FIELDS, FRAME_CAMERA_WHERE);
-  return readModelPreviewCamera(record.camera, FRAME_CAMERA_WHERE, into) ? 2 : 1;
+/** Validates an optional frame camera into `into` (`CAMERA_COORDS`), returning its presence in `MODEL_FRAME_CAMERA`. */
+export function readModelFrameCamera(record: Record<string, unknown>, into: Float64Array): ModelFrameCameraPresence {
+  if (!modelStates(record, 'camera')) return MODEL_FRAME_CAMERA.absent;
+  modelRecordStating(record.camera, MODEL_PREVIEW_CAMERA_FIELDS, FRAME_CAMERA_WHERE.camera);
+  return readModelPreviewCamera(record.camera, FRAME_CAMERA_WHERE, into)
+    ? MODEL_FRAME_CAMERA.statedFov
+    : MODEL_FRAME_CAMERA.defaultFov;
 }
 
 /**
@@ -77,10 +86,10 @@ export function readModelFrameCamera(record: Record<string, unknown>, into: Floa
  */
 export function modelPreviewFrame(value: unknown, scope: ModelFrameScope): ModelPreviewFrame {
   const {record, time, entities} = readModelFrameEntities(value, scope);
-  if (!modelStates(record, 'camera')) {
+  const presence = readModelFrameCamera(record, frameCameraScratch);
+  if (presence === MODEL_FRAME_CAMERA.absent) {
     return Object.freeze({simulationTimeSeconds: time, entities: Object.freeze(entities)});
   }
-  modelRecordStating(record.camera, FRAME_CAMERA_FIELDS, FRAME_CAMERA_WHERE);
-  const camera = modelPreviewCamera(record.camera, FRAME_CAMERA_WHERE);
+  const camera = freezeModelPreviewCamera(frameCameraScratch, presence === MODEL_FRAME_CAMERA.statedFov);
   return Object.freeze({simulationTimeSeconds: time, entities: Object.freeze(entities), camera});
 }

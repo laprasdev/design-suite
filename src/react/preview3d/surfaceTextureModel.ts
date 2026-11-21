@@ -2,15 +2,18 @@ import {isRecord} from '../../valueChecks.ts';
 import {modelDigest, modelName, modelNumbers, modelOption, modelRecord, modelStates} from './recordModel.ts';
 import {ModelStageRefusal} from './refusal.ts';
 
-// A surface record's texture value: a file by path and SHA-256 with its sampling, a host-supplied browser image with
-// its sampling, or a 1x1 constant for an empty slot. Orientation is glTF's (`flipY` false) across file and image alike.
+// A surface record's texture value: a file by path and SHA-256 with its sampling, a static host-supplied browser image
+// with its sampling (uploaded once per instance; pass a distinct instance to replace pixels), or a 1x1 constant for an
+// empty slot. Orientation is glTF's (`flipY` false) across file and image alike.
 export const MODEL_TEXTURE_WRAP = Object.freeze({repeat: 'repeat', clamp: 'clamp', mirror: 'mirror'} as const);
 export const MODEL_TEXTURE_CONSTANT = Object.freeze({white: 'white', black: 'black'} as const);
 /** The image formats the stage decodes (the browser's own decoder, as three's glTF loader uses it), by a path's end. */
 export const MODEL_TEXTURE_FORMATS = Object.freeze(['png', 'jpg', 'jpeg', 'webp'] as const);
-/** The browser image constructors three uploads as a `TexImageSource`. */
-export const MODEL_IMAGE_SOURCES = Object.freeze(['ImageBitmap', 'HTMLImageElement', 'HTMLCanvasElement',
-  'OffscreenCanvas', 'ImageData', 'VideoFrame', 'HTMLVideoElement'] as const);
+/** The static browser image constructors the stage uploads once per instance. Streaming video sources are excluded. */
+export const MODEL_IMAGE_SOURCES = Object.freeze([
+  'ImageBitmap', 'HTMLImageElement', 'HTMLCanvasElement', 'OffscreenCanvas', 'ImageData',
+] as const);
+export type ModelSurfaceImageSource = ImageBitmap | HTMLImageElement | HTMLCanvasElement | OffscreenCanvas | ImageData;
 
 type Wrap = typeof MODEL_TEXTURE_WRAP[keyof typeof MODEL_TEXTURE_WRAP];
 type Pair = readonly [number, number];
@@ -21,10 +24,10 @@ export interface ModelTextureSampling {
 }
 /** A file a record names, by path and SHA-256. */
 export type ModelSurfaceFile = {readonly path: string; readonly sha256: string};
-/** A texture a record names: a verified file or an in-memory image with its sampling, or a constant texel. */
+/** A texture a record names: a verified file or a static in-memory image with its sampling, or a constant texel. */
 export type ModelSurfaceTexture =
   | (ModelSurfaceFile & ModelTextureSampling)
-  | ({readonly image: TexImageSource} & ModelTextureSampling)
+  | ({readonly image: ModelSurfaceImageSource} & ModelTextureSampling)
   | {readonly constant: typeof MODEL_TEXTURE_CONSTANT[keyof typeof MODEL_TEXTURE_CONSTANT]};
 
 const FILE_TEXTURE_FIELDS = Object.freeze(['path', 'sha256', 'wrap', 'scale', 'offset']);
@@ -35,11 +38,11 @@ export const MODEL_SURFACE_TEXTURE_REFUSAL = Object.freeze({
   format: (where: string, path: string) =>
     `${where} ${path} is not a format the stage decodes: ${MODEL_TEXTURE_FORMATS.join(', ')}.`,
   wrap: (where: string) => `${where} is a pair, [u, v], each one of ${Object.values(MODEL_TEXTURE_WRAP).join(', ')}.`,
-  image: (where: string) => `${where} must be an image source: ${MODEL_IMAGE_SOURCES.join(', ')}.`,
+  image: (where: string) => `${where} must be a static image source: ${MODEL_IMAGE_SOURCES.join(', ')}.`,
 });
 
-/** Whether a value is an instance of one of the browser's `TexImageSource` types. */
-export function isModelImageSource(value: unknown): value is TexImageSource {
+/** Whether a value is an instance of one of the stage's supported static image source types. */
+export function isModelImageSource(value: unknown): value is ModelSurfaceImageSource {
   if (typeof value !== 'object' || value === null) return false;
   return MODEL_IMAGE_SOURCES.some(name => {
     const kind = Reflect.get(globalThis, name);

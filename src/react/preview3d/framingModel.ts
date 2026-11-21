@@ -1,5 +1,5 @@
-import {modelPreviewCamera, type ModelPreviewCamera} from './presentation.ts';
-import {modelFlag, modelShape, type ModelShapeFields} from './recordModel.ts';
+import {MODEL_PREVIEW_CAMERA_FIELDS, modelPreviewCamera, type ModelPreviewCamera} from './presentation.ts';
+import {modelFlag, modelShape, type ModelStatingFields} from './recordModel.ts';
 
 export const MODEL_STAGE_FRAMING = Object.freeze({focus: 'focus', all: 'all', pose: 'pose'} as const);
 /**
@@ -10,10 +10,13 @@ export type ModelStageFraming =
   | {readonly kind: typeof MODEL_STAGE_FRAMING.focus}
   | {readonly kind: typeof MODEL_STAGE_FRAMING.all}
   | ({readonly kind: typeof MODEL_STAGE_FRAMING.pose} & ModelPreviewCamera);
-// The fields each framing states, and nothing else; a pose optionally states its vertical field of view.
+// The fields each framing states, and nothing else; a pose extends a camera's fields with `kind`.
 const WHERE = 'The framing';
-const FIELDS: Readonly<Record<ModelStageFraming['kind'], ModelShapeFields>> = Object.freeze({
-  focus: ['kind'], all: ['kind'], pose: {stated: ['kind', 'position', 'target'], whenStated: ['fieldOfView']}});
+const FIELDS: Readonly<Record<ModelStageFraming['kind'], ModelStatingFields>> = Object.freeze({
+  focus: {stated: ['kind'], whenStated: []},
+  all: {stated: ['kind'], whenStated: []},
+  pose: {stated: ['kind', ...MODEL_PREVIEW_CAMERA_FIELDS.stated], whenStated: MODEL_PREVIEW_CAMERA_FIELDS.whenStated},
+});
 
 export function modelStageFraming(value: unknown): ModelStageFraming {
   const {shape: kind, record} = modelShape(value, 'kind', FIELDS, WHERE);

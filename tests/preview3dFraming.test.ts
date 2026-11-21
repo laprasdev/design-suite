@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import {MODEL_STAGE} from '../src/react/preview3d/model.ts';
 import {createModelFraming} from '../src/react/preview3d/camera.ts';
 import {MODEL_STAGE_FRAMING} from '../src/react/preview3d/framingModel.ts';
+import {makeFraming} from './preview3dActorFixture.ts';
 
 // A phone held upright, 390 by 844 px: the narrowest view a fit stands back for.
 const PORTRAIT_ASPECT = 390 / 844;
@@ -32,10 +33,7 @@ describe('the stage\'s framing', () => {
   });
 
   it('never leaves the orbit\'s reach short of the fitted distance', () => {
-    const camera = new THREE.PerspectiveCamera(MODEL_STAGE.fieldOfView, 1, 0.01, 100);
-    const controls = {target: new THREE.Vector3(), enabled: true, maxDistance: MODEL_STAGE.cameraMaximum,
-      update: () => true};
-    const framing = createModelFraming(camera, controls);
+    const {camera, controls, framing} = makeFraming();
     framing.frame({kind: MODEL_STAGE_FRAMING.all}, true);
     framing.fit(() => new THREE.Box3(new THREE.Vector3(-40, 0, -40), new THREE.Vector3(40, 10, 40)));
     assert.ok(camera.position.distanceTo(controls.target) <= controls.maxDistance + 1e-9);
@@ -46,10 +44,7 @@ describe('the stage\'s framing', () => {
   });
 
   it('never leaves the far plane short of the far side of what a fit framed', () => {
-    const camera = new THREE.PerspectiveCamera(MODEL_STAGE.fieldOfView, PORTRAIT_ASPECT, MODEL_STAGE.nearPlane,
-      MODEL_STAGE.farPlane);
-    const controls = {target: new THREE.Vector3(), enabled: false, update: () => true};
-    const framing = createModelFraming(camera, controls);
+    const {camera, framing} = makeFraming(PORTRAIT_ASPECT, MODEL_STAGE.nearPlane, MODEL_STAGE.farPlane, false);
     const wide = new THREE.Box3(new THREE.Vector3(-12, -2.5, -12), new THREE.Vector3(12, 1, 12));
     framing.frame({kind: MODEL_STAGE_FRAMING.all}, false);
     framing.fit(() => wide);

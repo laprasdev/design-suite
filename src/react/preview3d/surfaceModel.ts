@@ -4,11 +4,7 @@ import {modelEntries, modelFlag, modelName, modelNumber, modelNumbers, modelOneO
 import {ModelStageRefusal} from './refusal.ts';
 import {MODEL_FILE_SURFACE, MODEL_SURFACE_PARAMETER, MODEL_VECTOR_SIZE, type ModelSurfaceKind}
   from './surfaceKindModel.ts';
-import {MODEL_SURFACE_TEXTURE_REFUSAL, modelSurfaceTexture, type ModelSurfaceFile, type ModelSurfaceTexture}
-  from './surfaceTextureModel.ts';
-export {isModelImageSource, MODEL_IMAGE_SOURCES, MODEL_TEXTURE_CONSTANT, MODEL_TEXTURE_FORMATS, MODEL_TEXTURE_WRAP,
-  modelSurfaceTexture} from './surfaceTextureModel.ts';
-export type {ModelSurfaceFile, ModelSurfaceTexture, ModelTextureSampling} from './surfaceTextureModel.ts';
+import {modelSurfaceTexture, type ModelSurfaceFile, type ModelSurfaceTexture} from './surfaceTextureModel.ts';
 
 // What draws a model's renderers. An actor states where its surfaces come from, one of two whole forms: the file's own
 // materials throughout, or a named set of the description's, whose keys are the file's renderers, every one exactly
@@ -18,8 +14,10 @@ export type {ModelSurfaceFile, ModelSurfaceTexture, ModelTextureSampling} from '
 export const MODEL_ACTOR_SURFACES = Object.freeze({file: 'file', set: 'set'} as const);
 export type ModelActorSurfaces = {readonly from: typeof MODEL_ACTOR_SURFACES.file}
   | {readonly from: typeof MODEL_ACTOR_SURFACES.set; readonly set: string};
-const ACTOR_SURFACES = Object.freeze({[MODEL_ACTOR_SURFACES.file]: ['from'],
-  [MODEL_ACTOR_SURFACES.set]: ['from', 'set']});
+const ACTOR_SURFACES = Object.freeze({
+  [MODEL_ACTOR_SURFACES.file]: {stated: ['from'], whenStated: []},
+  [MODEL_ACTOR_SURFACES.set]: {stated: ['from', 'set'], whenStated: []},
+});
 export type ModelSurfaceValue = {readonly color: readonly [number, number, number, number]}
   | {readonly vector: readonly number[]} | {readonly float: number} | {readonly keyword: boolean}
   | {readonly texture: ModelSurfaceTexture};
@@ -36,7 +34,6 @@ const RENDERER_ID = /^gltf-node:(0|[1-9]\d*)\/primitive:(0|[1-9]\d*)$/;
 export const modelRendererId = (node: number, primitive: number) => `gltf-node:${node}/primitive:${primitive}`;
 const FORMS = Object.values(MODEL_SURFACE_PARAMETER);
 export const MODEL_SURFACE_REFUSAL = Object.freeze({
-  ...MODEL_SURFACE_TEXTURE_REFUSAL,
   renderer: (where: string, id: string) => `${where}: ${id} is not a renderer id, gltf-node:<n>/primitive:<m>.`,
   unknownSet: (where: string, set: string, sets: readonly string[]) =>
     `${where} names surface set ${set}; the description's sets are ${sets.join(', ') || 'none'}.`,
