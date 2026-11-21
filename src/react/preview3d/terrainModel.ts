@@ -71,21 +71,25 @@ function heights(value: unknown, count: number, where: string): readonly number[
   return Object.freeze(samples.map(Number));
 }
 
+/** A terrain's chunk-triangle budget, checked: a whole number of at least one cell's two triangles. */
+export function modelTerrainChunkTriangles(value: unknown, where: string): number {
+  if (!Number.isInteger(value) || Number(value) < TRIANGLES_PER_CELL) {
+    throw new ModelStageRefusal(refusal.chunk(where));
+  }
+  return Number(value);
+}
+
 /** A terrain, every field checked and refused by its name. */
 export function modelStageTerrain(value: unknown, where: string): ModelStageTerrain {
   const record = modelRecord(value, FIELDS, where);
   const sides = resolution(record.resolution, `${where}.resolution`);
   const size = modelNumbers(record.size, 2, `${where}.size`).map((length, axis) =>
     positive(length, `${where}.size[${axis}]`));
-  const chunkTriangles = record.chunkTriangles;
-  if (!Number.isInteger(chunkTriangles) || Number(chunkTriangles) < TRIANGLES_PER_CELL) {
-    throw new ModelStageRefusal(refusal.chunk(`${where}.chunkTriangles`));
-  }
   return Object.freeze({resolution: sides, size: Object.freeze([size[0], size[1]] as const),
     heightScale: positive(record.heightScale, `${where}.heightScale`),
     heights: heights(record.heights, sides[0] * sides[1], `${where}.heights`),
     split: modelOption(record.split, MODEL_TERRAIN_SPLIT, `${where}.split`),
-    chunkTriangles: Number(chunkTriangles)});
+    chunkTriangles: modelTerrainChunkTriangles(record.chunkTriangles, `${where}.chunkTriangles`)});
 }
 
 /** The cells per side of a square chunk: the most whose triangles stay within `chunkTriangles`. */

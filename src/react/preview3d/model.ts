@@ -54,7 +54,8 @@ export {MODEL_ACTOR_ANIMATION, MODEL_ACTOR_REFUSAL, MODEL_STAGE_DRIVER, modelAct
 export type {ModelFileActor, ModelStageActor, ModelStageActorAnimation, ModelStageActorSet, ModelStageActorSnapshot,
   ModelStageAsset, ModelStageDriver, ModelTerrainActor} from './actorModel.ts';
 // A terrain: a height grid the stage draws in chunks, checked here with no renderer.
-export {MODEL_TERRAIN_REFUSAL, MODEL_TERRAIN_SPLIT, modelStageTerrain, modelTerrainChunks} from './terrainModel.ts';
+export {MODEL_TERRAIN_REFUSAL, MODEL_TERRAIN_SPLIT, modelStageTerrain, modelTerrainChunks,
+  modelTerrainChunkTriangles} from './terrainModel.ts';
 export type {ModelStageTerrain, ModelTerrainChunk, ModelTerrainSplit} from './terrainModel.ts';
 // The whole description, checked with no renderer: every part, and every actor's set against the description's sets.
 export {MODEL_STAGE_DESCRIPTION_PARTS, modelStageActorSets, modelStageDescription} from './descriptionModel.ts';
