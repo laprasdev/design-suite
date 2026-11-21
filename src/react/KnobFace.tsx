@@ -1,7 +1,7 @@
 import {useStyle} from '../synth/StyleContext.tsx';
 import {hexToRgba} from '../color.ts';
 import React, {useId} from 'react';
-import {PHI} from '../layout.ts';
+import {PHI} from '../goldenRatio.ts';
 import {O} from '../synth/design/index.ts';
 import {KnobForm, type KnobFormValue} from '../synth/design/constants/KnobConfig.ts';
 

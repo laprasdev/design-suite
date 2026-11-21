@@ -1,6 +1,6 @@
 import {forwardRef, type ButtonHTMLAttributes, type ReactNode} from 'react';
 import {createLucideIcon, type IconNode, type LucideProps} from 'lucide-react';
-import {PHI_INVERSE} from '../layout.ts';
+import {PHI_INVERSE} from '../goldenRatio.ts';
 import type {NoticeTone} from './actionBarElements.ts';
 import type {Density} from './density.ts';
 

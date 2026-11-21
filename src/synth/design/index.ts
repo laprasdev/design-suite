@@ -4,7 +4,8 @@
 // =====================================================
 
 export * from './LayoutAPI.ts';
-export { PHI, PHI_INVERSE, PHI_SQUARED, Relativity, LayoutDimensions } from '../../layout.ts';
+export { PHI, PHI_INVERSE, PHI_SQUARED } from '../../goldenRatio.ts';
+export { Relativity, LayoutDimensions } from '../../layout.ts';
 export { CompactDimensions, SCALE, sc, setScale } from '../../layout.ts';
 
 // Shorthand aliases

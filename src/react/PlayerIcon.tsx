@@ -7,7 +7,7 @@
    surrounding text (name, position) is composed AROUND this by the caller. */
 
 import type { CSSProperties, MouseEvent, ReactNode } from 'react';
-import { PHI } from '../layout.ts';
+import { PHI } from '../goldenRatio.ts';
 import { PlayerIconElement, PlayerIconSideElement, type PlayerIconSide } from './playerIconElements.ts';
 
 const RING = { size: 120, radius: 56, stroke: 6 };
