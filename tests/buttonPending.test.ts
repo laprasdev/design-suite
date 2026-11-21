@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {after, describe, it} from 'node:test';
 import {Children, isValidElement, type ReactElement, type ReactNode} from 'react';
 import {bundled, replacedHooks} from './bundled.ts';
-import {STATEFUL_HOOKS} from './renderedHooks.ts';
+import {Component, STATEFUL_HOOKS, rendered} from './renderedHooks.ts';
 
 interface PendingProps {
   children?: ReactNode;
@@ -36,21 +36,28 @@ const findByType = (node: unknown, target: unknown): ReactElement<PendingProps>[
 describe('Button and SettingBoolean pending forms', () => {
   it('Button pending composes Label + PokeballSpinner, stays focusable (not disabled), and ignores presses', () => {
     let clicks = 0;
-    const pendingBtn = module.Button({
+    const pendingComp = new Component(() => module.Button({
       variant: 'subtle', pending: true, onClick: () => { clicks += 1; }, children: 'Reopen',
-    });
-    if (!isValidElement<PendingProps>(pendingBtn)) assert.fail('expected Button element');
+    }));
+    rendered(pendingComp);
+    const pendingBtn = pendingComp.now;
+    if (!isValidElement<PendingProps & {'aria-labelledby'?: string}>(pendingBtn)) {
+      assert.fail('expected Button element');
+    }
     assert.equal(pendingBtn.props.disabled, undefined);
     assert.equal(pendingBtn.props['aria-busy'], true);
     assert.equal(pendingBtn.props['data-pending'], true);
+    assert.equal(typeof pendingBtn.props['aria-labelledby'], 'string');
     if (pendingBtn.props.onClick) assert.fail('pending Button must not expose active onClick');
     assert.equal(clicks, 0);
     assert.equal(findByType(pendingBtn, module.Label).length, 1);
     assert.equal(findByType(pendingBtn, module.PokeballSpinner).length, 1);
 
-    const liveBtn = module.Button({
+    const liveComp = new Component(() => module.Button({
       variant: 'subtle', pending: false, onClick: () => { clicks += 1; }, children: 'Reopen',
-    });
+    }));
+    rendered(liveComp);
+    const liveBtn = liveComp.now;
     if (!isValidElement<{onClick?: () => void}>(liveBtn) || !liveBtn.props.onClick) {
       assert.fail('expected live Button onClick');
     }

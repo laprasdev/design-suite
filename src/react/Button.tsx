@@ -6,7 +6,7 @@
 // takes the accent on hover). `pending` shows the loading Poké Ball sized to the
 // text beside the label, marks the button busy, keeps focus, and ignores presses.
 // =====================================================
-import React, { type ButtonHTMLAttributes } from "react";
+import React, { useId, type ButtonHTMLAttributes } from "react";
 import { Label, type LabelKind } from "./accents.tsx";
 import { pendingStatus } from "./segmentPending.tsx";
 
@@ -20,12 +20,14 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 export function Button({ variant = "ghost", labelKind = "action", glow = false, pending = false,
   type = "button", className = "", disabled, onClick, children, ...rest }: ButtonProps) {
+  const statusId = `${useId()}-pending`;
   const classes = ["bd-btn", `bd-btn--${variant}`, glow && "bd-text-glow", className].filter(Boolean).join(" ");
-  const content = pending ? pendingStatus(children) : children;
+  const content = pending ? pendingStatus(children, false, statusId) : children;
+  const labelledBy = pending && !rest["aria-label"] && !rest["aria-labelledby"] ? statusId : rest["aria-labelledby"];
   return (
     <button type={type} className={classes} disabled={disabled}
       data-pending={pending || undefined} aria-busy={pending || undefined}
-      onClick={disabled || pending ? undefined : onClick} {...rest}>
+      onClick={disabled || pending ? undefined : onClick} {...rest} aria-labelledby={labelledBy}>
       {labelKind === "none" ? content : <Label kind={labelKind}>{content}</Label>}
     </button>
   );
