@@ -2,6 +2,7 @@ import {element} from '../elementContract.ts';
 import type {ModelStageSurfaceMode} from './surfaceModeModel.ts';
 import type {ModelStageActorSnapshot} from './actorModel.ts';
 import type {ModelPreviewFrame} from './frameModel.ts';
+import type {ModelActorMaterialMap} from './materialMapModel.ts';
 import type {ModelStageDescription} from './descriptionModel.ts';
 import type {ModelRotation, ModelVector} from './placementModel.ts';
 import {MODEL_STAGE_DISPLAY, type ModelStageDisplay} from './displayModel.ts';
@@ -44,7 +45,9 @@ export {modelPreviewEntity, MODEL_PREVIEW_CAPABILITIES} from './presentation.ts'
 export {modelPoseForBinding, MODEL_PREVIEW_QUATERNION_TOLERANCE} from './placementModel.ts';
 export type {ModelVector, ModelRotation, ModelPresentationPose, ModelPoseBinding} from './placementModel.ts';
 export {MODEL_PREVIEW_WEIGHT_TOLERANCE} from './animationLayerModel.ts';
-export type {ModelPreviewEntity} from './presentation.ts';
+export type {ModelPreviewCamera, ModelPreviewEntity} from './presentation.ts';
+export {modelActorMaterialMaps, MODEL_MATERIAL_MAP_REFUSAL} from './materialMapModel.ts';
+export type {ModelActorMaterialMap} from './materialMapModel.ts';
 export {ModelStageRefusal, MODEL_STAGE_FAILURE, modelStageFailure} from './refusal.ts';
 export type {ModelStageFailure, ModelStageFailureKind} from './refusal.ts';
 export {MODEL_ANIMATION_LAYER, MODEL_ANIMATION_REFUSAL, modelAnimationLayers} from './animationLayerModel.ts';
@@ -162,6 +165,8 @@ export interface ModelStageController {
   setDescription(value: ModelStageDescription): Promise<void>;
   /** Applies one host-built frame to every actor it names, or refuses it whole before anything changes. */
   setFrame(value: ModelPreviewFrame): void;
+  /** Overrides named standard materials' base-colour maps on one file actor, or clears overrides with null. */
+  setActorMaterialMaps(actorId: string, maps: Readonly<Record<string, ModelActorMaterialMap>> | null): void;
   /** An action, not state: returns a view the person orbited to the described framing, a held pose or a fresh fit. */
   resetCamera(): void;
   snapshot(): ModelStageSnapshot;

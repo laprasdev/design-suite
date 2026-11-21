@@ -285,7 +285,8 @@ exactly its fields: one it omits or one it does not have is refused by its path 
 - `environment`: `{reflectZ, plane, boxes}` scenery, or `null`: `plane` is `{position, size, color}` and a `grid`
   `{spacing, color}` when stated, or `null`; each box is `{id, position, size, color}` and a `rotationQuaternion`
   when stated. It is the scene's, fogged, bloomed and curved with the actors.
-- `framing`: `{kind: 'focus'}`, `{kind: 'all'}` (every actor) or `{kind: 'pose', position, target}`.
+- `framing`: `{kind: 'focus'}`, `{kind: 'all'}` (every actor) or `{kind: 'pose', position, target}` with an optional
+  vertical `fieldOfView` in degrees strictly within `(0, 180)` (omitted uses `MODEL_STAGE.fieldOfView`).
 - `orbit`: whether the person may orbit away from the framing.
 - `lighting`: `{time, times}`, the id of the time of day in force and the description's own times, each
   `{id, label, look}`; ids and labels are each a time's own. Two times are built in, `MODEL_STAGE_TIME.light` (the
@@ -311,11 +312,19 @@ exactly its fields: one it omits or one it does not have is refused by its path 
   reloaded. One that loads nothing applies or throws at once; one that loads (an asset, a texture or a kind's
   program a record names, or the glow's passes the first time a time brings glow) returns a promise that settles
   when they arrive, rejects with the previous description still shown, and is superseded by a later call.
-- `setFrame(frame)` (external clock only) applies `{simulationTimeSeconds, entities}`. Each entity names a declared
-  actor by `entityId` and carries `modelId`, a whole `pose`, `animationLayers`, `partPoses: []` and `materials`
-  (values only on a parameter its renderer's kind declares). The whole frame is refused before anything changes. A
+- `setFrame(frame)` (external clock only) applies `{simulationTimeSeconds, entities}` and an optional per-frame
+  `camera` (`ModelPreviewCamera`: `{position, target, fieldOfView?}`). Each entity names a declared actor by `entityId`
+  and carries `modelId`, a whole `pose`, `animationLayers`, `partPoses: []` and `materials` (values only on a parameter
+  its renderer's kind declares). The whole frame — entities and camera together — is refused before anything changes. A
   description may not change, replace or remove an actor a frame has driven.
-- `resetCamera()` returns a view the person orbited to the described framing.
+- `setActorMaterialMaps(actorId, maps)` overrides named standard materials' base-colour maps on one file actor
+  (`surfaces.from === 'file'`) using browser image sources (`ModelActorMaterialMap`: `{image, colorSpace?, flipY?,
+  color?}`, defaulting to `'srgb'` and `flipY: false`), preserving stage fog and Surface modes; pass `null` to restore
+  the file's own materials and free uploaded clones and textures. Refused for an unknown actor, a terrain, a runtime
+  material profile or an actor drawn by a surface set (and a description refuses switching an actor to a surface set
+  while material maps are active).
+- `resetCamera()` returns a view the person orbited (or a per-frame camera pose) to the described framing, restoring
+  `MODEL_STAGE.fieldOfView` for `focus` and `all`.
 - `snapshot()` reports the focused actor at the top level (`animation`, `time`, `playing`, `hold`, `display`,
   `boneCount`, `parts`, `poses`, `surfaceMode`, `surfaceModesAvailable`, the emission and visibility counts) and
   every actor under `actors`, each with its `driver` (`'host'` or `'engine'`), `pose` and applied `samples`.

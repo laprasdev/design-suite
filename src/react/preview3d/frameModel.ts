@@ -1,7 +1,9 @@
 import type {ModelStageActor, ModelStageActorSet} from './actorModel.ts';
 import {MODEL_ACTOR_REFUSAL as refusal, modelActorDrawsFile, modelRuntimeAssetProfile} from './actorModel.ts';
-import {MODEL_PREVIEW_ENTITY_REFUSAL, modelPreviewEntity, type ModelPreviewEntity} from './presentation.ts';
+import {MODEL_PREVIEW_ENTITY_REFUSAL, modelPreviewCamera, modelPreviewEntity,
+  type ModelPreviewCamera, type ModelPreviewEntity} from './presentation.ts';
 import {isNonEmptyString as named, isRecord as object} from '../../valueChecks.ts';
+import {modelStates} from './recordModel.ts';
 import {ModelStageRefusal} from './refusal.ts';
 import type {ModelSurfaceSet} from './surfaceModel.ts';
 import {modelSurfaceTakes, type ModelSurfaceTakes} from './surfaceOutputModel.ts';
@@ -13,6 +15,7 @@ import type {ModelRuntimeMaterialProfile} from './runtimeMaterialModel.ts';
 export interface ModelPreviewFrame {
   readonly simulationTimeSeconds: number;
   readonly entities: readonly ModelPreviewEntity[];
+  readonly camera?: ModelPreviewCamera;
 }
 /** What a frame is checked against: the declared actors and, by actor id, what each one's renderers take. */
 export interface ModelFrameScope {
@@ -58,5 +61,7 @@ export function modelPreviewFrame(value: unknown, scope: ModelFrameScope): Model
     seen.add(id);
     return modelPreviewEntity(entity, actor.asset.id, scope.takes.get(id));
   });
-  return Object.freeze({simulationTimeSeconds: time, entities: Object.freeze(entities)});
+  const camera = modelStates(value, 'camera') ? modelPreviewCamera(value.camera) : undefined;
+  return Object.freeze({simulationTimeSeconds: time, entities: Object.freeze(entities),
+    ...(camera !== undefined && {camera})});
 }

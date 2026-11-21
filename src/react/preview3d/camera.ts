@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import type {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {MODEL_STAGE as settings} from './model.ts';
 import {MODEL_STAGE_FRAMING, type ModelStageFraming} from './framingModel.ts';
+import type {ModelPreviewCamera} from './presentation.ts';
 
 type CameraControls = Pick<OrbitControls, 'target' | 'enabled' | 'update'>
   & Partial<Pick<OrbitControls, 'maxDistance'>>;
@@ -13,6 +14,19 @@ export function createModelFraming(camera: THREE.PerspectiveCamera, controls: Ca
   let fitRequested = true, held = false;
   // The orbit's reach never stops short of the framed distance, so the controls never pull the framing in.
   const reach = (distance: number) => {if (maximum !== undefined) controls.maxDistance = Math.max(maximum, distance);};
+  const setFieldOfView = (fieldOfView: number) => {
+    if (camera.fov === fieldOfView) return;
+    camera.fov = fieldOfView;
+    camera.updateProjectionMatrix();
+  };
+  const applyPose = (next: ModelPreviewCamera) => {
+    camera.position.fromArray(next.position);
+    controls.target.fromArray(next.target);
+    setFieldOfView(next.fieldOfView ?? settings.fieldOfView);
+    reach(camera.position.distanceTo(controls.target));
+    camera.lookAt(controls.target);
+    camera.updateMatrixWorld(true);
+  };
   // Nor does the far plane stop short of the far side of what the fit framed: a wide fit on a narrow view stands the
   // camera further off than the stage's own far plane reaches, which would draw nothing.
   const depth = (distance: number) => {
@@ -21,16 +35,20 @@ export function createModelFraming(camera: THREE.PerspectiveCamera, controls: Ca
   };
   return {
     requestFit() {if (!held) fitRequested = true;},
+    pose(next: ModelPreviewCamera) {
+      held = true;
+      fitRequested = false;
+      applyPose(next);
+    },
     frame(framing: ModelStageFraming, orbit: boolean) {
       controls.enabled = orbit;
       held = framing.kind === MODEL_STAGE_FRAMING.pose;
       fitRequested = !held;
-      if (framing.kind !== MODEL_STAGE_FRAMING.pose) return;
-      camera.position.fromArray(framing.position);
-      controls.target.fromArray(framing.target);
-      reach(camera.position.distanceTo(controls.target));
-      camera.lookAt(controls.target);
-      camera.updateMatrixWorld(true);
+      if (framing.kind !== MODEL_STAGE_FRAMING.pose) {
+        setFieldOfView(settings.fieldOfView);
+        return;
+      }
+      applyPose(framing);
     },
     /** Fits what is drawn, measured only when a fit is due. */
     fit(measure: () => THREE.Box3) {

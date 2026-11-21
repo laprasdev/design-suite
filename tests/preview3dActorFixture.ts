@@ -11,7 +11,7 @@ import {modelFrameScope} from '../src/react/preview3d/frameModel.ts';
 import {createModelSurfaceMaterials} from '../src/react/preview3d/surfaceMaterials.ts';
 import {createModelStageSharedValues} from '../src/react/preview3d/sharedValues.ts';
 import {MODEL_ACTOR_ANIMATION, MODEL_ANIMATION_LAYER, MODEL_STAGE_DISPLAY, MODEL_STAGE_FRAMING, MODEL_STAGE_ORIGIN,
-  MODEL_STAGE_SIZE, MODEL_STAGE_SURFACE_MODE, MODEL_STAGE_THEME_LIGHTING, modelStagePolicy,
+  MODEL_STAGE_SIZE, MODEL_STAGE_SURFACE_MODE, MODEL_STAGE_THEME_LIGHTING, ModelStageRefusal, modelStagePolicy,
   type ModelFileActor, type ModelStageActor, type ModelStageClock, type ModelStageLook, type ModelStageTheme}
   from '../src/react/preview3d/model.ts';
 
@@ -89,6 +89,13 @@ export const entity = (entityId: string, animationLayers: unknown[] = [], positi
 export const frame = (simulationTimeSeconds: number, ...entities: unknown[]) => ({simulationTimeSeconds, entities});
 export const close = (actual: number, expected: number, tolerance = 1e-6) =>
   {if (Math.abs(actual - expected) > tolerance) throw new Error(`Expected ${expected}, read ${actual}.`);};
+export function refused(run: () => unknown, pattern?: RegExp) {
+  try {run();} catch (error) {
+    if (error instanceof ModelStageRefusal && (!pattern || pattern.test(error.message))) return;
+    throw error;
+  }
+  throw new Error('Expected a ModelStageRefusal.');
+}
 // A whole stage look with neutral lighting and no post effects; a test overrides the parts it is about.
 export const stageLook = (changes: Partial<ModelStageLook> = {}): ModelStageLook => ({
   backdrop: [0, 0, 0], key: {color: [1, 1, 1], strength: 1, direction: [0, 1, 0]},

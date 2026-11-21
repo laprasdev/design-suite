@@ -1,6 +1,8 @@
-import {modelPresentationPose, modelPresentationVector, type ModelPresentationPose} from './placementModel.ts';
+import {modelPresentationPose, modelPresentationVector, type ModelPresentationPose, type ModelVector}
+  from './placementModel.ts';
 import {ModelStageRefusal} from './refusal.ts';
 import {isRecord as object} from '../../valueChecks.ts';
+import {modelStates} from './recordModel.ts';
 import {modelMaterialOutputs} from './runtimeMaterialModel.ts';
 import type {ModelMaterialOutput, ModelRuntimeMaterialProfile} from './runtimeMaterialModel.ts';
 import {modelSurfaceOutputs, type ModelSurfaceTakes} from './surfaceOutputModel.ts';
@@ -43,7 +45,14 @@ export function modelPreviewEntity(value: unknown, modelId: string,
       modelMaterialOutputs(value.materials, materials)});
 }
 
-export function modelPreviewCamera(value: unknown) {
+/** A camera pose: eye position, look-at target, and optional vertical field of view in degrees within (0, 180). */
+export interface ModelPreviewCamera {
+  readonly position: ModelVector;
+  readonly target: ModelVector;
+  readonly fieldOfView?: number;
+}
+
+export function modelPreviewCamera(value: unknown): ModelPreviewCamera {
   if (!object(value)) throw new ModelStageRefusal('A complete preview camera is required.');
   const position = modelPresentationVector(value.position, 'camera position');
   const target = modelPresentationVector(value.target, 'camera target');
@@ -51,5 +60,10 @@ export function modelPreviewCamera(value: unknown) {
   if (!(distance > 0) || !Number.isFinite(distance)) {
     throw new ModelStageRefusal('Camera position and target must be distinct.');
   }
-  return Object.freeze({position, target});
+  if (!modelStates(value, 'fieldOfView')) return Object.freeze({position, target});
+  const {fieldOfView} = value;
+  if (typeof fieldOfView !== 'number' || !Number.isFinite(fieldOfView) || fieldOfView <= 0 || fieldOfView >= 180) {
+    throw new ModelStageRefusal('camera fieldOfView must be a finite number strictly between 0 and 180.');
+  }
+  return Object.freeze({position, target, fieldOfView});
 }

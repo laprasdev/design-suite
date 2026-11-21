@@ -7,16 +7,19 @@ import {applyModelTransform, disposeModelObject, modelObjectBounds, modelParts, 
 import {createModelRig} from './rig.ts';
 import {createModelPlayback} from './playback.ts';
 import type {ModelStageChanges, ModelSurfaceModes} from './materials.ts';
+import {createModelActorMaterialMaps} from './actorMaterialMaps.ts';
 import {createModelActorSurfaces, type ModelActorSurfacesContext} from './actorSurfaces.ts';
 import {markModelStageAids} from './layers.ts';
 import {MODEL_STAGE_DRIVER, modelActorDrawsFile, modelActorHost} from './actorModel.ts';
 import type {ModelDrawn} from './drawn.ts';
 import type {ModelStageActor, ModelStageActorSnapshot, ModelStageDriver} from './actorModel.ts';
 import {modelPreviewFrame, type ModelFrameScope} from './frameModel.ts';
-import type {ModelPreviewEntity} from './presentation.ts';
+import {modelActorMaterialMaps} from './materialMapModel.ts';
+import type {ModelPreviewCamera, ModelPreviewEntity} from './presentation.ts';
 import {modelStageCommit, prepareWhole, type ModelStageCommit} from './commit.ts';
 import {ModelStageRefusal} from './refusal.ts';
 import {extendModelMaterials} from './shading.ts';
+import {MODEL_ACTOR_SURFACES} from './surfaceModel.ts';
 
 // What every actor shares from its stage: the policy, the theme, the scene it joins, the lighting of its aids and the
 // changes its file's materials take.
@@ -34,7 +37,14 @@ export interface ModelActorContext {
 }
 /** How an actor's model sits in its placement: the stage's size rule and origin. */
 export interface ModelActorSizing {readonly size: ModelStageSize; readonly origin: ModelStageOrigin}
-export const MODEL_ACTOR_TEXT = Object.freeze({unlit: 'Runtime presentation requires lit materials.'});
+export const MODEL_ACTOR_TEXT = Object.freeze({
+  unlit: 'Runtime presentation requires lit materials.',
+  unknownActor: (id: string) => `Actor ${id || '(unnamed)'} names no declared actor.`,
+  terrainMaps: (id: string) => `Actor ${id} is a terrain; material maps apply only to file actors.`,
+  surfaceSetMaps: (id: string) => `Actor ${id} is drawn by a surface set; material maps apply only to file materials.`,
+  runtimeProfileMaps: (id: string) =>
+    `Actor ${id} uses a runtime material profile; material maps apply only to file materials.`,
+});
 /** A renderable's one visible value: authored, not hidden by the Rig display, and not hidden by the engine. */
 export const modelRenderableVisible = (authored: boolean, display: ModelStageDisplay, engineHidden: boolean) =>
   authored && display !== MODEL_STAGE_DISPLAY.rig && !engineHidden;
@@ -50,7 +60,9 @@ export function createModelActor(drawn: ModelDrawn, declaration: ModelStageActor
     const points = modelParts(drawn, context.theme);
     acquired.push(() => points.forEach(({marker}) => {marker.removeFromParent(); disposeModelObject(marker);}));
     extendModelMaterials(drawn.scene, context.changes);
-    const surfaces = createModelActorSurfaces(drawn, id, context.surfaces);
+    const materialMaps = createModelActorMaterialMaps(drawn.scene);
+    acquired.push(() => materialMaps.dispose());
+    const surfaces = createModelActorSurfaces(drawn, id, context.surfaces, () => materialMaps.active);
     acquired.push(() => surfaces.dispose());
     const runtimeMaterials = drawn.runtimeMaterials?.();
     if (runtimeMaterials) acquired.push(() => runtimeMaterials.dispose());
@@ -98,6 +110,16 @@ export function createModelActor(drawn: ModelDrawn, declaration: ModelStageActor
       get declaration() {return current;},
       get driver() {return driver;},
       setDisplay(value: ModelStageDisplay) {rig.setDisplay(value); showRenderables();},
+      setMaterialMaps(maps: unknown) {
+        if (!modelActorDrawsFile(declaration)) throw new ModelStageRefusal(MODEL_ACTOR_TEXT.terrainMaps(id));
+        const surfaceFrom = surfaces.from ?? (modelActorDrawsFile(current) ? current.surfaces.from :
+          MODEL_ACTOR_SURFACES.set);
+        if (surfaceFrom === MODEL_ACTOR_SURFACES.set) {
+          throw new ModelStageRefusal(MODEL_ACTOR_TEXT.surfaceSetMaps(id));
+        }
+        if (runtimeMaterials) throw new ModelStageRefusal(MODEL_ACTOR_TEXT.runtimeProfileMaps(id));
+        materialMaps.apply(modelActorMaterialMaps(maps, `Actor ${id} materialMaps`));
+      },
       get sizing() {return sizing;},
       prepareSizing,
       /** What the actor draws in its display: the model, its rig, or both. */
@@ -135,14 +157,27 @@ export function createModelActor(drawn: ModelDrawn, declaration: ModelStageActor
 }
 export type ModelActor = ReturnType<typeof createModelActor>;
 
-// Validate the frame and prepare every named actor before any commits: a refusal leaves every actor as it was. An
-// actor the frame does not name keeps what it shows.
-export function applyModelFrame(actors: readonly ModelActor[], scope: ModelFrameScope, value: unknown) {
+// Validate the frame and prepare every named actor before any commits: a refusal leaves every actor and the camera as
+// they were. An actor the frame does not name keeps what it shows.
+export function applyModelFrame(actors: readonly ModelActor[], scope: ModelFrameScope, value: unknown,
+  onCamera?: (camera: ModelPreviewCamera) => void) {
   const accepted = modelPreviewFrame(value, scope);
   const named = new Map(accepted.entities.map(entity => [entity.entityId, entity]));
-  prepareWhole(actors.flatMap(actor => {
+  const prepares = actors.flatMap(actor => {
     const entity = named.get(actor.id);
     return entity ? [() => actor.prepare(entity)] : [];
-  }))();
+  });
+  if (accepted.camera && onCamera) {
+    const {camera} = accepted;
+    prepares.push(modelStageCommit(() => onCamera(camera)));
+  }
+  prepareWhole(prepares)();
   return accepted.simulationTimeSeconds;
+}
+
+/** Applies or clears per-actor material-map overrides for one declared file actor, refusing invalid routes or data. */
+export function applyModelActorMaterialMaps(actors: readonly ModelActor[], actorId: string, maps: unknown) {
+  const actor = actors.find(entry => entry.id === actorId);
+  if (!actor) throw new ModelStageRefusal(MODEL_ACTOR_TEXT.unknownActor(actorId));
+  actor.setMaterialMaps(maps);
 }
