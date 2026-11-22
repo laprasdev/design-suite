@@ -1,11 +1,10 @@
 import { RoutingDimensions } from './routingLayout.ts';
 import { PageShellDimensions } from './pageShellLayout.ts';
-import { MODULE_TEXT_SIZE, ModuleGridDimensions } from './moduleGridLayout.ts';
-import { PHI, PHI_CUBED } from './goldenRatio.ts';
+import { ICON_CHOICE_BOX, ICON_CHOICE_GLYPH, ModuleGridDimensions } from './moduleGridLayout.ts';
+import { PHI_CUBED } from './goldenRatio.ts';
 
 export { PHI, PHI_INVERSE, PHI_SQUARED, PHI_CUBED } from './goldenRatio.ts';
-
-const ICON_CHOICE_BOX = Math.ceil(MODULE_TEXT_SIZE * PHI), ICON_CHOICE_GLYPH = ICON_CHOICE_BOX / PHI;
+export { MODULE_TEXT_SIZE, TEXT_FLOOR } from './moduleGridLayout.ts';
 
 export const Relativity = {
   PhiInverse: 0.618, // ~61.8% - larger portion
@@ -179,7 +178,7 @@ export const LayoutDimensions = {
   // A module on the four-column grid: its fixed size in the rack, and how it fills a page's tile
   moduleGrid: {
     ...ModuleGridDimensions,
-    iconChoiceBox: ICON_CHOICE_BOX, // φ of its glyph, so the glyph is never under a module's words
+    iconChoiceBox: ICON_CHOICE_BOX,
     iconChoiceGlyph: ICON_CHOICE_GLYPH,
   },
 

@@ -2,7 +2,7 @@
   "scope": {"dirs":["."],"files":[],"extensions":[".ts",".tsx",".mts",".cts",".js",".jsx",".mjs",".cjs"],"skip":{"directories":[],"suffixes":[]}},
   "files": {
     "src/color.ts": {"lines":205,"longLines":1},
-    "src/layout.ts": {"lines":245,"longLines":0},
+    "src/layout.ts": {"lines":244,"longLines":0},
     "src/react/Bar.tsx": {"lines":17,"longLines":2},
     "src/react/BarParticipants.tsx": {"lines":50,"longLines":12},
     "src/react/CaretButton.tsx": {"lines":32,"longLines":1},
