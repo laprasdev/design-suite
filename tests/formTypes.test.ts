@@ -53,7 +53,7 @@ const MODAL_SHAPES: readonly TypeContract[] = [
     `${AT_POINT} popover={{at: {x: 0, y: 0}}}`, `${AT_POINT} popover={${PLACED}}`]},
 ];
 
-describe('a Modal\'s width, frame inset and top at the type check', () => {
+describe('a Modal\'s placement and form at the type check', () => {
   for (const shape of MODAL_SHAPES) {
     it(`takes ${shape.accepted} and refuses ${shape.refused.join(' or ')}`, () => {
       const usage = (value: string) => `import {${MODAL_NAMES}, type PopoverPlacement} from ${REACT_ENTRY};\n`
