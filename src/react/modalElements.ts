@@ -44,10 +44,7 @@ export type ModalAnchor=RefObject<HTMLElement|null>|CssPoint;
 // Where a popover goes beside its anchor. The anchor names the point, so this placement refuses an `at`.
 export type PopoverPlacementBesideAnchor=Omit<PopoverPlacement,'at'>&{at?: never};
 // An anchored Modal's anchor and where its panel goes beside it: what its anchored layer reads.
-export interface AnchoredPlacement {
- readonly anchor: ModalAnchor;
- readonly popover?: PopoverPlacementBesideAnchor;
-}
+export type AnchoredPlacement={anchor: ModalAnchor;popover?: PopoverPlacementBesideAnchor};
 // An anchored Modal also names a group, of which one is open at a time.
 type Anchored=AnchoredPlacement&{group?: string};
 type NotAnchored={[Key in keyof Anchored]?: never};
