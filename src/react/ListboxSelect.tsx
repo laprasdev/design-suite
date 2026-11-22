@@ -71,7 +71,7 @@ export function ListboxSelect<V extends string|number>(props: ListboxSelectProps
  const run=props.form===ListboxForm.MENU?props.onAction:props.onChange;
  const roles=LISTBOX_FORM_ROLES[form];
  const id=useId(),listId=`${id}-list`,optionId=(index: number)=>`${id}-option-${index}`;
- const trigger=useRef<HTMLButtonElement>(null),panel=useRef<HTMLDivElement>(null),input=useRef<HTMLInputElement>(null),search=useRef<TypeaheadSearch>({text:'',at:0});
+ const trigger=useRef<HTMLButtonElement>(null),input=useRef<HTMLInputElement>(null),search=useRef<TypeaheadSearch>({text:'',at:0});
  const [open,setOpen]=useState(false),[active,setActive]=useState(0),[query,setQuery]=useState(''),[list,setList]=useState<HTMLUListElement|null>(null);
  const shown=searchSubject?options.filter(option=>matchesOption(option.searchText??option.label,query)):options;
  const labels=shown.map(option=>option.label);
@@ -117,7 +117,7 @@ export function ListboxSelect<V extends string|number>(props: ListboxSelectProps
    aria-activedescendant={activeOn==='trigger'?optionId(active):undefined}
    disabled={disabled} onClick={()=>open?setOpen(false):show(start)} onKeyDown={open?openKey:closedKey}>{triggerContent}</button>
   {open&&<Modal open placement={ModalPlacement.ANCHORED} anchor={trigger} popover={{above,scroll:false}}
-   onClose={settle} panelRef={panel} role="presentation" className={ListboxElement.POPOVER.className}
+   onClose={settle} role="presentation" className={ListboxElement.POPOVER.className}
    data-icon-only={iconOnly||undefined}>
    {searchSubject&&<SearchField density={Density.COMPACT} size={searchSize}
     style={searchSize?{width:`calc(${searchSize}ch + 2 * var(--field-gap))`}:undefined} ref={input}
