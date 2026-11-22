@@ -20,7 +20,7 @@ export function FieldName({ label, icon, emphasis, onName, nameLabel, nameTitle,
   const style = useStyle().getEffectiveStyle();
   const set = emphasis === FieldEmphasis.SET, inert = emphasis === FieldEmphasis.INERT;
   const nameStyle: React.CSSProperties = {
-    ...T.moduleLabel, display: 'inline-flex', alignItems: 'center', justifyContent: align, gap: G.nameIconGap,
+    ...T.label, display: 'inline-flex', alignItems: 'center', justifyContent: align, gap: G.nameIconGap,
     textTransform: 'uppercase', textAlign: align, transition: TransitionKeys.fast,
     color: set ? style.primaryColor : hexToRgba(style.textColor, O.high) };
   const content = <>{icon}{label}</>;

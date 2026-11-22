@@ -9,14 +9,18 @@ import { getColorScheme } from '../../../color.ts';
 // =====================================================
 
 type TitleColor = 'primary' | 'secondary' | 'text';
-type TitleSize = 'sm' | 'md' | 'lg';
 
 export interface TitleProps {
   children: React.ReactNode;
   className?: string;
   color?: TitleColor;
-  size?: TitleSize;
   glow?: boolean;
+}
+
+// A title's colour: the style's text colour, or the main tone of the named scheme.
+function useTitleColor(color: TitleColor): string {
+  const style = useStyle().getEffectiveStyle();
+  return color === 'text' ? style.textColor : getColorScheme(color, style).main;
 }
 
 // =====================================================
@@ -26,28 +30,15 @@ export function TitleBase({
   children, 
   className = '',
   color = 'primary',
-  size = 'sm',
   glow = false
 }: TitleProps) {
-  const { getEffectiveStyle } = useStyle();
-  const style = getEffectiveStyle();
-  
-  const textColor = color === 'text' 
-    ? style.textColor 
-    : getColorScheme(color, style).main;
-  
-  const fontSize = {
-    sm: D.spacing.tightGap + 1, // 9
-    md: D.spacing.itemGap - 2,  // 10
-    lg: D.spacing.itemGap      // 12
-  }[size];
-  
+  const textColor = useTitleColor(color);
+
   return (
     <div 
       className={className}
       style={{
         ...LayoutAPI.labelStyle(textColor),
-        fontSize,
         textShadow: glow ? `0 0 ${D.spacing.tightGap}px ${textColor}` : undefined
       }}
     >
@@ -70,13 +61,8 @@ export function ModuleTitleText({
   className = '',
   color = 'primary'
 }: ModuleTitleTextProps) {
-  const { getEffectiveStyle } = useStyle();
-  const style = getEffectiveStyle();
-  
-  const textColor = color === 'text' 
-    ? style.textColor 
-    : getColorScheme(color, style).main;
-  
+  const textColor = useTitleColor(color);
+
   return (
     <div 
       className={className}

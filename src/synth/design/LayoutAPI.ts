@@ -13,7 +13,7 @@ import { DisplayMode, type DisplayModeValue, ContainerType, type ContainerTypeVa
 
 // Re-export everything for single import
 export { LayoutDimensions, CompactDimensions, SCALE, sc, setScale } from '../../layout.ts';
-export { Shadows, Typography, Opacity, ContainerStyles, Borders } from '../../tokens.ts';
+export { TEXT_FLOOR, Shadows, Typography, Opacity, ContainerStyles, Borders } from '../../tokens.ts';
 export { FlexKeys, PositionKeys, CursorKeys, TransformKeys, TransitionKeys, Units, CommonStrings } from './KeysPaths.ts';
 export { DisplayMode, ContainerType, createBorder } from './constants/index.ts';
 export type { DisplayModeValue, ContainerTypeValue } from './constants/index.ts';
@@ -147,18 +147,8 @@ export const LayoutAPI = {
 
   // Label text style
   labelStyle: (color: string): React.CSSProperties => ({
-    fontSize: T.label.fontSize,
-    fontWeight: T.label.fontWeight,
-    letterSpacing: T.label.letterSpacing,
+    ...T.label,
     textTransform: TransformKeys.uppercase as 'uppercase',
-    color
-  }),
-
-  // Value text style
-  valueStyle: (color: string): React.CSSProperties => ({
-    fontSize: T.value.fontSize,
-    fontWeight: T.value.fontWeight,
-    letterSpacing: T.value.letterSpacing,
     color
   }),
 
@@ -168,14 +158,6 @@ export const LayoutAPI = {
     fontWeight: T.title.fontWeight,
     letterSpacing: T.title.letterSpacing,
     textTransform: TransformKeys.uppercase as 'uppercase',
-    color
-  }),
-
-  // Small text style
-  smallStyle: (color: string): React.CSSProperties => ({
-    fontSize: T.small.fontSize,
-    fontWeight: T.small.fontWeight,
-    letterSpacing: T.small.letterSpacing,
     color
   }),
 

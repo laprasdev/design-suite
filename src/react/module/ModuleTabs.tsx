@@ -22,7 +22,7 @@ export function ModuleTabs<Id extends string>({tabs, value, onChange, ariaLabel,
           color: primaryColor, opacity: tab.authored || tab.id === value ? O.full : O.low},
         label: <span style={{display: 'flex', alignItems: 'center', gap: D.moduleGrid.fieldGap}}>
           {tab.content}{labelActive && tab.id === value &&
-            <span style={{...T.moduleLabel, textTransform: 'uppercase'}}>{tab.label}</span>}
+            <span style={{...T.label, textTransform: 'uppercase'}}>{tab.label}</span>}
         </span>,
       }))}/>
   </div>;

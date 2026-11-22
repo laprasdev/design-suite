@@ -23,7 +23,11 @@ export interface ModelStageLook {
   readonly toneCurve: ModelStageToneCurve | null;
   /** The time's glow, or null for none: what is brighter than the threshold blooms (draw.ts). */
   readonly glow: ModelStageGlow | null;
+  /** The light the frame is scaled by before its tone curve, greater than 0; 1 leaves it as drawn. */
+  readonly exposure: number;
 }
+/** What the canvas's output takes from a look: its curve, its exposure and its glow. */
+export type ModelStageOutput = Pick<ModelStageLook, 'toneCurve' | 'exposure' | 'glow'>;
 /** The tone curves the stage can draw: the one it has always used. */
 export const MODEL_STAGE_TONE_CURVE = Object.freeze({acesFilmic: 'aces-filmic'} as const);
 export type ModelStageToneCurve = typeof MODEL_STAGE_TONE_CURVE[keyof typeof MODEL_STAGE_TONE_CURVE];
@@ -42,7 +46,7 @@ export interface ModelStageFog {
   readonly height: {readonly base: number; readonly top: number; readonly strength: number} | null;
 }
 export const MODEL_STAGE_LOOK_FIELDS = Object.freeze({
-  look: ['backdrop', 'key', 'ambient', 'shadow', 'night', 'aids', 'fog', 'toneCurve', 'glow'],
+  look: ['backdrop', 'key', 'ambient', 'shadow', 'night', 'aids', 'fog', 'toneCurve', 'glow', 'exposure'],
   key: ['color', 'strength', 'direction'], ambient: ['sky', 'ground', 'strength'], aids: ['floor', 'share'],
   fog: ['near', 'far', 'height'], reach: ['distance', 'color'], height: ['base', 'top', 'strength'],
   glow: ['threshold', 'strength', 'radius'],
@@ -96,6 +100,12 @@ function glow(value: unknown, where: string): ModelStageGlow | null {
     radius: modelNumber(record.radius, `${where}.radius`, 0, MODEL_STAGE_GLOW_WIDEST)});
 }
 
+function exposure(value: unknown, where: string): number {
+  const scale = modelNumber(value, where, 0, UNBOUNDED);
+  if (!(scale > 0)) throw new ModelStageRefusal(`${where} must be greater than 0.`);
+  return scale;
+}
+
 const toneCurve = (value: unknown, where: string): ModelStageToneCurve | null =>
   value === null ? null : modelOption(value, MODEL_STAGE_TONE_CURVE, `${where}.toneCurve`);
 
@@ -120,5 +130,6 @@ export function modelStageLook(value: unknown, where: string): ModelStageLook {
     fog: fog(look.fog, `${where}.fog`),
     toneCurve: toneCurve(look.toneCurve, `${where}`),
     glow: glow(look.glow, `${where}.glow`),
+    exposure: exposure(look.exposure, `${where}.exposure`),
   });
 }

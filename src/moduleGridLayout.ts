@@ -2,12 +2,11 @@
 // LayoutDimensions.moduleGrid is this, kept in its own file so layout.ts holds its size.
 import { PHI, PHI_INVERSE, PHI_SQUARED } from './goldenRatio.ts';
 
-// A module's words: every field name, value and label on a page's module.
-export const MODULE_TEXT_SIZE = 12;
-// The owner's text floor: nothing a page draws is smaller on screen, at any window size.
+// The owner's text floor, and a module's words: every field name, value and label on a page's module is drawn at it
+// on the design stage, and nothing a page draws is smaller on screen at any window size.
 export const TEXT_FLOOR = 10;
 // An icon choice's square, φ of a module's words, and its glyph, the square over φ: never under a module's words.
-export const ICON_CHOICE_BOX = Math.ceil(MODULE_TEXT_SIZE * PHI), ICON_CHOICE_GLYPH = ICON_CHOICE_BOX / PHI;
+export const ICON_CHOICE_BOX = Math.ceil(TEXT_FLOOR * PHI), ICON_CHOICE_GLYPH = ICON_CHOICE_BOX / PHI;
 // A knob on a page's module: one golden step below the 88 px it was first drawn at, as the owner asked, and one more
 // step below that at the least.
 const MODULE_KNOB = 88 / PHI;
@@ -60,7 +59,7 @@ export const ModuleGridDimensions = {
     nameIconHeight: 12,
     // A yes/no field as one line: its dot, drawn at the name's size, then the name. The line is as tall as a module
     // header's, which is what it gives to press.
-    yesNoDot: MODULE_TEXT_SIZE,
+    yesNoDot: TEXT_FLOOR,
     yesNoStroke: 1.5,
     yesNoDash: 2,
     yesNoLine: 29,

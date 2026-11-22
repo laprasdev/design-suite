@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useCallback, type ReactNode
 import { useStyle } from '../../StyleContext.tsx';
 import { hexToRgba } from '../../../color.ts';
 import { LAYOUT, TIMING } from '../../DesignSystem.ts';
+import { Typography as T } from '../../../tokens.ts';
 
 export type TooltipDescriptions = Readonly<Record<string, string>>;
 
@@ -110,7 +111,7 @@ export function TooltipDisplay() {
       overflow: 'hidden'
     }}>
       <span style={{
-        fontSize: '10px',
+        ...T.value,
         color: hexToRgba(style.textColor, 0.6),
         whiteSpace: 'nowrap',
         overflow: 'hidden',

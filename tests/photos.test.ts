@@ -67,7 +67,7 @@ describe('PhotoCompare inline form', () => {
     const rowRules = selectors(rows);
     const rowsForm = '.bd-compare[data-photo-form="rows"]';
     assert.ok(rowRules.length > 0 && rowRules.every(selector => selector.startsWith(rowsForm)));
-    assert.match(inline, /font-size: max\(12px,/);
+    assert.match(inline, /font-size: var\(--photo-compare-caption-size, var\(--type-caption\)\);/);
     const tokens = (section: string, names: string[]) =>
       names.every(name => section.includes(`--photo-compare-${name}`));
     assert.ok(tokens(inline, ['max-height', 'background', 'caption-size']));

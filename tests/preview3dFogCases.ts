@@ -49,7 +49,7 @@ const unlitSceneLook = (fog: ModelStageFog | null) => stageLook({
   ambient: {...DEFAULT_LOOK.ambient, strength: 0},
   aids: {floor: [0.1, 0.1, 0.1], share: 1},
   fog,
-  toneCurve: FOG_CURVE,
+  toneCurve: FOG_CURVE, exposure: 1,
 });
 
 export const CLEAR_TIME: ModelStageTime = Object.freeze({

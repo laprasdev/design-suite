@@ -109,9 +109,9 @@
 .bd-node-group .bd-node-group-heading {
   pointer-events:auto;position:absolute;z-index:1;top:0;left:0;right:0;justify-content:flex-start;
   --button-min-height:var(--bd-node-heading-height);--button-padding-inline:16px;
-  border:0;border-radius:0;font-size:14px;
+  border:0;border-radius:0;
 }
-.bd-node-group-heading .bd-label { display:flex;align-items:center;gap:8px;font-size:14px; }
+.bd-node-group-heading .bd-label { display:flex;align-items:center;gap:8px; }
 .bd-node-group-heading[data-moving] { cursor:grab;touch-action:none; }
 .bd-node-group-heading[data-moving]:active { cursor:grabbing; }
 .bd-edge-hit { fill:none;stroke:transparent;stroke-width:14;pointer-events:stroke;cursor:pointer; }
@@ -128,7 +128,7 @@
   position:absolute;z-index:3;display:flex;transform:translate(-50%,-160%);padding:4px;
   background:var(--bd-node-bg);border:1px solid var(--bd-node-border);border-radius:var(--bd-node-radius);
 }
-.bd-wire-actions .bd-label { display:flex;align-items:center;gap:6px;font-size:14px;white-space:nowrap; }
+.bd-wire-actions .bd-label { display:flex;align-items:center;gap:6px;white-space:nowrap; }
 .bd-wire-marquee { z-index:3; }
 
 .bd-wire-sweep { fill:none;stroke:var(--bd-accent);stroke-width:2;stroke-dasharray:4 4;pointer-events:none; }

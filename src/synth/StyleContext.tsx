@@ -50,13 +50,19 @@ function loadPersistedState(): Partial<PersistedStyleState> {
   return {};
 }
 
+// A fixed palette or initial skin starts the provider; otherwise the saved style does, only when it may be saved.
+function startingState(persist: boolean, initialStyleName?: string, palette?: string): Partial<PersistedStyleState> {
+  if (palette) return {};
+  if (initialStyleName) return {styleName: initialStyleName};
+  return persist ? loadPersistedState() : {};
+}
+
 export function StyleProvider({ children, persist = true, initialStyleName, palette, skin, documentStyles = true }: {
   children: ReactNode; persist?: boolean; initialStyleName?: string; palette?: string;
   skin?: ComponentSkin; documentStyles?: boolean;
 }) {
   if (initialStyleName && !SKIN_FILES[initialStyleName]) throw new Error(`Unknown initial skin: ${initialStyleName}`);
-  const [persisted] = useState<Partial<PersistedStyleState>>(() => palette ? {} : initialStyleName
-    ? {styleName: initialStyleName} : loadPersistedState());
+  const [persisted] = useState(() => startingState(persist, initialStyleName, palette));
 
   const [savedStyleName, setStyleNameState] = useState(persisted.styleName && SKIN_FILES[persisted.styleName]
     ? persisted.styleName : DEFAULT_SKIN);
@@ -141,7 +147,7 @@ export function StyleProvider({ children, persist = true, initialStyleName, pale
     return style;
   };
 
-  useDocumentPalette(getEffectiveStyle().primaryColor, documentStyles);
+  useDocumentPalette(getEffectiveStyle(), documentStyles);
 
   return (
     <StyleContext.Provider

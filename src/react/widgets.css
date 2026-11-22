@@ -4,19 +4,21 @@
    ============================================================================ */
 
 /* ---- accents (AccentKind) ---- */
-.bd-label { font-family:var(--font-chrome,inherit); letter-spacing:var(--label-tracking,normal);text-transform:var(--label-case,none); }
+.bd-label { font-family:var(--font-chrome,inherit); text-transform:var(--label-case,none); }
 .bd-label--name {
-  font-size: var(--label-name-size, 12px); font-weight: 700; letter-spacing: 0.05em;
+  font-size: var(--label-name-size); font-weight: var(--label-name-weight); letter-spacing: var(--label-name-tracking);
   text-transform: uppercase; color: var(--button-color,var(--color-dim, #82828e));
 }
 .bd-label--value {
-  font-size: var(--label-value-size,var(--type-control,12px)); font-weight: 700; color: var(--color-text, #f0f0f3);
+  font-size: var(--label-value-size); font-weight: var(--label-value-weight);
+  letter-spacing: var(--label-value-tracking); color: var(--color-text, #f0f0f3);
   font-variant-numeric: tabular-nums;
 }
 /* Button/label text — one source for action typography. Labels read in Title
    Case exactly as written; nothing is forced into capitals. */
 .bd-label--action {
-  font-size: var(--label-action-size, 12px); font-weight: var(--label-action-weight,700); color: inherit;
+  font-size: var(--label-action-size); font-weight: var(--label-action-weight);
+  letter-spacing: var(--label-action-tracking); color: inherit;
 }
 
 /* ---- Button (composes Label) ---- */
@@ -79,12 +81,12 @@
 .bd-month[data-fit] .bd-days { grid-auto-rows:var(--month-cell-size); }
 .bd-month[data-fit] .bd-day { aspect-ratio:1;min-height:0; }
 .bd-month-label {
-  font-size: 9px; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase;
+  font-size: var(--type-caption); font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase;
   color: var(--color-dim, #82828e); padding: 4px 2px 8px;
 }
 .bd-week-head { display: grid; grid-template-columns: repeat(7, 1fr); }
 .bd-weekday {
-  text-align: center; font-size: 8px; font-weight: 700; letter-spacing: 0.05em;
+  text-align: center; font-size: var(--type-caption); font-weight: 700; letter-spacing: 0.05em;
   text-transform: uppercase; color: var(--color-faint, #55555f); padding: 2px 0 4px;
 }
 .bd-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
@@ -233,7 +235,7 @@
 .bd-cycle[data-variant=text] .bd-cycle-val {color:inherit; font:inherit; letter-spacing:inherit;}
 .bd-cycle[data-variant=text]:disabled {cursor:default; opacity:.6;}
 
-.bd-btn--navigation {font-family:var(--navigation-font,inherit);font-size:var(--navigation-size,var(--type-caption,12px));font-weight:700;letter-spacing:var(--tracking-caps,.1em);text-transform:uppercase;width:100%;justify-content:space-between;gap:8px;padding:var(--navigation-padding,6px 8px);background:transparent;border:0;color:var(--navigation-color,var(--text));text-align:left;}
+.bd-btn--navigation {font-family:var(--navigation-font,inherit);font-size:var(--navigation-size,var(--type-caption));font-weight:700;letter-spacing:var(--tracking-caps,.1em);text-transform:uppercase;width:100%;justify-content:space-between;gap:8px;padding:var(--navigation-padding,6px 8px);background:transparent;border:0;color:var(--navigation-color,var(--text));text-align:left;}
 .bd-btn--navigation:is(:hover,[aria-current=true]) {color:var(--pink);}
 .bd-btn--navigation:focus-visible {outline:var(--line-width) solid var(--pink);outline-offset:-1px;}
 
@@ -244,7 +246,7 @@
 .bd-check .selection-mark[data-selected=false] {border-color:var(--check-color,var(--line));}
 .bd-check .selection-mark::after {content:var(--check-content,none);position:absolute;inset:var(--check-inset,3px);border-radius:1px;background:var(--check-fill);background-size:6px 6px;}
 
-.bd-label[data-label-form=pill] {font-size:var(--type-caption,12px);letter-spacing:.06em;text-transform:uppercase;color:var(--dim);border:var(--line-width) solid var(--line);border-radius:999px;padding:1px 7px;}
+.bd-label[data-label-form=pill] {text-transform:uppercase;color:var(--dim);border:var(--line-width) solid var(--line);border-radius:999px;padding:1px 7px;}
 .bd-label[data-label-form=pill][data-on=true] {color:var(--pink);border-color:var(--pink);}
 .bd-glyph[data-glyph-form=dot] {flex:none;display:inline-block;border-radius:50%;background:var(--signal-color,var(--faint));box-shadow:var(--signal-glow,none);}
 @media (prefers-reduced-motion:no-preference) {

@@ -93,7 +93,7 @@ export const close = (actual: number, expected: number, tolerance = 1e-6) =>
 export const stageLook = (changes: Partial<ModelStageLook> = {}): ModelStageLook => ({
   backdrop: [0, 0, 0], key: {color: [1, 1, 1], strength: 1, direction: [0, 1, 0]},
   ambient: {sky: [1, 1, 1], ground: [0, 0, 0], strength: 1}, shadow: [0, 0, 0], night: 0,
-  aids: {floor: [0, 0, 0], share: 1}, fog: null, toneCurve: null, glow: null, ...changes});
+  aids: {floor: [0, 0, 0], share: 1}, fog: null, toneCurve: null, glow: null, exposure: 1, ...changes});
 // A whole stage description with one declared actor a; a test overrides the parts it is about.
 export const describing = (changes: Record<string, unknown> = {}) => ({
   actors: {focus: 'a', actors: [declaration('a')]}, environment: null, framing: {kind: MODEL_STAGE_FRAMING.focus},

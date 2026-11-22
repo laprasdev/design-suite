@@ -21,8 +21,9 @@ export {MODEL_PREVIEW_LIGHTING_TEXT, MODEL_STAGE_BUILT_IN_TIMES, MODEL_STAGE_THE
   modelStageLighting, modelStageTimeOptions} from './lightingModel.ts';
 export type {ModelStageLighting, ModelStageTime} from './lightingModel.ts';
 export {MODEL_STAGE_GLOW_WIDEST, MODEL_STAGE_TONE_CURVE} from './lookModel.ts';
-export type {ModelStageFog, ModelStageGlow, ModelStageLook, ModelStageToneCurve} from './lookModel.ts';
+export type {ModelStageFog, ModelStageGlow, ModelStageLook, ModelStageOutput, ModelStageToneCurve} from './lookModel.ts';
 export type {ModelColor} from './colorModel.ts';
+export {modelColorOfHex} from './colorModel.ts';
 // A surface kind's declaration, records and sets, and what a frame's renderers take: checked here with no renderer,
 // by a host, a scene package or a kind's author.
 export {MODEL_SURFACE_PARAMETER, MODEL_COLOR_SPACE, MODEL_SURFACE_LIGHT, MODEL_SURFACE_COVERAGE, MODEL_SURFACE_SIDE,
@@ -93,7 +94,7 @@ export const MODEL_PREVIEW_DISPLAY_OPTIONS = Object.freeze([
 ] satisfies {value: ModelStageDisplay; label: string}[]);
 
 export const MODEL_STAGE = Object.freeze({
-  pixelRatioLimit: 2, fieldOfView: 38, nearPlane: 0.01, farPlane: 100,
+  pixelRatioLimit: 2, fieldOfView: 38, nearPlane: 0.01, farPlane: 800,
   cameraMinimum: 1, cameraMaximum: 16, cameraDirection: [0.75, 0.4, 1], fitPadding: 1.4,
   floorRadius: 4, floorSegments: 64, floorOffset: -0.025, gridSize: 8, gridDivisions: 16,
   normalizedHeight: 2, markerRadius: 0.035, markerSegments: 12, jointRadiusRatio: 0.008, jointSegments: 8,
