@@ -1,7 +1,7 @@
 import {element} from '../elementContract.ts';
 import type {ModelStageSurfaceMode} from './surfaceModeModel.ts';
 import type {ModelStageActorSnapshot} from './actorModel.ts';
-import type {ModelPreviewFrame, ModelValidatedFrame} from './frameModel.ts';
+import type {ModelValidatedFrame} from './frameModel.ts';
 import type {ModelStageDescription} from './descriptionModel.ts';
 import type {ModelRotation, ModelVector} from './placementModel.ts';
 import {MODEL_STAGE_DISPLAY, type ModelStageDisplay} from './displayModel.ts';
@@ -41,9 +41,10 @@ export type {ModelActorSurfaces, ModelSurfaceEntry, ModelSurfaceRecord, ModelSur
   ModelSurfaceSource, ModelSurfaceWhere, ModelSurfaceValue} from './surfaceModel.ts';
 export {MODEL_RENDERER_SLOT, MODEL_SURFACE_OUTPUT_REFUSAL, modelSurfaceTakes} from './surfaceOutputModel.ts';
 export type {ModelSurfaceTakes} from './surfaceOutputModel.ts';
-export {modelFrameScope, modelPreviewFrame} from './frameModel.ts';
+export {modelFrameScope, modelPreviewFrame, validateModelFrame} from './frameModel.ts';
 export type {ModelFrameScope, ModelPreviewFrame, ModelValidatedFrame} from './frameModel.ts';
-export {MODEL_PREVIEW_CAMERA_REFUSAL, MODEL_PREVIEW_CAPABILITIES, modelPreviewCamera, modelPreviewEntity}
+export {createModelFrameInbox, MODEL_FRAME_INBOX_TEXT, type ModelFrameStatus} from './frameInbox.ts';
+export {CAMERA_COORDS, MODEL_PREVIEW_CAMERA_REFUSAL, MODEL_PREVIEW_CAPABILITIES, modelPreviewCamera, modelPreviewEntity}
   from './presentation.ts';
 export {modelPoseForBinding, MODEL_PREVIEW_QUATERNION_TOLERANCE} from './placementModel.ts';
 export type {ModelVector, ModelRotation, ModelPresentationPose, ModelPoseBinding} from './placementModel.ts';
@@ -172,8 +173,8 @@ export interface ModelStageController {
    * rejects when they cannot be shown, and the previous description then stands.
    */
   setDescription(value: ModelStageDescription): Promise<void>;
-  /** Applies one host-built frame to every actor it names, or refuses it whole before anything changes. */
-  setFrame(value: ModelPreviewFrame | ModelValidatedFrame): void;
+  /** Applies one validated frame (`validateModelFrame` or `createModelFrameInbox`), or refuses it whole. */
+  setFrame(value: ModelValidatedFrame): void;
   /** An action, not state: returns a view the person orbited to the described framing, a held pose or a fresh fit. */
   resetCamera(): void;
   snapshot(): ModelStageSnapshot;

@@ -4,12 +4,14 @@ import {CAMERA_COORDS, freezeModelPreviewCamera, MODEL_PREVIEW_CAMERA_FIELDS, MO
   modelPreviewCameraWhere, modelPreviewEntity, readModelPreviewCamera,
   type ModelPreviewCamera, type ModelPreviewEntity} from './presentation.ts';
 import {isNonEmptyString as named, isRecord as object} from '../../valueChecks.ts';
-import {modelRecordIdentity, modelRecordStating, modelStates} from './recordModel.ts';
+import {modelRecordStating, modelStates} from './recordModel.ts';
 import {ModelStageRefusal} from './refusal.ts';
 import type {ModelSurfaceSet} from './surfaceModel.ts';
 import {modelSurfaceTakes, type ModelSurfaceTakes} from './surfaceOutputModel.ts';
 import type {ModelSurfaceKind} from './surfaceKindModel.ts';
 import type {ModelRuntimeMaterialProfile} from './runtimeMaterialModel.ts';
+
+const VALIDATED_FRAME: unique symbol = Symbol('ModelValidatedFrame');
 
 // An engine frame as the stage takes it: what it is checked against (the description in force), and the check.
 // The stage's own frame, built by the host: every entity names a declared actor, so an unknown id is refused.
@@ -18,8 +20,9 @@ export interface ModelPreviewFrame {
   readonly entities: readonly ModelPreviewEntity[];
   readonly camera?: ModelPreviewCamera;
 }
-/** A validated frame ready for the stage to apply without re-reading or allocating a frozen camera record. */
+/** A validated frame produced only by `validateModelFrame`, ready to apply without re-reading or freezing a camera. */
 export interface ModelValidatedFrame {
+  readonly [VALIDATED_FRAME]: true;
   readonly simulationTimeSeconds: number;
   readonly entities: readonly ModelPreviewEntity[];
   readonly cameraCoordinates: Float64Array | null;
@@ -29,8 +32,9 @@ export interface ModelFrameScope {
   readonly actors: readonly ModelStageActor[];
   readonly takes: ReadonlyMap<string, ModelRuntimeMaterialProfile | ModelSurfaceTakes>;
 }
-const scopeKeys = new WeakMap<ModelFrameScope, string>();
-const validatedFrames = new WeakMap<object, {readonly frame: ModelValidatedFrame; readonly scopeKey: string}>();
+
+export const isModelValidatedFrame = (value: unknown): value is ModelValidatedFrame =>
+  typeof value === 'object' && value !== null && VALIDATED_FRAME in value && value[VALIDATED_FRAME] === true;
 
 /** A description's frame scope, made once when it is applied: an actor with a runtime profile takes through it (the
  * description refuses one with a set too), every other one through its surfaces. */
@@ -38,32 +42,12 @@ export function modelFrameScope(value: {readonly actors: ModelStageActorSet;
   readonly surfaceSets: Readonly<Record<string, ModelSurfaceSet>>},
 kinds: ReadonlyMap<string, ModelSurfaceKind>): ModelFrameScope {
   const {actors} = value.actors;
-  const takes = new Map(actors.filter(modelActorDrawsFile).map(actor => [actor.id,
-    modelRuntimeAssetProfile(actor) ?? modelSurfaceTakes(actor.surfaces, value.surfaceSets, kinds)]));
-  const scope: ModelFrameScope = Object.freeze({actors, takes});
-  scopeKeys.set(scope, modelRecordIdentity({
-    actors: actors.map(actor => modelActorDrawsFile(actor) ? [actor.id, actor.asset.id] : [actor.id]),
-    takes: [...takes.entries()].map(([id, take]) => [id, 'surfaces' in take ? [...take.surfaces.entries()] : take]),
-  }));
-  return scope;
+  return Object.freeze({actors, takes: new Map(actors.filter(modelActorDrawsFile).map(actor => [actor.id,
+    modelRuntimeAssetProfile(actor) ?? modelSurfaceTakes(actor.surfaces, value.surfaceSets, kinds)]))});
 }
 
 const FRAME_CAMERA_WHERE = modelPreviewCameraWhere('Frame camera');
 const frameCameraScratch = new Float64Array(CAMERA_COORDS.length);
-
-function checkFrameEntities(rawEntities: readonly unknown[], scope: ModelFrameScope): ModelPreviewEntity[] {
-  const declared = new Map(scope.actors.map(entry => [entry.id, entry])), seen = new Set<string>();
-  return Array.from(rawEntities, (entity: unknown) => {
-    const id = object(entity) ? entity.entityId : undefined;
-    if (!named(id)) throw new ModelStageRefusal(MODEL_PREVIEW_ENTITY_REFUSAL.entity);
-    const actor = declared.get(id);
-    if (!actor) throw new ModelStageRefusal(refusal.undeclared(id));
-    if (seen.has(id)) throw new ModelStageRefusal(refusal.twice(id));
-    if (!modelActorDrawsFile(actor)) throw new ModelStageRefusal(refusal.terrainFrame(id));
-    seen.add(id);
-    return modelPreviewEntity(entity, actor.asset.id, scope.takes.get(id));
-  });
-}
 
 /** Validates an optional frame camera into `into` (`CAMERA_COORDS`), returning whether `camera` was stated. */
 export function readModelFrameCamera(record: Record<string, unknown>, into: Float64Array): boolean {
@@ -74,17 +58,9 @@ export function readModelFrameCamera(record: Record<string, unknown>, into: Floa
   return true;
 }
 
-/** The one validator of an engine frame against `scope`, reusing a record already validated against the same scope. */
+/** The one validator of an engine frame against `scope`, writing optional camera coordinates into `cameraInto`. */
 export function validateModelFrame(value: unknown, scope: ModelFrameScope,
   cameraInto: Float64Array): ModelValidatedFrame {
-  const scopeKey = scopeKeys.get(scope);
-  const held = typeof value === 'object' && value !== null ? validatedFrames.get(value) : undefined;
-  if (held !== undefined) {
-    if (scopeKey !== undefined && held.scopeKey === scopeKey) return held.frame;
-    const entities = checkFrameEntities(held.frame.entities, scope);
-    return Object.freeze({simulationTimeSeconds: held.frame.simulationTimeSeconds,
-      entities: Object.freeze(entities), cameraCoordinates: held.frame.cameraCoordinates});
-  }
   const time = object(value) ? value.simulationTimeSeconds : undefined;
   const rawEntities = object(value) ? value.entities : undefined;
   if (!object(value) || typeof time !== 'number' || !Number.isFinite(time) || time < 0 ||
@@ -95,12 +71,25 @@ export function validateModelFrame(value: unknown, scope: ModelFrameScope,
     (!Array.isArray(value.removedEntities) || value.removedEntities.length)) {
     throw new ModelStageRefusal(refusal.removed);
   }
-  const entities = checkFrameEntities(rawEntities, scope);
+  const declared = new Map(scope.actors.map(entry => [entry.id, entry])), seen = new Set<string>();
+  const entities = Array.from(rawEntities, (entity: unknown) => {
+    const id = object(entity) ? entity.entityId : undefined;
+    if (!named(id)) throw new ModelStageRefusal(MODEL_PREVIEW_ENTITY_REFUSAL.entity);
+    const actor = declared.get(id);
+    if (!actor) throw new ModelStageRefusal(refusal.undeclared(id));
+    if (seen.has(id)) throw new ModelStageRefusal(refusal.twice(id));
+    if (!modelActorDrawsFile(actor)) throw new ModelStageRefusal(refusal.terrainFrame(id));
+    seen.add(id);
+    return modelPreviewEntity(entity, actor.asset.id, scope.takes.get(id));
+  });
   const hasCamera = readModelFrameCamera(value, cameraInto);
-  const frame: ModelValidatedFrame = Object.freeze({simulationTimeSeconds: time,
-    entities: Object.freeze(entities), cameraCoordinates: hasCamera ? cameraInto : null});
-  if (scopeKey !== undefined) validatedFrames.set(frame, {frame, scopeKey});
-  return frame;
+  const checked: ModelValidatedFrame = {
+    [VALIDATED_FRAME]: true,
+    simulationTimeSeconds: time,
+    entities: Object.freeze(entities),
+    cameraCoordinates: hasCamera ? cameraInto : null,
+  };
+  return Object.freeze(checked);
 }
 
 /**

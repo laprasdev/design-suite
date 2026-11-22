@@ -1,46 +1,26 @@
 // The cast baseline: type assertions (`as T` and `<T>`, never `as const`) and non-null `!` assertions each hide a type
 // the compiler could not prove. scripts/cast-baseline.json holds how many of each a file has, and the numbers only fall
 // (scripts/baseline/baselinedFiles.ts): the type gate refuses a file that holds more, and writes the lower numbers.
-import { readFileSync, writeFileSync } from 'node:fs';
+import { writeFileSync } from 'node:fs';
 import ts from '../gateTools/node_modules/typescript/lib/typescript.js';
-import { OTHER_FIELDS, holdsRecordOf, holdsShape, type FieldCheck, type ShapeOf } from '../build/fieldChecks.ts';
-import {
-  OBJECT, anyRose, baselineRefusal, baselineText, fileEntries, holdsNumbers, jsonBlock, lowest, ratchetedFiles,
-  type BaselineRule,
-} from '../baseline/baselinedFiles.ts';
+import { filesBaselineCodec, ratchetedFiles, type FilesBaseline } from '../baseline/baselinedFiles.ts';
 
 export const CAST_BASELINE = 'scripts/cast-baseline.json';
 export const CAST_KINDS = ['casts', 'nonNullAssertions'] as const;
 export type CastKind = typeof CAST_KINDS[number];
 export type CastNumbers = Readonly<Record<CastKind, number>>;
+export type CastBaseline = FilesBaseline<CastKind>;
 export type CastSite = { readonly kind: CastKind; readonly file: string; readonly line: number };
 
 const CAST_LABEL: Readonly<Record<CastKind, string>> = { casts: 'casts', nonNullAssertions: 'non-null assertions' };
 /** What a file the baseline does not name may hold. */
 export const NO_CASTS: CastNumbers = Object.freeze({ casts: 0, nonNullAssertions: 0 });
 
-/** A cast baseline's one record, as its fields and their checks; its type and its check derive from it. */
-const CAST_BASELINE_SHAPE = Object.freeze({ files: holdsRecordOf(holdsNumbers(CAST_KINDS)) });
-export type CastBaseline = ShapeOf<typeof CAST_BASELINE_SHAPE>;
-const holdsCastBaseline: FieldCheck<CastBaseline> = holdsShape(CAST_BASELINE_SHAPE, OTHER_FIELDS.refused);
-
-export const CAST_RULE: BaselineRule<CastNumbers, CastNumbers> = {
-  withinLimits: measured => CAST_KINDS.every(kind => measured[kind] === 0),
-  lowered: lowest(CAST_KINDS),
-  rose: anyRose,
-};
-
-/** A cast baseline from its decoded JSON; `file` names where it was read, for the refusal. */
-export function parseCastBaseline(value: unknown, file: string): CastBaseline {
-  holdsCastBaseline(value, '', baselineRefusal(`type gate: ${file}`));
-  return value;
-}
-
-export const readCastBaseline = (file: string): CastBaseline =>
-  parseCastBaseline(JSON.parse(readFileSync(file, 'utf8')), file);
-
-export const castBaselineText = (baseline: CastBaseline): string =>
-  baselineText({ files: jsonBlock(fileEntries(baseline.files), OBJECT) });
+const CAST_CODEC = filesBaselineCodec('type gate', CAST_KINDS);
+export const CAST_RULE = CAST_CODEC.rule;
+export const parseCastBaseline = CAST_CODEC.parse;
+export const readCastBaseline = CAST_CODEC.read;
+export const castBaselineText = CAST_CODEC.format;
 
 const isConstAssertion = (node: ts.AsExpression | ts.TypeAssertion): boolean =>
   ts.isTypeReferenceNode(node.type) && ts.isIdentifier(node.type.typeName) && node.type.typeName.text === 'const';

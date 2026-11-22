@@ -9,11 +9,11 @@ import {createModelPlayback} from './playback.ts';
 import type {ModelStageChanges, ModelSurfaceModes} from './materials.ts';
 import {createModelActorSurfaces, type ModelActorSurfacesContext} from './actorSurfaces.ts';
 import {markModelStageAids} from './layers.ts';
-import {MODEL_STAGE_DRIVER, modelActorDrawsFile, modelActorHost} from './actorModel.ts';
+import {MODEL_ACTOR_REFUSAL, MODEL_STAGE_DRIVER, modelActorDrawsFile, modelActorHost} from './actorModel.ts';
 import type {ModelDrawn} from './drawn.ts';
 import type {ModelStageActor, ModelStageActorSnapshot, ModelStageDriver} from './actorModel.ts';
-import {validateModelFrame, type ModelFrameScope} from './frameModel.ts';
-import type {ModelPreviewEntity} from './presentation.ts';
+import {isModelValidatedFrame, type ModelValidatedFrame} from './frameModel.ts';
+import {MODEL_PREVIEW_ENTITY_REFUSAL, type ModelPreviewEntity} from './presentation.ts';
 import {MODEL_STAGE_COMMIT_TEXT, modelStageCommit, prepareWhole, type ModelStageCommit} from './commit.ts';
 import {ModelStageRefusal} from './refusal.ts';
 import {extendModelMaterials} from './shading.ts';
@@ -137,27 +137,27 @@ export function createModelActor(drawn: ModelDrawn, declaration: ModelStageActor
 }
 export type ModelActor = ReturnType<typeof createModelActor>;
 
-export interface ModelFrameCameraChannel {
-  readonly coordinates: Float64Array;
-  apply(coordinates: Float64Array): void;
-}
-
-// Validate the frame and prepare every named actor before any commits: a refusal leaves every actor and the camera as
+// Prepare every named actor from a validated frame before any commits: a refusal leaves every actor and the camera as
 // they were. An actor the frame does not name keeps what it shows.
-export function applyModelFrame(actors: readonly ModelActor[], scope: ModelFrameScope, value: unknown,
-  camera: ModelFrameCameraChannel) {
-  const checked = validateModelFrame(value, scope, camera.coordinates);
-  const named = new Map(checked.entities.map(entity => [entity.entityId, entity]));
-  const prepares = actors.flatMap(actor => {
-    const entity = named.get(actor.id);
-    return entity ? [() => actor.prepare(entity)] : [];
+export function applyModelFrame(actors: readonly ModelActor[], value: ModelValidatedFrame,
+  applyCamera: (coordinates: Float64Array) => void) {
+  if (!isModelValidatedFrame(value)) throw new ModelStageRefusal(MODEL_ACTOR_REFUSAL.frame);
+  const prepares = value.entities.map(entity => {
+    const actor = actors.find(candidate => candidate.id === entity.entityId);
+    if (!actor) throw new ModelStageRefusal(MODEL_ACTOR_REFUSAL.undeclared(entity.entityId));
+    const {declaration} = actor;
+    if (!modelActorDrawsFile(declaration)) throw new ModelStageRefusal(MODEL_ACTOR_REFUSAL.terrainFrame(actor.id));
+    if (entity.modelId !== declaration.asset.id) {
+      throw new ModelStageRefusal(MODEL_PREVIEW_ENTITY_REFUSAL.model(entity.entityId, declaration.asset.id));
+    }
+    return () => actor.prepare(entity);
   });
   const commitActors = prepareWhole(prepares);
   commitActors();
-  if (checked.cameraCoordinates !== null) {
-    try {camera.apply(checked.cameraCoordinates);} catch (error) {
+  if (value.cameraCoordinates !== null) {
+    try {applyCamera(value.cameraCoordinates);} catch (error) {
       throw new Error(MODEL_STAGE_COMMIT_TEXT.partial, {cause: error});
     }
   }
-  return checked.simulationTimeSeconds;
+  return value.simulationTimeSeconds;
 }

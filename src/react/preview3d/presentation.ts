@@ -10,7 +10,10 @@ import {modelAnimationLayers} from './animationLayerModel.ts';
 import type {ModelAnimationLayer} from './animationLayerModel.ts';
 
 export const MODEL_STAGE_FIELD_OF_VIEW = 38;
-export const MODEL_PREVIEW_ENTITY_REFUSAL = Object.freeze({entity: 'Every frame entity requires an entityId.'});
+export const MODEL_PREVIEW_ENTITY_REFUSAL = Object.freeze({
+  entity: 'Every frame entity requires an entityId.',
+  model: (id: string, expected: string) => `Entity ${id}: modelId must match the declared model ${expected}.`,
+});
 export const MODEL_PREVIEW_CAPABILITIES = Object.freeze({
   pose: true, animationLayers: true, partPoses: false, materials: false,
 });
@@ -33,7 +36,7 @@ export function modelPreviewEntity(value: unknown, modelId: string,
     throw new ModelStageRefusal(MODEL_PREVIEW_ENTITY_REFUSAL.entity);
   }
   if (typeof value.modelId !== 'string' || value.modelId !== modelId) {
-    throw new ModelStageRefusal(`Entity ${value.entityId}: modelId must match the declared model ${modelId}.`);
+    throw new ModelStageRefusal(MODEL_PREVIEW_ENTITY_REFUSAL.model(value.entityId, modelId));
   }
   if (!Array.isArray(value.partPoses) || value.partPoses.length !== 0) {
     throw new ModelStageRefusal('partPoses must be an explicitly empty array for this preview.');

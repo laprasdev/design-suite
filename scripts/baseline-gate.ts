@@ -16,6 +16,9 @@ import type { BaselineNumbers, SizeBaseline } from './sizeGate/limits.ts';
 import { measureCommitted, measureText } from './sizeGate/measure.ts';
 import { parseWithoutRetiredFields } from './sizeGate/retiredFields.ts';
 import {
+  ALLOCATION_BASELINE, ALLOCATION_RULE, parseAllocationBaseline, type AllocationBaseline, type AllocationNumbers,
+} from './baseline/allocationBaseline.ts';
+import {
   CAST_BASELINE, CAST_RULE, parseCastBaseline, type CastBaseline, type CastNumbers,
 } from './typeGate/castBaseline.ts';
 
@@ -54,6 +57,10 @@ const CASTS: BaselineReading<CastNumbers, CastBaseline> = {
   file: CAST_BASELINE, parse: parseCastBaseline, parseBase: parseCastBaseline, rose: CAST_RULE.rose,
   unaccounted: () => 'no allowance covers a cast',
 };
+const ALLOCATIONS: BaselineReading<AllocationNumbers, AllocationBaseline> = {
+  file: ALLOCATION_BASELINE, parse: parseAllocationBaseline, parseBase: parseAllocationBaseline,
+  rose: ALLOCATION_RULE.rose, unaccounted: () => 'no allowance covers per-tick allocation',
+};
 
 /** Each refusal for one baseline against the base branch's, or the notice that the base branch holds none. */
 function risen<Numbers extends FileNumbers, Baseline extends { readonly files: BaselinedFiles<Numbers> }>(
@@ -82,7 +89,7 @@ function gateBaselines(root: string): number {
     console.error(`baseline gate: ${absence}.`);
     return 1;
   }
-  const results = [risen(root, SIZE), risen(root, CASTS)];
+  const results = [risen(root, SIZE), risen(root, CASTS), risen(root, ALLOCATIONS)];
   const refusals = results.flatMap(result => result.refusals);
   for (const notice of results.flatMap(result => result.notices)) console.log(`baseline gate: ${notice}.`);
   for (const refusal of refusals) console.error(`baseline gate: ${refusal}.`);

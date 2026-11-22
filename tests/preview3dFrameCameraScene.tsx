@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 import {GLTFExporter} from 'three/addons/exporters/GLTFExporter.js';
-import {MODEL_ACTOR_SURFACES, MODEL_STAGE_CLOCK, MODEL_STAGE_FRAMING, MODEL_STAGE_SURFACE_MODE, modelRendererId,
-  modelStageDescription, modelSurfaceKind, type ModelColor, type ModelStageController, type ModelStageSurfaceMode}
+import {createModelFrameInbox, MODEL_ACTOR_SURFACES, MODEL_STAGE_CLOCK, MODEL_STAGE_FRAMING,
+  MODEL_STAGE_SURFACE_MODE, modelRendererId, modelStageDescription, modelSurfaceKind, type ModelColor,
+  type ModelStageController, type ModelStageDescription, type ModelStageSurfaceMode}
   from '../src/react/preview3d/model.ts';
 import {createModelStage} from '../src/react/preview3d/stage.ts';
 import {THEME, declaration, describing, stageLook, standingAt} from './preview3dActorFixture.ts';
@@ -100,10 +101,20 @@ async function bootFrameCameraScene(programSha256: string): Promise<void> {
   };
 
   const initial = buildDescription({image: null, mode: MODEL_STAGE_SURFACE_MODE.lit, fogged: false, frontPose: false});
+  const inbox = createModelFrameInbox();
+  inbox.describe(initial, [kind]);
   const controller = await new Promise<ModelStageController>((ready, reject) => createModelStage(
     host, initial, THEME, ready, reject,
     {reviewKey: 'frameCameraReview', clock: MODEL_STAGE_CLOCK.external, floor: true, grid: true, kinds: [kind]},
   ));
+  inbox.attach(value => controller.setFrame(value));
+  const applyDescription = async (next: ModelStageDescription) => {
+    await controller.setDescription(next);
+    inbox.describe(next, [kind]);
+  };
+  const deliver = (rawFrame: unknown) => {
+    if (inbox.receive(rawFrame) === 'error') throw inbox.failure;
+  };
   const canvas = host.querySelector('canvas');
   if (!(canvas instanceof HTMLCanvasElement)) throw new Error('Expected stage canvas.');
   const settle = async () => {
@@ -119,40 +130,31 @@ async function bootFrameCameraScene(programSha256: string): Promise<void> {
     pose: {position: entityPos, rotationQuaternion: entityRot, scale: entityScale},
     animationLayers: [] as const, partPoses: [] as const, materials: [] as const,
   };
-  const cameraPos: [number, number, number] = [
-    FRAME_CAMERA_POSE.position[0], FRAME_CAMERA_POSE.position[1], FRAME_CAMERA_POSE.position[2],
-  ];
-  const cameraTarget: [number, number, number] = [
-    FRAME_CAMERA_POSE.target[0], FRAME_CAMERA_POSE.target[1], FRAME_CAMERA_POSE.target[2],
-  ];
+  const cameraPos: [number, number, number] = [...FRAME_CAMERA_POSE.position];
+  const cameraTarget: [number, number, number] = [...FRAME_CAMERA_POSE.target];
   const cameraInput = {position: cameraPos, target: cameraTarget, fieldOfView: FRAME_CAMERA_POSE.fieldOfView};
   const frameWithoutCamera = {simulationTimeSeconds: 0, entities: [entityRecord]};
   const frameWithCamera = {simulationTimeSeconds: 0, entities: [entityRecord], camera: cameraInput};
 
+  const showDefaultCamera = async (image: HTMLCanvasElement | null) => {
+    await applyDescription(buildDescription(
+      {image, mode: MODEL_STAGE_SURFACE_MODE.lit, fogged: false, frontPose: false}));
+    controller.resetCamera();
+    await settle();
+    return controller.snapshot().camera;
+  };
   const driver: FrameCameraSceneDriver = {
-    async showFileDefaultCamera() {
-      await controller.setDescription(buildDescription(
-        {image: null, mode: MODEL_STAGE_SURFACE_MODE.lit, fogged: false, frontPose: false}));
-      controller.resetCamera();
-      await settle();
-      return controller.snapshot().camera;
-    },
+    showFileDefaultCamera: () => showDefaultCamera(null),
     async showFileFrameCamera() {
-      await controller.setDescription(buildDescription(
+      await applyDescription(buildDescription(
         {image: null, mode: MODEL_STAGE_SURFACE_MODE.lit, fogged: false, frontPose: false}));
-      controller.setFrame({simulationTimeSeconds: 0.5, entities: [entityRecord], camera: FRAME_CAMERA_POSE});
+      deliver({simulationTimeSeconds: 0.5, entities: [entityRecord], camera: FRAME_CAMERA_POSE});
       await settle();
       return controller.snapshot().camera;
     },
-    async showImageDefaultCamera() {
-      await controller.setDescription(buildDescription(
-        {image: primaryCanvas, mode: MODEL_STAGE_SURFACE_MODE.lit, fogged: false, frontPose: false}));
-      controller.resetCamera();
-      await settle();
-      return controller.snapshot().camera;
-    },
+    showImageDefaultCamera: () => showDefaultCamera(primaryCanvas),
     async showSwappedImage() {
-      await controller.setDescription(buildDescription(
+      await applyDescription(buildDescription(
         {image: altCanvas, mode: MODEL_STAGE_SURFACE_MODE.color, fogged: false, frontPose: true}));
       await settle();
       return readPixelAt(canvas, 0.5, 0.5);
@@ -163,7 +165,7 @@ async function bootFrameCameraScene(programSha256: string): Promise<void> {
       return controller.snapshot().camera;
     },
     async sampleBands(mode, fogged) {
-      await controller.setDescription(buildDescription({image: primaryCanvas, mode, fogged, frontPose: true}));
+      await applyDescription(buildDescription({image: primaryCanvas, mode, fogged, frontPose: true}));
       await settle();
       return {
         upperRgb: readPixelAt(canvas, 0.5, 0.65),
@@ -179,10 +181,10 @@ async function bootFrameCameraScene(programSha256: string): Promise<void> {
           frameWithCamera.simulationTimeSeconds = tick * 0.016;
           cameraInput.position[0] = FRAME_CAMERA_POSE.position[0] + (tick % 8) * 0.01;
           cameraInput.target[0] = (tick % 4) * 0.005;
-          controller.setFrame(frameWithCamera);
+          deliver(frameWithCamera);
         } else {
           frameWithoutCamera.simulationTimeSeconds = tick * 0.016;
-          controller.setFrame(frameWithoutCamera);
+          deliver(frameWithoutCamera);
         }
       }
     },

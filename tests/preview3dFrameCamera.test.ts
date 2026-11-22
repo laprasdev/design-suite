@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {describe, it} from 'node:test';
 import * as THREE from 'three';
 import {MODEL_ACTOR_REFUSAL, MODEL_PREVIEW_CAMERA_REFUSAL, MODEL_PREVIEW_CAPABILITIES, MODEL_STAGE,
-  modelFrameScope, modelPreviewFrame, modelStageDescription}
+  modelFrameScope, modelPreviewFrame, modelStageDescription, validateModelFrame}
   from '../src/react/preview3d/model.ts';
 import {modelStageDescriptionChanges} from '../src/react/preview3d/descriptionModel.ts';
 import {modelPreviewCamera} from '../src/react/preview3d/presentation.ts';
@@ -79,54 +79,58 @@ describe('atomic per-frame camera application and inbox delivery', () => {
   it('commits actors and camera atomically, orients lookAt, resets unstated fov, and refuses whole', () => {
     const {actor} = makeActor('a', [{name: 'idle', duration: 2}]);
     const scope = modelFrameScope(fileScene([actor.declaration]), new Map());
-    const {camera, controls, channel} = makeFraming();
+    const {camera, controls, coordinates, applyCamera} = makeFraming();
+    const run = (raw: unknown, sink = applyCamera) =>
+      applyModelFrame([actor], validateModelFrame(raw, scope, coordinates), sink);
     const applied = () => ({pos: actor.snapshot().pose.position, cam: camera.position.toArray(), fov: camera.fov});
-    applyModelFrame([actor], scope, {
+    run({
       ...frame(0.5, entity('a', [layer(sample('idle', 0.5))], [3, 0, 0])),
       camera: {position: [1, 2, 9], target: [0, 1, 0], fieldOfView: 50},
-    }, channel);
+    });
     assert.deepEqual(applied(), {pos: [3, 0, 0], cam: [1, 2, 9], fov: 50});
     const expectedForward = new THREE.Vector3(0, 1, 0).sub(new THREE.Vector3(1, 2, 9)).normalize();
     assert.ok(camera.getWorldDirection(new THREE.Vector3()).distanceTo(expectedForward) < 1e-6);
+    // Refuses an unbranded object bypassed past TypeScript before touching actors or camera.
+    refused(() => Reflect.apply(applyModelFrame, undefined, [
+      [actor], {simulationTimeSeconds: 0.8, entities: [], cameraCoordinates: null}, applyCamera,
+    ]), MODEL_ACTOR_REFUSAL.frame);
     // Invalid camera refuses before actor changes.
-    refused(() => applyModelFrame([actor], scope, {
+    refused(() => run({
       ...frame(1, entity('a', [], [99, 0, 0])),
       camera: {position: [5, 5, 5], target: [0, 0, 0], fieldOfView: 180},
-    }, channel), MODEL_PREVIEW_CAMERA_REFUSAL.fieldOfView('Frame camera'));
+    }), MODEL_PREVIEW_CAMERA_REFUSAL.fieldOfView('Frame camera'));
     assert.deepEqual(applied(), {pos: [3, 0, 0], cam: [1, 2, 9], fov: 50});
     // Entity failing during actor.prepare (clip time out of bounds) leaves camera unchanged.
-    refused(() => applyModelFrame([actor], scope, {
+    refused(() => run({
       ...frame(1.5, entity('a', [layer(sample('idle', 99))], [50, 0, 0])),
       camera: {position: [9, 9, 9], target: [0, 0, 0], fieldOfView: 65},
-    }, channel), /^Actor a: clip idle time 99 lies outside \[0, 2\] seconds\.$/);
+    }), /^Actor a: clip idle time 99 lies outside \[0, 2\] seconds\.$/);
     assert.deepEqual(applied(), {pos: [3, 0, 0], cam: [1, 2, 9], fov: 50});
     // Frame without camera updates actor without touching held camera or fov.
     let cameraCalls = 0;
-    applyModelFrame([actor], scope, frame(2, entity('a', [], [7, 0, 0])),
-      {coordinates: channel.coordinates, apply: () => {cameraCalls++;}});
+    run(frame(2, entity('a', [], [7, 0, 0])), () => {cameraCalls++;});
     assert.deepEqual([cameraCalls, actor.snapshot().pose.position, camera.fov, controls.target.toArray()],
       [0, [7, 0, 0], 50, [0, 1, 0]]);
     // Frame with camera omitting fieldOfView restores MODEL_STAGE.fieldOfView (kills held-fov carry-over mutant).
-    applyModelFrame([actor], scope, {
+    run({
       ...frame(2.5, entity('a', [], [8, 0, 0])),
       camera: {position: [2, 3, 9], target: [0, 2, 0]},
-    }, channel);
+    });
     assert.deepEqual(applied(), {pos: [8, 0, 0], cam: [2, 3, 9], fov: MODEL_STAGE.fieldOfView});
     assert.deepEqual(controls.target.toArray(), [0, 2, 0]);
     actor.dispose();
   });
 
-  it('validates once through the frame inbox without allocating a frozen camera, and re-checks on scope change', () => {
+  it('validates once through the frame inbox without allocating a frozen camera, and refuses undeclared actors', () => {
     const {actor} = makeActor('a', []);
     const declared = fileScene([actor.declaration]);
-    const scope = modelFrameScope(declared, new Map());
-    const {camera, channel} = makeFraming();
+    const {camera, applyCamera} = makeFraming();
     const inbox = createModelFrameInbox();
     inbox.describe(declared, []);
     const delivered: unknown[] = [];
     inbox.attach(value => {
       delivered.push(value);
-      applyModelFrame([actor], scope, value, channel);
+      applyModelFrame([actor], value, applyCamera);
     });
     let entityReads = 0, cameraReads = 0;
     const rawEntities = [entity('a', [], [2, 0, 0])];
@@ -146,12 +150,12 @@ describe('atomic per-frame camera application and inbox delivery', () => {
     assert.equal(inbox.receive({...frame(2, entity('a', [], [5, 0, 0])),
       camera: {position: pendingPos, target: [0, 0, 0]}}), 'pending');
     pendingPos[0] = 99;
-    assert.equal(inbox.attach(value => applyModelFrame([actor], scope, value, channel)), 'ready');
+    assert.equal(inbox.attach(value => applyModelFrame([actor], value, applyCamera)), 'ready');
     assert.deepEqual([camera.position.toArray(), camera.fov], [[4, 2, 7], MODEL_STAGE.fieldOfView]);
     inbox.detach();
     inbox.describe(fileScene([declaration('b', 'actor-mesh')]), []);
     assert.equal(inbox.receive(frame(3, entity('b', [], [1, 0, 0], 'actor-mesh'))), 'pending');
-    assert.equal(inbox.attach(value => applyModelFrame([actor], scope, value, channel)), 'error');
+    assert.equal(inbox.attach(value => applyModelFrame([actor], value, applyCamera)), 'error');
     assert.equal(inbox.failure instanceof Error ? inbox.failure.message : '', MODEL_ACTOR_REFUSAL.undeclared('b'));
     actor.dispose();
   });

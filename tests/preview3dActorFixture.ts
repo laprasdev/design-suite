@@ -5,11 +5,11 @@ import * as THREE from 'three';
 import {createModelFog} from '../src/react/preview3d/fog.ts';
 import {createModelSurfaceModes, modelStageChanges} from '../src/react/preview3d/materials.ts';
 import type {GLTF} from 'three/addons/loaders/GLTFLoader.js';
-import {applyModelFrame, createModelActor, type ModelActor, type ModelActorContext, type ModelFrameCameraChannel}
+import {applyModelFrame, createModelActor, type ModelActor, type ModelActorContext}
   from '../src/react/preview3d/actor.ts';
 import {createModelFraming} from '../src/react/preview3d/camera.ts';
 import {CAMERA_COORDS} from '../src/react/preview3d/presentation.ts';
-import {modelFrameScope} from '../src/react/preview3d/frameModel.ts';
+import {modelFrameScope, validateModelFrame} from '../src/react/preview3d/frameModel.ts';
 import {createModelSurfaceMaterials} from '../src/react/preview3d/surfaceMaterials.ts';
 import {createModelStageSharedValues} from '../src/react/preview3d/sharedValues.ts';
 import {MODEL_ACTOR_ANIMATION, MODEL_ANIMATION_LAYER, MODEL_STAGE, MODEL_STAGE_DISPLAY, MODEL_STAGE_FRAMING,
@@ -124,9 +124,13 @@ export const fileScene = (actors: readonly ModelStageActor[]) =>
   ({actors: {focus: actors[0].id, actors}, surfaceSets: {}});
 /** A frame applied as the stage applies it, to actors drawn with their files' own materials. */
 export const applyFrame = (actors: readonly ModelActor[], value: unknown,
-  applyCamera: (coordinates: Float64Array) => void = () => {throw new Error('Unexpected frame camera.');}) =>
-  applyModelFrame(actors, modelFrameScope(fileScene(actors.map(actor => actor.declaration)), new Map()), value,
-    {coordinates: new Float64Array(CAMERA_COORDS.length), apply: applyCamera});
+  applyCamera: (coordinates: Float64Array) => void = () => {throw new Error('Unexpected frame camera.');}) => {
+  const checked = validateModelFrame(
+    value, modelFrameScope(fileScene(actors.map(actor => actor.declaration)), new Map()),
+    new Float64Array(CAMERA_COORDS.length),
+  );
+  return applyModelFrame(actors, checked, applyCamera);
+};
 /** A staged load that waits on nothing. */
 export const NO_LOAD = Object.freeze({pending: [], release: () => undefined});
 /** The parts' file registries, for a test that loads no file. */
@@ -137,9 +141,6 @@ export function makeFraming(aspect = 1, near = 0.01, far = 100, enabled = true) 
   const camera = new THREE.PerspectiveCamera(MODEL_STAGE.fieldOfView, aspect, near, far);
   const controls = {target: new THREE.Vector3(), enabled, maxDistance: MODEL_STAGE.cameraMaximum, update: () => true};
   const framing = createModelFraming(camera, controls);
-  const channel: ModelFrameCameraChannel = {
-    coordinates: new Float64Array(CAMERA_COORDS.length),
-    apply: framing.poseCoordinates,
-  };
-  return {camera, controls, framing, channel};
+  const coordinates = new Float64Array(CAMERA_COORDS.length);
+  return {camera, controls, framing, coordinates, applyCamera: framing.poseCoordinates};
 }
