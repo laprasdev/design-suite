@@ -18,7 +18,7 @@ export { Button, type ButtonProps, type ButtonVariant } from "./Button.tsx";
 export { Modal, type ModalProps } from './Modal.tsx';
 export { ModalRow, type ModalRowProps, type ModalTitleProps } from './ModalLayout.tsx';
 export { ModalElement, ModalForm, ModalPlacement, ModalWidth, ModalFrameInset, MODAL_TITLED_ATTRIBUTE,
-  MODAL_ROW_LABELLED_ATTRIBUTE, MODAL_PLACEMENT_ATTRIBUTE, type ModalAnchor, type PopoverAnchorPlacement,
+  MODAL_ROW_LABELLED_ATTRIBUTE, MODAL_PLACEMENT_ATTRIBUTE, type ModalAnchor, type PopoverPlacementBesideAnchor,
   type ModalWidthValue, type ModalFrameInsetValue,
 } from './modalElements.ts';
 export { PlayerIcon, PlayerStatusRings, type PlayerIconProps, type PhotoRing, type StatusRing, type RingSegment,

@@ -5,14 +5,8 @@
 import {useCallback,useRef,useState,type ReactNode,type RefObject} from 'react';
 import {createPortal} from 'react-dom';
 import {ApplicationElement} from './applicationElements.ts';
-import type {ModalAnchor,PopoverAnchorPlacement} from './modalElements.ts';
+import type {AnchoredPlacement} from './modalElements.ts';
 import {useAnchoredPopover} from './useAnchoredPopover.ts';
-
-// An anchored Modal's anchor and where it goes beside it.
-export interface AnchoredPlacement {
- readonly anchor: ModalAnchor;
- readonly popover: PopoverAnchorPlacement|undefined;
-}
 
 // The application root `node` renders in, refused by name when it renders in none.
 function applicationRoot(node: Element) {
