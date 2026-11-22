@@ -3,15 +3,19 @@
 // typographic source (no ad-hoc font/letter-spacing per button). Domain-free;
 // variants are themeable. `variant`: "primary" (filled) | "ghost" (bordered) |
 // "accent" (accent text) | "text" (full-strength text) | "subtle" (dim text that
-// takes the accent on hover). `pending` shows the loading Poké Ball sized to the
-// text beside the label, marks the button busy, keeps focus, and ignores presses.
+// takes the accent on hover).
+// `labelKind` uses any kit Label style, including compact uppercase names.
+// `glow` adds the kit's gentle text glow for a call to action.
+// `pending` is the suite's pending form (pending.tsx): it replaces `disabled`
+// while the consumer saves the press.
 // =====================================================
-import React, { useId, type ButtonHTMLAttributes } from "react";
+import React from "react";
 import { Label, type LabelKind } from "./accents.tsx";
-import { pendingStatus } from "./segmentPending.tsx";
+import { pendingContent, pendingPress, type PendingButtonAttributes } from "./pending.tsx";
+import { PendingForm } from "./pendingElements.ts";
 
 export type ButtonVariant = "primary" | "ghost" | "accent" | "text" | "subtle" | "navigation";
-export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+export interface ButtonProps extends PendingButtonAttributes {
   variant?: ButtonVariant;
   labelKind?: LabelKind | "none";
   glow?: boolean;
@@ -19,15 +23,11 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 export function Button({ variant = "ghost", labelKind = "action", glow = false, pending = false,
-  type = "button", className = "", disabled, onClick, children, ...rest }: ButtonProps) {
-  const statusId = `${useId()}-pending`;
+  type = "button", className = "", onClick, children, ...rest }: ButtonProps) {
   const classes = ["bd-btn", `bd-btn--${variant}`, glow && "bd-text-glow", className].filter(Boolean).join(" ");
-  const content = pending ? pendingStatus(children, false, statusId) : children;
-  const labelledBy = pending && !rest["aria-label"] && !rest["aria-labelledby"] ? statusId : rest["aria-labelledby"];
+  const content = pendingContent({ pending, form: PendingForm.TEXT, content: children });
   return (
-    <button type={type} className={classes} disabled={disabled}
-      data-pending={pending || undefined} aria-busy={pending || undefined}
-      onClick={disabled || pending ? undefined : onClick} {...rest} aria-labelledby={labelledBy}>
+    <button {...rest} type={type} className={classes} {...pendingPress(pending, onClick)}>
       {labelKind === "none" ? content : <Label kind={labelKind}>{content}</Label>}
     </button>
   );

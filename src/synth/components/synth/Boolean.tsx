@@ -8,7 +8,8 @@ import { D, F, C, DC, SYNTH_LABEL, TransitionKeys } from '../../design/index.ts'
 import { controlTooltip, useTooltipSafe } from './TooltipContext.tsx';
 import {HoverDetail} from '../../../react/HoverDetail.tsx';
 import {SelectionMark} from '../../../react/SelectionMark.tsx';
-import {pendingStatus} from '../../../react/segmentPending.tsx';
+import {pendingContent,pendingPress} from '../../../react/pending.tsx';
+import {PendingForm} from '../../../react/pendingElements.ts';
 
 type BooleanSize = 'xs' | 'sm' | 'md' | 'lg';
 type BooleanColor = 'primary' | 'secondary' | 'green' | 'cyan' | 'pink';
@@ -47,16 +48,15 @@ export interface SettingBooleanProps {
   className?: string;
 }
 function SettingBoolean({value,onChange,label,detail,iconOnly=false,title,disabled=false,pending=false,className=''}: SettingBooleanProps) {
-  const mark=<SelectionMark selected={value}/>;
-  const content=iconOnly?(pending?pendingStatus(undefined,true):mark):
-    <>{mark}{pending?pendingStatus(<strong>{label}</strong>):<strong>{label}</strong>}</>;
-  const props={className:`${iconOnly?'bd-check':'setting-option'} ${className}`,disabled,title,
-    'data-pending':pending||undefined,'aria-busy':pending||undefined};
-  const activate=onChange&&!disabled&&!pending ? ()=>onChange(!value) : undefined;
+  const mark=<SelectionMark selected={value}/>,name=<strong>{label}</strong>;
+  const content=iconOnly?pendingContent({pending,form:PendingForm.MARK,content:mark}):
+    <>{mark}{pendingContent({pending,form:PendingForm.TEXT,content:name})}</>;
+  const props={className:`${iconOnly?'bd-check':'setting-option'} ${className}`,disabled,title};
+  const press=pendingPress(pending,onChange&&(()=>onChange(!value)));
   return detail?<HoverDetail {...props} interactive panelRole="tooltip" triggerProps={{'aria-pressed':value}}
-    label={label} content={detail} onActivate={activate}>{content}</HoverDetail>:
-    <button type="button" {...props} role={iconOnly?'checkbox':undefined} aria-label={label}
-      aria-checked={iconOnly?value:undefined} aria-pressed={iconOnly?undefined:value} onClick={activate}>{content}</button>;
+    label={label} content={detail} press={press}>{content}</HoverDetail>:
+    <button type="button" {...props} {...press} role={iconOnly?'checkbox':undefined} aria-label={label}
+      aria-checked={iconOnly?value:undefined} aria-pressed={iconOnly?undefined:value}>{content}</button>;
 }
 export function Boolean(props: BooleanProps|SettingBooleanProps|SwitchBooleanProps) {
   if(props.form===BooleanForm.SWITCH) return <SwitchBoolean {...props}/>;

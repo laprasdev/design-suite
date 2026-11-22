@@ -6,9 +6,7 @@
 // value for the next render but schedules none, so a scene renders again itself (`rendered`); and useLayoutEffect is
 // useEffect, where React runs every layout effect before any passive one (Modal's one layout effect does not mind).
 const RENDERING='renderingComponent';
-export const STATEFUL_HOOKS=`let nextHookId = 0;
-const rendering = () => globalThis.${RENDERING};
-export const useId = () => rendering().cell(() => \`hook-id-\${++nextHookId}\`);
+export const STATEFUL_HOOKS=`const rendering = () => globalThis.${RENDERING};
 export const useState = initial => rendering().state(initial);
 export const useRef = current => rendering().cell(() => ({current}));
 export const useEffect = (effect, deps) => rendering().effect(effect, deps), useLayoutEffect = useEffect;

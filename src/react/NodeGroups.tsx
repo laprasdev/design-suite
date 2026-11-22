@@ -1,14 +1,14 @@
-import React, { type HTMLAttributes } from "react";
+import React from "react";
 import { GroupResize } from "./GroupResize.tsx";
 import { ChevronUp } from "lucide-react";
-import { Button } from "./Button.tsx";
+import { Button, type ButtonProps } from "./Button.tsx";
 import { NodeGraphElement } from "./nodeGraphElements.ts";
 import type { GraphGroup, GraphNode, GraphGroupResize } from "./nodeGraphTypes.ts";
 
 import { GROUP_SPACE } from "./groupGeometry.ts";
 export function NodeGroups({ groups, nodes, onToggle, onResize, groupProps }: {
   groups: readonly GraphGroup[]; nodes: readonly GraphNode[]; onToggle?(id: string): void; onResize?: GraphGroupResize;
-  groupProps(id: string): HTMLAttributes<HTMLElement>;
+  groupProps(id: string): ButtonProps;
 }) {
   return groups.map(group => {
     const members = nodes.filter(node => group.members.includes(node.id));
