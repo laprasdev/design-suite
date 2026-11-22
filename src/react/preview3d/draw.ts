@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import {MODEL_STAGE_TONE_CURVE, type ModelStageGlow, type ModelStageToneCurve} from './lookModel.ts';
+import {MODEL_STAGE_TONE_CURVE, type ModelStageGlow, type ModelStageOutput, type ModelStageToneCurve} from './lookModel.ts';
 import type {ModelStageCommit} from './commit.ts';
 import {ModelStageRefusal} from './refusal.ts';
 import {MODEL_STAGE_LAYERS} from './layers.ts';
@@ -75,9 +75,10 @@ export function createModelDraw(renderer: THREE.WebGLRenderer, scene: THREE.Scen
     glow.set(value);
   };
   // The curve the canvas is drawn under: the direct draw's, or the output pass's under glow (set as it draws).
-  const apply = (value: ModelStageToneCurve | null) => {
-    curve = value === null ? THREE.NoToneMapping : CURVES[value];
+  const apply = ({toneCurve, exposure}: ModelStageOutput) => {
+    curve = toneCurve === null ? THREE.NoToneMapping : CURVES[toneCurve];
     renderer.toneMapping = curve;
+    renderer.toneMappingExposure = exposure;
   };
   return {
     /** What drawing this glow needs loaded first: the glow's passes, fetched once, when a look first brings glow;
@@ -91,15 +92,16 @@ export function createModelDraw(renderer: THREE.WebGLRenderer, scene: THREE.Scen
       });
       return [loading];
     },
-    /** A look's tone curve and glow, checked; `where` names the glow in a refusal. */
-    prepare(toneCurve: ModelStageToneCurve | null, value: ModelStageGlow | null, where: string): ModelStageCommit {
-      if (value === null) return () => {apply(toneCurve); release();};
+    /** A look's tone curve, exposure and glow, checked; `where` names the glow in a refusal. */
+    prepare(output: ModelStageOutput, where: string): ModelStageCommit {
+      const value = output.glow;
+      if (value === null) return () => {apply(output); release();};
       if (!HALF_FLOAT.some(name => renderer.extensions.has(name))) {
         throw new ModelStageRefusal(MODEL_DRAW_TEXT.halfFloat(where));
       }
       const loaded = passes;
       if (!loaded) throw new Error(MODEL_DRAW_TEXT.unloaded);
-      return () => {apply(toneCurve); bloom(value, loaded);};
+      return () => {apply(output); bloom(value, loaded);};
     },
     /** The canvas changed size: the glow's target and passes follow its drawing buffer. */
     resize() {

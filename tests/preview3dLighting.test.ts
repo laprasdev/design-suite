@@ -23,7 +23,7 @@ function fixture() {
   const outputs: [string | null, unknown][] = [];
   const shared = createModelStageSharedValues();
   const lighting = createModelLighting(modelStageBuiltInTimes(theme.colors), {fog: createModelFog(scene), shared,
-    output: {load: () => [], prepare: (curve, glow) => () => {outputs.push([curve, glow]);}}});
+    output: {load: () => [], prepare: ({toneCurve, glow}) => () => {outputs.push([toneCurve, glow]);}}});
   // A described lighting as the stage applies it: checked with the description, then prepared and committed.
   const set = (value: unknown) => lighting.prepare(modelStageLighting(value))();
   const floor = new THREE.MeshStandardMaterial();

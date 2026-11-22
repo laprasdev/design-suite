@@ -9,7 +9,7 @@ import {modelToneCurveSource} from './toneCurve.ts';
 // strengths. Dark is a night stage of its own: a deep colour behind, a floor that still reads under less light, both
 // lights cooled and held to one share of Light's strength, and the unlit aids held to another, so a model's emission
 // carries the picture. Exposure is untouched, or the glow would dim with the lights.
-const STAGE_LIGHT = Object.freeze({key: 3, ambient: 2, direction: Object.freeze([3, 5, 4]) as ModelVector});
+const STAGE_LIGHT = Object.freeze({key: 3, ambient: 2, exposure: 1, direction: Object.freeze([3, 5, 4]) as ModelVector});
 const DARK = Object.freeze({deep: '#05080f', floor: '#262a33', light: '#99bfff', lightShare: 0.3, aidShare: 0.3});
 const CURVE = MODEL_STAGE_TONE_CURVE.acesFilmic;
 
@@ -31,11 +31,11 @@ export function modelStageBuiltInTimes(colors: ModelStageThemeColors): readonly 
   const looks: Record<ModelStageBuiltInTime, ModelStageLook> = {
     light: {backdrop: behind('light', stage), key: {color: text, strength: STAGE_LIGHT.key,
       direction: STAGE_LIGHT.direction}, ambient: {sky: text, ground: surface, strength: STAGE_LIGHT.ambient},
-    shadow: surface, night: 0, aids: {floor: surface, share: 1}, fog: null, toneCurve: CURVE, glow: null},
+    shadow: surface, night: 0, aids: {floor: surface, share: 1}, fog: null, toneCurve: CURVE, glow: null, exposure: STAGE_LIGHT.exposure},
     dark: {backdrop: behind('dark', deep), ambient: {sky: light, ground: deep,
       strength: STAGE_LIGHT.ambient * DARK.lightShare}, key: {color: light, strength: STAGE_LIGHT.key * DARK.lightShare,
       direction: STAGE_LIGHT.direction}, shadow: deep, night: 1, aids: {floor, share: DARK.aidShare}, fog: null,
-    toneCurve: CURVE, glow: null},
+    toneCurve: CURVE, glow: null, exposure: STAGE_LIGHT.exposure},
   };
   return Object.freeze(MODEL_STAGE_BUILT_IN_TIMES.map(({id, label}) =>
     Object.freeze({id, label, look: modelStageLook(looks[id], `Time ${id}: look`)})));

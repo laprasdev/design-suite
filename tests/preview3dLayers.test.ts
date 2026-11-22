@@ -49,7 +49,7 @@ describe('the frame\'s layers', () => {
       {loadPasses: loadModelGlowPasses, inspecting: () => view.inspecting});
     draw.compile(new THREE.Mesh());
     await Promise.all(draw.load({threshold: 1, strength: 1, radius: 0}, 'Time t: look.glow'));
-    draw.prepare(null, {threshold: 1, strength: 1, radius: 0}, 'Time t: look.glow')();
+    draw.prepare({toneCurve: null, exposure: 1, glow: {threshold: 1, strength: 1, radius: 0}}, 'Time t: look.glow')();
     draw.compile(new THREE.Mesh());
     assert.equal(into[0], null);
     assert.ok(into[1] instanceof THREE.WebGLRenderTarget && into[1].samples === 4);
