@@ -203,6 +203,8 @@ export const LayoutDimensions = {
     curveSamples: 48,
     graphStroke: 1.5,
     graphGlow: 3,
+    // The radius of the mark that rides a graph's curve at the running place.
+    graphHandleRadius: 3,
     gridLine: 1,
     labelLine: 1.3,
     modulationPopoverWidth: 280,

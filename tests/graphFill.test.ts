@@ -10,7 +10,7 @@ type Module = typeof import('../src/react/GraphDisplay.tsx') & typeof import('..
   & typeof import('../src/synth/StyleContext.tsx');
 const {module, dispose} = await bundled<Module>(['src/react/GraphDisplay.tsx', 'src/react/graphFillForm.ts',
   'src/synth/StyleContext.tsx']);
-const {GraphFill, GraphFillForm, StyleProvider} = module;
+const {GraphFill, GraphFillForm, GraphHandle, graphGlowFilter, StyleProvider} = module;
 after(dispose);
 
 const AREA = 'M 0,100 L 50,0 L 100,100 Z';
@@ -34,5 +34,16 @@ describe('a graph fill in each form', () => {
     const plain = drawn(GraphFillForm.PLAIN).stops, lit = drawn(GraphFillForm.LIT).stops;
     assert.equal(lit.length, plain.length);
     lit.forEach((opacity, index) => assert.ok(opacity > plain[index], `stop ${index}: ${opacity} > ${plain[index]}`));
+  });
+});
+
+describe('a graph handle', () => {
+  it('starts hidden, a circle of its own size in the primary colour wearing the glow its curve wears', () => {
+    const markup = renderToStaticMarkup(createElement(StyleProvider, {persist: false, documentStyles: false,
+      children: createElement(GraphHandle)}));
+    assert.match(markup, /<circle data-graph-handle="true" cx="0%" cy="0%" r="3" fill="#[0-9A-Fa-f]{6}" style="visibility:hidden/);
+    const color = markup.match(/fill="(#[0-9A-Fa-f]{6})"/)?.[1];
+    assert.ok(color, markup);
+    assert.ok(markup.includes(`filter:${graphGlowFilter(color)}`), markup);
   });
 });
