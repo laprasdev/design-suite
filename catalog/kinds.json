@@ -233,7 +233,8 @@
    ],
    "core": [
     "ListboxSelect"
-   ]
+   ],
+   "note": "ListboxSelect takes a ListboxForm. The select, the default, holds a value: a select-only combobox over a listbox that marks the chosen option. The menu form is a list of actions with no current value, such as places to go: a menu button (aria-haspopup=menu) whose children draw the trigger, inside a field with field, opening a menu of menuitems that moves focus into it; the arrows, Home, End and typing move through it, Enter, Space or a click runs onAction each time, and Escape, Tab or a choice closes it with focus back on the trigger. A select with no value is the menu form, never value null. The gallery's sample is ElementKindIndex's jump at phone width."
   },
   "PipRow": {
    "data": "small count",
