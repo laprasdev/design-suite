@@ -3,13 +3,13 @@
 // combobox over a listbox that marks its chosen option; opening moves focus into the menu, on its first action;
 // the arrows step through the actions and stop at the ends, Home and End reach them; Enter, Space and a click each
 // run the action they are on, every time, closing the menu and returning focus to the trigger; Escape closes it with
-// focus returned and runs nothing; Tab closes it and moves on; with `field` the trigger draws the select's caret; and
-// the open menu lies inside the window, outlined by no focus ring.
+// focus returned and runs nothing; Tab closes it and moves on; with `field` the trigger draws the select's caret; the
+// open menu lies inside the window, outlined by no focus ring; and a select with a search opens on its search.
 import assert from 'node:assert/strict';
 import {afterEach,test} from 'node:test';
 import {ListboxElement} from '../src/react/listboxSelectElements.ts';
 import {DESKTOP_VIEWPORT,PHONE_VIEWPORT,openScene,SCENE_GL} from './browserScene.ts';
-import {ACTION_COUNT_ATTRIBUTE,LAST_ACTION_ATTRIBUTE,MENU_ACTIONS,MENU_LABEL,MenuSceneElement,SELECT_LABEL}
+import {ACTION_COUNT_ATTRIBUTE,LAST_ACTION_ATTRIBUTE,MENU_ACTIONS,MENU_LABEL,MenuSceneElement,SEARCH_LABEL,SELECT_LABEL}
  from './listboxMenuCases.ts';
 
 const page=await openScene('tests/listboxMenuScene.tsx',DESKTOP_VIEWPORT,SCENE_GL.software);
@@ -106,6 +106,15 @@ test('Escape closes the menu, returns focus and runs nothing; Tab closes it and 
  await menu.waitFor({state:'detached'});
  assert.equal(await focused(page.getByRole('combobox',{name:SELECT_LABEL})),true);
  assert.deepEqual(await runs(),before);
+});
+
+test('a select with a search opens with its search focused',async()=>{
+ await page.getByRole('combobox',{name:SEARCH_LABEL}).click();
+ const list=page.getByRole('listbox',{name:SEARCH_LABEL});
+ await list.waitFor();
+ assert.equal(await focused(popover.getByRole('combobox')),true);
+ await page.keyboard.press('Escape');
+ await list.waitFor({state:'detached'});
 });
 
 for(const viewport of [DESKTOP_VIEWPORT,PHONE_VIEWPORT])test(`at ${viewport.width}px the open menu lies in the window`,

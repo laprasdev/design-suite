@@ -2,10 +2,7 @@ import {Button} from './Button.tsx';
 import {Modal} from './Modal.tsx';
 import {ModalPlacement} from './modalElements.ts';
 import {Label} from './accents.tsx';
-import {ApplicationElement} from './applicationElements.ts';
 import {useEffect,useId,useLayoutEffect,useRef,useState,type KeyboardEvent,type ReactNode} from 'react';
-import {createPortal} from 'react-dom';
-import {useAnchoredPopover} from './useAnchoredPopover.ts';
 import {SearchField} from './SearchField.tsx';
 import {Density} from './density.ts';
 import {searchCopy} from './interfaceCopy.ts';
@@ -74,10 +71,9 @@ export function ListboxSelect<V extends string|number>(props: ListboxSelectProps
  const run=props.form===ListboxForm.MENU?props.onAction:props.onChange;
  const roles=LISTBOX_FORM_ROLES[form];
  const id=useId(),listId=`${id}-list`,optionId=(index: number)=>`${id}-option-${index}`;
- const trigger=useRef<HTMLButtonElement>(null),panel=useRef<HTMLDivElement>(null),list=useRef<HTMLUListElement>(null),input=useRef<HTMLInputElement>(null),search=useRef<TypeaheadSearch>({text:'',at:0});
- const [open,setOpen]=useState(false),[active,setActive]=useState(0),[query,setQuery]=useState('');
+ const trigger=useRef<HTMLButtonElement>(null),input=useRef<HTMLInputElement>(null),search=useRef<TypeaheadSearch>({text:'',at:0});
+ const [open,setOpen]=useState(false),[active,setActive]=useState(0),[query,setQuery]=useState(''),[list,setList]=useState<HTMLUListElement|null>(null);
  const shown=searchSubject?options.filter(option=>matchesOption(option.searchText??option.label,query)):options;
- const position=useAnchoredPopover(open,trigger,panel,{above,scroll:false});
  const labels=shown.map(option=>option.label);
  const chosen=roles.holdsValue?shown.findIndex(option=>option.value===value):-1,start=Math.max(0,chosen);
  const show=(index: number)=>{setActive(index);setOpen(true);};
@@ -109,24 +105,26 @@ export function ListboxSelect<V extends string|number>(props: ListboxSelectProps
  };
  useEffect(()=>{if(disabled)setOpen(false);},[disabled]);
  // Clicking a button does not focus it in every browser. Keep keyboard events
- // on the combobox, its search input or the menu, without moving the anchored viewport.
- const keys=searchSubject?input:{trigger,list}[roles.focus],activeOn=open&&!searchSubject&&shown.length?roles.focus:null;
- useLayoutEffect(()=>{if(open)keys.current?.focus({preventScroll:true});},[open,keys]);
- useLayoutEffect(()=>{if(open)list.current?.children[active]?.scrollIntoView({block:'nearest'});},[open,active,query]);
+ // on the combobox, its search input or the menu, without moving the anchored viewport. The popover's content is
+ // drawn a commit after it opens, once its anchored layer finds the application root, so the drawn list starts both.
+ const activeOn=open&&!searchSubject&&shown.length?roles.focus:null;
+ useLayoutEffect(()=>{if(list)(searchSubject?input.current:{trigger:trigger.current,list}[roles.focus])
+  ?.focus({preventScroll:true});},[list,searchSubject,roles.focus]);
+ useLayoutEffect(()=>{list?.children[active]?.scrollIntoView({block:'nearest'});},[list,active,query]);
  return <>
   <button ref={trigger} type="button" role={roles.trigger} className={`${ListboxElement.TRIGGER.className}${className?` ${className}`:''}`} data-shows-value={children===undefined||field||undefined}
    aria-label={label} title={title} aria-haspopup={roles.popup} aria-expanded={open} aria-controls={open?listId:undefined}
    aria-activedescendant={activeOn==='trigger'?optionId(active):undefined}
    disabled={disabled} onClick={()=>open?setOpen(false):show(start)} onKeyDown={open?openKey:closedKey}>{triggerContent}</button>
-  {open&&createPortal(<Modal open placement={ModalPlacement.ANCHORED} anchor={trigger} onClose={settle}
-   panelRef={panel} role="presentation" className={ListboxElement.POPOVER.className} data-icon-only={iconOnly||undefined}
-   style={position}>
+  {open&&<Modal open placement={ModalPlacement.ANCHORED} anchor={trigger} popover={{above,scroll:false}}
+   onClose={settle} role="presentation" className={ListboxElement.POPOVER.className}
+   data-icon-only={iconOnly||undefined}>
    {searchSubject&&<SearchField density={Density.COMPACT} size={searchSize}
     style={searchSize?{width:`calc(${searchSize}ch + 2 * var(--field-gap))`}:undefined} ref={input}
     subject={searchSubject} value={query} onChange={value=>{setQuery(value);setActive(0);}} role="combobox"
     aria-expanded="true" aria-controls={listId} aria-activedescendant={shown.length?optionId(active):undefined}
     onKeyDown={openKey}/>}
-   <ul ref={list} id={listId} role={roles.popup} aria-label={label} className={ListboxElement.LIST.className}
+   <ul ref={setList} id={listId} role={roles.popup} aria-label={label} className={ListboxElement.LIST.className}
     tabIndex={roles.focus==='list'?-1:undefined} aria-activedescendant={activeOn==='list'?optionId(active):undefined}
     onKeyDown={roles.focus==='list'?openKey:undefined}>
     {shown.map((option,index)=><li key={option.value} id={optionId(index)} role={roles.item} aria-label={option.label}
@@ -137,6 +135,6 @@ export function ListboxSelect<V extends string|number>(props: ListboxSelectProps
    {onCreate&&query.trim()&&!options.some(option=>option.label.toLocaleLowerCase()===query.trim().toLocaleLowerCase())&&
     <Button onClick={create}>Create {query.trim()}</Button>}
    {!shown.length&&!onCreate&&<span role="status">{searchCopy.empty}</span>}
-  </Modal>,trigger.current?.closest(ApplicationElement.ROOT.selector)??document.body)}
+  </Modal>}
  </>;
 }

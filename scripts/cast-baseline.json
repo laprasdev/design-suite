@@ -50,7 +50,7 @@
     "src/skins.ts": {"casts":5,"nonNullAssertions":0},
     "src/synth/components/synth/40-IntegerIncrementer.tsx": {"casts":1,"nonNullAssertions":0},
     "src/synth/components/synth/Boolean.tsx": {"casts":1,"nonNullAssertions":0},
-    "src/synth/components/synth/Enum.tsx": {"casts":4,"nonNullAssertions":0},
+    "src/synth/components/synth/Enum.tsx": {"casts":3,"nonNullAssertions":0},
     "src/synth/components/synth/Graph.tsx": {"casts":2,"nonNullAssertions":0},
     "src/synth/components/synth/Knob.tsx": {"casts":6,"nonNullAssertions":0},
     "src/synth/components/synth/RangeSlider.tsx": {"casts":0,"nonNullAssertions":6},

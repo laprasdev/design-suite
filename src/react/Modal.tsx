@@ -9,27 +9,8 @@ import { ModalLayout, type ModalTitleProps } from './ModalLayout.tsx';
 import { ModalElement, ModalForm, ModalPlacement, modalShape,
   type ModalFormProps, type ModalPlacementProps } from './modalElements.ts';
 import { useModalDismissal } from './modalDismissal.ts';
-const FADE_MS = 200;
-
-/* Keep a node mounted through its fade-out, returning [mounted, visible].
-   `visible` flips true on the frame after mount so the CSS transition runs. */
-function useFadeMount(open: boolean): [boolean, boolean] {
-  const [mounted, setMounted] = useState(open);
-  const [visible, setVisible] = useState(false);
-  useEffect(() => {
-    if (open) return setMounted(true);
-    setVisible(false);
-    const t = setTimeout(() => setMounted(false), FADE_MS);
-    return () => clearTimeout(t);
-  }, [open]);
-  useEffect(() => {
-    if (!mounted) return;
-    const r = requestAnimationFrame(() => setVisible(true));
-    return () => cancelAnimationFrame(r);
-  }, [mounted]);
-  return [mounted, visible];
-}
-
+import { useAnchoredLayer } from './anchoredLayer.tsx';
+import { useFadeMount } from './useFadeMount.ts';
 /* Makes everything outside `node` inert: each sibling of the node and of every
    ancestor up to the body. Returns a function that restores those siblings. */
 function inertOutside(node: HTMLElement) {
@@ -177,20 +158,21 @@ export type ModalProps = ModalTitleProps & Omit<HTMLAttributes<HTMLDivElement>, 
 export function Modal({
   open, onClose, dismissible = true, dismissOnContent = false, blocking = false, returnFocusRef,
   ariaLabel, labelledBy, keepRoomFor, className = "", title, actions, children,
-  placement = ModalPlacement.VIEWPORT, anchor, group, panelRef, role = 'dialog',
+  placement = ModalPlacement.VIEWPORT, anchor, popover, group, panelRef, role = 'dialog',
   form = ModalForm.DIALOG, width, frameInset, top, onClick, onKeyDown, tabIndex, style, ...attributes
 }: ModalProps) {
   const [mounted, visible] = useFadeMount(open);
   const backdrop = useRef<HTMLDivElement>(null), ownDialog = useRef<HTMLDivElement>(null), dialog = panelRef ?? ownDialog;
-  const viewport = placement === ModalPlacement.VIEWPORT, anchored = placement === ModalPlacement.ANCHORED;
+  const viewport = placement === ModalPlacement.VIEWPORT;
+  const anchored = useAnchoredLayer(anchor && {anchor, popover}, mounted, dialog);
   const {hold, opened} = useHeldTop(mounted && viewport, keepRoomFor, backdrop, dialog);
   const blocked = blocking && open && mounted && viewport;
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
   const close = () => onCloseRef.current?.();
   const interactive = dismissible;
-  const escapeKey = useModalDismissal(dialog, {open: open && mounted, placement, anchor, group, dismissible,
-    onClose: onCloseRef});
+  const escapeKey = useModalDismissal(dialog, {open: open && mounted && anchored.drawn, placement,
+    anchor: anchored.region, group, dismissible, onClose: onCloseRef});
   // An ancestor scroll container can itself be a tab stop even when every
   // sibling outside the dialog is inert. Keep both Tab directions in the dialog.
   const containFocus = (event: ReactKeyboardEvent) => {
@@ -222,7 +204,7 @@ export function Modal({
   };
   const panel = <div {...attributes} ref={dialog}
     className={`${ModalElement.PANEL.className}${className ? " " + className : ""}`}
-    style={{'--sd-modal-radius':`${LayoutDimensions.radius.module}px`,...shape.panelStyle,...style}}
+    style={{'--sd-modal-radius':`${LayoutDimensions.radius.module}px`,...shape.panelStyle,...anchored.style,...style}}
     role={role} data-modal-form={form} aria-modal={viewport && role === 'dialog' ? true : undefined} data-dismissible={interactive}
     {...shape.panel}
     aria-label={ariaLabel ?? title} aria-labelledby={labelledBy} tabIndex={tabIndex ?? (blocking ? -1 : undefined)}
@@ -231,6 +213,7 @@ export function Modal({
     onKeyDown={event => { containFocus(event); onKeyDown?.(event); escapeKey(event); }}>
     {title === undefined ? children : <ModalLayout title={title} actions={actions}>{children}</ModalLayout>}
   </div>;
-  return anchored ? panel : <div ref={backdrop} className={`${ModalElement.FRAME.className}${visible ? " sd-in" : ""}`}
+  return anchor ? anchored.drawInLayer(panel)
+    : <div ref={backdrop} className={`${ModalElement.FRAME.className}${visible ? " sd-in" : ""}`}
     {...shape.frame} onClick={interactive ? close : undefined}>{panel}</div>;
 }

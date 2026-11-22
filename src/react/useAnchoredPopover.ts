@@ -1,5 +1,5 @@
 import {useLayoutEffect,useState,type CSSProperties,type RefObject} from 'react';
-import {cssRect,cssViewport} from './cssZoom.ts';
+import {cssRect,cssViewport,type CssPoint,type CssRect} from './cssZoom.ts';
 import {HEADER_CONTROL_PROPERTY} from './headerControl.ts';
 
 // Where a popover portaled to the app root sits beside its anchor: this far from
@@ -12,6 +12,8 @@ const ANCHOR_STYLE: readonly `--${string}`[]=['--pink','--teal','--pink-deep','-
  HEADER_CONTROL_PROPERTY,'--header-gap'];
 // A popover's height within `room`, scrolling within when taller.
 const within=(room: number,scroll: boolean): CSSProperties=>({maxHeight:room,overflowY:scroll?'auto':'visible',visibility:room>=POPOVER_MIN_HEIGHT?'visible':'hidden'});
+// A point's box: no width or height, where the point is.
+const pointRect=({x,y}: CssPoint): CssRect=>({left:x,right:x,top:y,bottom:y,width:0,height:0});
 // A placed popover's style: its position and the custom properties it carries from its anchor.
 export type PopoverStyle=CSSProperties&{[custom: `--${string}`]: string};
 
@@ -28,7 +30,8 @@ export type PopoverStyle=CSSProperties&{[custom: `--${string}`]: string};
 // anchor when it opened above it, to the viewport's bottom edge, then scrolls
 // within. The anchor's width is `--anchor-width`, for a popover at least as wide as
 // its anchor.
-// Where a popover goes: aligned or centred, preferring above or beside, and what to keep clear of.
+// Where a popover goes: aligned or centred, preferring above or beside, what to keep clear of, and (`at`) a point in
+// its CSS pixels (cssPoint) it opens at in place of its anchor's box, the anchor then only lending its palette.
 export interface PopoverPlacement {
  align?: 'start'|'center';
  above?: boolean;
@@ -36,8 +39,9 @@ export interface PopoverPlacement {
  preferBefore?: boolean;
  avoid?: ()=>{elements?: readonly (Element|Range)[],boundary?: Element|null}|null|undefined;
  scroll?: boolean;
+ at?: CssPoint;
 }
-export function useAnchoredPopover(open: boolean,anchor: RefObject<HTMLElement|null>,panel: RefObject<HTMLElement|null>,{align='start',above=false,beside=false,preferBefore=false,avoid,scroll=true}: PopoverPlacement={}) {
+export function useAnchoredPopover(open: boolean,anchor: RefObject<HTMLElement|null>,panel: RefObject<HTMLElement|null>,{align='start',above=false,beside=false,preferBefore=false,avoid,scroll=true,at}: PopoverPlacement={}) {
  const [position,setPosition]=useState<PopoverStyle>({left:0,top:0});
  useLayoutEffect(()=>{
   if(!open)return;
@@ -49,7 +53,7 @@ export function useAnchoredPopover(open: boolean,anchor: RefObject<HTMLElement|n
    const theme=getComputedStyle(anchorNode),inherited: Record<`--${string}`,string>=Object.fromEntries(ANCHOR_STYLE.map(key=>[key,theme.getPropertyValue(key)]));
    for(const [key,value] of Object.entries(inherited))panelNode.style.setProperty(key,value);
    // Everything in the panel's CSS pixels, which a zoomed page scales on screen.
-   const a=cssRect(panelNode,anchorNode),p=cssRect(panelNode),view=cssViewport(panelNode);
+   const a=at?pointRect(at):cssRect(panelNode,anchorNode),p=cssRect(panelNode),view=cssViewport(panelNode);
    const style=getComputedStyle(panelNode);
    const height=panelNode.scrollHeight+parseFloat(style.borderTopWidth)+parseFloat(style.borderBottomWidth);
    let left=Math.max(VIEWPORT_EDGE,Math.min(align==='center'?a.left+(a.width-p.width)/2:a.left,view.width-p.width-VIEWPORT_EDGE));
@@ -79,7 +83,7 @@ export function useAnchoredPopover(open: boolean,anchor: RefObject<HTMLElement|n
   };
   const hold=()=>{
    if(panelNode.scrollHeight===placed.height)return;
-   const top=cssRect(panelNode,anchorNode).top+placed.offset;
+   const top=(at?at.y:cssRect(panelNode,anchorNode).top)+placed.offset;
    placed={...placed,height:panelNode.scrollHeight};
    const room=Math.max(0,cssViewport(panelNode).height-VIEWPORT_EDGE-top);
    setPosition(position=>({...position,top,...within(room,scroll)}));
@@ -89,6 +93,6 @@ export function useAnchoredPopover(open: boolean,anchor: RefObject<HTMLElement|n
   place();window.addEventListener('scroll',follow,true);window.addEventListener('resize',place);
   const observer=new ResizeObserver(hold);observer.observe(panelNode);
   return()=>{observer.disconnect();window.removeEventListener('scroll',follow,true);window.removeEventListener('resize',place);};
- },[open,align,above,beside,preferBefore,avoid,scroll]);
+ },[open,align,above,beside,preferBefore,avoid,scroll,at?.x,at?.y]);
  return position;
 }
