@@ -147,7 +147,7 @@
     "gate-tools": "npm ci --prefix scripts/gateTools --no-audit --no-fund --loglevel=error",
     "gate-browser": "scripts/gateTools/node_modules/.bin/playwright install --only-shell chromium",
     "test": "npm run gate-tools && npm run gate-browser && node --test tests/*.test.ts",
-    "check:forms": "node --test tests/photos.test.ts tests/pipRowForm.test.ts tests/formTypes.test.ts tests/loading.test.ts tests/playerRing.test.ts tests/modalDismissal.test.ts tests/modalPress.test.ts tests/escapeOrder.test.ts tests/pageInputOwners.test.ts tests/modalInputCheck.test.ts tests/buttonPending.test.ts"
+    "check:forms": "node --test tests/photos.test.ts tests/pipRowForm.test.ts tests/formTypes.test.ts tests/listboxSelect.test.ts tests/loading.test.ts tests/playerRing.test.ts tests/modalDismissal.test.ts tests/modalPress.test.ts tests/escapeOrder.test.ts tests/pageInputOwners.test.ts tests/modalInputCheck.test.ts tests/buttonPending.test.ts"
   },
   "devDependencies": {
     "@types/react": "^18.3.31",
