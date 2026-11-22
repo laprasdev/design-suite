@@ -25,9 +25,9 @@
     "src/skins.ts": {"lines":95,"longLines":5},
     "src/synth/components/synth/40-IntegerIncrementer.tsx": {"lines":119,"longLines":6},
     "src/synth/components/synth/Boolean.tsx": {"lines":198,"longLines":3},
-    "src/synth/components/synth/Enum.tsx": {"lines":460,"longLines":6},
+    "src/synth/components/synth/Enum.tsx": {"lines":460,"longLines":5},
     "src/synth/components/synth/Graph.tsx": {"lines":573,"longLines":0},
-    "src/synth/components/synth/Knob.tsx": {"lines":531,"longLines":10},
+    "src/synth/components/synth/Knob.tsx": {"lines":529,"longLines":10},
     "src/synth/components/synth/Layout.tsx": {"lines":151,"longLines":8},
     "src/synth/components/synth/ModulationRings.tsx": {"lines":72,"longLines":12},
     "src/synth/components/synth/ModuleGrid.tsx": {"lines":104,"longLines":10},
@@ -42,9 +42,9 @@
     "src/synth/components/synth/modulation.ts": {"lines":59,"longLines":3},
     "src/synth/design/Composable.ts": {"lines":362,"longLines":4},
     "src/synth/design/ComposableComponents.tsx": {"lines":256,"longLines":0},
-    "src/synth/design/LayoutAPI.ts": {"lines":204,"longLines":4},
+    "src/synth/design/LayoutAPI.ts": {"lines":186,"longLines":4},
     "src/synth/design/constants/KnobConfig.ts": {"lines":248,"longLines":0},
-    "src/tokens.ts": {"lines":146,"longLines":1},
+    "src/tokens.ts": {"lines":131,"longLines":1},
     "tests/skins.test.ts": {"lines":131,"longLines":3}
   },
   "allowances": []

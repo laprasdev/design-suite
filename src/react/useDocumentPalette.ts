@@ -1,12 +1,15 @@
 import {hexToFloatRgba, hexToRgba} from '../color.ts';
 import {useEffect} from 'react';
 
+/** The colours the app owner publishes on the document: the primary colour and the page ground. */
+interface DocumentPalette { primaryColor: string; backgroundColor: string }
+
 /** The app owner opts into document styling; scoped previews never touch it. */
-export function useDocumentPalette(primaryColor: string, enabled: boolean) {
+export function useDocumentPalette({primaryColor, backgroundColor}: DocumentPalette, enabled: boolean) {
   useEffect(() => {
     if (!enabled) return;
-    const effectiveStyle = {primaryColor};
-    document.documentElement.style.setProperty('--theme-primary', effectiveStyle.primaryColor);
+    document.documentElement.style.setProperty('--theme-primary', primaryColor);
+    document.documentElement.style.setProperty('--theme-background', backgroundColor);
 
     let styleEl = document.getElementById('dynamic-scrollbar-style') as HTMLStyleElement;
     if (!styleEl) {
@@ -41,5 +44,5 @@ export function useDocumentPalette(primaryColor: string, enabled: boolean) {
         scrollbar-color: ${scrollThumb} ${scrollTrack} !important;
       }
     `;
-  }, [primaryColor, enabled]);
+  }, [primaryColor, backgroundColor, enabled]);
 }

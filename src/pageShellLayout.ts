@@ -29,7 +29,6 @@ export const PageShellDimensions = {
   scrollCueHeight: 18,
   scrollCueIcon: 12,
   barLineHeight: 1.4,
-  guideText: 12,
   guideTagLayer: 1,
   // A closed page's card: laid out on φ in its own box, with text and icons at module size.
   cardPadding: 8,
@@ -63,13 +62,13 @@ export const PageShellDimensions = {
   arrangeLayer,
   heldLayer,
   arrangeChipLayer,
-  // Arranging: how near a tile's edge a drop cuts in, how far a press moves to lift, what a gutter draws, and where a
-  // cut can rest, so a layout stays on the ratio.
+  // Arranging: how near a tile's edge a drop cuts in, how far a press moves to lift, what a gutter draws, the φ stops
+  // a cut snaps to, and how near one, as a share of the cut, a dragged gutter comes before it settles there.
   dropEdgeZone: 36,
   pickUpDistance: 4,
   gutterLine: 2,
-  arrangeText: 13,
   cutStops: [OUTER_STOP, 1 - PHI_INVERSE, PHI_INVERSE, 1 - OUTER_STOP],
+  cutSnap: 0.02,
   // The smallest window an arrangement has to stay usable in, whichever window it is made in.
   smallestWindowWidth: 1366,
   smallestWindowHeight: 650,

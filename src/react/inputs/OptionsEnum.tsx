@@ -37,7 +37,7 @@ function LegacyOptions<T>({options, value, onChange, disabled, scheme, style, cl
             title={option.tooltip ?? option.label}
             onClick={() => onChange?.(option.value)}
             style={{
-              ...T.moduleLabel, minWidth: 0, padding: `${optionPaddingBlock}px ${optionPaddingInline}px`,
+              ...T.label, minWidth: 0, padding: `${optionPaddingBlock}px ${optionPaddingInline}px`,
               ...(columns ? {} : {flex: '1 0 auto', maxWidth: '100%', overflowWrap: 'anywhere'}),
               borderRadius: D.radius.button, border: 'none', cursor: disabled ? C.notAllowed : C.pointer,
               background: selected ? scheme.main : hexToRgba(scheme.main, O.trace),

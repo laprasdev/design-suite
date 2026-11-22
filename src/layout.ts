@@ -4,7 +4,7 @@ import { ICON_CHOICE_BOX, ICON_CHOICE_GLYPH, ModuleGridDimensions } from './modu
 import { PHI_CUBED } from './goldenRatio.ts';
 
 export { PHI, PHI_INVERSE, PHI_SQUARED, PHI_CUBED } from './goldenRatio.ts';
-export { MODULE_TEXT_SIZE, TEXT_FLOOR } from './moduleGridLayout.ts';
+export { TEXT_FLOOR } from './moduleGridLayout.ts';
 
 export const Relativity = {
   PhiInverse: 0.618, // ~61.8% - larger portion

@@ -9,7 +9,7 @@ export function ModuleHeaderRow({ group, children }: { group?: string; children:
   const style = useStyle().getEffectiveStyle();
   // The group's name yields first. Controls stay on one row and remain reachable by horizontal scroll.
   const groupStyle: React.CSSProperties = {
-    ...T.moduleLabel, lineHeight: `${G.headerLineHeight}px`, flex: '1 1 0', minWidth: 0,
+    ...T.label, lineHeight: `${G.headerLineHeight}px`, flex: '1 1 0', minWidth: 0,
     overflow: 'hidden', textOverflow: 'ellipsis', textTransform: 'uppercase', color: style.textColor, opacity: O.high,
     whiteSpace: 'nowrap',
   };

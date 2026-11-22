@@ -4,7 +4,7 @@ export {BooleanForm, type SwitchBooleanProps};
 import React, { useEffect, useState, useCallback } from 'react';
 import { useStyle } from '../../StyleContext.tsx';
 import { getColorScheme, getBooleanStyles, getInsetShadow, type ColorType } from '../../../color.ts';
-import { D, F, C, DC, SYNTH_LABEL, TransitionKeys } from '../../design/index.ts';
+import { D, F, C, DC, T, TransitionKeys } from '../../design/index.ts';
 import { controlTooltip, useTooltipSafe } from './TooltipContext.tsx';
 import {HoverDetail} from '../../../react/HoverDetail.tsx';
 import {SelectionMark} from '../../../react/SelectionMark.tsx';
@@ -191,7 +191,7 @@ export function LabeledBool({ label, value, onChange, color, layout = 'row' }: L
   return (
     <div style={{ display: 'flex', flexDirection: isColumn ? 'column' : 'row', alignItems: 'center', gap: isColumn ? 2 : DC.rowGap }}>
       <LightUpBoolean value={value} onChange={onChange} size="sm" />
-      <span style={{ ...SYNTH_LABEL, color, opacity: value ? 1 : 0.5 }}>{label}</span>
+      <span style={{ ...T.label, color, opacity: value ? 1 : 0.5 }}>{label}</span>
     </div>
   );
 }

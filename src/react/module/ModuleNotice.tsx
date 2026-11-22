@@ -20,7 +20,7 @@ export function ModuleNotice({ form = NoticeForm.NOTE, children }: {
   if (form === NoticeForm.EMPTY) {
     return <div data-module-notice={NoticeForm.EMPTY} style={{ flex: 1, minWidth: 0, minHeight: 0, display: 'flex',
       alignItems: 'center', justifyContent: 'center' }}>
-      <span style={{ ...T.moduleLabel, textTransform: 'uppercase', color: style.textColor, opacity: O.medium }}>
+      <span style={{ ...T.label, textTransform: 'uppercase', color: style.textColor, opacity: O.medium }}>
         {children}
       </span>
     </div>;

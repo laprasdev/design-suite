@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { colorVariables, createTheme } from '@looms/bloom-design';
+import { colorVariables, createTheme, themeVariables } from '@looms/bloom-design';
 import { Button, Cycle, Label, Modal, PlayerIcon } from '@looms/bloom-design/react';
 import '@looms/bloom-design/react/styles.css';
 import './gallery.css';
@@ -25,7 +25,7 @@ function Gallery() {
   const opener = useRef<HTMLElement | null>(null);
   const theme = createTheme({ colors: { accent: palette.color } });
   return (
-    <main className="bloom-gallery" style={colorVariables(theme)}>
+    <main className="bloom-gallery" style={{...themeVariables(theme), ...colorVariables(theme)}}>
       <header>
         <Label kind="name">Component Library</Label>
         <h1>{galleryCopy.title}</h1>

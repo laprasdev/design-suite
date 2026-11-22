@@ -250,10 +250,6 @@
   "forms": {
     "text": {
       "sizeScale": [
-        6,
-        7,
-        8,
-        9,
         10,
         12,
         14,
@@ -261,7 +257,7 @@
         20,
         24
       ],
-      "sizeIndex": 5,
+      "sizeIndex": 0,
       "weight": 600,
       "kerning": 0.05,
       "lineHeight": 1.2,
@@ -272,29 +268,14 @@
           "kerning": 0.1
         },
         "label": {
-          "sizeAdj": -2,
+          "sizeAdj": 0,
           "weight": 600,
           "kerning": 0.05
         },
         "value": {
-          "sizeAdj": -1,
+          "sizeAdj": 0,
           "weight": 600,
           "kerning": 0.02
-        },
-        "small": {
-          "sizeAdj": -3,
-          "weight": 500,
-          "kerning": 0.03
-        },
-        "tiny": {
-          "sizeAdj": -4,
-          "weight": 500,
-          "kerning": 0.02
-        },
-        "micro": {
-          "sizeAdj": -5,
-          "weight": 600,
-          "kerning": 0.05
         }
       }
     },

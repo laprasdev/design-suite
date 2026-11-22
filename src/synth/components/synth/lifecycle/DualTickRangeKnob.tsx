@@ -301,15 +301,15 @@ export function DualTickRangeKnob(props: DualTickRangeKnobProps) {
       gap: isHorizontal ? '6px' : '4px'
     }}>
       <div style={{
-        fontSize: T.small.fontSize,
+        fontSize: T.value.fontSize,
         color: scheme.main,
-        fontWeight: T.small.fontWeight,
+        fontWeight: T.value.fontWeight,
         textAlign: 'center',
         opacity: O.high
       }}>
         {displayFormat(minValue, maxValue)}
       </div>
-      {label && <KnobLabel text={label} cutout={useCutoutLabel} size={config.size} color={scheme.main} style={style}
+      {label && <KnobLabel text={label} cutout={useCutoutLabel} color={scheme.main} style={style}
         align="center" />}
     </div>
   );

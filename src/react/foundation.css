@@ -3,7 +3,7 @@
  --header-gap-compact:8px;--header-gap:var(--header-gap-compact);
  /* Outside a page surface (page-bar.css), a page keeps the theme's inset. */
  --header-icon-size:20px;--page-gutter:0px;--page-inset:var(--inset);--popover-layer:10000;
- --label-action-size:12px;--surface-chrome:var(--card);
+ --surface-chrome:var(--card);
 }
 /* A compact bar or header button draws its header glyphs at its action label's size. A compact choice sizes its own
    glyphs (segmented-control.css). */

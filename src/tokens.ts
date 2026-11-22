@@ -3,7 +3,7 @@
 // =====================================================
 
 import { LayoutDimensions } from './layout.ts';
-import { MODULE_TEXT_SIZE } from './moduleGridLayout.ts';
+import { TEXT_FLOOR } from './moduleGridLayout.ts';
 
 // =====================================================
 // SHADOWS
@@ -31,52 +31,37 @@ export const Shadows = {
 // =====================================================
 // TYPOGRAPHY
 // =====================================================
+// Every role draws at the one text size, `TEXT_FLOOR`: a role differs only by its weight and spacing,
+// so a header is the same text given its heavier weight.
+export { TEXT_FLOOR };
+
 export const Typography = {
   caption: {
-    fontSize: 10,
+    fontSize: TEXT_FLOOR,
     fontWeight: 700,
     letterSpacing: '0.05em'
   },
   title: {
-    fontSize: MODULE_TEXT_SIZE,
+    fontSize: TEXT_FLOOR,
     fontWeight: 700,
     letterSpacing: '0.1em'
   },
+  // A field's name, on a page's module and everywhere else.
   label: {
-    fontSize: 9,
+    fontSize: TEXT_FLOOR,
     fontWeight: 600,
     letterSpacing: '0.05em'
   },
   value: {
-    fontSize: 10,
+    fontSize: TEXT_FLOOR,
     fontWeight: 600,
     letterSpacing: '0.02em'
   },
-  // A field's name and value on a page's module, at the module's text size.
-  moduleLabel: {
-    fontSize: MODULE_TEXT_SIZE,
-    fontWeight: 600,
-    letterSpacing: '0.05em'
-  },
+  // A field's value on a page's module.
   moduleValue: {
-    fontSize: MODULE_TEXT_SIZE,
+    fontSize: TEXT_FLOOR,
     fontWeight: 500,
     letterSpacing: '0.02em'
-  },
-  small: {
-    fontSize: 8,
-    fontWeight: 500,
-    letterSpacing: '0.03em'
-  },
-  tiny: {
-    fontSize: 7,
-    fontWeight: 500,
-    letterSpacing: '0.02em'
-  },
-  micro: {
-    fontSize: 6,
-    fontWeight: 600,
-    letterSpacing: '0.05em'
   }
 } as const;
 

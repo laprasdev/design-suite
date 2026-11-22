@@ -66,14 +66,14 @@ describe('a tab\'s groups', () => {
   it('draws the group shown inline bold and glowing, and every other one at the label weight without a glow', () => {
     for (const look of looks(true)) {
       const shown = look.group.id === SHOWN;
-      assert.equal(look.weight, String(shown ? Typography.title.fontWeight : Typography.moduleLabel.fontWeight));
+      assert.equal(look.weight, String(shown ? Typography.title.fontWeight : Typography.label.fontWeight));
       assert.equal(look.glows, shown);
     }
   });
 
   it('keeps the shown group\'s look under a header', () => {
     for (const look of looks(false)) {
-      assert.equal(look.weight, String(Typography.moduleLabel.fontWeight));
+      assert.equal(look.weight, String(Typography.label.fontWeight));
       assert.equal(look.glows, false);
     }
   });
