@@ -6,7 +6,7 @@ import {after, describe, it} from 'node:test';
 import {bundled, replacedHooks} from './bundled.ts';
 import {Component, STATEFUL_HOOKS, rendered} from './renderedHooks.ts';
 
-interface Node {type: unknown; props: {children?: unknown; onClick?: () => void; onActivate?: () => void}}
+interface Node {type: unknown; props: {children?: unknown; onClick?: () => void}}
 type Options = {value: number; label: string; disabled?: boolean}[];
 interface Props {
   options: Options; onPoint?: (value: number | null) => void; disabled?: boolean;
@@ -14,12 +14,11 @@ interface Props {
 }
 interface Module {SegmentedControl(props: Props): Node}
 
-const pressables = (node: unknown): Node[] => {
-  if (Array.isArray(node)) return node.flatMap(pressables);
+const buttons = (node: unknown): Node[] => {
+  if (Array.isArray(node)) return node.flatMap(buttons);
   if (!node || typeof node !== 'object') return [];
   const element = node as Node;
-  const pressed = element.props.onClick || element.props.onActivate ? [element] : [];
-  return [...pressed, ...pressables(element.props.children)];
+  return [...(element.type === 'button' ? [element] : []), ...buttons(element.props.children)];
 };
 
 const {module, dispose} = await bundled<Module>(['src/react/SegmentedControl.tsx'], [replacedHooks(STATEFUL_HOOKS)]);
@@ -32,9 +31,9 @@ describe('a locked segmented control', () => {
     const onChange = (value: unknown) => changes.push(value);
     const control = new Component(() => module.SegmentedControl({options, value: 0, ...props, onChange}));
     rendered(control);
-    const found = pressables(control.now);
+    const found = buttons(control.now);
     assert.equal(found.length, options.length);
-    found.forEach(each => (each.props.onClick ?? each.props.onActivate)?.());
+    found.forEach(each => each.props.onClick?.());
     return changes;
   };
 
