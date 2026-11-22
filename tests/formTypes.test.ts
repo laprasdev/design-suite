@@ -54,10 +54,13 @@ describe('a Modal\'s width, frame inset and top at the type check', () => {
 });
 
 // What each ListboxSelect form takes: the menu holds no value, so it refuses the select's value, its onChange, its
-// creating and its search, and the select refuses the menu's onAction. Each row's accepted usage passes.
-const MENU_PROPS = 'form={ListboxForm.MENU} label="Go" options={[{value: \'a\', label: \'A\'}]} children=""';
+// creating and its search, and its children, which alone draw its trigger, cannot be undefined; the select refuses
+// the menu's onAction. Each row's accepted usage passes.
+const MENU_FORM = 'form={ListboxForm.MENU} label="Go" options={[{value: \'a\', label: \'A\'}]}';
+const MENU_PROPS = `${MENU_FORM} children=""`;
 const SELECT_PROPS = 'label="Go" options={[{value: \'a\', label: \'A\'}]} value="a"';
 const LISTBOX_SHAPES = [
+  {props: `${MENU_FORM} onAction={() => undefined}`, accepted: 'children=""', refused: 'children={undefined}'},
   ...['value="a"', 'onChange={() => undefined}', 'onCreate={() => undefined}', 'searchSubject="places"',
     'searchSize={8}'].map(refused => ({props: MENU_PROPS, accepted: 'onAction={() => undefined}',
     refused: `onAction={() => undefined} ${refused}`})),

@@ -8,7 +8,7 @@
     "src/react/CaretButton.tsx": {"lines":32,"longLines":1},
     "src/react/HeaderIconButton.tsx": {"lines":54,"longLines":3},
     "src/react/HoverDetail.tsx": {"lines":55,"longLines":6},
-    "src/react/ListboxSelect.tsx": {"lines":94,"longLines":13},
+    "src/react/ListboxSelect.tsx": {"lines":94,"longLines":12},
     "src/react/Modal.tsx": {"lines":236,"longLines":18},
     "src/react/Photos.tsx": {"lines":184,"longLines":1},
     "src/react/PlayerIcon.tsx": {"lines":165,"longLines":6},

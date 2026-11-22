@@ -57,7 +57,8 @@ interface ListboxSelectForm<V extends string|number> extends ListboxProps<V> {
 }
 interface ListboxMenuForm<V extends string|number> extends ListboxProps<V> {
  form: typeof ListboxForm.MENU;
- children: ReactNode;
+ // The menu's trigger is drawn by its children alone, so it always has some.
+ children: Exclude<ReactNode,undefined>;
  onAction(value: NoInfer<V>): void;
  value?: never;
  onChange?: never;
@@ -77,16 +78,22 @@ export function ListboxSelect<V extends string|number>(props: ListboxSelectProps
  const [open,setOpen]=useState(false),[active,setActive]=useState(0),[query,setQuery]=useState('');
  const shown=searchSubject?options.filter(option=>matchesOption(option.searchText??option.label,query)):options;
  const position=useAnchoredPopover(open,trigger,panel,{above,scroll:false});
- const labels=shown.map(option=>option.label),chosen=shown.findIndex(option=>option.value===value),start=Math.max(0,chosen);
+ const labels=shown.map(option=>option.label);
+ const chosen=roles.holdsValue?shown.findIndex(option=>option.value===value):-1,start=Math.max(0,chosen);
  const show=(index: number)=>{setActive(index);setOpen(true);};
- const selectedContent=children??options.find(option=>option.value===value)?.label;
+ const selectedContent=children??(roles.holdsValue?options.find(option=>option.value===value)?.label:undefined);
  const triggerContent=typeof selectedContent==='string'||typeof selectedContent==='number'
   ? <Label kind="action">{selectedContent}</Label> : selectedContent;
  // Modal's dismissal returns focus itself; `close` returns it for the closes Modal does not see.
  const settle=()=>{setOpen(false);setQuery('');};
  const close=()=>{settle();trigger.current?.focus();};
  const create=()=>{const name=query.trim();if(!name||!onCreate)return;close();onCreate(name);};
- const choose=(index: number)=>{if(!shown[index])return;close();if(shown[index].value!==value)run(shown[index].value);};
+ const choose=(index: number)=>{
+  const option=shown[index];
+  if(!option)return;
+  close();
+  if(!roles.holdsValue||option.value!==value)run(option.value);
+ };
  const find=(key: string,from: number)=>{search.current=typeahead(search.current,key,Date.now());return typeaheadMatch(labels,search.current.text,from);};
  const closedKey=(e: KeyboardEvent)=>{
   if(!searchSubject&&typesText(e)&&e.key!==' '){e.preventDefault();show(find(e.key,start)??start);return;}

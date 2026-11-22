@@ -17,8 +17,9 @@ export const ListboxElement=Object.freeze({
 export const ListboxForm=Object.freeze({SELECT:'select',MENU:'menu'} as const);
 export type ListboxForm=typeof ListboxForm[keyof typeof ListboxForm];
 // What each form's parts are to assistive technology: the trigger's role and the popup it opens, each item's role,
-// whether an item says it is the chosen one, and where focus sits while it is open (the select-only combobox keeps it
-// on its trigger; a menu button moves it into its menu). Either way the focused part names the active item.
+// whether the form holds a value (marking the chosen item and skipping a repeat choice), and where focus sits while it
+// is open (the select-only combobox keeps it on its trigger; a menu button moves it into its menu). Either way the
+// focused part names the active item.
 interface ListboxFormRoles {
  trigger: 'combobox'|'button';
  popup: 'listbox'|'menu';
