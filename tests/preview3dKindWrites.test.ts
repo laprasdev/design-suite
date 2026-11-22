@@ -6,7 +6,7 @@ import {MODEL_SURFACE_KIND_REFUSAL, modelSurfaceKind, modelSurfaceKinds}
   from '../src/react/preview3d/surfaceKindModel.ts';
 import {createModelSurfaceMaterials} from '../src/react/preview3d/surfaceMaterials.ts';
 import {createModelStageSharedValues} from '../src/react/preview3d/sharedValues.ts';
-import {ModelStageRefusal} from '../src/react/preview3d/refusal.ts';
+import {refused} from './preview3dActorFixture.ts';
 import {PULSE, PULSE_PROGRAM, record} from './preview3dKindFixture.ts';
 
 // What a kind may write and use beyond its colour (step E2): its normal from a normal map, its light response, a
@@ -21,9 +21,6 @@ const at = (source: string, text: string) => {
   assert.ok(index >= 0, text);
   return index;
 };
-const refused = (run: () => unknown, pattern: RegExp | string) => assert.throws(run, (error: unknown) =>
-  error instanceof ModelStageRefusal && (typeof pattern === 'string' ? error.message === pattern :
-    pattern.test(error.message)), String(pattern));
 const CALL = 'kindSurface( diffuseColor, totalEmissiveRadiance );';
 
 describe('what a kind may write beyond its colour', () => {

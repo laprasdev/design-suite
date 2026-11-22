@@ -9,12 +9,12 @@ import {createModelPlayback} from './playback.ts';
 import type {ModelStageChanges, ModelSurfaceModes} from './materials.ts';
 import {createModelActorSurfaces, type ModelActorSurfacesContext} from './actorSurfaces.ts';
 import {markModelStageAids} from './layers.ts';
-import {MODEL_STAGE_DRIVER, modelActorDrawsFile, modelActorHost} from './actorModel.ts';
+import {MODEL_ACTOR_REFUSAL, MODEL_STAGE_DRIVER, modelActorDrawsFile, modelActorHost} from './actorModel.ts';
 import type {ModelDrawn} from './drawn.ts';
 import type {ModelStageActor, ModelStageActorSnapshot, ModelStageDriver} from './actorModel.ts';
-import {modelPreviewFrame, type ModelFrameScope} from './frameModel.ts';
+import {isModelValidatedFrame, type ModelValidatedFrame} from './frameModel.ts';
 import type {ModelPreviewEntity} from './presentation.ts';
-import {modelStageCommit, prepareWhole, type ModelStageCommit} from './commit.ts';
+import {MODEL_STAGE_COMMIT_TEXT, modelStageCommit, prepareWhole, type ModelStageCommit} from './commit.ts';
 import {ModelStageRefusal} from './refusal.ts';
 import {extendModelMaterials} from './shading.ts';
 
@@ -34,7 +34,9 @@ export interface ModelActorContext {
 }
 /** How an actor's model sits in its placement: the stage's size rule and origin. */
 export interface ModelActorSizing {readonly size: ModelStageSize; readonly origin: ModelStageOrigin}
-export const MODEL_ACTOR_TEXT = Object.freeze({unlit: 'Runtime presentation requires lit materials.'});
+export const MODEL_ACTOR_TEXT = Object.freeze({
+  unlit: 'Runtime presentation requires lit materials.',
+});
 /** A renderable's one visible value: authored, not hidden by the Rig display, and not hidden by the engine. */
 export const modelRenderableVisible = (authored: boolean, display: ModelStageDisplay, engineHidden: boolean) =>
   authored && display !== MODEL_STAGE_DISPLAY.rig && !engineHidden;
@@ -135,14 +137,22 @@ export function createModelActor(drawn: ModelDrawn, declaration: ModelStageActor
 }
 export type ModelActor = ReturnType<typeof createModelActor>;
 
-// Validate the frame and prepare every named actor before any commits: a refusal leaves every actor as it was. An
-// actor the frame does not name keeps what it shows.
-export function applyModelFrame(actors: readonly ModelActor[], scope: ModelFrameScope, value: unknown) {
-  const accepted = modelPreviewFrame(value, scope);
-  const named = new Map(accepted.entities.map(entity => [entity.entityId, entity]));
-  prepareWhole(actors.flatMap(actor => {
-    const entity = named.get(actor.id);
-    return entity ? [() => actor.prepare(entity)] : [];
-  }))();
-  return accepted.simulationTimeSeconds;
+// Prepare every named actor from a validated frame before any commits: a refusal leaves every actor and the camera as
+// they were. An actor the frame does not name keeps what it shows.
+export function applyModelFrame(actors: readonly ModelActor[], value: ModelValidatedFrame,
+  applyCamera: (coordinates: Float64Array) => void) {
+  if (!isModelValidatedFrame(value)) throw new ModelStageRefusal(MODEL_ACTOR_REFUSAL.unvalidated);
+  const prepares: Array<() => ModelStageCommit> = [];
+  for (const actor of actors) {
+    const entity = value.entities.find(candidate => candidate.entityId === actor.id);
+    if (entity) prepares.push(() => actor.prepare(entity));
+  }
+  if (prepares.length !== value.entities.length) throw new ModelStageRefusal(MODEL_ACTOR_REFUSAL.scope);
+  prepareWhole(prepares)();
+  if (value.cameraCoordinates !== null) {
+    try {applyCamera(value.cameraCoordinates);} catch (error) {
+      throw new Error(MODEL_STAGE_COMMIT_TEXT.partial, {cause: error});
+    }
+  }
+  return value.simulationTimeSeconds;
 }

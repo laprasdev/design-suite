@@ -10,7 +10,7 @@ import {createModelStageSharedValues} from '../src/react/preview3d/sharedValues.
 import {modelSurfaceKinds} from '../src/react/preview3d/surfaceKindModel.ts';
 import {modelSurfaceRecordsFit, modelSurfaceSets, modelSurfaceSetWhere} from '../src/react/preview3d/surfaceModel.ts';
 import {padModelBoundsByReach} from '../src/react/preview3d/reachBounds.ts';
-import {ModelStageRefusal} from '../src/react/preview3d/refusal.ts';
+import {refused} from './preview3dActorFixture.ts';
 import {kindFile, PULSE, RENDERERS} from './preview3dKindFixture.ts';
 import {modelFileDrawn} from '../src/react/preview3d/drawn.ts';
 
@@ -29,8 +29,6 @@ const UNLIT = kind({light: 'unlit'});
 const DEPTH = kind({attributes: ['uv', {name: '_depth', size: 1}]});
 const shared = createModelStageSharedValues().declarations;
 const program = (value: typeof SWAY) => createModelSurfaceProgram(value, SWAY_PROGRAM, shared);
-const refused = (run: () => unknown, pattern: RegExp) => assert.throws(run, (error: unknown) =>
-  error instanceof ModelStageRefusal && pattern.test(error.message), String(pattern));
 const at = (source: string, text: string) => {
   const index = source.indexOf(text);
   assert.ok(index >= 0, text);
@@ -88,11 +86,9 @@ describe('a kind\'s forms beyond a lit surface', () => {
     const sets = modelSurfaceSets({s: {[RENDERERS.body]: {kind: 'test-form', values: {_Color: {color: [1, 1, 1, 1]},
       _Reach: {float: 0}}}, [RENDERERS.eyes]: {kind: 'file'}, [RENDERERS.line]: {kind: 'file'}}});
     const where = `Actor a, renderer ${RENDERERS.body}, kind test-form`;
-    assert.throws(() => surfaces.prepare({surfaces: {from: 'set', set: 's'}, sets: sets}), (error: unknown) =>
-      error instanceof ModelStageRefusal && error.message === TEXT.attribute(where, '_depth'));
+    refused(() => surfaces.prepare({surfaces: {from: 'set', set: 's'}, sets: sets}), TEXT.attribute(where, '_depth'));
     body.geometry.setAttribute('_depth', new THREE.Float32BufferAttribute(new Float32Array(48), 2));
-    assert.throws(() => surfaces.prepare({surfaces: {from: 'set', set: 's'}, sets: sets}), (error: unknown) =>
-      error instanceof ModelStageRefusal && error.message === TEXT.size(where, '_depth', 1, 2));
+    refused(() => surfaces.prepare({surfaces: {from: 'set', set: 's'}, sets: sets}), TEXT.size(where, '_depth', 1, 2));
   });
 
   it('culls a renderer a kind moves by its bounds grown by the reach it shows, and gives three its own back',

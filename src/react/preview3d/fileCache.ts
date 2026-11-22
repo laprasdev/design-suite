@@ -1,5 +1,5 @@
 import type {ModelFileReader} from './files.ts';
-import type {ModelSurfaceFile} from './surfaceModel.ts';
+import type {ModelSurfaceFile} from './surfaceTextureModel.ts';
 import {ModelStageRefusal} from './refusal.ts';
 
 // The stage's one cache of files a description names by SHA-256: each read once (verified, files.ts) and decoded

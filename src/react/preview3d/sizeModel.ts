@@ -1,5 +1,5 @@
 import {ModelStageRefusal} from './refusal.ts';
-import {modelNumber, modelOption, modelShape} from './recordModel.ts';
+import {modelNumber, modelOption, modelShape, type ModelStatingFields} from './recordModel.ts';
 
 export const MODEL_STAGE_SIZE = Object.freeze({real: 'real', normalized: 'normalized'} as const);
 /**
@@ -12,7 +12,10 @@ export const MODEL_STAGE_SIZE_REFUSAL = Object.freeze({
   height: (where: string) => `${where} must be greater than 0.`,
 });
 // The fields each size rule states, and nothing else.
-const FIELDS = Object.freeze({real: ['rule'], normalized: ['rule', 'height']});
+const FIELDS: Readonly<Record<ModelStageSize['rule'], ModelStatingFields>> = Object.freeze({
+  real: {stated: ['rule'], whenStated: []},
+  normalized: {stated: ['rule', 'height'], whenStated: []},
+});
 const WHERE = 'The stage size';
 
 export function modelStageSize(value: unknown): ModelStageSize {

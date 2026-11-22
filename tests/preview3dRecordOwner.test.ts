@@ -4,14 +4,11 @@ import {modelSurfaceKinds} from '../src/react/preview3d/surfaceKindModel.ts';
 import {modelSurfaceRecordsFit, modelSurfaceSets, modelSurfaceSetWhere} from '../src/react/preview3d/surfaceModel.ts';
 import {modelStageDescription} from '../src/react/preview3d/descriptionModel.ts';
 import {modelFileRenderers} from '../src/react/preview3d/renderers.ts';
-import {ModelStageRefusal} from '../src/react/preview3d/refusal.ts';
-import {declaration, describing} from './preview3dActorFixture.ts';
+import {declaration, describing, refused} from './preview3dActorFixture.ts';
 import {kindFile, MASK, PULSE, RENDERERS} from './preview3dKindFixture.ts';
 
 // The record owner reads only a record's own fields, and builds a record keyed by the data's own names with no
 // prototype: a name every object inherits (`valueOf`, `toString`, `constructor`) is data like any other.
-const refused = (run: () => unknown, pattern: RegExp) =>
-  assert.throws(run, (error: unknown) => error instanceof ModelStageRefusal && pattern.test(error.message));
 const kind = (parameters: Record<string, unknown>) => modelSurfaceKinds([{...PULSE, id: 'k', parameters, inert: {}}]);
 const set = (values: Record<string, unknown>) => modelSurfaceSets({s: {[RENDERERS.body]: {kind: 'k', values}}});
 

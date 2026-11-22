@@ -3,15 +3,12 @@ import {describe, it} from 'node:test';
 import * as THREE from 'three';
 import {createModelActorSurfaces, MODEL_ACTOR_SURFACES_TEXT as TEXT} from '../src/react/preview3d/actorSurfaces.ts';
 import {modelSurfaceOutputs, modelSurfaceTakes} from '../src/react/preview3d/surfaceOutputModel.ts';
-import {ModelStageRefusal} from '../src/react/preview3d/refusal.ts';
 import {kindFile, kindMaterials, kinds, MASK, record, RENDERERS, sets} from './preview3dKindFixture.ts';
 import {modelStageDescription, modelStageDescriptionChanges} from '../src/react/preview3d/descriptionModel.ts';
-import {declaration, describing} from './preview3dActorFixture.ts';
+import {declaration, describing, refused} from './preview3dActorFixture.ts';
 import {modelFileDrawn} from '../src/react/preview3d/drawn.ts';
 
 const SET = Object.freeze({from: 'set', set: 'tinted'} as const), FILE = Object.freeze({from: 'file'} as const);
-const refused = (run: () => unknown, message: string) => assert.throws(run, (error: unknown) =>
-  error instanceof ModelStageRefusal && error.message === message, message);
 // As a kind's values hold it: a 32-bit float.
 const linear = (value: number) => Math.fround(new THREE.Color().setRGB(value, 0, 0, THREE.SRGBColorSpace).r);
 // One actor's surfaces over the kind fixture's file, with a compile that records what it compiled and can fail.

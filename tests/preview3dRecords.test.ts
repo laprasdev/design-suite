@@ -2,8 +2,7 @@ import assert from 'node:assert/strict';
 import {describe, it} from 'node:test';
 import {modelStageDescription} from '../src/react/preview3d/descriptionModel.ts';
 import {modelStageLighting} from '../src/react/preview3d/lightingModel.ts';
-import {ModelStageRefusal} from '../src/react/preview3d/refusal.ts';
-import {describing, held, stageLook} from './preview3dActorFixture.ts';
+import {describing, held, refused, stageLook} from './preview3dActorFixture.ts';
 
 // Every record of the description states exactly its fields: for each one, by its path, every field it omits and a
 // field it does not have are refused by name. The table is the records' own list, so a record left out of it shows.
@@ -17,18 +16,18 @@ function exact(check: (value: unknown) => unknown, whole: unknown, path: Path, w
   kept: readonly string[] = []) {
   const record = at(whole, path) as Record<string, unknown>;
   assert.deepEqual(Object.keys(record).sort(), [...fields].sort(), where);
-  const refused = (change: (copy: Record<string, unknown>) => void, pattern: RegExp) => {
+  const expectRefused = (change: (copy: Record<string, unknown>) => void, pattern: RegExp) => {
     const copy = structuredClone(whole);
     change(at(copy, path) as Record<string, unknown>);
-    assert.throws(() => check(copy), (error: unknown) =>
-      error instanceof ModelStageRefusal && pattern.test(error.message), `${where}: ${pattern}`);
+    refused(() => check(copy), pattern);
   };
-  refused(copy => {copy.stray = 1;}, new RegExp(`^${escaped(where)} does not state stray; it states`));
+  expectRefused(copy => {copy.stray = 1;}, new RegExp(`^${escaped(where)} does not state stray; it states`));
   for (const field of fields.filter(name => !kept.includes(name))) {
-    refused(copy => {delete copy[field];}, new RegExp(`^${escaped(where)} omits ${field}; it states \\w`));
+    expectRefused(copy => {delete copy[field];}, new RegExp(`^${escaped(where)} omits ${field}; it states \\w`));
   }
   for (const field of kept.filter(name => !SHAPES.includes(name))) {
-    refused(copy => {copy[field] = undefined;}, new RegExp(`^${escaped(where)}.${field} is stated with no value`));
+    expectRefused(copy => {copy[field] = undefined;},
+      new RegExp(`^${escaped(where)}.${field} is stated with no value`));
   }
 }
 

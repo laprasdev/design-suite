@@ -4,7 +4,7 @@ import { describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { SUITE_BASELINE } from '../scripts/size-gate.ts';
 import { readBaseline } from '../scripts/sizeGate/baselineFile.ts';
-import { CAST_BASELINE, castBaselineText, type CastNumbers } from '../scripts/typeGate/castBaseline.ts';
+import { CAST_BASELINE, type CastNumbers } from '../scripts/typeGate/castBaseline.ts';
 import { isRecord } from '../src/valueChecks.ts';
 import { GATE, runGate } from './gateFixture.ts';
 
@@ -35,7 +35,8 @@ const BASE_CONFIG = readConfig('tsconfig.json');
 const REPO_CONFIG = readConfig('tsconfig.repo.json');
 
 /** A fixture's cast baseline, which names no file unless a case gives its numbers. */
-const castBaseline = (files: Record<string, CastNumbers>) => ({ [CAST_BASELINE]: castBaselineText({ files }) });
+const castBaseline = (files: Record<string, CastNumbers>) =>
+  ({ [CAST_BASELINE.file]: CAST_BASELINE.format({ files }) });
 const SIZE_SCOPE = readBaseline(fileURLToPath(new URL(`../${SUITE_BASELINE}`, import.meta.url))).scope;
 const types = (files: Record<string, string>) =>
   runGate(GATE.types, { base: {}, head: { ...castBaseline({}), ...files } }, process.env);
