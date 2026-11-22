@@ -10,7 +10,7 @@ import {SearchField} from './SearchField.tsx';
 import {Density} from './density.ts';
 import {searchCopy} from './interfaceCopy.ts';
 import {ListboxElement} from './listboxSelectElements.ts';
-import {LISTBOX_MOVES,LISTBOX_OPENS,typesText,typeahead,searching,typeaheadMatch,matchesOption,type TypeaheadSearch} from './listboxNavigation.ts';
+import {LISTBOX_ARROWS,LISTBOX_MOVES,LISTBOX_OPENS,typesText,typeahead,searching,typeaheadMatch,matchesOption,type TypeaheadSearch} from './listboxNavigation.ts';
 
 // The app's own select: a trigger and, when open, a listbox popover of `options`
 // (a searchable label, optional leading/trailing content and hover title) anchored
@@ -72,7 +72,7 @@ export function ListboxSelect<V extends string|number>({options,value,onChange,l
  };
  const openKey=(e: KeyboardEvent)=>{
   if(e.key==='Tab'){trigger.current?.focus();setOpen(false);setQuery('');return;}
-  if(LISTBOX_MOVES[e.key]&&(!searchSubject||['ArrowUp','ArrowDown'].includes(e.key))){e.preventDefault();setActive(LISTBOX_MOVES[e.key](active,shown.length));return;}
+  if(LISTBOX_MOVES[e.key]&&(!searchSubject||LISTBOX_ARROWS.includes(e.key))){e.preventDefault();setActive(LISTBOX_MOVES[e.key](active,shown.length));return;}
   if(!searchSubject&&typesText(e)&&(e.key!==' '||searching(search.current,Date.now()))){e.preventDefault();const found=find(e.key,active);if(found!==undefined)setActive(found);return;}
   if(e.key==='Enter'&&!shown.length&&onCreate){e.preventDefault();create();return;}
   if(e.key==='Enter'||!searchSubject&&e.key===' '){e.preventDefault();choose(active);}
