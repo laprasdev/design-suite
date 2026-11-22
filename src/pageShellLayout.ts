@@ -4,6 +4,8 @@
 import { PHI_INVERSE } from './goldenRatio.ts';
 
 const OUTER_STOP = (1 - PHI_INVERSE) * PHI_INVERSE;
+const CUT_STOPS = [OUTER_STOP, 1 - PHI_INVERSE, PHI_INVERSE, 1 - OUTER_STOP] as const;
+const HALF_CUT = 1 / 2;
 
 // Stage stack, bottom to top: travelling cards, arriving page, fading pressed card, leaving page, then tile frames.
 const flipCardLayer = 0;
@@ -63,11 +65,13 @@ export const PageShellDimensions = {
   heldLayer,
   arrangeChipLayer,
   // Arranging: how near a tile's edge a drop cuts in, how far a press moves to lift, what a gutter draws, the φ stops
-  // a cut snaps to, and how near one, as a share of the cut, a dragged gutter comes before it settles there.
+  // a drop cuts at, the points a dragged gutter snaps to (those stops and the half), and how near one, as a share of
+  // the cut, a dragged gutter comes before it settles there.
   dropEdgeZone: 36,
   pickUpDistance: 4,
   gutterLine: 2,
-  cutStops: [OUTER_STOP, 1 - PHI_INVERSE, PHI_INVERSE, 1 - OUTER_STOP],
+  cutStops: CUT_STOPS,
+  cutSnapPoints: [...CUT_STOPS, HALF_CUT],
   cutSnap: 0.02,
   // The smallest window an arrangement has to stay usable in, whichever window it is made in.
   smallestWindowWidth: 1366,
