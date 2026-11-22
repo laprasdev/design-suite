@@ -142,7 +142,7 @@
     "createModelStage",
     "ModelPreview"
    ],
-   "note": "Browser GLB presentation uses /preview3d and the complete view uses /preview3d/react. ModelPreview accepts stageOverlay for controls positioned within the stage. A surface kind reads what its declared attributes give (README's kind contract): with 'position', its object-space and world-space positions, kindObjectPosition and kindWorldPosition. State evaluation and native camera adapters stay with their owners."
+   "note": "Browser GLB presentation uses /preview3d and the complete view uses /preview3d/react. ModelPreview accepts stageOverlay for controls positioned within the stage. What an overlay over a surface asks for is an OverlaySource (overlaySource.ts, menuSource.ts): elements per OverlaySlot, world markers, sidebars and the menu's stack of content views (collection or synth), every member optional; overlayRefusal refuses a source whole through the ActionBar notice, naming each pattern OVERLAY_FILLS leaves unfilled. A surface kind reads what its declared attributes give (README's kind contract): with 'position', its object-space and world-space positions, kindObjectPosition and kindWorldPosition. State evaluation and native camera adapters stay with their owners."
   },
   "NodeGraph": {
    "data": "node network",
