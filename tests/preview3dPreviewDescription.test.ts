@@ -5,7 +5,6 @@ import {MODEL_PREVIEW_TEXT, MODEL_REST_POSE, MODEL_STAGE_SIZE, MODEL_STAGE_THEME
   MODEL_STAGE_FAILURE,
   ModelStageRefusal, modelStageFailure}
   from '../src/react/preview3d/model.ts';
-import type {ModelStageController} from '../src/react/preview3d/model.ts';
 import {createModelDescriptionRequests, createModelPreviewChoices, modelPreviewChoices, modelPreviewDescription,
   modelPreviewFailure, modelPreviewSelectionOf,
   modelPreviewClip, modelPreviewNotice, modelPreviewPick, modelPreviewReady, modelPreviewToggle}
@@ -57,11 +56,14 @@ describe('the view\'s description', () => {
   });
 
   it('shows the selection of the description the stage holds while a refusal stands', () => {
-    const requests = createModelDescriptionRequests(() => undefined, () => undefined, () => undefined);
+    const applied: unknown[] = [];
+    const requests = createModelDescriptionRequests(() => undefined, () => undefined, () => undefined,
+      value => applied.push(value));
     const shown = modelStageDescription(describing());
     const declared = {...modelPreviewSelectionOf(shown), animation: playing('swim')};
     assert.throws(() => requests.shown(declared, true), /^Error: A refusal was recorded before the stage held/);
     requests.hold(shown);
+    assert.deepEqual(applied, [shown]);
     assert.equal(requests.shown(declared, false), declared);
     assert.deepEqual(requests.shown(declared, true), modelPreviewSelectionOf(shown));
   });
@@ -81,56 +83,59 @@ describe('the view\'s description', () => {
   });
 
   it('keeps readiness for a description that loads nothing, and hands on the latest refusal only', async () => {
-    const pending: boolean[] = [], failures: unknown[] = [];
+    const pending: boolean[] = [], failures: unknown[] = [], applied: unknown[] = [];
     const requests = createModelDescriptionRequests(value => pending.push(value), error => failures.push(error),
-      () => undefined);
+      () => undefined, value => applied.push(value));
     const description = modelStageDescription(describing());
     let loading = false, settle: (fail: boolean) => void = () => undefined;
     const refusal = new ModelStageRefusal('no');
-    const api = {snapshot: () => ({actorsPending: loading}) as ReturnType<ModelStageController['snapshot']>,
+    const api = {snapshot: () => ({actorsPending: loading}),
       setDescription: () => loading ? new Promise<void>((resolve, reject) =>
         {settle = fail => fail ? reject(refusal) : resolve();}) : Promise.resolve()};
     assert.equal(requests.request(api, description), true);
     await Promise.resolve();
-    assert.deepEqual(pending, [false]);
+    assert.deepEqual([pending, applied], [[false], [description]]);
     loading = true;
     requests.request(api, description);
     settle(true);
     await Promise.resolve();
-    assert.deepEqual([pending.at(-2), pending.at(-1), failures], [true, false, [refusal]]);
+    assert.deepEqual([pending.at(-2), pending.at(-1), failures, applied], [true, false, [refusal], [description]]);
     assert.equal(requests.request({...api, setDescription: () => {throw refusal;}}, description), false);
   });
 
   it('reports only the latest of two overlapping descriptions', async () => {
-    const pending: boolean[] = [], settles: Array<() => void> = [];
-    const requests = createModelDescriptionRequests(value => pending.push(value), () => undefined, () => undefined);
-    const api = {snapshot: () => ({actorsPending: true}) as ReturnType<ModelStageController['snapshot']>,
+    const pending: boolean[] = [], settles: Array<() => void> = [], applied: unknown[] = [];
+    const requests = createModelDescriptionRequests(value => pending.push(value), () => undefined, () => undefined,
+      value => applied.push(value));
+    const api = {snapshot: () => ({actorsPending: true}),
       setDescription: () => new Promise<void>(resolve => {settles.push(resolve);})};
-    const description = modelStageDescription(describing());
-    requests.request(api, description);
-    requests.request(api, description);
+    const first = modelStageDescription(describing());
+    const second = modelStageDescription({...describing(), lighting: {time: 'dark', times: []}});
+    requests.request(api, first);
+    requests.request(api, second);
     settles[0]();
     await Promise.resolve();
-    assert.deepEqual(pending, [true, true]);
+    assert.deepEqual([pending, applied], [[true, true], []]);
     settles[1]();
     await Promise.resolve();
-    assert.deepEqual(pending, [true, true, false]);
+    assert.deepEqual([pending, applied], [[true, true, false], [second]]);
   });
 
   it('clears a recorded refusal when the declared description returns to the one the stage holds', async () => {
     const events: string[] = [];
     const requests = createModelDescriptionRequests(() => undefined, () => events.push('refused'),
-      () => events.push('settled'));
+      () => events.push('settled'), () => events.push('applied'));
     const shown = modelStageDescription(describing());
     const other = modelStageDescription({...describing(), lighting: {time: 'dark', times: []}});
     let loads = false, reject: () => void = () => undefined;
-    const api = {snapshot: () => ({actorsPending: loads}) as ReturnType<ModelStageController['snapshot']>,
+    const api = {snapshot: () => ({actorsPending: loads}),
       setDescription: (value: unknown) => {
         if (value === other && !loads) throw new ModelStageRefusal('no');
         return loads ? new Promise<void>((_, fail) => {reject = () => fail(new ModelStageRefusal('late'));}) :
           Promise.resolve();
       }};
     requests.hold(shown);
+    events.length = 0;
     // Refused at once: the stage still holds the first; declaring it again clears the refusal and sends nothing.
     assert.equal(requests.declare(api, other), false);
     let sent = 0;

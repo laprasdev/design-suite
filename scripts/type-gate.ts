@@ -18,8 +18,7 @@ import { repositoryFiles } from './repositoryFiles.ts';
 import { SUITE_BASELINE } from './size-gate.ts';
 import { readBaseline } from './sizeGate/baselineFile.ts';
 import {
-  CAST_BASELINE, castKindOf, castNotices, castNumbers, castRefusals, readCastBaseline, writeRatchetedCasts,
-  type CastSite,
+  CAST_BASELINE, castKindOf, castNotices, castNumbers, castRefusals, writeRatchetedCasts, type CastSite,
 } from './typeGate/castBaseline.ts';
 
 const TSC = fileURLToPath(new URL('../node_modules/.bin/tsc', import.meta.url));
@@ -152,8 +151,8 @@ for (const file of tsFiles) {
   problems.push(...inspected.issues);
   casts.push(...inspected.casts);
 }
-const castBaselinePath = path.join(root, CAST_BASELINE);
-const castBaseline = readCastBaseline(castBaselinePath);
+const castBaselinePath = path.join(root, CAST_BASELINE.file);
+const castBaseline = CAST_BASELINE.read(castBaselinePath);
 const castsByFile = castNumbers(casts);
 problems.push(...castRefusals(castBaseline, castsByFile, casts));
 const typecheck = runTsc(root, ['--pretty', 'false']);

@@ -5,8 +5,9 @@ import path from 'node:path';
 import { describe, it } from 'node:test';
 import { parseBaseline, readBaseline } from '../scripts/sizeGate/baselineFile.ts';
 import type { SizeBaseline } from '../scripts/sizeGate/limits.ts';
+import { ALLOCATION_BASELINE } from '../scripts/baseline/allocationBaseline.ts';
 import { parseWithoutRetiredFields } from '../scripts/sizeGate/retiredFields.ts';
-import { parseCastBaseline } from '../scripts/typeGate/castBaseline.ts';
+import { CAST_BASELINE } from '../scripts/typeGate/castBaseline.ts';
 
 const SCOPE = { dirs: ['src'], files: [], extensions: ['.ts'], skip: { directories: [], suffixes: [] } };
 const GRANT = { path: 'src/a.ts', step: '1', reason: 'a split', date: '2026-11-02' };
@@ -75,14 +76,16 @@ describe('reading a size baseline', () => {
     for (const read of READS) {
       for (const [baseline, refusal] of wrong) assert.throws(() => read(baseline, 'b.json'), refusal);
     }
-    assert.throws(() => parseCastBaseline({ files: { 'src/a.ts': { casts: 1, nonNullAssertions: '0' } } }, 'c.json'),
+    assert.throws(() => CAST_BASELINE.parse({ files: { 'src/a.ts': { casts: 1, nonNullAssertions: '0' } } }, 'c.json'),
       /c\.json files\["src\/a\.ts"\]\.nonNullAssertions must be a number\./);
   });
 
-  it('refuses a cast baseline field it does not take, by name', () => {
+  it('refuses a cast or allocation baseline field it does not take, by name', () => {
     const value = { files: { 'src/a.ts': { casts: 1, nonNullAssertions: 0, importLines: 2 } } };
-    assert.throws(() => parseCastBaseline(value, 'casts.json'),
+    assert.throws(() => CAST_BASELINE.parse(value, 'casts.json'),
       /type gate: casts\.json files\["src\/a\.ts"\] holds importLines; it takes casts, nonNullAssertions\./);
+    assert.throws(() => ALLOCATION_BASELINE.parse({ files: { 'src/a.ts': { extraBytesPerTick: 108, slack: 1 } } },
+      'alloc.json'), /allocation gate: alloc\.json files\["src\/a\.ts"\] holds slack; it takes extraBytesPerTick\./);
   });
 });
 

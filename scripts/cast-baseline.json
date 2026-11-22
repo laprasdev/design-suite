@@ -90,7 +90,6 @@
     "tests/preview3dPartRefusals.test.ts": {"casts":4,"nonNullAssertions":1},
     "tests/preview3dPlayback.test.ts": {"casts":1,"nonNullAssertions":0},
     "tests/preview3dPresentation.test.ts": {"casts":3,"nonNullAssertions":0},
-    "tests/preview3dPreviewDescription.test.ts": {"casts":3,"nonNullAssertions":0},
     "tests/preview3dRecordOwner.test.ts": {"casts":1,"nonNullAssertions":0},
     "tests/preview3dRecords.test.ts": {"casts":3,"nonNullAssertions":0},
     "tests/preview3dRig.test.ts": {"casts":1,"nonNullAssertions":0},

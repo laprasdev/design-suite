@@ -1,7 +1,7 @@
-// A baseline holds the numbers of each file a gate lets stand above its limits, and they only fall. The gate refuses a
-// file whose numbers grew and, on a pass, writes the lower numbers and drops each file that now holds its limits or is
-// gone; scripts/baseline-gate.ts refuses a baseline that rose above the base branch's. The size and cast baselines are
-// both read, lowered and written here. A reader refuses any field a baseline's format does not take, naming it.
+// A baseline holds the numbers of each file a gate lets stand above its limits, and they only fall.
+// scripts/baseline-gate.ts refuses any baseline (size, cast or allocation) that rose above the base branch's.
+// Deterministic gates (size and cast) lower their baselines through `ratchetedFiles`; sampled allocation ceilings are
+// read and formatted here and lowered by hand from recorded runs. Every reader refuses an unknown field by name.
 import { readFileSync } from 'node:fs';
 import {
   OTHER_FIELDS, fieldsHolding, holdsNumber, holdsRecordOf, holdsShape, refusalBy, type FieldCheck, type Refusal,
@@ -37,7 +37,7 @@ export const lowest = <Kind extends string>(kinds: readonly Kind[]) =>
   };
 
 /** Whether any one number is higher in `head`, for numbers that each only fall. */
-export const anyRose = <Numbers extends FileNumbers>(base: Numbers, head: Numbers): boolean =>
+const anyRose = <Numbers extends FileNumbers>(base: Numbers, head: Numbers): boolean =>
   Object.entries(head).some(([name, value]) => value > base[name]);
 
 export const OBJECT = ['{', '}'] as const;
@@ -80,31 +80,45 @@ export const risenFiles = <Numbers extends FileNumbers>(
 ): string[] => Object.entries(head)
   .filter(([file, numbers]) => !Object.hasOwn(base, file) || rose(base[file], numbers)).map(([file]) => file);
 
+/** The numeric record a baseline stores per file for `Kind`. */
+export type NumbersOf<Kind extends string> = Readonly<Record<Kind, number>>;
+
 /** A baseline whose root record holds only `files`, each naming `Kind` numbers. */
 export interface FilesBaseline<Kind extends string> {
-  readonly files: BaselinedFiles<Readonly<Record<Kind, number>>>;
+  readonly files: BaselinedFiles<NumbersOf<Kind>>;
 }
 
-/** Builds the rule, parser, reader and formatter for a `files`-only numeric baseline. */
-export function filesBaselineCodec<Kind extends string>(gate: string, kinds: readonly Kind[]) {
+/** One `files`-only numeric baseline: its path, kinds, rise check, parser, reader and formatter. */
+export interface FilesBaselineModule<Kind extends string> {
+  readonly file: string;
+  readonly kinds: readonly Kind[];
+  readonly rose: (base: NumbersOf<Kind>, head: NumbersOf<Kind>) => boolean;
+  readonly parse: (value: unknown, file: string) => FilesBaseline<Kind>;
+  readonly read: (file: string) => FilesBaseline<Kind>;
+  readonly format: (baseline: FilesBaseline<Kind>) => string;
+}
+
+/** Builds the path, kinds, rise check, parser, reader and formatter for a `files`-only numeric baseline. */
+export function filesBaseline<Kind extends string>(
+  gate: string,
+  file: string,
+  kinds: readonly Kind[],
+): FilesBaselineModule<Kind> {
   const check: FieldCheck<FilesBaseline<Kind>> = holdsShape(
     { files: holdsRecordOf(holdsNumbers(kinds)) },
     OTHER_FIELDS.refused,
   );
-  const parse = (value: unknown, file: string): FilesBaseline<Kind> => {
-    check(value, '', baselineRefusal(`${gate}: ${file}`));
+  const parse = (value: unknown, source: string): FilesBaseline<Kind> => {
+    check(value, '', baselineRefusal(`${gate}: ${source}`));
     return value;
   };
-  const rule: BaselineRule<Readonly<Record<Kind, number>>, Readonly<Record<Kind, number>>> = {
-    withinLimits: measured => kinds.every(kind => measured[kind] === 0),
-    lowered: lowest(kinds),
+  return Object.freeze({
+    file,
+    kinds,
     rose: anyRose,
-  };
-  return {
-    rule,
     parse,
-    read: (file: string): FilesBaseline<Kind> => parse(JSON.parse(readFileSync(file, 'utf8')), file),
+    read: (source: string): FilesBaseline<Kind> => parse(JSON.parse(readFileSync(source, 'utf8')), source),
     format: (baseline: FilesBaseline<Kind>): string =>
       baselineText({ files: jsonBlock(fileEntries(baseline.files), OBJECT) }),
-  };
+  });
 }

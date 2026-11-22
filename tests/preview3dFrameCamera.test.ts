@@ -6,6 +6,7 @@ import {MODEL_ACTOR_REFUSAL, MODEL_PREVIEW_CAMERA_REFUSAL, MODEL_PREVIEW_CAPABIL
   from '../src/react/preview3d/model.ts';
 import {modelStageDescriptionChanges} from '../src/react/preview3d/descriptionModel.ts';
 import {modelPreviewCamera} from '../src/react/preview3d/presentation.ts';
+import {createModelDescriptionRequests} from '../src/react/preview3d/previewDescription.ts';
 import {applyModelFrame} from '../src/react/preview3d/actor.ts';
 import {createModelFrameInbox} from '../src/react/preview3d/frameInbox.ts';
 import {declaration, describing, entity, fileScene, frame, layer, makeActor, makeFraming, refused, sample}
@@ -90,10 +91,10 @@ describe('atomic per-frame camera application and inbox delivery', () => {
     assert.deepEqual(applied(), {pos: [3, 0, 0], cam: [1, 2, 9], fov: 50});
     const expectedForward = new THREE.Vector3(0, 1, 0).sub(new THREE.Vector3(1, 2, 9)).normalize();
     assert.ok(camera.getWorldDirection(new THREE.Vector3()).distanceTo(expectedForward) < 1e-6);
-    // Refuses an unbranded object bypassed past TypeScript before touching actors or camera.
+    // Refuses an unbranded object bypassed past TypeScript before touching actors or camera, naming validateModelFrame.
     refused(() => Reflect.apply(applyModelFrame, undefined, [
       [actor], {simulationTimeSeconds: 0.8, entities: [], cameraCoordinates: null}, applyCamera,
-    ]), MODEL_ACTOR_REFUSAL.frame);
+    ]), MODEL_ACTOR_REFUSAL.unvalidated);
     // Invalid camera refuses before actor changes.
     refused(() => run({
       ...frame(1, entity('a', [], [99, 0, 0])),
@@ -152,11 +153,42 @@ describe('atomic per-frame camera application and inbox delivery', () => {
     pendingPos[0] = 99;
     assert.equal(inbox.attach(value => applyModelFrame([actor], value, applyCamera)), 'ready');
     assert.deepEqual([camera.position.toArray(), camera.fov], [[4, 2, 7], MODEL_STAGE.fieldOfView]);
-    inbox.detach();
-    inbox.describe(fileScene([declaration('b', 'actor-mesh')]), []);
-    assert.equal(inbox.receive(frame(3, entity('b', [], [1, 0, 0], 'actor-mesh'))), 'pending');
-    assert.equal(inbox.attach(value => applyModelFrame([actor], value, applyCamera)), 'error');
+    // Validator refuses an undeclared actor directly against the inbox's applied scope.
+    assert.equal(inbox.receive(frame(3, entity('b', [], [1, 0, 0], 'actor-mesh'))), 'error');
     assert.equal(inbox.failure instanceof Error ? inbox.failure.message : '', MODEL_ACTOR_REFUSAL.undeclared('b'));
+    // Re-describing while detached drops a pending frame from the previous description.
+    inbox.detach();
+    assert.equal(inbox.receive(frame(3.5, entity('a', [], [6, 0, 0]))), 'pending');
+    inbox.describe(fileScene([declaration('b', 'otter')]), []);
+    assert.equal(inbox.status, 'waiting');
     actor.dispose();
   });
+
+  it('publishes inbox scope only when the stage applies a description, keeping the shown scope while loading',
+    async () => {
+      const {actor: actorA} = makeActor('a', []), {actor: actorB} = makeActor('b', []);
+      const {applyCamera} = makeFraming(), inbox = createModelFrameInbox();
+      const shownA = modelStageDescription(describing({actors: {focus: 'a', actors: [actorA.declaration]}}));
+      const nextB = modelStageDescription(describing({actors: {focus: 'b', actors: [actorB.declaration]}}));
+      let liveActors = [actorA], resolveLoad: () => void = () => undefined;
+      const requests = createModelDescriptionRequests(() => undefined, () => undefined, () => undefined,
+        applied => inbox.describe(applied, []));
+      requests.hold(shownA);
+      inbox.attach(value => applyModelFrame(liveActors, value, applyCamera));
+      requests.declare({snapshot: () => ({actorsPending: true}),
+        setDescription: () => new Promise<void>(resolve => {resolveLoad = resolve;})}, nextB);
+      assert.equal(inbox.receive(frame(1, entity('b', [], [2, 0, 0]))), 'error');
+      assert.equal(inbox.failure instanceof Error ? inbox.failure.message : '', MODEL_ACTOR_REFUSAL.undeclared('b'));
+      assert.equal(inbox.receive(frame(1.5, entity('a', [], [3, 0, 0]))), 'ready');
+      assert.deepEqual(actorA.snapshot().pose.position, [3, 0, 0]);
+      liveActors = [actorB];
+      resolveLoad();
+      await Promise.resolve();
+      assert.equal(inbox.receive(frame(2, entity('a', [], [4, 0, 0]))), 'error');
+      assert.equal(inbox.failure instanceof Error ? inbox.failure.message : '', MODEL_ACTOR_REFUSAL.undeclared('a'));
+      assert.equal(inbox.receive(frame(2.5, entity('b', [], [6, 0, 0]))), 'ready');
+      assert.deepEqual(actorB.snapshot().pose.position, [6, 0, 0]);
+      actorA.dispose();
+      actorB.dispose();
+    });
 });

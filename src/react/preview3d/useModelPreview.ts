@@ -17,7 +17,6 @@ export type ModelPreviewStageOptions = Pick<ModelStageOptions, 'floor' | 'grid' 
 export function useModelPreview(host: ModelStageDescription, theme: ModelStageTheme, reviewKey: string,
   options: ModelPreviewStageOptions, frame: ModelPreviewFrame | null | undefined) {
   const external = frame !== undefined;
-  const [inbox] = useState(createModelFrameInbox);
   const [poseStatus, setPoseStatus] = useState<ModelFrameStatus>('waiting');
   const hostRef = useRef<HTMLDivElement>(null);
   const controller = useRef<ModelStageController | null>(null);
@@ -46,9 +45,20 @@ export function useModelPreview(host: ModelStageDescription, theme: ModelStageTh
   }, []);
   const hostLatest = useRef(host);
   hostLatest.current = host;
+  const kindsLatest = useRef(options.kinds);
+  kindsLatest.current = options.kinds;
+  const externalLatest = useRef(external);
+  externalLatest.current = external;
+  const frameLatest = useRef(frame);
+  frameLatest.current = frame;
   const describe = (value: ModelPreviewSelection) => modelPreviewDescription(hostLatest.current, value);
   const description = describe(declared), described = JSON.stringify(description);
   const latest = useRef(description);
+  const [inbox] = useState(() => {
+    const value = createModelFrameInbox();
+    value.describe(description, options.kinds);
+    return value;
+  });
   // Whether a created stage is there to keep when a request is refused.
   const usable = useRef(true);
   // The one place a failure is read, decided by its kind: a refusal leaves the stage as it was and is recorded;
@@ -64,7 +74,12 @@ export function useModelPreview(host: ModelStageDescription, theme: ModelStageTh
     if (status === 'error') read(inbox.failure, usable.current, setFrameFailure);
     else setFrameFailure(null);
   };
-  const [requests] = useState(() => createModelDescriptionRequests(setLoading, value => read(value), settled));
+  // Frames are checked against the description the stage has applied, published once per applied setDescription.
+  const [requests] = useState(() => createModelDescriptionRequests(setLoading, value => read(value), settled,
+    applied => {
+      inbox.describe(applied, kindsLatest.current);
+      if (externalLatest.current) pose(inbox.receive(frameLatest.current));
+    }));
   // The controls show and act on what the stage shows: while a refusal stands, the description it holds.
   const selection = requests.shown(declared, failure?.kind === MODEL_STAGE_FAILURE.refused);
   const selected = useRef(selection);
@@ -74,9 +89,7 @@ export function useModelPreview(host: ModelStageDescription, theme: ModelStageTh
     latest.current = description;
     if (controller.current) requests.declare(controller.current, description);
   }, [described]);
-  // What a frame is checked against is built when the description or the kinds change, never per frame.
   const kinds = JSON.stringify(options.kinds);
-  useLayoutEffect(() => inbox.describe(latest.current, options.kinds), [described, kinds]);
   useLayoutEffect(() => {
     if (external) pose(inbox.receive(frame));
   }, [external, inbox, frame]);
@@ -113,6 +126,10 @@ export function useModelPreview(host: ModelStageDescription, theme: ModelStageTh
     setFrameFailure(null);
     setLoading(false);
     const created = latest.current;
+    if (requests.held !== undefined) {
+      inbox.describe(created, options.kinds);
+      if (external) pose(inbox.receive(frameLatest.current));
+    }
     try {
       dispose = createModelStage(node, created, theme, api => {
         if (!active) return;

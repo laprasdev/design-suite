@@ -4,7 +4,7 @@ import {mkdirSync, writeFileSync} from 'node:fs';
 import {join} from 'node:path';
 import {test} from 'node:test';
 import {MODEL_STAGE, MODEL_STAGE_SURFACE_MODE} from '../src/react/preview3d/model.ts';
-import {ALLOCATION_BASELINE, readAllocationBaseline} from '../scripts/baseline/allocationBaseline.ts';
+import {ALLOCATION_BASELINE} from '../scripts/baseline/allocationBaseline.ts';
 import {isRecord} from '../src/valueChecks.ts';
 import {openScene, SCENE_GL} from './browserScene.ts';
 import type {TerrainViewport} from './preview3dTerrainCases.ts';
@@ -160,8 +160,8 @@ test('verifies sRGB colour space, flipY false orientation, fog, Surface modes, i
     const withoutMean = Math.round(mean(withoutRuns));
     const withMean = Math.round(mean(withRuns));
     const extraBytesPerTick = withMean - withoutMean;
-    const ceiling = readAllocationBaseline(join(SUITE_ROOT, ALLOCATION_BASELINE)).files[FRAME_CAMERA_OWNER];
-    assert.ok(ceiling !== undefined, `${ALLOCATION_BASELINE} must record a ceiling for ${FRAME_CAMERA_OWNER}`);
+    const ceiling = ALLOCATION_BASELINE.read(join(SUITE_ROOT, ALLOCATION_BASELINE.file)).files[FRAME_CAMERA_OWNER];
+    assert.ok(ceiling !== undefined, `${ALLOCATION_BASELINE.file} must record a ceiling for ${FRAME_CAMERA_OWNER}`);
     const report = {
       ticksPerRun: PROFILE_TICKS,
       pairs: PROFILE_PAIRS,

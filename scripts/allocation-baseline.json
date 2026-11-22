@@ -1,5 +1,5 @@
 {
   "files": {
-    "src/react/preview3d/frameModel.ts": {"extraBytesPerTick": 120}
+    "src/react/preview3d/frameModel.ts": {"extraBytesPerTick":108}
   }
 }

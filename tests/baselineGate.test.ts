@@ -10,15 +10,13 @@ import { SIZE_RULE, readBaseline, sizeBaselineText } from '../scripts/sizeGate/b
 import {
   FILE_LINE_LIMIT, LINE_CHARACTER_LIMIT, type AllowanceGrant, type SizeBaseline,
 } from '../scripts/sizeGate/limits.ts';
-import {
-  ALLOCATION_BASELINE, allocationBaselineText, type AllocationNumbers,
-} from '../scripts/baseline/allocationBaseline.ts';
-import { CAST_BASELINE, castBaselineText, type CastNumbers } from '../scripts/typeGate/castBaseline.ts';
+import { ALLOCATION_BASELINE } from '../scripts/baseline/allocationBaseline.ts';
+import { CAST_BASELINE, type CastNumbers } from '../scripts/typeGate/castBaseline.ts';
 import { GATE, runGate, type GateTree } from './gateFixture.ts';
 
-const casts = (files: Record<string, CastNumbers>) => ({ [CAST_BASELINE]: castBaselineText({ files }) });
-const allocations = (files: Record<string, AllocationNumbers>) =>
-  ({ [ALLOCATION_BASELINE]: allocationBaselineText({ files }) });
+const casts = (files: Record<string, CastNumbers>) => ({ [CAST_BASELINE.file]: CAST_BASELINE.format({ files }) });
+const allocations = (files: Parameters<typeof ALLOCATION_BASELINE.format>[0]['files']) =>
+  ({ [ALLOCATION_BASELINE.file]: ALLOCATION_BASELINE.format({ files }) });
 const ONE_CAST = { 'src/a.ts': { casts: 1, nonNullAssertions: 0 } };
 const TWO_CASTS = { 'src/a.ts': { casts: 2, nonNullAssertions: 0 } };
 const baselines = (tree: GateTree) => runGate(GATE.baselines, tree, process.env);

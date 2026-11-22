@@ -13,7 +13,7 @@ import {MODEL_ACTOR_REFUSAL, MODEL_STAGE_DRIVER, modelActorDrawsFile, modelActor
 import type {ModelDrawn} from './drawn.ts';
 import type {ModelStageActor, ModelStageActorSnapshot, ModelStageDriver} from './actorModel.ts';
 import {isModelValidatedFrame, type ModelValidatedFrame} from './frameModel.ts';
-import {MODEL_PREVIEW_ENTITY_REFUSAL, type ModelPreviewEntity} from './presentation.ts';
+import type {ModelPreviewEntity} from './presentation.ts';
 import {MODEL_STAGE_COMMIT_TEXT, modelStageCommit, prepareWhole, type ModelStageCommit} from './commit.ts';
 import {ModelStageRefusal} from './refusal.ts';
 import {extendModelMaterials} from './shading.ts';
@@ -141,19 +141,13 @@ export type ModelActor = ReturnType<typeof createModelActor>;
 // they were. An actor the frame does not name keeps what it shows.
 export function applyModelFrame(actors: readonly ModelActor[], value: ModelValidatedFrame,
   applyCamera: (coordinates: Float64Array) => void) {
-  if (!isModelValidatedFrame(value)) throw new ModelStageRefusal(MODEL_ACTOR_REFUSAL.frame);
-  const prepares = value.entities.map(entity => {
-    const actor = actors.find(candidate => candidate.id === entity.entityId);
-    if (!actor) throw new ModelStageRefusal(MODEL_ACTOR_REFUSAL.undeclared(entity.entityId));
-    const {declaration} = actor;
-    if (!modelActorDrawsFile(declaration)) throw new ModelStageRefusal(MODEL_ACTOR_REFUSAL.terrainFrame(actor.id));
-    if (entity.modelId !== declaration.asset.id) {
-      throw new ModelStageRefusal(MODEL_PREVIEW_ENTITY_REFUSAL.model(entity.entityId, declaration.asset.id));
-    }
-    return () => actor.prepare(entity);
-  });
-  const commitActors = prepareWhole(prepares);
-  commitActors();
+  if (!isModelValidatedFrame(value)) throw new ModelStageRefusal(MODEL_ACTOR_REFUSAL.unvalidated);
+  const prepares: Array<() => ModelStageCommit> = [];
+  for (const actor of actors) {
+    const entity = value.entities.find(candidate => candidate.entityId === actor.id);
+    if (entity) prepares.push(() => actor.prepare(entity));
+  }
+  prepareWhole(prepares)();
   if (value.cameraCoordinates !== null) {
     try {applyCamera(value.cameraCoordinates);} catch (error) {
       throw new Error(MODEL_STAGE_COMMIT_TEXT.partial, {cause: error});

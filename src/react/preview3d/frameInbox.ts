@@ -36,8 +36,10 @@ export function createModelFrameInbox() {
   return {
     get status() {return status;},
     get failure() {return failure;},
-    /** The declared description and the kinds the stage is given changed: frames are checked against them now. */
+    /** The description the stage shows and the kinds it is given changed: frames are checked against them now. */
     describe(declared: Pick<ModelStageDescription, 'actors' | 'surfaceSets'>, kinds: readonly ModelSurfaceKind[]) {
+      pending = null;
+      if (status === 'pending') status = 'waiting';
       try {
         checked = {scope: modelFrameScope(declared, modelSurfaceKinds(kinds))};
       } catch (error) {
