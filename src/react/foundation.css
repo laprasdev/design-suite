@@ -11,6 +11,8 @@
 /* Reset plain buttons, but not composable ones. `:where` keeps the exclusion at zero
    specificity so component button styles still win. */
 .app-root button:where(:not(.bd-btn)) { font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer; }
+/* A busy button (pending.tsx), whatever control it is, shows the busy cursor; after the reset, so it wins. */
+button[aria-busy=true] { cursor:progress; }
 :where(:root) { --segment-padding-block:3px;--segment-padding-inline:10px; }
 /* One select chrome: its caret sits as far in from the right as its text sits from the left. */
 .app-root { --select-inset:12px;--select-caret:4px; }

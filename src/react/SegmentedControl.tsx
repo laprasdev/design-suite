@@ -15,7 +15,10 @@ import {wrapVariables,type WrapGrid,type Pictured} from './segmentWrap.ts';
 import {HoverDetail} from './HoverDetail.tsx';
 import {PALETTE_CHANGE_EVENT} from '../theme.ts';
 import {cssRect} from './cssZoom.ts';
-import {pendingText,type SegmentPending} from './segmentPending.tsx';
+import {pendingContent,pendingPress} from './pending.tsx';
+import {PendingForm} from './pendingElements.ts';
+import {moveTab} from './tabNavigation.ts';
+import type {ListOrientation} from './listboxNavigation.ts';
 
 // An option: its value and label, hover help (`detail`) or a chosen description,
 // whether it is unavailable, and its own attributes.
@@ -49,7 +52,7 @@ interface SegmentedBase<V extends SegmentValue> extends Pictured<V>, SegmentDefa
   ariaLabel?: string;
   className?: string;
   style?: CSSProperties;
-  orientation?: 'horizontal'|'vertical';
+  orientation?: ListOrientation;
   /** A vertical rail floating in its space: a rule above its first row and below its last. */
   closed?: boolean;
   /** Square cells, sized in pixels or by a CSS token, with no padding. */
@@ -60,6 +63,8 @@ interface SegmentedBase<V extends SegmentValue> extends Pictured<V>, SegmentDefa
   disabled?: boolean;
   children?: ReactNode;
 }
+// A choice its consumer is still saving: the option shown chosen, and what it says meanwhile.
+export interface SegmentPending<V> {value: V,label: ReactNode}
 // One choice, or (`multiple`) any set of them.
 // The options give the values; a change handler takes them (and never decides them).
 export type SingleSegmentProps<V extends SegmentValue>=SegmentedBase<V>&{multiple?: false,value?: V|null,pending?: SegmentPending<NoInfer<V>>|null,onChange(value: NoInfer<V>): void};
@@ -90,7 +95,6 @@ export function SegmentedControl<V extends SegmentValue>(props: SegmentedControl
   const lastText=useRef({value,ariaLabel}),textAnimation=useRef<Animation|null>(null);
   const chosen=(option: V)=>props.multiple?props.value.includes(option):value===option;
   const choose=(option: V,selected: boolean)=>{
-    if(pending||disabled||options.some(o=>o.value===option&&o.disabled))return;
     if(props.multiple)props.onChange(selected?props.value.filter(v=>v!==option):[...props.value,option]);
     else props.onChange(option);
   };
@@ -168,27 +172,24 @@ export function SegmentedControl<V extends SegmentValue>(props: SegmentedControl
     window.addEventListener(PALETTE_CHANGE_EVENT,update);
     return()=>{observer.disconnect();window.removeEventListener(PALETTE_CHANGE_EVENT,update);};
   });
-  const onKeyDown=(e: KeyboardEvent<HTMLDivElement>)=>{
-    const back=orientation==='vertical'?'ArrowUp':'ArrowLeft',next=orientation==='vertical'?'ArrowDown':'ArrowRight';
-    if(!tabs||disabled||pending||![back,next,'Home','End'].includes(e.key))return;
-    const enabled=options.filter(o=>!o.disabled);
-    if(!enabled.length)return;
-    e.preventDefault();
-    const current=enabled.findIndex(o=>o.value===value),index=e.key==='Home'?0:e.key==='End'?enabled.length-1:(current+(e.key===next?1:-1)+enabled.length)%enabled.length;
-    choose(enabled[index].value,chosen(enabled[index].value));e.currentTarget.querySelectorAll('button')[options.indexOf(enabled[index])]?.focus();
-  };
+  const select=(o: SegmentOption<V>)=>choose(o.value,chosen(o.value));
+  // An unavailable option's press does nothing (its detail still opens), and a saving control's is refused.
+  const optionPress=(o: SegmentOption<V>)=>pendingPress(!!pending,disabled||o.disabled?undefined:()=>select(o));
+  const onKeyDown=(e: KeyboardEvent<HTMLDivElement>)=>moveTab(e,{orientation,options,chosen:o=>chosen(o.value),
+    press:select});
   return (
-    <div ref={root} className={`seg${variant?` seg--${variant}`:''}${className?` ${className}`:''}`} data-fit={fit||undefined} data-scroll={scroll||undefined} data-density={density} style={{...(fit&&{'--segment-count':options.length}),...(cell!==undefined&&{'--segment-cell':typeof cell==='number'?`${cell}px`:cell}),...(glyphShare!==undefined&&{'--segment-glyph-share':glyphShare}),...(wrap&&wrapVariables(wrap,options.length)),...style}} data-cell={cell!==undefined||undefined} data-glyph={glyphShare!==undefined||undefined} data-wrap={wrap?true:undefined} data-count={options.length} data-orientation={orientation} data-closed={closed||undefined} data-icon-only={iconOnly||undefined} data-multiple={multiple||undefined} data-pending={pending?true:undefined} role={tabs?'tablist':'group'} aria-orientation={tabs?orientation:undefined} aria-label={ariaLabel} aria-busy={pending?true:undefined} onKeyDown={onKeyDown}>
+    <div ref={root} className={`seg${variant?` seg--${variant}`:''}${className?` ${className}`:''}`} data-fit={fit||undefined} data-scroll={scroll||undefined} data-density={density} style={{...(fit&&{'--segment-count':options.length}),...(cell!==undefined&&{'--segment-cell':typeof cell==='number'?`${cell}px`:cell}),...(glyphShare!==undefined&&{'--segment-glyph-share':glyphShare}),...(wrap&&wrapVariables(wrap,options.length)),...style}} data-cell={cell!==undefined||undefined} data-glyph={glyphShare!==undefined||undefined} data-wrap={wrap?true:undefined} data-count={options.length} data-orientation={orientation} data-closed={closed||undefined} data-icon-only={iconOnly||undefined} data-multiple={multiple||undefined} data-pending={pending?true:undefined} role={tabs?'tablist':'group'} aria-orientation={tabs?orientation:undefined} aria-label={ariaLabel} aria-busy={pending?true:undefined} onKeyDown={tabs&&!disabled&&!pending?onKeyDown:undefined}>
       {filled&&<span ref={indicator} className={SegmentIndicator.className} aria-hidden="true"/>}
       {options.map((o,index) => {
         const selected=chosen(o.value),saving=pending?.value===o.value;
         const optionProps={...o.data,className:o.className,style:o.style,id:o.id,title:o.title,role:tabs?'tab':undefined,'aria-selected':tabs?selected:undefined,'aria-pressed':tabs?undefined:multiple&&o.mixed?'mixed' as const:selected,'aria-controls':o.controls,'aria-expanded':o.expanded,tabIndex:tabs?(selected?0:-1):undefined,onMouseEnter:()=>onPoint?.(o.value),onMouseLeave:()=>onPoint?.(null),onFocus:()=>onPoint?.(o.value),onBlur:()=>onPoint?.(null),'data-on':selected,'data-mixed':multiple&&o.mixed||undefined,'data-unavailable':o.disabled||undefined,'data-pending':saving||undefined,[SEGMENT_GROUP_START_ATTRIBUTE]:index>0&&o.group!==options[index-1].group||undefined};
-        const label=<Label kind="action">{saving?<span className="seg-pending" role="status">{pendingText(o,pending)}</span>:o.label}{swept&&<span className={TextSweepElement.className} aria-hidden="true">{pendingText(o,pending)}</span>}</Label>,select=()=>choose(o.value,selected);
+        const text=pendingContent({pending:saving,form:PendingForm.TEXT,content:saving?pending.label:o.label});
+        const label=<Label kind="action">{text}{swept&&<span className={TextSweepElement.className} aria-hidden="true">{text}</span>}</Label>,press=optionPress(o);
         // An option's `detail` is hover/focus help, shared with settings through HoverDetail.
         // An option unavailable on its own keeps its help: hovering or pressing it explains why.
         return o.detail
-          ?<HoverDetail triggerRef={o.buttonRef} key={String(o.value)} interactive panelRole="tooltip" label={o.ariaLabel??(typeof o.label==='string'?o.label:undefined)} content={o.detail} disabled={disabled} triggerProps={{...optionProps,'aria-disabled':o.disabled||undefined}} onActivate={o.disabled?undefined:select}>{label}</HoverDetail>
-          :<button ref={o.buttonRef} type="button" key={String(o.value)} {...optionProps} aria-label={o.ariaLabel} disabled={!onPoint&&(disabled||o.disabled)} aria-disabled={onPoint&&(disabled||o.disabled)||undefined} onClick={select}>{label}</button>;
+          ?<HoverDetail triggerRef={o.buttonRef} key={String(o.value)} interactive panelRole="tooltip" label={o.ariaLabel??(typeof o.label==='string'?o.label:undefined)} content={o.detail} disabled={disabled} triggerProps={{...optionProps,'aria-disabled':o.disabled||undefined}} press={press}>{label}</HoverDetail>
+          :<button ref={o.buttonRef} type="button" key={String(o.value)} {...optionProps} aria-label={o.ariaLabel} disabled={!onPoint&&(disabled||o.disabled)} aria-disabled={onPoint&&(disabled||o.disabled)||undefined} {...press}>{label}</button>;
       })}
       {children}
     </div>

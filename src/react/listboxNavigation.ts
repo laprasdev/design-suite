@@ -1,15 +1,38 @@
-// Keyboard navigation through a listbox of options (ListboxSelect), following
-// the select-only combobox pattern.
+// Keyboard navigation through a list of options: a listbox (ListboxSelect), following the select-only combobox
+// pattern, and a tab list (tabNavigation.ts, for SegmentedControl's `tabs`).
 
 // Keys typed within this long of each other search the labels together.
 export const TYPEAHEAD_MS=500;
-// Keys that move through an open list, from the active option: (active,count)=>next.
+// Keys that move through an open list, from the active option's index, or NO_ACTIVE: (active,count)=>next.
 type ListMove=(active: number,count: number)=>number;
-export const LISTBOX_MOVES: Readonly<Record<string,ListMove>>=Object.freeze({ArrowDown:(i,n)=>Math.min(n-1,i+1),ArrowUp:i=>Math.max(0,i-1),Home:()=>0,End:(i,n)=>n-1});
+// No option is active (findIndex's none): the arrows enter the list, on at its first option and back at its last.
+export const NO_ACTIVE=-1;
+// The arrows that step back and on through a list along each orientation.
+const LIST_ARROWS=Object.freeze({
+ vertical:{back:'ArrowUp',next:'ArrowDown'},
+ horizontal:{back:'ArrowLeft',next:'ArrowRight'},
+});
+export type ListOrientation=keyof typeof LIST_ARROWS;
+// The moves along `orientation`: an arrow past an end stops there, or (`wraps`) comes round to the other end.
+export function listMoves(orientation: ListOrientation,wraps: boolean): Readonly<Record<string,ListMove>> {
+ const {back,next}=LIST_ARROWS[orientation];
+ const step=(by: number): ListMove=>(active,n)=>{
+  const i=active===NO_ACTIVE&&by<0?n:active;
+  return wraps?(i+by+n)%n:Math.min(n-1,Math.max(0,i+by));
+ };
+ return Object.freeze({[back]:step(-1),[next]:step(1),Home:()=>0,End:(_,n)=>n-1});
+}
+const LISTBOX_ORIENTATION: ListOrientation='vertical';
+export const LISTBOX_MOVES=listMoves(LISTBOX_ORIENTATION,false);
+// The arrows along a listbox, which a list that is searching still takes.
+export const LISTBOX_ARROWS: readonly string[]=Object.freeze(Object.values(LIST_ARROWS[LISTBOX_ORIENTATION]));
 // Keys that open a closed list, and the option each starts on, from the chosen one.
-export const LISTBOX_OPENS: Readonly<Record<string,ListMove>>=Object.freeze({ArrowDown:i=>i,ArrowUp:i=>i,Enter:i=>i,' ':i=>i,Home:()=>0,End:(i,n)=>n-1});
+const onChosen: ListMove=i=>i;
+export const LISTBOX_OPENS: Readonly<Record<string,ListMove>>=Object.freeze({
+ ...Object.fromEntries([...LISTBOX_ARROWS,'Enter',' '].map(key=>[key,onChosen])),Home:()=>0,End:(_,n)=>n-1});
 // A key that types into the search rather than commanding the list.
-export const typesText=(event: Pick<KeyboardEvent,'key'|'ctrlKey'|'metaKey'|'altKey'>)=>event.key.length===1&&!event.ctrlKey&&!event.metaKey&&!event.altKey;
+export const typesText=(event: Pick<KeyboardEvent,'key'|'ctrlKey'|'metaKey'|'altKey'>)=>
+ event.key.length===1&&!event.ctrlKey&&!event.metaKey&&!event.altKey;
 const searchable=(text: string)=>text.normalize('NFKD').replace(/[̀-ͯ]/g,'').toLowerCase();
 
 // The search after typing `key` at `now`: it continues the previous search while
@@ -18,7 +41,8 @@ export interface TypeaheadSearch {
  text: string;
  at: number;
 }
-export const typeahead=(previous: TypeaheadSearch,key: string,now: number): TypeaheadSearch=>({text:(now-previous.at<TYPEAHEAD_MS?previous.text:'')+searchable(key),at:now});
+export const typeahead=(previous: TypeaheadSearch,key: string,now: number): TypeaheadSearch=>
+ ({text:(now-previous.at<TYPEAHEAD_MS?previous.text:'')+searchable(key),at:now});
 // Whether a search is still taking keys (a space then searches, not chooses).
 export const searching=(search: TypeaheadSearch,now: number)=>!!search.text&&now-search.at<TYPEAHEAD_MS;
 // The option a search reaches among `labels`, from the active one (`from`), or
@@ -30,4 +54,5 @@ export function typeaheadMatch(labels: readonly string[],text: string,from: numb
 }
 
 // Substring terms for searchable pickers; case and accents match typeahead.
-export const matchesOption=(label: string,query: string)=>searchable(query).trim().split(/\s+/).every(term=>searchable(label).includes(term));
+export const matchesOption=(label: string,query: string)=>
+ searchable(query).trim().split(/\s+/).every(term=>searchable(label).includes(term));
