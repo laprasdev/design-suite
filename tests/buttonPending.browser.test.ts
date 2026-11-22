@@ -154,12 +154,12 @@ for(const viewport of [DESKTOP_VIEWPORT,PHONE_VIEWPORT])test(`at ${viewport.widt
   assert.ok(segments.length>0);
   for(const segment of segments){
    const balls=await segment.locator(PendingElement.selector)
-    .evaluateAll((statuses,{sweep,ball})=>statuses.map(status=>{
-    const spinner=status.querySelector(ball);
-    return {copy:!!status.closest(sweep),visibility:spinner&&getComputedStyle(spinner).visibility,
+    .evaluateAll((pendings,{sweep,ball})=>pendings.map(pending=>{
+    const spinner=pending.querySelector(ball);
+    return {copy:!!pending.closest(sweep),visibility:spinner&&getComputedStyle(spinner).visibility,
      width:spinner?.getBoundingClientRect().width};
    }),{sweep:TextSweepElement.selector,ball:LoadingElement.POKEBALL.selector});
-   // One status in the saving option's label, and one in its sweep's copy.
+   // One pending element in the saving option's label, and one in its sweep's copy.
    assert.deepEqual(balls.map(drawn=>drawn.copy),[false,true]);
    assert.equal(balls[0].visibility,'visible');
    assert.ok((balls[0].width??0)>0,'the saving option draws no Poké Ball');
@@ -167,7 +167,7 @@ for(const viewport of [DESKTOP_VIEWPORT,PHONE_VIEWPORT])test(`at ${viewport.widt
   }
  });
  await t.test('a swept SegmentedControl\'s sweep copy lies over its label, part by part, in each form',async()=>{
-  // Each part of the label (a glyph, its text, a pending status) beside the same part of the sweep's copy.
+  // Each part of the label (a glyph, its text, a pending element) beside the same part of the sweep's copy.
   const parts=await page.locator(`${PendingSceneElement.SEGMENT.selector} button`)
    .evaluateAll((options,sweep)=>options.map(option=>{
     const copy=option.querySelector(sweep),label=copy?.parentElement;

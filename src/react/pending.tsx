@@ -1,7 +1,8 @@
-/* A control's pending form while its consumer saves the press: the loading Poké Ball with what the control shows, in a
-   status (its forms: pendingElements.ts), and its press, which marks it busy (`aria-busy`, which its styles read) and
-   refuses itself whole. The control stays focusable; pending replaces `disabled` for that time. The consumer owns the
-   save and the confirmed value it passes afterwards. The content keeps its own inline layout. */
+/* A control's pending form while its consumer saves the press: the loading Poké Ball with what the control shows
+   (its forms: pendingElements.ts), and its press, which marks it busy (`aria-busy`, which its styles read) and
+   refuses itself whole. The busy mark is the control's alone: a status role inside a control takes its accessible
+   name. The control stays focusable; pending replaces `disabled` for that time. The consumer owns the save and the
+   confirmed value it passes afterwards. The content keeps its own inline layout. */
 import type {ButtonHTMLAttributes,ReactNode} from 'react';
 import {PokeballSpinner} from './Pokeball.tsx';
 import {PENDING_FORM_ATTRIBUTE,PendingElement,type PendingForm} from './pendingElements.ts';
@@ -10,7 +11,7 @@ import {PENDING_FORM_ATTRIBUTE,PendingElement,type PendingForm} from './pendingE
 export interface PendingContent {pending: boolean,form: PendingForm,content: ReactNode}
 
 export function pendingContent({pending,form,content}: PendingContent): ReactNode {
-  return pending?<span className={PendingElement.className} {...{[PENDING_FORM_ATTRIBUTE]:form}} role="status">
+  return pending?<span className={PendingElement.className} {...{[PENDING_FORM_ATTRIBUTE]:form}}>
     <PokeballSpinner/><span>{content}</span>
   </span>:content;
 }
