@@ -18,7 +18,8 @@ export { Button, type ButtonProps, type ButtonVariant } from "./Button.tsx";
 export { Modal, type ModalProps } from './Modal.tsx';
 export { ModalRow, type ModalRowProps, type ModalTitleProps } from './ModalLayout.tsx';
 export { ModalElement, ModalForm, ModalPlacement, ModalWidth, ModalFrameInset, MODAL_TITLED_ATTRIBUTE,
-  MODAL_ROW_LABELLED_ATTRIBUTE, MODAL_PLACEMENT_ATTRIBUTE, type ModalWidthValue, type ModalFrameInsetValue,
+  MODAL_ROW_LABELLED_ATTRIBUTE, MODAL_PLACEMENT_ATTRIBUTE, type ModalAnchor, type ModalWidthValue,
+  type ModalFrameInsetValue,
 } from './modalElements.ts';
 export { PlayerIcon, PlayerStatusRings, type PlayerIconProps, type PhotoRing, type StatusRing, type RingSegment,
   type Hand, type ActiveHand } from './PlayerIcon.tsx';
@@ -49,8 +50,8 @@ export {
   LoadingIndicator, LoadingScreen, POKEBALL_OUTLINE, PokeballIcon, PokeballOutline, PokeballSpinner,
 } from './Pokeball.tsx';
 export { GlowParticleElement, LoadingElement } from './loadingElements.ts';
-export { CSS_ZOOM_PROPERTY, cssRect, cssViewport, zoomOf, type CssRect } from './cssZoom.ts';
-export { useAnchoredPopover, VIEWPORT_EDGE, type PopoverPlacement } from './useAnchoredPopover.ts';
+export { CSS_ZOOM_PROPERTY, cssPoint, cssRect, cssViewport, zoomOf, type CssPoint, type CssRect } from './cssZoom.ts';
+export { POPOVER_GAP, VIEWPORT_EDGE, type PopoverPlacement } from './useAnchoredPopover.ts';
 export { PARTICIPANT_GRASS, PARTICIPANT_GRASS_BEND } from './participantGrass.ts';
 export { ListboxElement } from './listboxSelectElements.ts';
 export { SettingElement, METER_VALUE_ATTRIBUTE, METER_FIXED_ATTRIBUTE } from './settingElements.ts';

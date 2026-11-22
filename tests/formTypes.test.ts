@@ -31,7 +31,8 @@ describe('opt-in forms at the type check', () => {
 });
 
 // What a Modal's placement and form take: only a contained Modal fills its frame, keeps its frame's inset or sits at a
-// top, and an anchored or media Modal names no width. Each row's accepted usage passes and its refused one fails.
+// top, an anchored or media Modal names no width, and only an anchored Modal, which must name its anchor, says where it
+// goes beside it. Each row's accepted usage passes and its refused one fails.
 const MODAL_SHAPES = [
   {accepted: 'placement={ModalPlacement.CONTAINED} width={ModalWidth.FILL}', refused: 'width={ModalWidth.FILL}'},
   {accepted: 'placement={ModalPlacement.CONTAINED} frameInset={ModalFrameInset.GUTTER}',
@@ -39,6 +40,10 @@ const MODAL_SHAPES = [
   {accepted: 'placement={ModalPlacement.CONTAINED} top={8}', refused: 'top={8}'},
   {accepted: 'width={ModalWidth.STAGE}', refused: 'placement={ModalPlacement.ANCHORED} width={ModalWidth.STAGE}'},
   {accepted: 'form={ModalForm.MEDIA}', refused: 'form={ModalForm.MEDIA} width={ModalWidth.READING}'},
+  {accepted: 'placement={ModalPlacement.ANCHORED} anchor={{x: 0, y: 0}}',
+    refused: 'placement={ModalPlacement.ANCHORED}'},
+  {accepted: 'placement={ModalPlacement.ANCHORED} anchor={{x: 0, y: 0}} popover={{above: true}}',
+    refused: 'popover={{above: true}}'},
 ] as const;
 
 describe('a Modal\'s width, frame inset and top at the type check', () => {

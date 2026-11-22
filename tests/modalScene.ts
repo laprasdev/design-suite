@@ -5,9 +5,12 @@
 // stays open. The window hears an event in its capture phase, then React's handlers see it, then the window hears it
 // in its bubble phase, each only if nothing has stopped it.
 import assert from 'node:assert/strict';
+import {ApplicationElement} from '../src/react/applicationElements.ts';
 import {ModalElement,type ModalPlacementValue} from '../src/react/modalElements.ts';
+import type {PlacedArguments} from './modalScenePlacement.ts';
 import type {NodeSelection} from '../src/react/nodeGraphTypes.ts';
 import {bundled,replacedHooks} from './bundled.ts';
+import {UNPLACED,attachedMarker} from './modalSceneLayer.ts';
 import {Component,STATEFUL_HOOKS,rendered} from './renderedHooks.ts';
 
 export const BOX_PX=100;
@@ -34,8 +37,12 @@ export class FakeElement extends FakeNode {
  setPointerCapture(pointer: number) {this.#held.add(pointer);}
  hasPointerCapture(pointer: number) {return this.#held.has(pointer);}
  releasePointerCapture(pointer: number) {this.#held.delete(pointer);}
- // No element around it is a button, a link or the like.
- closest() {return null;}
+ // The nearest of itself and the elements around it with the one class `selector` names. None is a button, a link
+ // or the like, which a list of selectors names.
+ closest(selector: string) {
+  for(let node: FakeElement|null=this;node;node=node.parentElement)if(selector===`.${node.className}`)return node;
+  return null;
+ }
  // Nor does it hold wire paths to sweep.
  querySelectorAll() {return [];}
  getBoundingClientRect() {return {left:0,top:0,width:BOX_PX,height:BOX_PX};}
@@ -92,11 +99,14 @@ class FakeWindow {
 }
 let pageWindow=new FakeWindow();
 
-export const page=new FakeElement('page',null,0);
+// The page is the application root every Modal in the scene renders in.
+export const page=new FakeElement(ApplicationElement.ROOT.className,null,0);
 export const panel=(parent: FakeElement,order: number)=>new FakeElement(ModalElement.PANEL.className,parent,order);
 export const inside=(holder: FakeElement)=>new FakeElement('control',holder,holder.order+.5);
 // The element that handles keys: the panel, inside the frame of a Modal that has one.
+// An anchored Modal's layer is a fragment: its marker, then its panel.
 const keyed=(node: unknown): Rendered=>{
+ if(Array.isArray(node))return keyed(node.at(-1));
  if(!node||typeof node!=='object'||!('props' in node))throw new Error('A Modal renders its panel.');
  const shown=node as Rendered;
  return shown.props.onKeyDown?shown:keyed(shown.props.children);
@@ -104,12 +114,13 @@ const keyed=(node: unknown): Rendered=>{
 
 export async function scene() {
  pageWindow=new FakeWindow();
- Object.assign(globalThis,{window:pageWindow,document:new EventTarget(),Node:FakeNode,Element:FakeElement,
+ const pageDocument=Object.assign(new EventTarget(),{body:page});
+ Object.assign(globalThis,{window:pageWindow,document:pageDocument,Node:FakeNode,Element:FakeElement,
   requestAnimationFrame:()=>0});
  const {module,dispose}=await bundled<SceneModule>(['src/react/Modal.tsx','src/react/controlCancel.ts',
   'src/react/useDragSession.ts','src/react/useNodeMoving.ts','src/react/useWireGestures.ts',
   'src/synth/components/synth/base/useControlBehavior.ts'],
-  [replacedHooks(STATEFUL_HOOKS)]);
+  [replacedHooks(STATEFUL_HOOKS),UNPLACED]);
  const closed: string[]=[];
  // A component rendered and committed once.
  const mount=<Out>(hooks: ()=>Out)=>{
@@ -117,9 +128,14 @@ export async function scene() {
   rendered(component);
   return component;
  };
- const open=(name: string,holder: FakeElement,placement: ModalPlacementValue,props: Partial<ModalProps>={})=>
-  keyed(mount(()=>module.Modal({open:true,onClose:()=>closed.push(name),placement,panelRef:{current:holder},
-   ...props})).now);
+ const open=<Placement extends ModalPlacementValue>(name: string,holder: FakeElement,placement: Placement,
+  ...[props]: PlacedArguments<Placement,Pick<ModalProps,'dismissible'|'onKeyDown'>,{current: FakeElement}>)=>
+  {
+   const modal=mount(()=>module.Modal({open:true,onClose:()=>closed.push(name),placement,panelRef:{current:holder},
+    ...props}));
+   if(attachedMarker(modal.now,new FakeElement('marker',page,0)))rendered(modal);
+   return keyed(modal.now);
+  };
  const controls: Controls&DragHooks=module;
  return {open,closed,controls,mount,dispose};
 }

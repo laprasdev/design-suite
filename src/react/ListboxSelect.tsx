@@ -2,10 +2,7 @@ import {Button} from './Button.tsx';
 import {Modal} from './Modal.tsx';
 import {ModalPlacement} from './modalElements.ts';
 import {Label} from './accents.tsx';
-import {ApplicationElement} from './applicationElements.ts';
 import {useEffect,useId,useLayoutEffect,useRef,useState,type KeyboardEvent,type ReactNode} from 'react';
-import {createPortal} from 'react-dom';
-import {useAnchoredPopover} from './useAnchoredPopover.ts';
 import {SearchField} from './SearchField.tsx';
 import {Density} from './density.ts';
 import {searchCopy} from './interfaceCopy.ts';
@@ -53,7 +50,6 @@ export function ListboxSelect<V extends string|number>({options,value,onChange,l
  const trigger=useRef<HTMLButtonElement>(null),panel=useRef<HTMLDivElement>(null),list=useRef<HTMLUListElement>(null),input=useRef<HTMLInputElement>(null),search=useRef<TypeaheadSearch>({text:'',at:0});
  const [open,setOpen]=useState(false),[active,setActive]=useState(0),[query,setQuery]=useState('');
  const shown=searchSubject?options.filter(option=>matchesOption(option.searchText??option.label,query)):options;
- const position=useAnchoredPopover(open,trigger,panel,{above,scroll:false});
  const labels=shown.map(option=>option.label),chosen=shown.findIndex(option=>option.value===value),start=Math.max(0,chosen);
  const show=(index: number)=>{setActive(index);setOpen(true);};
  const selectedContent=children??options.find(option=>option.value===value)?.label;
@@ -86,9 +82,8 @@ export function ListboxSelect<V extends string|number>({options,value,onChange,l
   <button ref={trigger} type="button" role="combobox" className={`${ListboxElement.TRIGGER.className}${className?` ${className}`:''}`} data-shows-value={children===undefined||field||undefined}
    aria-label={label} title={title} aria-haspopup="listbox" aria-expanded={open} aria-controls={open?listId:undefined} aria-activedescendant={open&&!searchSubject&&shown.length?optionId(active):undefined}
    disabled={disabled} onClick={()=>open?setOpen(false):show(start)} onKeyDown={open?openKey:closedKey}>{triggerContent}</button>
-  {open&&createPortal(<Modal open placement={ModalPlacement.ANCHORED} anchor={trigger} onClose={()=>{setOpen(false);setQuery('');}}
-   panelRef={panel} role="presentation" className={ListboxElement.POPOVER.className} data-icon-only={iconOnly||undefined}
-   style={position}>
+  {open&&<Modal open placement={ModalPlacement.ANCHORED} anchor={trigger} popover={{above,scroll:false}} onClose={()=>{setOpen(false);setQuery('');}}
+   panelRef={panel} role="presentation" className={ListboxElement.POPOVER.className} data-icon-only={iconOnly||undefined}>
    {searchSubject&&<SearchField density={Density.COMPACT} size={searchSize}
     style={searchSize?{width:`calc(${searchSize}ch + 2 * var(--field-gap))`}:undefined} ref={input}
     subject={searchSubject} value={query} onChange={value=>{setQuery(value);setActive(0);}} role="combobox"
@@ -101,6 +96,6 @@ export function ListboxSelect<V extends string|number>({options,value,onChange,l
    {onCreate&&query.trim()&&!options.some(option=>option.label.toLocaleLowerCase()===query.trim().toLocaleLowerCase())&&
     <Button onClick={create}>Create {query.trim()}</Button>}
    {!shown.length&&!onCreate&&<span role="status">{searchCopy.empty}</span>}
-  </Modal>,trigger.current?.closest(ApplicationElement.ROOT.selector)??document.body)}
+  </Modal>}
  </>;
 }
