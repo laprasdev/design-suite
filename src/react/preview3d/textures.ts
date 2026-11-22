@@ -1,16 +1,16 @@
 import * as THREE from 'three';
 import type {ModelFileReader} from './files.ts';
 import {createModelFileCache} from './fileCache.ts';
-import {MODEL_TEXTURE_CONSTANT, MODEL_TEXTURE_WRAP, type ModelSurfaceTexture}
-  from './surfaceModel.ts';
+import {MODEL_TEXTURE_CONSTANT, MODEL_TEXTURE_WRAP, type ModelSurfaceImageSource, type ModelSurfaceTexture,
+  type ModelTextureSampling} from './surfaceTextureModel.ts';
 import {MODEL_COLOR_SPACE, type ModelColorSpace} from './surfaceKindModel.ts';
 import {modelRecordIdentity} from './recordModel.ts';
 
 // The stage's textures for surface records. A file is read once by its SHA-256 and decoded once (fileCache.ts),
 // as three's glTF loader decodes a file's own images: no premultiplied alpha, no colour-space conversion, glTF's
-// orientation (flipY false). A texture is one file under one sampling (space, wrap, scale, offset), counted by its
+// orientation (flipY false). A texture is one source under one sampling (space, wrap, scale, offset), counted by its
 // users and freed with the last. Files load inside the stage's staged load, so readiness covers them; the files the
-// description in force names are kept, every other is dropped once nothing uses it.
+// description in force names are kept, and every source no held texture uses is dropped.
 /** An image three can upload, and how to free it once the stage drops it. */
 export interface ModelDecodedImage {readonly image: TexImageSource; close(): void}
 /** Turns a file's verified bytes into an image three can upload. */
@@ -38,23 +38,23 @@ type Decoded = {readonly source: THREE.Source; readonly close: () => void};
 export function createModelTextures(read: ModelFileReader, decode: ModelImageDecoder) {
   const textures = new Map<string, {readonly texture: THREE.Texture; users: number}>();
   const keys = new Map<THREE.Texture, string>();
+  const images = new Map<ModelSurfaceImageSource, THREE.Source>();
+  const sourceUsed = (source: THREE.Source) => [...textures.values()].some(({texture}) => texture.source === source);
+  const dropUnusedImages = () => {
+    for (const [image, source] of images) {
+      if (!sourceUsed(source)) images.delete(image);
+    }
+  };
   const sources = createModelFileCache<Decoded>(read, {what: 'texture', free: decoded => decoded.close(),
     decode: async bytes => {
       const {image, close} = await decode(bytes);
       return {source: new THREE.Source(image), close};
     },
-    used: decoded => [...textures.values()].some(({texture}) => texture.source === decoded.source)});
-  const make = (value: ModelSurfaceTexture, space: ModelColorSpace) => {
-    if ('constant' in value) {
-      const texture = new THREE.DataTexture(new Uint8Array(TEXELS[value.constant]), 1, 1);
-      texture.name = `constant ${value.constant}`;
-      texture.colorSpace = SPACES[space];
-      texture.needsUpdate = true;
-      return texture;
-    }
+    used: decoded => sourceUsed(decoded.source)});
+  const sampled = (name: string, source: THREE.Source, value: ModelTextureSampling, space: ModelColorSpace) => {
     const texture = new THREE.Texture();
-    texture.name = value.path;
-    texture.source = sources.get(value).source;
+    texture.name = name;
+    texture.source = source;
     texture.flipY = false;
     texture.colorSpace = SPACES[space];
     texture.wrapS = WRAPS[value.wrap[0]];
@@ -63,6 +63,24 @@ export function createModelTextures(read: ModelFileReader, decode: ModelImageDec
     texture.offset.fromArray(value.offset);
     texture.needsUpdate = true;
     return texture;
+  };
+  const make = (value: ModelSurfaceTexture, space: ModelColorSpace) => {
+    if ('constant' in value) {
+      const texture = new THREE.DataTexture(new Uint8Array(TEXELS[value.constant]), 1, 1);
+      texture.name = `constant ${value.constant}`;
+      texture.colorSpace = SPACES[space];
+      texture.needsUpdate = true;
+      return texture;
+    }
+    if ('image' in value) {
+      let source = images.get(value.image);
+      if (!source) {
+        source = new THREE.Source(value.image);
+        images.set(value.image, source);
+      }
+      return sampled(`image ${source.uuid}`, source, value, space);
+    }
+    return sampled(value.path, sources.get(value).source, value, space);
   };
   return {
     /** A staged load of these files: each one not yet held is read and decoded once while in flight. */
@@ -87,6 +105,7 @@ export function createModelTextures(read: ModelFileReader, decode: ModelImageDec
       if (--held.users > 0) return;
       textures.delete(key);
       keys.delete(texture);
+      dropUnusedImages();
       texture.dispose();
     },
     /** The files the description in force names stay read; every other file no texture uses is freed. */
@@ -96,6 +115,7 @@ export function createModelTextures(read: ModelFileReader, decode: ModelImageDec
       for (const {texture} of textures.values()) texture.dispose();
       textures.clear();
       keys.clear();
+      images.clear();
     },
   };
 }

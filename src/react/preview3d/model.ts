@@ -1,10 +1,11 @@
 import {element} from '../elementContract.ts';
 import type {ModelStageSurfaceMode} from './surfaceModeModel.ts';
 import type {ModelStageActorSnapshot} from './actorModel.ts';
-import type {ModelPreviewFrame} from './frameModel.ts';
+import type {ModelValidatedFrame} from './frameModel.ts';
 import type {ModelStageDescription} from './descriptionModel.ts';
 import type {ModelRotation, ModelVector} from './placementModel.ts';
 import {MODEL_STAGE_DISPLAY, type ModelStageDisplay} from './displayModel.ts';
+import {MODEL_STAGE_FIELD_OF_VIEW} from './presentation.ts';
 export {MODEL_RUNTIME_MATERIAL, modelRuntimeMaterialProfile} from './runtimeMaterialModel.ts';
 export type {ModelRuntimeMaterialProfile, ModelMaterialOutput, ModelRendererBinding} from './runtimeMaterialModel.ts';
 export {MODEL_ENVIRONMENT_GRID, MODEL_ENVIRONMENT_REFUSAL, modelEnvironment} from './environmentModel.ts';
@@ -29,22 +30,26 @@ export {MODEL_SURFACE_PARAMETER, MODEL_COLOR_SPACE, MODEL_SURFACE_LIGHT, MODEL_S
   MODEL_VECTOR_SIZE, MODEL_FILE_SURFACE, MODEL_SURFACE_KIND_REFUSAL, modelSurfaceKind, modelSurfaceKinds}
   from './surfaceKindModel.ts';
 export type {ModelColorSpace, ModelSurfaceKind, ModelSurfaceParameter} from './surfaceKindModel.ts';
-export {MODEL_ACTOR_SURFACES, MODEL_FILE_ENTRY, MODEL_SURFACE_REFUSAL, MODEL_TEXTURE_FORMATS, MODEL_TEXTURE_WRAP,
-  MODEL_TEXTURE_CONSTANT, modelActorSurfaces, modelRendererId, modelSurfaceFiles, modelSurfaceRecord,
-  modelSurfaceRecordsFit, modelSurfaceSetWhere,
+export {isModelImageSource, MODEL_IMAGE_SOURCES, MODEL_SURFACE_TEXTURE_REFUSAL, MODEL_TEXTURE_CONSTANT,
+  MODEL_TEXTURE_FORMATS, MODEL_TEXTURE_WRAP, modelSurfaceTexture} from './surfaceTextureModel.ts';
+export type {ModelSurfaceFile, ModelSurfaceImageSource, ModelSurfaceTexture, ModelTextureSampling}
+  from './surfaceTextureModel.ts';
+export {MODEL_ACTOR_SURFACES, MODEL_FILE_ENTRY, MODEL_SURFACE_REFUSAL, modelActorSurfaces, modelRendererId,
+  modelSurfaceFiles, modelSurfaceRecord, modelSurfaceRecordsFit, modelSurfaceSetWhere,
   modelSurfaceSets} from './surfaceModel.ts';
-export type {ModelActorSurfaces, ModelSurfaceEntry, ModelSurfaceFile, ModelSurfaceRecord, ModelSurfaceSet,
-  ModelSurfaceSource, ModelSurfaceWhere,
-  ModelSurfaceTexture, ModelSurfaceValue} from './surfaceModel.ts';
+export type {ModelActorSurfaces, ModelSurfaceEntry, ModelSurfaceRecord, ModelSurfaceSet,
+  ModelSurfaceSource, ModelSurfaceWhere, ModelSurfaceValue} from './surfaceModel.ts';
 export {MODEL_RENDERER_SLOT, MODEL_SURFACE_OUTPUT_REFUSAL, modelSurfaceTakes} from './surfaceOutputModel.ts';
 export type {ModelSurfaceTakes} from './surfaceOutputModel.ts';
-export {modelFrameScope, modelPreviewFrame} from './frameModel.ts';
-export type {ModelFrameScope, ModelPreviewFrame} from './frameModel.ts';
-export {modelPreviewEntity, MODEL_PREVIEW_CAPABILITIES} from './presentation.ts';
+export {modelFrameScope, modelPreviewFrame, validateModelFrame} from './frameModel.ts';
+export type {ModelFrameScope, ModelPreviewFrame, ModelValidatedFrame} from './frameModel.ts';
+export {createModelFrameInbox, MODEL_FRAME_INBOX_TEXT, type ModelFrameStatus} from './frameInbox.ts';
+export {CAMERA_COORDS, MODEL_PREVIEW_CAMERA_REFUSAL, MODEL_PREVIEW_CAPABILITIES, modelPreviewCamera, modelPreviewEntity}
+  from './presentation.ts';
 export {modelPoseForBinding, MODEL_PREVIEW_QUATERNION_TOLERANCE} from './placementModel.ts';
 export type {ModelVector, ModelRotation, ModelPresentationPose, ModelPoseBinding} from './placementModel.ts';
 export {MODEL_PREVIEW_WEIGHT_TOLERANCE} from './animationLayerModel.ts';
-export type {ModelPreviewEntity} from './presentation.ts';
+export type {ModelPreviewCamera, ModelPreviewEntity} from './presentation.ts';
 export {ModelStageRefusal, MODEL_STAGE_FAILURE, modelStageFailure} from './refusal.ts';
 export type {ModelStageFailure, ModelStageFailureKind} from './refusal.ts';
 export {MODEL_ANIMATION_LAYER, MODEL_ANIMATION_REFUSAL, modelAnimationLayers} from './animationLayerModel.ts';
@@ -93,7 +98,7 @@ export const MODEL_PREVIEW_DISPLAY_OPTIONS = Object.freeze([
 ] satisfies {value: ModelStageDisplay; label: string}[]);
 
 export const MODEL_STAGE = Object.freeze({
-  pixelRatioLimit: 2, fieldOfView: 38, nearPlane: 0.01, farPlane: 100,
+  pixelRatioLimit: 2, fieldOfView: MODEL_STAGE_FIELD_OF_VIEW, nearPlane: 0.01, farPlane: 100,
   cameraMinimum: 1, cameraMaximum: 16, cameraDirection: [0.75, 0.4, 1], fitPadding: 1.4,
   floorRadius: 4, floorSegments: 64, floorOffset: -0.025, gridSize: 8, gridDivisions: 16,
   normalizedHeight: 2, markerRadius: 0.035, markerSegments: 12, jointRadiusRatio: 0.008, jointSegments: 8,
@@ -122,6 +127,12 @@ export interface ModelStageTheme {
     accent: string; accentDeep: string; teal: string;
   };
 }
+export interface ModelStageCameraSnapshot {
+  readonly position: ModelVector;
+  readonly target: ModelVector;
+  readonly fieldOfView: number;
+  readonly held: boolean;
+}
 export interface ModelStageSnapshot {
   id: string;
   animation: string;
@@ -143,6 +154,8 @@ export interface ModelStageSnapshot {
   emissiveMaterialCount: number;
   /** The id of the time of day in force. */
   lighting: string;
+  /** The stage's camera pose, vertical field of view and whether a described or per-frame pose holds it. */
+  camera: ModelStageCameraSnapshot;
   /** The focused model's parts (its PART- nodes), each by its name with its world pose. */
   parts: readonly {name: string; position: ModelVector; rotationQuaternion: ModelRotation}[];
   poses: Record<string, ModelRotation>;
@@ -160,8 +173,8 @@ export interface ModelStageController {
    * rejects when they cannot be shown, and the previous description then stands.
    */
   setDescription(value: ModelStageDescription): Promise<void>;
-  /** Applies one host-built frame to every actor it names, or refuses it whole before anything changes. */
-  setFrame(value: ModelPreviewFrame): void;
+  /** Applies one validated frame (`validateModelFrame` or `createModelFrameInbox`), or refuses it whole. */
+  setFrame(value: ModelValidatedFrame): void;
   /** An action, not state: returns a view the person orbited to the described framing, a held pose or a fresh fit. */
   resetCamera(): void;
   snapshot(): ModelStageSnapshot;

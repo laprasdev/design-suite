@@ -9,9 +9,8 @@ import {modelStageDescription, modelStageDescriptionChanges} from '../src/react/
 import {createModelStageParts} from '../src/react/preview3d/stageParts.ts';
 import {createModelSurfaceModes} from '../src/react/preview3d/materials.ts';
 import {createModelFog} from '../src/react/preview3d/fog.ts';
-import {ModelStageRefusal} from '../src/react/preview3d/refusal.ts';
 import {modelStagePolicy} from '../src/react/preview3d/model.ts';
-import {NO_FILES, actorAsset, actorContext, declaration, describing} from './preview3dActorFixture.ts';
+import {NO_FILES, actorAsset, actorContext, declaration, describing, refused} from './preview3dActorFixture.ts';
 import {createModelActor} from '../src/react/preview3d/actor.ts';
 import {modelFileDrawn} from '../src/react/preview3d/drawn.ts';
 import {MODEL_ACTOR_REFUSAL} from '../src/react/preview3d/actorModel.ts';
@@ -31,8 +30,6 @@ const RECORD = {kind: 'test-pulse', values: {_Color: {color: [1, 0.5, 0, 1]}, _P
 const RENDERER = 'gltf-node:0/primitive:0';
 const kinds = () => modelSurfaceKinds([PULSE]);
 const sets = (entry: unknown) => modelSurfaceSets({tinted: {[RENDERER]: entry}});
-const refused = (run: () => unknown, pattern: RegExp) => assert.throws(run, (error: unknown) =>
-  error instanceof ModelStageRefusal && pattern.test(error.message), String(pattern));
 // A loaded file as the loader associates it: node 2 holds a mesh of two primitives, node 3 one line.
 function file() {
   const scene = new THREE.Group(), node = new THREE.Group(), associations = new Map<object, object>();

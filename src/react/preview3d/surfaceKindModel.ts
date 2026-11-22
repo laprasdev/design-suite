@@ -60,8 +60,13 @@ export const MODEL_SURFACE_KIND_FIELDS = Object.freeze({kind: ['id', 'parameters
   'coverage', 'side', 'fog', 'displacement', 'webProgram'], webProgram: ['path', 'sha256'], include: ['path', 'sha256'],
 displacement: ['reach'], cutout: ['cutout'],
 attribute: ['name', 'size'],
-parameter: Object.freeze({color: ['type', 'space', 'hdr'], vector: ['type', 'size'], float: ['type'],
-  keyword: ['type'], texture: ['type', 'space']})});
+parameter: Object.freeze({
+  color: {stated: ['type', 'space', 'hdr'], whenStated: []},
+  vector: {stated: ['type', 'size'], whenStated: []},
+  float: {stated: ['type'], whenStated: []},
+  keyword: {stated: ['type'], whenStated: []},
+  texture: {stated: ['type', 'space'], whenStated: []},
+})});
 const fields = MODEL_SURFACE_KIND_FIELDS;
 export const MODEL_SURFACE_KIND_REFUSAL = Object.freeze({
   reserved: (where: string) => `${where} ${MODEL_FILE_SURFACE} is the file's own material's; a kind has its own id.`,

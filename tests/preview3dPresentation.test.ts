@@ -18,7 +18,7 @@ const inboxOf = () => {
   return {inbox, receive: (value: unknown) => inbox.receive(value === null ? null :
     {simulationTimeSeconds: 0, entities: [value]})};
 };
-const poseOf = (value: ModelPreviewFrame) => value.entities[0].pose;
+const poseOf = (value: Pick<ModelPreviewFrame, 'entities'>) => value.entities[0].pose;
 
 describe('one entity of a frame', () => {
   it('requires every unsupported channel to be explicitly empty before accepting a pose', () => {

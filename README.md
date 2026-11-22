@@ -281,11 +281,13 @@ exactly its fields: one it omits or one it does not have is refused by its path 
   an engine frame's material values are taken only on a parameter the renderer's kind declares. A record's
   `values` give every parameter of its kind one of `{color: [r, g, b, a]}`, `{vector: [...]}`, `{float}`,
   `{keyword}` or `{texture}`, a texture being `{path, sha256, wrap: [u, v], scale: [u, v], offset: [u, v]}` (a PNG,
-  JPEG or WebP) or `{constant: 'white' | 'black'}`: the types `ModelSurfaceValue` and `ModelSurfaceTexture`.
+  JPEG or WebP), `{image, wrap: [u, v], scale: [u, v], offset: [u, v]}` (a static browser image source) or
+  `{constant: 'white' | 'black'}`: the types `ModelSurfaceValue` and `ModelSurfaceTexture`.
 - `environment`: `{reflectZ, plane, boxes}` scenery, or `null`: `plane` is `{position, size, color}` and a `grid`
   `{spacing, color}` when stated, or `null`; each box is `{id, position, size, color}` and a `rotationQuaternion`
   when stated. It is the scene's, fogged, bloomed and curved with the actors.
-- `framing`: `{kind: 'focus'}`, `{kind: 'all'}` (every actor) or `{kind: 'pose', position, target}`.
+- `framing`: `{kind: 'focus'}`, `{kind: 'all'}` (every actor) or `{kind: 'pose', position, target}` with an optional
+  vertical `fieldOfView` in degrees strictly within `(0, 180)` (omitted uses `MODEL_STAGE.fieldOfView`).
 - `orbit`: whether the person may orbit away from the framing.
 - `lighting`: `{time, times}`, the id of the time of day in force and the description's own times, each
   `{id, label, look}`; ids and labels are each a time's own. Two times are built in, `MODEL_STAGE_TIME.light` (the
@@ -311,16 +313,18 @@ exactly its fields: one it omits or one it does not have is refused by its path 
   reloaded. One that loads nothing applies or throws at once; one that loads (an asset, a texture or a kind's
   program a record names, or the glow's passes the first time a time brings glow) returns a promise that settles
   when they arrive, rejects with the previous description still shown, and is superseded by a later call.
-- `setFrame(frame)` (external clock only) applies `{simulationTimeSeconds, entities}`. Each entity names a declared
-  actor by `entityId` and carries `modelId`, a whole `pose`, `animationLayers`, `partPoses: []` and `materials`
-  (values only on a parameter its renderer's kind declares). The whole frame is refused before anything changes. A
+- `setFrame(frame)` (external clock only) applies `{simulationTimeSeconds, entities}` and an optional per-frame
+  `camera` (`ModelPreviewCamera`: `{position, target, fieldOfView?}`). Each entity names a declared actor by `entityId`
+  and carries `modelId`, a whole `pose`, `animationLayers`, `partPoses: []` and `materials` (values only on a parameter
+  its renderer's kind declares). The whole frame — entities and camera together — is refused before anything changes. A
   description may not change, replace or remove an actor a frame has driven.
-- `resetCamera()` returns a view the person orbited to the described framing.
+- `resetCamera()` returns a view the person orbited (or a per-frame camera pose) to the described framing, restoring
+  `MODEL_STAGE.fieldOfView` for `focus` and `all`.
 - `snapshot()` reports the focused actor at the top level (`animation`, `time`, `playing`, `hold`, `display`,
-  `boneCount`, `parts`, `poses`, `surfaceMode`, `surfaceModesAvailable`, the emission and visibility counts) and
-  every actor under `actors`, each with its `driver` (`'host'` or `'engine'`), `pose` and applied `samples`.
-  `renderedModelMeshes` counts the meshes of the actors on the stage that the last frame drew (shown, and inside
-  the camera's view), read when asked.
+  `boneCount`, `parts`, `poses`, `surfaceMode`, `surfaceModesAvailable`, the emission and visibility counts), `camera`
+  (`{position, target, fieldOfView, held}`), and every actor under `actors`, each with its `driver` (`'host'` or
+  `'engine'`), `pose` and applied `samples`. `renderedModelMeshes` counts the meshes of the actors on the stage that
+  the last frame drew (shown, and inside the camera's view), read when asked.
 
 Under the local clock the stage keeps one presentation time that every playing clip follows; it holds while the
 person asks for reduced motion or the page is hidden, and `hold` says which. Under the external clock only frames
@@ -394,8 +398,11 @@ export const TOON_SURFACE: ModelSurfaceKind = {
 - **Attributes.** Declare only what the program reads; nothing undeclared is added to it. A file's own attribute (a
   glTF custom attribute `_DEPTH`, which three names `_depth`) is `{name, size}` with 1 to 4 numbers a vertex.
 - **Textures.** A record names each by `{path, sha256, wrap: [u, v], scale, offset}` (a PNG, JPEG or WebP; another
-  format is refused where the record is read), or `{constant: 'white' | 'black'}` for an empty slot. Orientation is
-  glTF's (`flipY` false). A kind never reads an image embedded in the model file.
+  format is refused where the record is read), `{image, wrap: [u, v], scale, offset}` (a static in-memory image source:
+  `ImageBitmap`, `HTMLImageElement`, `HTMLCanvasElement`, `OffscreenCanvas` or `ImageData`, uploaded once per instance —
+  pass a distinct instance to replace pixels; streaming video sources and any other value are refused where the record is
+  read), or `{constant: 'white' | 'black'}` for an empty slot. Orientation is glTF's (`flipY` false). A kind never reads
+  an image embedded in the model file.
 - **Shared GLSL.** `webProgram.includes` lists GLSL files the kind's repository owns, each by path and SHA-256. They are
   read with the program, once, and placed ahead of it in the order listed, so one formula is written once. A file
   listed twice is refused; one whose bytes are not its digest refuses the description, naming the file.
@@ -503,7 +510,7 @@ source engine's world space only through the converter's axis change.
 |---|---|
 | Declaration | A missing or stray field; an unknown option; a parameter name that is not a GLSL name; an `inert` entry, `reach` or threshold that names no declared float; a threshold outside [0, 1]; an include listed twice; a bad hash. |
 | Stage creation | A three attribute other than `'uv'`, `'color'`, `'normal'` and `'position'` (a file's own states `{name, size}`). |
-| Record, before anything loads | An unknown kind; a parameter missing or stray; a value of the wrong type or size; a non-HDR colour outside [0, 1]; an inert value not met; a reach below 0; a texture format the stage does not decode. |
+| Record, before anything loads | An unknown kind; a parameter missing or stray; a value of the wrong type or size; a non-HDR colour outside [0, 1]; an inert value not met; a reach below 0; a texture format the stage does not decode or a non-static image source. |
 | Actor | A set the description lacks; a surface set together with `asset.runtimeMaterials`. |
 | Staged load | A program, include or texture that cannot be read or decoded, named by path and SHA-256. |
 | Staged build | A set that leaves out a renderer of the file or names one it lacks; a record on a renderer of lines or points; an attribute the mesh lacks or holds at another size; a mesh without normals under `'normal'`; a program that fails to compile or link, with the compiler's log. Each names the actor, renderer and kind, and refuses the description: the one in force stays drawn. |
@@ -560,8 +567,12 @@ npm test
 npm run build
 ```
 
-`npm test` installs the pinned gate tools (`scripts/gateTools`) and Playwright's headless
-Chromium, in which `tests/*.browser.test.ts` read computed sizes, such as each Modal width's.
+`npm run check` runs the type, size, baseline, cycle and duplication gates: `scripts/baseline-gate.ts` refuses rises
+against `origin/main` across all three baselines (`scripts/size-baseline.json` and `scripts/cast-baseline.json`,
+lowered automatically by `scripts/size-gate.ts` and `scripts/type-gate.ts` through `ratchetedFiles`, and
+`scripts/allocation-baseline.json`, lowered by hand from recorded runs). `npm test` installs the pinned gate tools
+(`scripts/gateTools`) and Playwright's headless Chromium, in which `tests/*.browser.test.ts` read computed sizes,
+such as each Modal width's, and sample per-tick heap allocations against `scripts/allocation-baseline.json`.
 
 ## Boundary
 

@@ -7,7 +7,6 @@ import {createModelActorSet} from './actorSet.ts';
 import {modelActorDrawsFile, modelAssetDigest, modelRuntimeAssetProfile, type ModelStageActor} from './actorModel.ts';
 import {modelFileDrawn, type ModelDrawn} from './drawn.ts';
 import {createModelTerrain} from './terrain.ts';
-import {modelFrameScope, type ModelFrameScope} from './frameModel.ts';
 import {modelStageDescription, modelStageDescriptionChanges, modelStageFramed, modelStageRefit,
   type ModelStageDescription} from './descriptionModel.ts';
 import {createModelStageParts, type ModelStageSurface} from './stageParts.ts';
@@ -18,8 +17,6 @@ import {createModelSurfaceMaterials} from './surfaceMaterials.ts';
 import type {ModelStageSharedValues} from './sharedValues.ts';
 import {prepareWhole} from './commit.ts';
 
-// Before a description is shown no actor is declared, so a frame may name none.
-const NO_ACTORS: ModelFrameScope = Object.freeze({actors: [], takes: new Map()});
 /** What the descriptions are applied to: the stage's scene side (scene.ts), as far as a description reaches it. */
 export interface ModelStageScenePart extends Pick<ModelStageSurface, 'scene' | 'fog' | 'frame'> {
   readonly lighting: ModelStageSurface['lighting'] & ModelActorContext['lighting'];
@@ -60,15 +57,13 @@ export function createModelStageDescriptions(context: ModelStageDescriptionsCont
         modelRuntimeAssetProfile(declaration))) : Promise.resolve(createModelTerrain(declaration.terrain));
   const actors = createModelActorSet(draw, (drawn, declaration) => createModelActor(drawn, declaration, actorContext));
   const parts = createModelStageParts({...stage, kinds: policy.kinds, modes, textures, materials});
-  let applied: ModelStageDescription | undefined, scope = NO_ACTORS;
+  let applied: ModelStageDescription | undefined;
   // The actors the framing fits, taken when a description is shown.
   let framed: readonly ModelActor[] = [];
   return {
     actors, parts,
     /** The description in force; none before the first is shown. */
     get applied() {return applied;},
-    /** What a frame is checked against: the description in force's actors and what their renderers take. */
-    get scope() {return scope;},
     get framed() {return framed;},
     /**
      * A description, checked whole at once, then applied when what it needs has loaded (actorSet.ts). One refused
@@ -86,7 +81,6 @@ export function createModelStageDescriptions(context: ModelStageDescriptionsCont
           throw error;
         }
         applied = next;
-        scope = modelFrameScope(next, policy.kinds);
         parts.keep(next);
         const ids = new Set(modelStageFramed(next).map(({id}) => id));
         framed = staged.actors.filter(actor => ids.has(actor.id));

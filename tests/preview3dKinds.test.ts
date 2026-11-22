@@ -7,14 +7,10 @@ import {modelSurfaceKind} from '../src/react/preview3d/surfaceKindModel.ts';
 import {MODEL_STAGE_SHARED, MODEL_STAGE_SHARED_UNIFORM} from '../src/react/preview3d/sharedValues.ts';
 import {MODEL_SURFACE_OUTPUT_REFUSAL as OUTPUT, modelSurfaceOutputs, modelSurfaceTakes}
   from '../src/react/preview3d/surfaceOutputModel.ts';
-import {ModelStageRefusal} from '../src/react/preview3d/refusal.ts';
 import {kindMaterials, kinds, MASK, PULSE, PULSE_PROGRAM, record, RENDERERS, sets} from './preview3dKindFixture.ts';
-import {declaration, entity} from './preview3dActorFixture.ts';
+import {declaration, entity, refused} from './preview3dActorFixture.ts';
 import {createModelFrameInbox, MODEL_FRAME_INBOX_TEXT} from '../src/react/preview3d/frameInbox.ts';
 
-const refused = (run: () => unknown, pattern: RegExp | string) => assert.throws(run, (error: unknown) =>
-  error instanceof ModelStageRefusal && (typeof pattern === 'string' ? error.message === pattern :
-    pattern.test(error.message)), String(pattern));
 const linear = (value: number) => new THREE.Color().setRGB(value, 0, 0, THREE.SRGBColorSpace).r;
 const close = (actual: ArrayLike<number>, expected: readonly number[]) =>
   assert.deepEqual(Array.from(actual, value => Math.round(value * 1e6) / 1e6),
