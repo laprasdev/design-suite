@@ -1,5 +1,5 @@
 import { knobConfigFromProps, type KnobConfigProps } from '../../../skinForms.ts';
-import React, { useCallback, useState, useRef } from 'react';
+import React, { useCallback } from 'react';
 import { useStyle } from '../../StyleContext.tsx';
 import { getColorScheme, getInsetShadow, resolveColorType, hexToRgba, type AnyColor } from '../../../color.ts';
 import { D, F, O, TransitionKeys, Borders, T } from '../../design/index.ts';
@@ -15,11 +15,8 @@ import {
 } from '../../design/constants/KnobConfig.ts';
 import {KnobLabel} from '../../../react/KnobLabel.tsx';
 import {KnobFace, KnobLineIndicator, HorseshoeRing} from '../../../react/KnobFace.tsx';
-import {Modal} from '../../../react/Modal.tsx';
-import {ModalPlacement} from '../../../react/modalElements.ts';
-import {Label} from '../../../react/accents.tsx';
-import {cancelsOnEscape} from '../../../react/controlCancel.ts';
 import { useKnobDrag, KnobInnerCircle } from './base/index.ts';
+import { EditableValue } from './EditableValue.tsx';
 import { controlTooltip, useTooltipSafe } from './TooltipContext.tsx';
 import { ModulationRings } from './ModulationRings.tsx';
 import type { ModulationProps } from './modulation.ts';
@@ -149,62 +146,6 @@ export interface KnobProps extends ModulationProps, KnobConfigProps {
   onToggleChange?: (v: boolean) => void;
   /** Text alignment for horizontal layout: 'left' (default) = text left of knob, 'right' = text right of knob */
   align?: 'left' | 'right';
-}
-
-// =====================================================
-// EDITABLE VALUE — click to type a numeric value
-// =====================================================
-
-/** What a refused number says: the limits it has, and that nothing was written. */
-export function limitWords(typed: number, min: number, max: number) {
-  const takes = Number.isFinite(min) && Number.isFinite(max) ? `${min} to ${max}` : Number.isFinite(min) ? `${min} or more` : `${max} or less`;
-  return `Takes ${takes}, so ${typed} wasn't written.`;
-}
-
-/** A refusal is an anchored Modal under the value, its words a Label: a press elsewhere or Escape dismisses it. */
-const REFUSAL_PLACE: React.CSSProperties = {
-  position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)', padding: D.moduleGrid.inputPadding,
-};
-
-/**
- * `refusesOutside` writes nothing for a number past min or max and says so, where without it the number is clamped. Escape then leaves without writing.
- * `value` is the exact number held, where `text` may round it for show: the box opens holding it, and leaving the box on that number writes nothing.
- */
-export function EditableValue({ text, value, color, style, onChange, min, max, refusesOutside, opensOnPress }: {
-  text: string; value?: number; color: string; style: React.CSSProperties;
-  onChange?: (v: number) => void; min: number; max: number; refusesOutside?: boolean;
-  /** One press opens the box, as its text cursor promises. Without it, as on the old grid, a double-click does. */
-  opensOnPress?: boolean;
-}) {
-  const [editing, setEditing] = useState(false), [refused, setRefused] = useState<string | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const opensWith = value === undefined ? text.replace(/[^0-9.\-]/g, '') : String(value);
-
-  const commit = () => {
-    const typed = inputRef.current?.value ?? '';
-    const raw = parseFloat(typed);
-    setEditing(false);
-    if (value !== undefined && (typed === opensWith || raw === value)) return;
-    if (isNaN(raw)) return;
-    if (refusesOutside && (raw < min || raw > max)) return setRefused(limitWords(raw, min, max));
-    onChange?.(Math.min(max, Math.max(min, raw)));
-  };
-  const onKey = (event: React.KeyboardEvent) => {
-    if (event.key === 'Enter') commit();
-    else cancelsOnEscape(event, () => { if (!refusesOutside) return false; setEditing(false); return true; });
-  };
-
-  if (!editing || !onChange) return <div data-editable-value style={refusesOutside ? { ...style, position: 'relative' } : style} onClick={opensOnPress ? () => setEditing(true) : undefined} onDoubleClick={opensOnPress ? undefined : () => setEditing(true)}>
-    {text}
-    {refused && <Modal open placement={ModalPlacement.ANCHORED} onClose={() => setRefused(null)} role="alert"
-      style={REFUSAL_PLACE}><Label kind="action">{refused}</Label></Modal>}
-  </div>;
-
-  return (
-    <input ref={inputRef} autoFocus defaultValue={opensWith}
-      style={{ ...style, background: 'transparent', border: 'none', outline: 'none', color, width: 32, padding: 0 }}
-      onBlur={commit} onKeyDown={onKey} />
-  );
 }
 
 // =====================================================

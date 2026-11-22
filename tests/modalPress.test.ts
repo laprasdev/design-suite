@@ -16,7 +16,7 @@ describe('Presses, drags and groups',()=>{
    open('dialog',panel(page,2),ModalPlacement.VIEWPORT);
    open('contained',panel(page,3),ModalPlacement.CONTAINED);
    open('detail',detailPanel,ModalPlacement.ANCHORED,{anchor});
-   open('fixed',panel(page,5),ModalPlacement.ANCHORED,{dismissible:false});
+   open('fixed',panel(page,5),ModalPlacement.ANCHORED,{anchor:trigger(page,4.5),dismissible:false});
    for(const target of [anchor.current,inside(detailPanel)])pressAt(target);
    assert.deepEqual(closed,[],'a press on the anchor or in the panel keeps it open');
    pressAt(inside(page));
@@ -65,9 +65,9 @@ describe('Presses, drags and groups',()=>{
  it('dismiss the open Modal of a group when another of that group opens',async()=>{
   const {open,closed,dispose}=await scene();
   try {
-   open('first help',panel(page,1),ModalPlacement.ANCHORED,{group:'help'});
-   open('a tool',panel(page,2),ModalPlacement.ANCHORED,{group:'tools'});
-   open('second help',panel(page,3),ModalPlacement.ANCHORED,{group:'help'});
+   open('first help',panel(page,1),ModalPlacement.ANCHORED,{anchor:trigger(page,.5),group:'help'});
+   open('a tool',panel(page,2),ModalPlacement.ANCHORED,{anchor:trigger(page,1.5),group:'tools'});
+   open('second help',panel(page,3),ModalPlacement.ANCHORED,{anchor:trigger(page,2.5),group:'help'});
    assert.deepEqual(closed,['first help']);
   } finally {dispose();}
  });
