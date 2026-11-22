@@ -32,6 +32,14 @@ export { BarElement, BarSlotElement, barSlotsWithin } from './barElements.ts';
 export { ActionBar, type ActionBarProps, type ActionBarNotice } from './ActionBar.tsx';
 export { ActionBarElement, ActionBarSlotElement, ActionNoticeElement, BarParticipantElement, NoticeTone }
   from './actionBarElements.ts';
+export { OverlaySlot, SidebarEdge, OverlayPattern, type OverlaySource, type OverlayElement, type OverlayElementPattern,
+  type OverlayMeasure, type OverlayCount, type OverlayPips, type OverlayFeed, type WorldMarker,
+  type OverlayPatternValue } from './overlaySource.ts';
+export { OVERLAY_FILLS, OVERLAY_TEXT, UNFILLED, overlayPatterns, overlayRefusal, type OverlayDraw, type OverlayFills }
+  from './overlayFills.ts';
+export { MenuCellKind, MenuViewKind, MenuRoot, type CellIndex, type MenuCell, type MenuChoiceOption, type MenuRow,
+  type MenuSection, type MenuDelegate, type MenuView, type MenuSource, type SidebarGroup, type SidebarSource }
+  from './menuSource.ts';
 export { HoverDetail, type HoverDetailProps } from './HoverDetail.tsx';
 export { SegmentedControl, TEXT_SEGMENT_VARIANT, JOINED_SEGMENT_VARIANT, ICON_SEGMENT_VARIANT,
   SEGMENT_GROUP_START_ATTRIBUTE, type SegmentValue, type SegmentOption,
