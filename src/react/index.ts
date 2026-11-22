@@ -60,7 +60,7 @@ export { GlowParticleElement, LoadingElement } from './loadingElements.ts';
 export { CSS_ZOOM_PROPERTY, cssRect, cssViewport, zoomOf, type CssRect } from './cssZoom.ts';
 export { useAnchoredPopover, VIEWPORT_EDGE, type PopoverPlacement } from './useAnchoredPopover.ts';
 export { PARTICIPANT_GRASS, PARTICIPANT_GRASS_BEND } from './participantGrass.ts';
-export { ListboxElement } from './listboxSelectElements.ts';
+export { ListboxElement, ListboxForm } from './listboxSelectElements.ts';
 export { SettingElement, METER_VALUE_ATTRIBUTE, METER_FIXED_ATTRIBUTE } from './settingElements.ts';
 export { Boolean, BooleanForm } from '../synth/components/synth/Boolean.tsx';
 export { Slider } from '../synth/components/synth/Slider.tsx';

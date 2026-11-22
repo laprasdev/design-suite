@@ -1,7 +1,7 @@
 // The form of kinds.json, the hand-kept map from each kind to the members that implement it in every source.
 import {
-  OTHER_FIELDS, entryAt, fieldAt, fieldsHolding, holdsOptional, holdsRecordOf, holdsShape, holdsString,
-  holdsStringList, refusalBy, type FieldCheck, type ShapeOf,
+  OTHER_FIELDS, entryAt, fieldAt, fieldsHolding, holdsNonEmptyString, holdsOptional, holdsRecordOf, holdsShape,
+  holdsString, holdsStringList, refusalBy, type FieldCheck, type ShapeOf,
 } from '../scripts/build/fieldChecks.ts';
 
 /** The sources a kind names its members in; each one is a set the scan finds. */
@@ -10,8 +10,9 @@ export type SourceKey = typeof SOURCE_KEYS[number];
 /** Every list a kinds.json row may hold: the sources, and the folders its web members live in. */
 const LIST_FIELDS = [...SOURCE_KEYS, 'webDirs'] as const;
 
-/** A kind's row: each list it names, and the web member it shows first; its notes and data are not read here. */
+/** A kind's row: the data that chooses it, each list it names, and the web member it shows first. */
 const KIND_ROW_SHAPE = Object.freeze({
+  data: holdsNonEmptyString,
   webFirst: holdsOptional(holdsString),
   ...fieldsHolding(LIST_FIELDS, holdsOptional(holdsStringList)),
 });

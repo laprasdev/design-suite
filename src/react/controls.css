@@ -27,6 +27,8 @@
 /* An anchored Modal on its trigger: Modal draws the surface and places the layer; the list lays out inside it. */
 .listbox-select-popover { display:flex;flex-direction:column;min-width:var(--anchor-width);margin:0;padding:4px;list-style:none;color:var(--text);font-family:var(--font-chrome,inherit);font-size:var(--type-control,12px);line-height:1.4; }
 .listbox-select-list { margin:0;padding:0;list-style:none;min-height:0;overflow:auto;overscroll-behavior:contain; }
+/* The menu form's list holds focus; its active item's wash shows where the keys are. */
+.listbox-select-list:focus-visible { outline:none; }
 .listbox-select-popover>.search-field { flex:none;box-sizing:border-box;width:100%;min-width:0;max-width:100%;}
 .listbox-select-option { padding:7px 10px;border-radius:calc(var(--r-sm) / 2);white-space:nowrap;cursor:pointer; }
 .listbox-select-content { display:flex;align-items:center;gap:var(--field-gap);height:1lh;min-width:0; }

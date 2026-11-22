@@ -12,6 +12,8 @@ const FORMS = [
     props: 'value={1} max={3} segments={3}', member: 'COMPACT'},
   {component: 'Modal', form: 'ModalWidth', prop: 'width', from: 'src/react/index.ts', props: 'open children=""',
     member: 'READING'},
+  {component: 'ListboxSelect', form: 'ListboxForm', prop: 'form', from: 'src/react/index.ts',
+    props: 'label="Go" options={[]} onAction={() => undefined} children=""', member: 'MENU'},
 ] as const;
 /** A word no form has. */
 const OUTSIDE = "'wide'";
@@ -46,6 +48,31 @@ describe('a Modal\'s width, frame inset and top at the type check', () => {
     it(`takes ${accepted} and refuses ${refused}`, () => {
       const usage = (value: string) => `import {${MODAL_NAMES}} from ${REACT_ENTRY};\n`
         + `export const shown = <Modal open ${value}>text</Modal>; void [${MODAL_NAMES}];\n`;
+      assertRefusesType(value => typeCheck({'usage.tsx': usage(value)}, SUITE_COMPILER_OPTIONS), accepted, refused);
+    });
+  }
+});
+
+// What each ListboxSelect form takes: the menu holds no value, so it refuses the select's value, its onChange, its
+// creating and its search, and its children, which alone draw its trigger, cannot be undefined; the select refuses
+// the menu's onAction. Each row's accepted usage passes.
+const MENU_FORM = 'form={ListboxForm.MENU} label="Go" options={[{value: \'a\', label: \'A\'}]}';
+const MENU_PROPS = `${MENU_FORM} children=""`;
+const SELECT_PROPS = 'label="Go" options={[{value: \'a\', label: \'A\'}]} value="a"';
+const LISTBOX_SHAPES = [
+  {props: `${MENU_FORM} onAction={() => undefined}`, accepted: 'children=""', refused: 'children={undefined}'},
+  ...['value="a"', 'onChange={() => undefined}', 'onCreate={() => undefined}', 'searchSubject="places"',
+    'searchSize={8}'].map(refused => ({props: MENU_PROPS, accepted: 'onAction={() => undefined}',
+    refused: `onAction={() => undefined} ${refused}`})),
+  {props: SELECT_PROPS, accepted: 'onChange={() => undefined}',
+    refused: 'onChange={() => undefined} onAction={() => undefined}'},
+] as const;
+
+describe('a ListboxSelect form\'s props at the type check', () => {
+  for (const {props, accepted, refused} of LISTBOX_SHAPES) {
+    it(`takes ${accepted} and refuses ${refused}`, () => {
+      const usage = (value: string) => `import {ListboxSelect, ListboxForm} from ${REACT_ENTRY};\n`
+        + `export const shown = <ListboxSelect ${props} ${value} />; void ListboxForm;\n`;
       assertRefusesType(value => typeCheck({'usage.tsx': usage(value)}, SUITE_COMPILER_OPTIONS), accepted, refused);
     });
   }
