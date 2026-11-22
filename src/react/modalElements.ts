@@ -42,6 +42,8 @@ type NotContained={[Key in keyof Contained]?: never};
 type NotAnchored={anchor?: never;group?: never;popover?: never};
 // What an anchored Modal is placed from: the element it opens from, which is part of its region, or a point.
 export type ModalAnchor=RefObject<HTMLElement|null>|CssPoint;
+// Where a popover goes beside its anchor: its placement less the point (`at`), which the anchor names instead.
+export type PopoverAnchorPlacement=Omit<PopoverPlacement,'at'>;
 // Where a Modal sits. Only an anchored Modal names an anchor, where it goes beside it (`popover`), and a group, of
 // which one is open at a time; it takes its content's width. Only a contained Modal fills its frame.
 export type ModalPlacementProps=
@@ -49,7 +51,7 @@ export type ModalPlacementProps=
   &NotAnchored&NotContained
  |{placement: typeof ModalPlacement.CONTAINED;width?: ModalWidthValue}&NotAnchored&Contained
  |{placement: typeof ModalPlacement.ANCHORED;anchor: ModalAnchor;group?: string;width?: never;
-  popover?: Omit<PopoverPlacement,'at'>}
+  popover?: PopoverAnchorPlacement}
   &NotContained;
 // Media takes its content's size, so it names no width.
 export type ModalFormProps={form?: typeof ModalForm.DIALOG}|{form: typeof ModalForm.MEDIA;width?: never};
