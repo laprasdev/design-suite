@@ -42,9 +42,9 @@ type NotContained={[Key in keyof Contained]?: never};
 // What an anchored Modal is placed from: the element it opens from, which is part of its region, or a point.
 export type ModalAnchor=RefObject<HTMLElement|null>|CssPoint;
 // Where a popover goes beside its anchor. The anchor names the point, so this placement refuses an `at`.
-export type PopoverPlacementBesideAnchor=Omit<PopoverPlacement,'at'>&{at?: never};
+export type PopoverPlacementFromAnchor=Omit<PopoverPlacement,'at'>&{at?: never};
 // An anchored Modal's anchor and where its panel goes beside it: what its anchored layer reads.
-export type AnchoredPlacement={anchor: ModalAnchor;popover?: PopoverPlacementBesideAnchor};
+export type AnchoredPlacement={anchor: ModalAnchor;popover?: PopoverPlacementFromAnchor};
 // An anchored Modal also names a group, of which one is open at a time.
 type Anchored=AnchoredPlacement&{group?: string};
 type NotAnchored={[Key in keyof Anchored]?: never};

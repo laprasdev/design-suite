@@ -140,7 +140,7 @@ regions of the `Modal`s anchored inside its panel, such as a list opened from a 
 Dismissed with focus in its panel, an anchored `Modal` hands focus back to its anchor. An
 anchored `Modal` may also name a `group`, of which one is open at a time: opening one
 dismisses the others. An anchored `Modal` may also say where its panel goes beside the
-anchor with `popover` (`PopoverPlacementBesideAnchor`: a `PopoverPlacement` less `at`, the
+anchor with `popover` (`PopoverPlacementFromAnchor`: a `PopoverPlacement` less `at`, the
 point the anchor names). `HoverDetail`, `ListboxSelect`, the synth `Enum`'s grid picker and a
 `Knob`'s refused number compose the anchored placement, the first three with their trigger
 as the anchor. Every placement keeps the same surface and the module radius token.
