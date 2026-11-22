@@ -43,17 +43,12 @@ export function useModelPreview(host: ModelStageDescription, theme: ModelStageTh
     document.addEventListener('visibilitychange', read);
     return () => {motion.removeEventListener('change', read); document.removeEventListener('visibilitychange', read);};
   }, []);
-  const hostLatest = useRef(host);
-  hostLatest.current = host;
-  const kindsLatest = useRef(options.kinds);
-  kindsLatest.current = options.kinds;
-  const externalLatest = useRef(external);
-  externalLatest.current = external;
-  const frameLatest = useRef(frame);
-  frameLatest.current = frame;
-  const describe = (value: ModelPreviewSelection) => modelPreviewDescription(hostLatest.current, value);
+  const inputs = useRef({host, kinds: options.kinds, frame});
+  inputs.current = {host, kinds: options.kinds, frame};
+  const describe = (value: ModelPreviewSelection) => modelPreviewDescription(inputs.current.host, value);
   const description = describe(declared), described = JSON.stringify(description);
   const latest = useRef(description);
+  // Seeded so the layout effect below can receive an initial frame before createModelStage is ready.
   const [inbox] = useState(() => {
     const value = createModelFrameInbox();
     value.describe(description, options.kinds);
@@ -74,12 +69,13 @@ export function useModelPreview(host: ModelStageDescription, theme: ModelStageTh
     if (status === 'error') read(inbox.failure, usable.current, setFrameFailure);
     else setFrameFailure(null);
   };
-  // Frames are checked against the description the stage has applied, published once per applied setDescription.
-  const [requests] = useState(() => createModelDescriptionRequests(setLoading, value => read(value), settled,
-    applied => {
-      inbox.describe(applied, kindsLatest.current);
-      if (externalLatest.current) pose(inbox.receive(frameLatest.current));
-    }));
+  // Frames are checked against the description the stage is created from or has applied.
+  const reframe = (value: ModelStageDescription) => {
+    const current = inputs.current;
+    inbox.describe(value, current.kinds);
+    if (current.frame !== undefined) pose(inbox.receive(current.frame));
+  };
+  const [requests] = useState(() => createModelDescriptionRequests(setLoading, value => read(value), settled, reframe));
   // The controls show and act on what the stage shows: while a refusal stands, the description it holds.
   const selection = requests.shown(declared, failure?.kind === MODEL_STAGE_FAILURE.refused);
   const selected = useRef(selection);
@@ -106,7 +102,7 @@ export function useModelPreview(host: ModelStageDescription, theme: ModelStageTh
     const next = modelPreviewSelection(selected.current, change), api = controller.current;
     if (api && !requests.request(api, describe(next))) return;
     selected.current = next;
-    choices.take(hostLatest.current, next);
+    choices.take(inputs.current.host, next);
     taken();
   };
   // Play or pause, read against the time the stage shows; a refusal goes to the one reader.
@@ -126,10 +122,8 @@ export function useModelPreview(host: ModelStageDescription, theme: ModelStageTh
     setFrameFailure(null);
     setLoading(false);
     const created = latest.current;
-    if (requests.held !== undefined) {
-      inbox.describe(created, options.kinds);
-      if (external) pose(inbox.receive(frameLatest.current));
-    }
+    // While a recreated stage loads, frames arriving before onReady check against its description and kinds.
+    if (requests.held !== undefined) reframe(created);
     try {
       dispose = createModelStage(node, created, theme, api => {
         if (!active) return;

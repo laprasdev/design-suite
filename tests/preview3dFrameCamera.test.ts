@@ -95,6 +95,11 @@ describe('atomic per-frame camera application and inbox delivery', () => {
     refused(() => Reflect.apply(applyModelFrame, undefined, [
       [actor], {simulationTimeSeconds: 0.8, entities: [], cameraCoordinates: null}, applyCamera,
     ]), MODEL_ACTOR_REFUSAL.unvalidated);
+    const otherScope = modelFrameScope(fileScene([actor.declaration, declaration('b', 'otter')]), new Map());
+    const unshown = validateModelFrame({...frame(0.9, entity('a', [], [99, 0, 0]), entity('b', [], [1, 0, 0])),
+      camera: {position: [9, 9, 9], target: [0, 0, 0], fieldOfView: 65}}, otherScope, coordinates);
+    refused(() => applyModelFrame([actor], unshown, applyCamera), MODEL_ACTOR_REFUSAL.scope);
+    assert.deepEqual(applied(), {pos: [3, 0, 0], cam: [1, 2, 9], fov: 50});
     // Invalid camera refuses before actor changes.
     refused(() => run({
       ...frame(1, entity('a', [], [99, 0, 0])),

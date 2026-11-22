@@ -147,6 +147,7 @@ export function applyModelFrame(actors: readonly ModelActor[], value: ModelValid
     const entity = value.entities.find(candidate => candidate.entityId === actor.id);
     if (entity) prepares.push(() => actor.prepare(entity));
   }
+  if (prepares.length !== value.entities.length) throw new ModelStageRefusal(MODEL_ACTOR_REFUSAL.scope);
   prepareWhole(prepares)();
   if (value.cameraCoordinates !== null) {
     try {applyCamera(value.cameraCoordinates);} catch (error) {

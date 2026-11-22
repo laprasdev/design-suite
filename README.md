@@ -567,8 +567,12 @@ npm test
 npm run build
 ```
 
-`npm test` installs the pinned gate tools (`scripts/gateTools`) and Playwright's headless
-Chromium, in which `tests/*.browser.test.ts` read computed sizes, such as each Modal width's.
+`npm run check` runs the type, size, baseline, cycle and duplication gates: `scripts/baseline-gate.ts` refuses rises
+against `origin/main` across all three baselines (`scripts/size-baseline.json` and `scripts/cast-baseline.json`,
+lowered automatically by `scripts/size-gate.ts` and `scripts/type-gate.ts` through `ratchetedFiles`, and
+`scripts/allocation-baseline.json`, lowered by hand from recorded runs). `npm test` installs the pinned gate tools
+(`scripts/gateTools`) and Playwright's headless Chromium, in which `tests/*.browser.test.ts` read computed sizes,
+such as each Modal width's, and sample per-tick heap allocations against `scripts/allocation-baseline.json`.
 
 ## Boundary
 

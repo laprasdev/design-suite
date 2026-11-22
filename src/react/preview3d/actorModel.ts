@@ -93,6 +93,7 @@ export const MODEL_ACTOR_REFUSAL = Object.freeze({
   terrainFrame: (id: string) => `Frame entity ${id} names a terrain; no engine entity drives a terrain.`,
   frame: 'A frame requires a finite nonnegative simulationTimeSeconds and an entities array.',
   unvalidated: 'A stage frame must be validated by validateModelFrame.',
+  scope: 'The frame was validated against a description this stage does not show.',
   removed: 'This stage removes no actor from an engine frame; removedEntities must be empty.',
   undeclared: (id: string) => `Frame entity ${id} names no declared actor; engine records do not create actors.`,
   twice: (id: string) => `Frame entity ${id} appears twice.`,

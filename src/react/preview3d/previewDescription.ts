@@ -1,7 +1,7 @@
 import type {ActionBarNotice} from '../ActionBar.tsx';
 import {NoticeTone} from '../actionBarElements.ts';
 import {MODEL_PREVIEW_TEXT, MODEL_REST_POSE} from './model.ts';
-import type {ModelStageDisplay, ModelStageSnapshot} from './model.ts';
+import type {ModelStageController, ModelStageDisplay, ModelStageSnapshot} from './model.ts';
 import {MODEL_ACTOR_ANIMATION, modelStageFocus, type ModelStageActorAnimation} from './actorModel.ts';
 import type {ModelStageDescription} from './descriptionModel.ts';
 import type {ModelStageSurfaceMode} from './surfaceModeModel.ts';
@@ -120,7 +120,7 @@ export const modelPreviewHeld = (declared: ModelStageDescription, held: ModelSta
   loading: boolean) => !loading && held !== undefined && descriptionKey(declared) === descriptionKey(held);
 
 export interface ModelDescriptionStage {
-  setDescription(value: ModelStageDescription): Promise<void>;
+  readonly setDescription: ModelStageController['setDescription'];
   snapshot(): Pick<ModelStageSnapshot, 'actorsPending'>;
 }
 
