@@ -3,9 +3,12 @@
 import type {NoticeTone} from '../src/react/actionBarElements.ts';
 export const CompactGlyph=Object.freeze({BAR:'compact bar',BUTTON:'compact button',CHOICE:'compact choice',
  TOGGLE:'compact toggle'} as const);
-// A module header's controls in their header forms: a cycle showing one of its options, and an icon toggle whose
-// glyph is what a press does next.
-export const HeaderForm=Object.freeze({CYCLE:'header cycle',TOGGLE:CompactGlyph.TOGGLE} as const);
-export const CYCLE_OPTIONS=Object.freeze(['One','Two','Three'] as const);
+// A module header's controls: the module's title heading a choice of its options, the last unavailable, and an icon
+// toggle whose glyph, marked with which it is, is what a press does next.
+export const HeaderForm=Object.freeze({TITLE:'Header',TOGGLE:CompactGlyph.TOGGLE} as const);
+export const TITLE_OPTIONS=Object.freeze([{value:'one',label:'One'},{value:'two',label:'Two'},
+ {value:'three',label:'Three',unavailable:'Three is not built yet.'}] as const);
+export const TOGGLE_GLYPH_ATTRIBUTE='data-toggle-glyph';
+export const ToggleGlyph=Object.freeze({ON:'on',OFF:'off'} as const);
 export const toneButton=(tone: NoticeTone)=>`${tone} button`;
 export const toneIcon=(tone: NoticeTone)=>`${tone} icon`;

@@ -1,4 +1,4 @@
-import {BooleanForm} from './synth/components/synth/booleanForm.ts';
+import {BooleanForm} from './react/inputs/booleanForm.ts';
 import {IncrementerForm} from './synth/components/synth/incrementerForm.ts';
 import {SliderForm} from './react/inputs/sliderForm.ts';
 

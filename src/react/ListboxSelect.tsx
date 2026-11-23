@@ -2,8 +2,10 @@ import {Button} from './Button.tsx';
 import {Modal} from './Modal.tsx';
 import {ModalPlacement} from './modalElements.ts';
 import {Label} from './accents.tsx';
+import {CARET_DOWN_TURN,CaretGlyph} from './caretGlyph.tsx';
 import {useEffect,useId,useLayoutEffect,useRef,useState,type KeyboardEvent,type ReactNode} from 'react';
 import {SearchField} from './SearchField.tsx';
+import {Opacity} from '../tokens.ts';
 import {Density} from './density.ts';
 import {searchCopy} from './interfaceCopy.ts';
 import {LISTBOX_FORM_ROLES,ListboxElement,ListboxForm} from './listboxSelectElements.ts';
@@ -15,13 +17,16 @@ import {LISTBOX_ARROWS,LISTBOX_MOVES,LISTBOX_OPENS,typesText,typeahead,searching
 // shows the chosen option as a field unless `children` draw it; with `field`,
 // `children` are drawn inside the field (a portrait beside a name, or a menu's name). It follows the
 // select-only combobox pattern (listboxNavigation): focus stays on the trigger;
-// arrows, Home and End move through the options, typing jumps to a label, Enter
+// arrows, Home and End move through the options (in the step form the arrows on the closed trigger choose the next
+// option at once, an unavailable one refusing as a press would), typing jumps to a label, Enter
 // or Space chooses and Tab closes. A click chooses. The popover is an anchored
 // Modal on the trigger, which closes it on Escape and on a press elsewhere.
 // `searchSubject` adds a search over the labels. The select form's `onChange` runs when the
 // chosen value changes. The menu form is a menu button over actions with no current value:
 // `children` draw its trigger, focus moves into the menu while it is open, and `onAction`
-// runs the chosen action each time; Escape or a choice returns focus.
+// runs the chosen action each time; Escape or a choice returns focus. An `unavailable` option, which names why, draws
+// faded and refuses a choice: the list closes and hands it to `onRefuse`, whose consumer shows the reason in its bar's
+// notice. A list that holds an unavailable option without `onRefuse` fails as it draws.
 export interface ListboxOption<V> {
  value: V;
  label: string;
@@ -30,6 +35,7 @@ export interface ListboxOption<V> {
  trailing?: ReactNode;
  title?: string;
  searchText?: string;
+ unavailable?: string;
 }
 interface ListboxProps<V extends string|number> {
  options: readonly ListboxOption<V>[];
@@ -41,9 +47,10 @@ interface ListboxProps<V extends string|number> {
  className?: string;
  iconOnly?: boolean;
  renderOption?(option: ListboxOption<V>): ReactNode;
+ onRefuse?(option: ListboxOption<V>): void;
 }
 interface ListboxSelectForm<V extends string|number> extends ListboxProps<V> {
- form?: typeof ListboxForm.SELECT;
+ form?: typeof ListboxForm.SELECT|typeof ListboxForm.STEP;
  value: V|null|undefined;
  onChange(value: NoInfer<V>): void;
  onAction?: never;
@@ -66,7 +73,9 @@ interface ListboxMenuForm<V extends string|number> extends ListboxProps<V> {
 export type ListboxSelectProps<V extends string|number>=ListboxSelectForm<V>|ListboxMenuForm<V>;
 export function ListboxSelect<V extends string|number>(props: ListboxSelectProps<V>) {
  const {form=ListboxForm.SELECT,options,value,label,title,disabled=false,above=false,field=false,className='',children,
-  searchSubject,searchSize,iconOnly=false,renderOption,onCreate}=props;
+  searchSubject,searchSize,iconOnly=false,renderOption,onCreate,onRefuse}=props;
+ const refused=options.find(option=>option.unavailable!==undefined);
+ if(refused&&!onRefuse)throw new Error(`${label} offers ${refused.label}, unavailable, with no onRefuse to say why.`);
  // The select reports a changed value; the menu, which holds none, runs every chosen action.
  const run=props.form===ListboxForm.MENU?props.onAction:props.onChange;
  const roles=LISTBOX_FORM_ROLES[form];
@@ -80,6 +89,7 @@ export function ListboxSelect<V extends string|number>(props: ListboxSelectProps
  const selectedContent=children??(roles.holdsValue?options.find(option=>option.value===value)?.label:undefined);
  const triggerContent=typeof selectedContent==='string'||typeof selectedContent==='number'
   ? <Label kind="action">{selectedContent}</Label> : selectedContent;
+ const showsValue=children===undefined||field;
  // Modal's dismissal returns focus itself; `close` returns it for the closes Modal does not see.
  const settle=()=>{setOpen(false);setQuery('');};
  const close=()=>{settle();trigger.current?.focus();};
@@ -88,11 +98,13 @@ export function ListboxSelect<V extends string|number>(props: ListboxSelectProps
   const option=shown[index];
   if(!option)return;
   close();
+  if(option.unavailable!==undefined){onRefuse?.(option);return;}
   if(!roles.holdsValue||option.value!==value)run(option.value);
  };
  const find=(key: string,from: number)=>{search.current=typeahead(search.current,key,Date.now());return typeaheadMatch(labels,search.current.text,from);};
  const closedKey=(e: KeyboardEvent)=>{
   if(!searchSubject&&typesText(e)&&e.key!==' '){e.preventDefault();show(find(e.key,start)??start);return;}
+  if(roles.closedArrowsStep&&LISTBOX_ARROWS.includes(e.key)){e.preventDefault();choose(LISTBOX_MOVES[e.key](start,shown.length));return;}
   if(!LISTBOX_OPENS[e.key])return;
   e.preventDefault();show(LISTBOX_OPENS[e.key](start,shown.length));
  };
@@ -112,10 +124,11 @@ export function ListboxSelect<V extends string|number>(props: ListboxSelectProps
   ?.focus({preventScroll:true});},[list,searchSubject,roles.focus]);
  useLayoutEffect(()=>{list?.children[active]?.scrollIntoView({block:'nearest'});},[list,active,query]);
  return <>
-  <button ref={trigger} type="button" role={roles.trigger} className={`${ListboxElement.TRIGGER.className}${className?` ${className}`:''}`} data-shows-value={children===undefined||field||undefined}
+  <button ref={trigger} type="button" role={roles.trigger} className={`${ListboxElement.TRIGGER.className}${className?` ${className}`:''}`} data-shows-value={showsValue||undefined}
    aria-label={label} title={title} aria-haspopup={roles.popup} aria-expanded={open} aria-controls={open?listId:undefined}
    aria-activedescendant={activeOn==='trigger'?optionId(active):undefined}
-   disabled={disabled} onClick={()=>open?setOpen(false):show(start)} onKeyDown={open?openKey:closedKey}>{triggerContent}</button>
+   disabled={disabled} onClick={()=>open?setOpen(false):show(start)} onKeyDown={open?openKey:closedKey}>{triggerContent}
+   {showsValue&&<CaretGlyph turn={CARET_DOWN_TURN} className={ListboxElement.CARET.className}/>}</button>
   {open&&<Modal open placement={ModalPlacement.ANCHORED} anchor={trigger} popover={{above,scroll:false}}
    onClose={settle} role="presentation" className={ListboxElement.POPOVER.className}
    data-icon-only={iconOnly||undefined}>
@@ -129,7 +142,9 @@ export function ListboxSelect<V extends string|number>(props: ListboxSelectProps
     onKeyDown={roles.focus==='list'?openKey:undefined}>
     {shown.map((option,index)=><li key={option.value} id={optionId(index)} role={roles.item} aria-label={option.label}
      title={option.title??(iconOnly?option.label:undefined)}
-     aria-selected={roles.holdsValue?option.value===value:undefined} data-active={index===active||undefined} className={ListboxElement.OPTION.className}
+     aria-selected={roles.holdsValue?option.value===value:undefined}
+     aria-disabled={option.unavailable!==undefined||undefined}
+     style={option.unavailable!==undefined?{opacity:Opacity.low}:undefined} data-active={index===active||undefined} className={ListboxElement.OPTION.className}
      onMouseDown={e=>e.preventDefault()} onMouseMove={()=>setActive(index)} onClick={()=>choose(index)}>{renderOption?renderOption(option):<span className={ListboxElement.CONTENT.className}>{option.leading}<Label kind="action" className={ListboxElement.LABEL.className}>{option.label}</Label>{option.trailing&&<span className={ListboxElement.IMPACT.className}>{option.trailing}</span>}</span>}{index===active&&option.description&&<small className={ListboxElement.DETAIL.className}>{option.description}</small>}</li>)}
    </ul>
    {onCreate&&query.trim()&&!options.some(option=>option.label.toLocaleLowerCase()===query.trim().toLocaleLowerCase())&&

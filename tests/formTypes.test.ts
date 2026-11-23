@@ -18,8 +18,6 @@ const FORMS = [
     props: 'children=""', member: 'EMPTY'},
   {component: 'ListboxSelect', form: 'ListboxForm', prop: 'form', from: 'src/react/index.ts',
     props: 'label="Go" options={[]} onAction={() => undefined} children=""', member: 'MENU'},
-  {component: 'Cycle', form: 'CycleForm', prop: 'variant', from: 'src/react/index.ts',
-    props: 'options={[]} value="a" onChange={() => undefined}', member: 'TEXT'},
   {component: 'Boolean', form: 'BooleanForm', prop: 'form', from: 'src/react/index.ts',
     props: 'value onChange={() => undefined} label="Play" glyphs={{on: "", off: ""}}', member: 'ICON'},
 ] as const;
@@ -86,6 +84,28 @@ describe('a ListboxSelect form\'s props at the type check', () => {
     it(`takes ${accepted} and refuses ${refused}`, () => {
       const usage = (value: string) => `import {ListboxSelect, ListboxForm} from ${REACT_ENTRY};\n`
         + `export const shown = <ListboxSelect ${props} ${value} />; void ListboxForm;\n`;
+      assertRefusesType(value => typeCheck({'usage.tsx': usage(value)}, SUITE_COMPILER_OPTIONS), accepted, refused);
+    });
+  }
+});
+
+// What an icon Boolean takes: its glyphs and its label, never the switch's `ariaLabel`; and a Cycle, a cell alone,
+// takes no form at all (a module header's picker is GridModule's title choice).
+const BOOLEAN_ICON = 'form={BooleanForm.ICON} value onChange={() => undefined}';
+const SHAPES = [
+  {component: 'Boolean', props: BOOLEAN_ICON, accepted: 'label="Play" glyphs={{on: "", off: ""}}',
+    refused: 'label="Play"'},
+  {component: 'Boolean', props: BOOLEAN_ICON, accepted: 'label="Play" glyphs={{on: "", off: ""}}',
+    refused: 'ariaLabel="Play" glyphs={{on: "", off: ""}}'},
+  {component: 'Cycle', props: 'options={[]} value="a" onChange={() => undefined}', accepted: '',
+    refused: 'variant="text"'},
+] as const;
+
+describe('an icon Boolean\'s and a Cycle\'s props at the type check', () => {
+  for (const {component, props, accepted, refused} of SHAPES) {
+    it(`${component} takes ${accepted || 'its own props'} and refuses ${refused}`, () => {
+      const usage = (value: string) => `import {${component}, BooleanForm} from ${REACT_ENTRY};\n`
+        + `export const shown = <${component} ${props} ${value} />; void BooleanForm;\n`;
       assertRefusesType(value => typeCheck({'usage.tsx': usage(value)}, SUITE_COMPILER_OPTIONS), accepted, refused);
     });
   }

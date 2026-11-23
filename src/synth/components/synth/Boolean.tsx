@@ -1,19 +1,20 @@
 import {SwitchBoolean} from '../../../react/inputs/SwitchBoolean.tsx';
 import {IconBoolean} from '../../../react/inputs/IconBoolean.tsx';
-import {BooleanForm, type BooleanGlyphs, type IconBooleanProps, type SwitchBooleanProps} from './booleanForm.ts';
+import {BooleanForm, type BooleanGlyphs, type IconBooleanProps, type SwitchBooleanProps}
+  from '../../../react/inputs/booleanForm.ts';
 export {BooleanForm, type BooleanGlyphs, type IconBooleanProps, type SwitchBooleanProps};
 import React, { useEffect, useState, useCallback } from 'react';
 import { useStyle } from '../../StyleContext.tsx';
 import { getColorScheme, getBooleanStyles, getInsetShadow, type ColorType } from '../../../color.ts';
-import { D, F, C, DC, T, TransitionKeys } from '../../design/index.ts';
+import { D, F, C, TransitionKeys } from '../../design/index.ts';
 import { controlTooltip, useTooltipSafe } from './TooltipContext.tsx';
 import {HoverDetail} from '../../../react/HoverDetail.tsx';
 import {SelectionMark} from '../../../react/SelectionMark.tsx';
 import {pendingContent,pendingPress} from '../../../react/pending.tsx';
 import {PendingForm} from '../../../react/pendingElements.ts';
 
-type BooleanSize = 'xs' | 'sm' | 'md' | 'lg';
-type BooleanColor = 'primary' | 'secondary' | 'green' | 'cyan' | 'pink';
+export type BooleanSize = 'xs' | 'sm' | 'md' | 'lg';
+export type BooleanColor = 'primary' | 'secondary' | 'green' | 'cyan' | 'pink';
 type BooleanVariant = 'standard' | 'basic' | 'oscillating';
 
 export interface BooleanProps {
@@ -33,7 +34,9 @@ export interface BooleanProps {
 
 let _sizeMap: Record<BooleanSize, number> | null = null;
 function getSizeMap(): Record<BooleanSize, number> {
-  return _sizeMap ??= { xs: D.sizes.booleanMicro, sm: D.sizes.booleanSmall, md: D.sizes.booleanMedium, lg: D.sizes.booleanLarge };
+  return _sizeMap ??= {
+    xs: D.sizes.booleanMicro, sm: D.sizes.booleanSmall, md: D.sizes.booleanMedium, lg: D.sizes.booleanLarge,
+  };
 }
 
 export interface SettingBooleanProps {
@@ -48,7 +51,8 @@ export interface SettingBooleanProps {
   pending?: boolean;
   className?: string;
 }
-function SettingBoolean({value,onChange,label,detail,iconOnly=false,title,disabled=false,pending=false,className=''}: SettingBooleanProps) {
+function SettingBoolean({value,onChange,label,detail,iconOnly=false,title,disabled=false,pending=false,
+  className=''}: SettingBooleanProps) {
   const mark=<SelectionMark selected={value}/>,name=<strong>{label}</strong>;
   const content=iconOnly?pendingContent({pending,form:PendingForm.MARK,content:mark}):
     <>{mark}{pendingContent({pending,form:PendingForm.TEXT,content:name})}</>;
@@ -148,53 +152,3 @@ function CellBoolean({
     />
   );
 }
-
-
-export function LightUpBoolean(props: Omit<BooleanProps, 'color' | 'variant'>) {
-  return <Boolean {...props} color="primary" variant="standard" />;
-}
-
-export function PinkBoolean(props: Omit<BooleanProps, 'color' | 'variant'>) {
-  return <Boolean {...props} color="secondary" variant="standard" />;
-}
-
-export function BasicBoolean(props: Omit<BooleanProps, 'variant'>) {
-  return <Boolean {...props} variant="basic" />;
-}
-
-export interface OscillatingBooleanProps {
-  active: boolean;
-  speed?: number;
-  className?: string;
-  size?: BooleanSize;
-  color?: BooleanColor;
-  rounded?: boolean;
-}
-
-export function OscillatingBoolean({
-  active,
-  speed = D.timing.oscillateNormal,
-  color = 'primary',
-  ...rest
-}: OscillatingBooleanProps) {
-  return <Boolean value={active} oscillateSpeed={speed} color={color} variant="oscillating" {...rest} />;
-}
-
-export interface LabeledBoolProps {
-  label: string;
-  value: boolean;
-  onChange: (v: boolean) => void;
-  color: string;
-  layout?: 'row' | 'column';
-}
-
-export function LabeledBool({ label, value, onChange, color, layout = 'row' }: LabeledBoolProps) {
-  const isColumn = layout === 'column';
-  return (
-    <div style={{ display: 'flex', flexDirection: isColumn ? 'column' : 'row', alignItems: 'center', gap: isColumn ? 2 : DC.rowGap }}>
-      <LightUpBoolean value={value} onChange={onChange} size="sm" />
-      <span style={{ ...T.label, color, opacity: value ? 1 : 0.5 }}>{label}</span>
-    </div>
-  );
-}
-

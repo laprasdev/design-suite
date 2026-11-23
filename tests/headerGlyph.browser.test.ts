@@ -2,12 +2,12 @@
 // on everything that wears it. Read in Chromium from headerGlyphScene.tsx.
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
-import {DESKTOP_VIEWPORT,openScene,SCENE_GL} from './browserScene.ts';
+import {DESKTOP_VIEWPORT,named as namedOn,openScene,SCENE_GL} from './browserScene.ts';
 import {NoticeTone} from '../src/react/actionBarElements.ts';
 import {CompactGlyph,toneButton,toneIcon} from './headerGlyphCases.ts';
 
 const page=await openScene('tests/headerGlyphScene.tsx',DESKTOP_VIEWPORT,SCENE_GL.software);
-const named=(name: string)=>page.locator(`[aria-label="${name}"]`).first();
+const named=(name: string)=>namedOn(page,name);
 const glyphOf=(name: string)=>named(name).locator('svg').first();
 for(const form of Object.values(CompactGlyph))test(`a ${form}'s glyph is its action label's size`,async()=>{
  const [glyph,label]=await named(form).evaluate(node=>{

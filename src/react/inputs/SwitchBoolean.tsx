@@ -1,7 +1,7 @@
 import React from 'react';
 import {useStyle} from '../../synth/StyleContext.tsx';
 import {C, TransitionKeys} from '../../synth/design/index.ts';
-import type {SwitchBooleanProps} from '../../synth/components/synth/booleanForm.ts';
+import type {SwitchBooleanProps} from './booleanForm.ts';
 const HEIGHT = 10, INSET_RATIO = 0.2;
 /** A switch is twice as wide as it is tall; a row of other yes/no forms keeps this width so their names line up. */
 export const SWITCH_WIDTH_RATIO = 2;

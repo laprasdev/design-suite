@@ -5,20 +5,26 @@
 
 /* ---- accents (AccentKind) ---- */
 .bd-label { font-family:var(--font-chrome,inherit); text-transform:var(--label-case,none); }
+/* A composition sets a Label's case through `--label-case` and its tracking through `--label-tracking`, never its type. */
 .bd-label--name {
-  font-size: var(--label-name-size); font-weight: var(--label-name-weight); letter-spacing: var(--label-name-tracking);
+  font-size: var(--label-name-size); font-weight: var(--label-name-weight); letter-spacing: var(--label-tracking, var(--label-name-tracking));
   text-transform: uppercase; color: var(--button-color,var(--color-dim, #82828e));
 }
 .bd-label--value {
   font-size: var(--label-value-size); font-weight: var(--label-value-weight);
-  letter-spacing: var(--label-value-tracking); color: var(--color-text, #f0f0f3);
+  letter-spacing: var(--label-tracking, var(--label-value-tracking)); color: var(--color-text, #f0f0f3);
   font-variant-numeric: tabular-nums;
 }
 /* Button/label text — one source for action typography. Labels read in Title
    Case exactly as written; nothing is forced into capitals. */
 .bd-label--action {
   font-size: var(--label-action-size); font-weight: var(--label-action-weight);
-  letter-spacing: var(--label-action-tracking); color: inherit;
+  letter-spacing: var(--label-tracking, var(--label-action-tracking)); color: inherit;
+}
+/* The chosen option's name beside the word it heads, in the text colour whatever colour the word wears. */
+.bd-label--chosen {
+  font-size: var(--label-chosen-size); font-weight: var(--label-chosen-weight);
+  letter-spacing: var(--label-tracking, var(--label-chosen-tracking)); color: var(--text);
 }
 
 /* ---- Button (composes Label) ---- */
@@ -118,11 +124,11 @@
   box-shadow: inset 0 1px 0 var(--color-bevel, rgba(255, 255, 255, 0.05));
   transition: border-color 0.15s, box-shadow 0.15s;
 }
+.bd-cycle .bd-cycle-val { --label-case: uppercase; --label-tracking: var(--tracking-caps); }
 .bd-cycle:hover {
   border-color: rgba(255, 255, 255, 0.14);
   box-shadow: inset 0 1px 0 var(--color-bevel, rgba(255, 255, 255, 0.05)), 0 0 14px rgba(196, 103, 143, 0.22);
 }
-.bd-cycle:not([data-variant]) .bd-cycle-val { text-transform: uppercase; font-size: 10px; letter-spacing: 0.1em; }
 .bd-cycle[data-accent="true"] { border-color: var(--color-accent-deep, #7d3f5b); }
 .bd-cycle[data-accent="true"] .bd-cycle-val { color: var(--color-accent, #c4678f); }
 
@@ -226,13 +232,6 @@
 .bd-edge-fade {
   mask-image:linear-gradient(90deg,transparent,#000 var(--bd-fade-start,0px),#000 calc(100% - var(--bd-fade-end,0px)),transparent);
 }
-
-/* A module header's Cycle shows only its current value, in Label's action type: this drops the cell's chrome only. */
-.bd-cycle[data-variant=text], .bd-cycle[data-variant=text]:hover {
-  padding:0; border:0; border-radius:0; background:transparent; box-shadow:none;
-  color:inherit; font-family:inherit; cursor:pointer;
-}
-.bd-cycle[data-variant=text]:disabled {cursor:default; opacity:.6;}
 
 .bd-btn--navigation {font-family:var(--navigation-font,inherit);font-size:var(--navigation-size,var(--type-caption));font-weight:700;letter-spacing:var(--tracking-caps,.1em);text-transform:uppercase;width:100%;justify-content:space-between;gap:8px;padding:var(--navigation-padding,6px 8px);background:transparent;border:0;color:var(--navigation-color,var(--text));text-align:left;}
 .bd-btn--navigation:is(:hover,[aria-current=true]) {color:var(--pink);}

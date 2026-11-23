@@ -32,7 +32,7 @@ export const TEXT_SIZE_VARIABLES = Object.freeze({
 // The Label's kinds (widgets.css `.bd-label--<kind>`), each drawn in its typography role: one size, the role's
 // weight and tracking, so a header is the same text given its heavier role.
 const LABEL_KIND_ROLES = Object.freeze({
-  name: "caption", value: "value", action: "label",
+  name: "caption", value: "value", action: "label", chosen: "chosen",
 } as const satisfies Record<string, keyof typeof Typography>);
 /** The type every Label kind reads, from its typography role: a host that loads no theme spreads it on its root. */
 export const labelVariables = (): Record<`--label-${string}`, string> => Object.fromEntries(

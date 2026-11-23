@@ -1,28 +1,38 @@
 // The page the header glyph and header form tests read in a browser: a glyph in each compact form, each tone on a
-// button and on the notice's glyph, and a compact bar holding a cycle and an icon toggle in their header forms.
+// button and on the notice's glyph, a compact bar holding an icon toggle, whose notice says why a title's choice was
+// refused, and a module whose title heads a choice.
 import {useState} from 'react';
-import {Cycle,CycleForm} from '../src/react/Cycle.tsx';
 import {Boolean,BooleanForm} from '../src/synth/components/synth/Boolean.tsx';
-import {PauseIcon,PlayIcon} from '../src/react/PlaybackIcons.tsx';
+import {StyleProvider} from '../src/synth/StyleContext.tsx';
+import {GridModule} from '../src/react/module/GridModule.tsx';
+import type {ListboxOption} from '../src/react/ListboxSelect.tsx';
 import {ActionBar,NoticeIcon} from '../src/react/ActionBar.tsx';
 import {HeaderIconButton,ResetIcon} from '../src/react/HeaderIconButton.tsx';
 import {SegmentedControl,ICON_SEGMENT_VARIANT} from '../src/react/SegmentedControl.tsx';
 import {Density} from '../src/react/density.ts';
 import {NoticeTone} from '../src/react/actionBarElements.ts';
-import {CompactGlyph,CYCLE_OPTIONS,HeaderForm,toneButton,toneIcon} from './headerGlyphCases.ts';
+import {CompactGlyph,HeaderForm,TITLE_OPTIONS,TOGGLE_GLYPH_ATTRIBUTE,ToggleGlyph,toneButton,toneIcon}
+ from './headerGlyphCases.ts';
 import {renderScene} from './renderScene.tsx';
 
 const ignore=()=>undefined;
-const GLYPHS={on:<PauseIcon/>,off:<PlayIcon/>};
-const OPTIONS=CYCLE_OPTIONS.map(value=>({value,label:value}));
+const glyph=(which: string)=><svg viewBox="0 0 2 2" aria-hidden="true" {...{[TOGGLE_GLYPH_ATTRIBUTE]:which}}>
+ <rect width="2" height="2" fill="currentColor"/></svg>;
+const GLYPHS={on:glyph(ToggleGlyph.ON),off:glyph(ToggleGlyph.OFF)};
+type TitleOption=ListboxOption<typeof TITLE_OPTIONS[number]['value']>;
 function HeaderForms() {
- const [option,setOption]=useState<string>(CYCLE_OPTIONS[0]),[on,setOn]=useState(false);
- return <ActionBar density={Density.COMPACT} slots={{right:<>
-  <Cycle variant={CycleForm.TEXT} ariaLabel={HeaderForm.CYCLE} options={OPTIONS} value={option} onChange={setOption}/>
-  <Boolean form={BooleanForm.ICON} label={HeaderForm.TOGGLE} value={on} onChange={setOn} glyphs={GLYPHS} bare
-   density={Density.COMPACT}/>
-  <HeaderIconButton label={CompactGlyph.BAR}><ResetIcon/></HeaderIconButton>
- </>}}/>;
+ const [value,setValue]=useState<TitleOption['value']>(TITLE_OPTIONS[0].value),[on,setOn]=useState(false);
+ const [refused,setRefused]=useState<TitleOption|null>(null);
+ return <StyleProvider persist={false}>
+  <ActionBar density={Density.COMPACT}
+   notice={refused&&{tone:NoticeTone.INFO,message:refused.label,detail:refused.unavailable}} slots={{right:<>
+   <Boolean form={BooleanForm.ICON} label={HeaderForm.TOGGLE} value={on} onChange={setOn} glyphs={GLYPHS} bare
+    density={Density.COMPACT}/>
+   <HeaderIconButton label={CompactGlyph.BAR}><ResetIcon/></HeaderIconButton>
+  </>}}/>
+  <GridModule title={HeaderForm.TITLE} choice={{options:TITLE_OPTIONS,value,onChange:setValue,onRefuse:setRefused}}>
+   {null}</GridModule>
+ </StyleProvider>;
 }
 renderScene(<>
  <HeaderForms/>

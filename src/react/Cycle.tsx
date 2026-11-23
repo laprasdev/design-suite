@@ -5,11 +5,6 @@
 // =====================================================
 import React, { type ReactNode } from "react";
 
-/** Cycle's opt-in forms. Text shows only the current value, as an action label without the cell, as a module header's
- *  picker. */
-export const CycleForm = Object.freeze({TEXT: "text"} as const);
-export type CycleFormValue = typeof CycleForm[keyof typeof CycleForm];
-
 export interface CycleOption<V> {
   value: V;
   label: ReactNode;
@@ -25,12 +20,11 @@ export interface CycleProps<V> {
   glyph?: ReactNode;
   className?: string;
   disabled?: boolean;
-  variant?: CycleFormValue;
   ariaLabel?: string;
 }
 import { Label, Glyph } from "./accents.tsx";
 
-export function Cycle<V>({options, value, onChange, label, glyph, className = "", disabled, variant,
+export function Cycle<V>({options, value, onChange, label, glyph, className = "", disabled,
   ariaLabel}: CycleProps<V>) {
   const idx = Math.max(
     0,
@@ -51,11 +45,10 @@ export function Cycle<V>({options, value, onChange, label, glyph, className = ""
       onClick={next}
       title={ariaLabel ? `${ariaLabel}: ${word ?? ""}` : label}
       aria-label={ariaLabel ? `${ariaLabel}: ${word ?? ""}` : undefined}
-      data-variant={variant}
     >
       {glyph && <Glyph size={12}>{glyph}</Glyph>}
       {label && <Label kind="name">{label}</Label>}
-      <Label kind={variant === CycleForm.TEXT ? "action" : "value"} className="bd-cycle-val">
+      <Label kind="value" className="bd-cycle-val">
         {cur?.label}
       </Label>
     </button>

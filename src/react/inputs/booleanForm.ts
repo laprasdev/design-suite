@@ -1,5 +1,5 @@
 import type {ReactNode} from 'react';
-import type {Density} from '../../../react/density.ts';
+import type {Density} from '../density.ts';
 // One boolean, four forms: a lit cell for a module's grid, a labelled row for a settings list, a small switch for a
 // module's header, or a header's icon toggle. A leaf, so Boolean and the forms it draws share it without importing
 // each other.

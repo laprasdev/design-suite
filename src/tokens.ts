@@ -62,6 +62,12 @@ export const Typography = {
     fontSize: TEXT_FLOOR,
     fontWeight: 500,
     letterSpacing: '0.02em'
+  },
+  // The chosen option's name beside the word it heads, in the regular weight so the word leads.
+  chosen: {
+    fontSize: TEXT_FLOOR,
+    fontWeight: 400,
+    letterSpacing: '0.02em'
   }
 } as const;
 

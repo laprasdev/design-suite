@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import {after} from 'node:test';
 import {build} from 'esbuild';
 import playwright from '../scripts/gateTools/node_modules/playwright/index.js';
-import type {Page,ViewportSize} from '../scripts/gateTools/node_modules/playwright/index.js';
+import type {Locator,Page,ViewportSize} from '../scripts/gateTools/node_modules/playwright/index.js';
 import {FONT_ROUTE_FILES} from '../src/fonts.ts';
 import {Breakpoint} from '../src/react/breakpoints.ts';
 import {SUITE_ROOT} from './bundled.ts';
@@ -27,6 +27,9 @@ export type SceneGl=typeof SCENE_GL[keyof typeof SCENE_GL];
 // The page's origin: localhost is a secure context, so the scene has what only one has (crypto.subtle's digests, which
 // the stage's file reads check); every file a scene reads is routed by its test.
 const SCENE_ORIGIN='http://localhost/';
+
+/** A control by its whole accessible name, in a scene or in a part of it. */
+export const named=(scope: Page|Locator,name: string)=>scope.locator(`[aria-label="${name}"]`).first();
 
 export async function openScene(scene: string,viewport: ViewportSize,gl: SceneGl): Promise<Page> {
  const {outputFiles}=await build({absWorkingDir:SUITE_ROOT,entryPoints:[scene],bundle:true,write:false,outdir:'scene',

@@ -11,7 +11,7 @@ export { isPanKeyHeld } from "./panKey.ts";
 export { bezierPath, edgePoint, linkPath, verticalBezierPath, type NodeBox, type NodeSide } from "./geometry.ts";
 export { Label, Glyph, Divider, LightBox, type LabelKind } from "./accents.tsx";
 export { MonthGrid, type DayCell, type MonthGridProps } from "./Calendar.tsx";
-export { Cycle, CycleForm, type CycleFormValue, type CycleOption, type CycleProps } from "./Cycle.tsx";
+export { Cycle, type CycleOption, type CycleProps } from "./Cycle.tsx";
 export { ViewStack, type StackView, type ViewStackProps } from "./ViewStack.tsx";
 export { PipRow, PipRowForm, type PipRowFormValue, type PipRowProps } from "./PipRow.tsx";
 export { Button, type ButtonProps, type ButtonVariant } from "./Button.tsx";
@@ -109,7 +109,8 @@ export {windowedRange, type ListViewport} from './table/useTableWindow.ts';
 export {GooExpander, GooForm, type GooExpanderProps} from './GooExpander.tsx';
 export {useDoubleTap} from './useDoubleTap.ts';
 export {graphDots, graphEdgeFade, nodeFrame} from './graphSurface.ts';
-export {GraphDisplay, GraphFill, GraphHandle, graphGlowFilter, placeGraphHandle, type GraphHandlePlace} from './GraphDisplay.tsx';
+export {GraphDisplay, GraphFill, GraphHandle, graphGlowFilter, placeGraphHandle, type GraphHandlePlace}
+  from './GraphDisplay.tsx';
 export {GraphFillForm, type GraphFillFormValue} from './graphFillForm.ts';
 export {animateCardFlip} from './cardFlip.ts';
 

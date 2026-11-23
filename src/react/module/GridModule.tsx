@@ -2,16 +2,34 @@ import React from 'react';
 import { useStyle } from '../../synth/StyleContext.tsx';
 import { Borders, D, MODULE_TITLE } from '../../synth/design/index.ts';
 import { ModuleHeaderRow } from './ModuleHeaderRow.tsx';
+import { ListboxSelect, type ListboxOption } from '../ListboxSelect.tsx';
+import { ListboxForm } from '../listboxSelectElements.ts';
+import { Label } from '../accents.tsx';
+import { ModuleHeaderElement, ModuleTitleChoiceElement, ModuleTitleChosenElement } from './gridModuleElements.ts';
 
 const G = D.moduleGrid;
 const FILLS: React.CSSProperties = { flex: 1, minWidth: 0, minHeight: 0 };
+/** The room between a title's word and its chosen name, set only where a title heads a choice. */
+const CHOICE_GAP: Record<'--module-title-gap', string> = { '--module-title-gap': `${G.headerTitleGap}px` };
+
+/** What a module's name heads: one of `options`, each named as the title shows it, the module's word opening the list
+ *  beside the chosen one's name and the list's caret, the arrows on the closed title stepping to the next option. An
+ *  option that is unavailable refuses with its reason. */
+export interface ModuleTitleChoice<V extends string | number> {
+  options: readonly ListboxOption<V>[];
+  value: V;
+  onChange(value: NoInfer<V>): void;
+  onRefuse(option: ListboxOption<NoInfer<V>>): void;
+}
 
 /**
  * A module on a page: its name, open group and tabs over a body filling the tile. The tile draws the only border.
  * An untitled module's drawing says what it is, so its name is only its label, and a header with nothing else goes.
+ * A titled module whose name heads a `choice` draws its word as that choice's trigger.
  */
-export function GridModule({ title, titled = true, group, tabs, children }: {
-  title: string; titled?: boolean; group?: string; tabs?: React.ReactNode; children: React.ReactNode;
+export function GridModule<V extends string | number>({ title, titled = true, group, tabs, choice, children }: {
+  title: string; titled?: boolean; group?: string; tabs?: React.ReactNode; choice?: ModuleTitleChoice<V>;
+  children: React.ReactNode;
 }) {
   const style = useStyle().getEffectiveStyle();
   const headerStyle: React.CSSProperties = {
@@ -23,11 +41,19 @@ export function GridModule({ title, titled = true, group, tabs, children }: {
     cursor: 'default', whiteSpace: 'nowrap', minWidth: 0,
     overflow: 'hidden', textOverflow: 'ellipsis',
   };
+  const chosen = choice?.options.find(option => option.value === choice.value);
+  if (choice && !chosen) throw new Error(`${title}'s choice holds ${choice.value}, which none of its options is.`);
   return (
     <section data-grid-module data-module-owner={title} aria-label={title}
       style={{ ...FILLS, display: 'flex', flexDirection: 'column', fontFamily: 'var(--font-chrome, inherit)' }}>
-      {(titled || group || tabs) && <header data-module-header={title} style={headerStyle}>
-        {titled && <h2 style={titleStyle}>{title}</h2>}
+      {(titled || group || tabs) && <header data-module-header={title} className={ModuleHeaderElement.className}
+        style={headerStyle}>
+        {titled && <h2 style={choice ? { ...titleStyle, ...CHOICE_GAP } : titleStyle}>{choice && chosen
+          ? <ListboxSelect form={ListboxForm.STEP} field label={title} className={ModuleTitleChoiceElement.className}
+            options={choice.options} value={choice.value} onChange={choice.onChange} onRefuse={choice.onRefuse}>
+            {title}<Label kind="chosen" className={ModuleTitleChosenElement.className}>{chosen.label}</Label>
+          </ListboxSelect>
+          : title}</h2>}
         <ModuleHeaderRow group={group}>{tabs}</ModuleHeaderRow>
       </header>}
       <div data-module-body={title} style={{ ...FILLS, display: 'flex', overflow: 'auto' }}>{children}</div>
