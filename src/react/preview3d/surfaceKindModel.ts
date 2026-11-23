@@ -1,6 +1,7 @@
 import {isNonEmptyString, isRecord} from '../../valueChecks.ts';
 import {modelDigest, modelEntries, modelFlag, modelName, modelNumber, modelOption,
-  modelRecord, modelRecordStating, modelShape, modelStates} from './recordModel.ts';
+  modelRecord, modelRecordStating, modelShape, modelStates,
+  modelStatesValue} from './recordModel.ts';
 import {ModelStageRefusal} from './refusal.ts';
 
 // A surface kind's declaration: what any host needs to know to check a record against the kind, with no renderer. It
@@ -179,7 +180,8 @@ export function modelSurfaceKind(value: unknown, where: string): ModelSurfaceKin
     coverage: coverage(kind.coverage, `${where}.coverage`),
     side: modelOption(kind.side, MODEL_SURFACE_SIDE, `${where}.side`), fog: modelFlag(kind.fog, `${where}.fog`),
     displacement, webProgram: Object.freeze({...programFile(program, `${where}.webProgram`), includes:
-      modelStates(program, 'includes') ? includes(program.includes, `${where}.webProgram.includes`) : NO_INCLUDES})});
+      modelStatesValue(program, 'includes', `${where}.webProgram`) ?
+        includes(program.includes, `${where}.webProgram.includes`) : NO_INCLUDES})});
 }
 
 /** The kinds a stage is given, by id: each checked whole, ids distinct, none the file's. */

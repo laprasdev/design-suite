@@ -52,8 +52,7 @@ const frameCameraScratch = new Float64Array(CAMERA_COORDS.length);
 /** Validates an optional frame camera into `into` (`CAMERA_COORDS`), returning whether `camera` was stated. */
 export function readModelFrameCamera(record: Record<string, unknown>, into: Float64Array): boolean {
   if (!modelStates(record, 'camera')) return false;
-  const {camera} = record;
-  modelRecordStating(camera, MODEL_PREVIEW_CAMERA_FIELDS, FRAME_CAMERA_WHERE.camera);
+  const camera = modelRecordStating(record.camera, MODEL_PREVIEW_CAMERA_FIELDS, FRAME_CAMERA_WHERE.camera);
   readModelPreviewCamera(camera, FRAME_CAMERA_WHERE, into);
   return true;
 }

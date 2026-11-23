@@ -2,7 +2,7 @@ import {modelPresentationPose, type ModelPresentationPose, type ModelVector}
   from './placementModel.ts';
 import {ModelStageRefusal} from './refusal.ts';
 import {isRecord as object} from '../../valueChecks.ts';
-import {modelStates, readModelNumbers, type ModelStatingFields} from './recordModel.ts';
+import {modelStatesValue, readModelNumbers, type ModelStatingFields} from './recordModel.ts';
 import {modelMaterialOutputs} from './runtimeMaterialModel.ts';
 import type {ModelMaterialOutput, ModelRuntimeMaterialProfile} from './runtimeMaterialModel.ts';
 import {modelSurfaceOutputs, type ModelSurfaceTakes} from './surfaceOutputModel.ts';
@@ -73,15 +73,15 @@ export const UNSTATED_FIELD_OF_VIEW = Number.NaN;
 export const cameraStatesFieldOfView = (coords: Float64Array): boolean =>
   !Number.isNaN(coords[CAMERA_COORDS.fov]);
 export const MODEL_PREVIEW_CAMERA_REFUSAL = Object.freeze({
-  camera: (where: string) => `${where} requires position and target.`,
   distinct: (where: string) => `${where}: position and target must be distinct.`,
   fieldOfView: (where: string) => `${where}.fieldOfView must be a finite number strictly between 0 and 180.`,
 });
 
-/** Validates a camera into `into` (`CAMERA_COORDS`), storing `UNSTATED_FIELD_OF_VIEW` when `fieldOfView` is unstated.
- * Makes no object, array or string on valid input. */
-export function readModelPreviewCamera(value: unknown, where: ModelPreviewCameraWhere, into: Float64Array): void {
-  if (!object(value)) throw new ModelStageRefusal(MODEL_PREVIEW_CAMERA_REFUSAL.camera(where.camera));
+/** Validates a camera record its caller has checked (`MODEL_PREVIEW_CAMERA_FIELDS`) into `into` (`CAMERA_COORDS`),
+ * storing `UNSTATED_FIELD_OF_VIEW` when `fieldOfView` is unstated. A frame's camera is read here on every tick it
+ * states one. */
+export function readModelPreviewCamera(value: Record<string, unknown>, where: ModelPreviewCameraWhere,
+  into: Float64Array): void {
   readModelNumbers(value.position, 3, into, CAMERA_COORDS.px, where.position);
   readModelNumbers(value.target, 3, into, CAMERA_COORDS.tx, where.target);
   const dx = into[CAMERA_COORDS.px] - into[CAMERA_COORDS.tx];
@@ -91,7 +91,7 @@ export function readModelPreviewCamera(value: unknown, where: ModelPreviewCamera
   if (!(distanceSquared > 0) || !Number.isFinite(distanceSquared)) {
     throw new ModelStageRefusal(MODEL_PREVIEW_CAMERA_REFUSAL.distinct(where.camera));
   }
-  if (!modelStates(value, 'fieldOfView')) {
+  if (!modelStatesValue(value, 'fieldOfView', where.camera)) {
     into[CAMERA_COORDS.fov] = UNSTATED_FIELD_OF_VIEW;
     return;
   }
@@ -114,7 +114,8 @@ export function freezeModelPreviewCamera(coords: Float64Array): ModelPreviewCame
 }
 
 const cameraScratch = new Float64Array(CAMERA_COORDS.length);
-export function modelPreviewCamera(value: unknown, where: string): ModelPreviewCamera {
+/** A description's camera record, checked by its caller, read once as it is applied. */
+export function modelPreviewCamera(value: Record<string, unknown>, where: string): ModelPreviewCamera {
   readModelPreviewCamera(value, modelPreviewCameraWhere(where), cameraScratch);
   return freezeModelPreviewCamera(cameraScratch);
 }

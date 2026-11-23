@@ -40,17 +40,12 @@ function statedWith(value: Record<string, unknown>, stated: readonly string[], w
   return [...stated, ...whenStated.filter(field => modelStates(value, field))];
 }
 
-// Written as loops over the fields, so that a check on a tick's path (a frame's pose or camera) makes no array or
-// closure unless it refuses.
+// Checks the record's field names only, never a value: a field stated with no value is its reader's to refuse
+// (`modelStatesValue`). Written as loops over the fields, so that a check on a tick's path (a frame's pose or camera)
+// makes no array or closure unless it refuses.
 function exact(value: unknown, stated: readonly string[], whenStated: readonly string[],
   where: string): Record<string, unknown> {
   if (!isRecord(value)) throw new ModelStageRefusal(refusal.record(where, [...stated, ...whenStated]));
-  for (let index = 0; index < whenStated.length; index++) {
-    const field = whenStated[index];
-    if (modelStates(value, field) && value[field] === undefined) {
-      throw new ModelStageRefusal(refusal.unstated(where, field));
-    }
-  }
   for (let index = 0; index < stated.length; index++) {
     if (!modelStates(value, stated[index])) {
       throw new ModelStageRefusal(refusal.omitted(where, stated[index], statedWith(value, stated, whenStated)));
@@ -64,13 +59,21 @@ function exact(value: unknown, stated: readonly string[], whenStated: readonly s
   return value;
 }
 
+/** Whether a record states one of its `whenStated` fields, `field`; one stated with no value is refused by `where`,
+ * never read as left out. */
+export function modelStatesValue(record: Record<string, unknown>, field: string, where: string): boolean {
+  if (!modelStates(record, field)) return false;
+  if (record[field] === undefined) throw new ModelStageRefusal(refusal.unstated(where, field));
+  return true;
+}
+
 export const modelRecord = (value: unknown, fields: readonly string[], where: string): Record<string, unknown> =>
   exact(value, fields, EMPTY_FIELDS, where);
 
 /**
  * A record whose `whenStated` fields are each either stated with a value or left out (an asset's revision, a box's
  * rotation, a camera's fieldOfView): the fields it states are exactly its `stated` ones and those of `whenStated` it
- * names. A field named with no value is refused, never read as left out.
+ * names. Each reader of a `whenStated` field asks `modelStatesValue` whether it is stated.
  */
 export const modelRecordStating = (value: unknown, fields: ModelStatingFields,
   where: string): Record<string, unknown> => exact(value, fields.stated, fields.whenStated, where);
@@ -163,30 +166,31 @@ export function modelNumber(value: unknown, where: string, least: number, most: 
   return value;
 }
 
-function readCheckedNumbers<Target extends number[] | Float64Array>(
-  value: unknown, count: number, into: Target, offset: number, where: string,
-): Target {
-  if (!Array.isArray(value) || value.length !== count) {
-    throw new ModelStageRefusal(refusal.numbers(where, count));
-  }
-  for (let index = 0; index < count; index++) {
-    const item: unknown = value[index];
-    if (typeof item !== 'number' || !Number.isFinite(item)) {
-      throw new ModelStageRefusal(refusal.numbers(where, count));
-    }
-    into[offset + index] = item;
-  }
-  return into;
+// Every refusal of a number list: its shape, or any one item. Each reader checks an item where it loads it.
+function refuseNumbers(where: string, count: number): never {
+  throw new ModelStageRefusal(refusal.numbers(where, count));
 }
+function numbersOfCount(value: unknown, count: number, where: string): readonly unknown[] {
+  if (!Array.isArray(value) || value.length !== count) refuseNumbers(where, count);
+  return value;
+}
+const finiteNumber = (item: unknown, where: string, count: number): number =>
+  typeof item === 'number' && Number.isFinite(item) ? item : refuseNumbers(where, count);
 
-/** Writes `count` finite numbers into `into` at `offset` (sparse holes read as missing, never skipped); makes no array
- * or string on valid input. */
+/** Writes `count` finite numbers into `into` at `offset` (sparse holes read as missing, never skipped), checked as
+ * `modelNumbers` checks them; makes no array or string on valid input, for a frame's camera is read here on every
+ * tick it states one. */
 export function readModelNumbers(value: unknown, count: number, into: Float64Array, offset: number,
   where: string): void {
-  readCheckedNumbers(value, count, into, offset, where);
+  const items = numbersOfCount(value, count, where);
+  for (let index = 0; index < count; index++) into[offset + index] = finiteNumber(items[index], where, count);
 }
 
 /** Exactly `count` finite numbers, copied (a sparse array's holes read as missing, never skipped), refused by their
- * name otherwise. */
-export const modelNumbers = (value: unknown, count: number, where: string): number[] =>
-  readCheckedNumbers(value, count, new Array<number>(count), 0, where);
+ * name otherwise. A loop, not `Array.from` with a mapper: a frame's poses are read here on every tick, and the mapper
+ * cost about 400 B/tick there. */
+export function modelNumbers(value: unknown, count: number, where: string): number[] {
+  const items = numbersOfCount(value, count, where), copy = new Array<number>(count);
+  for (let index = 0; index < count; index++) copy[index] = finiteNumber(items[index], where, count);
+  return copy;
+}

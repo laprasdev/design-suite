@@ -1,8 +1,8 @@
 import {modelPresentationPose, type ModelPresentationPose} from './placementModel.ts';
 import type {ModelAnimationSample} from './animationLayerModel.ts';
 import {modelRuntimeMaterialProfile, type ModelRuntimeMaterialProfile} from './runtimeMaterialModel.ts';
-import {modelDigest, modelName, modelNumber, modelRecord, modelRecordStating, modelShape, modelStates,
-  type ModelStatingFields} from './recordModel.ts';
+import {modelDigest, modelName, modelNumber, modelRecord, modelRecordStating, modelShape,
+  modelStates, modelStatesValue, type ModelStatingFields} from './recordModel.ts';
 import {ModelStageRefusal} from './refusal.ts';
 import {MODEL_ACTOR_SURFACES, modelActorSurfaces, type ModelActorSurfaces, type ModelSurfaceRecord,
   modelSurfaceRecord} from './surfaceModel.ts';
@@ -115,9 +115,9 @@ function animation(value: unknown, where: string): ModelStageActorAnimation {
 function asset(value: unknown, where: string): ModelStageAsset {
   const record = modelRecordStating(value, ASSET_FIELDS, where);
   return Object.freeze({id: modelName(record.id, `${where}.id`), path: modelName(record.path, `${where}.path`),
-    ...(modelStates(record, 'revision') && {revision: modelName(record.revision, `${where}.revision`)}),
-    ...(modelStates(record, 'sha256') && {sha256: modelDigest(record.sha256, `${where}.sha256`)}),
-    ...(modelStates(record, 'runtimeMaterials') &&
+    ...(modelStatesValue(record, 'revision', where) && {revision: modelName(record.revision, `${where}.revision`)}),
+    ...(modelStatesValue(record, 'sha256', where) && {sha256: modelDigest(record.sha256, `${where}.sha256`)}),
+    ...(modelStatesValue(record, 'runtimeMaterials', where) &&
       {runtimeMaterials: modelRuntimeMaterialProfile(record.runtimeMaterials)})});
 }
 function terrainActor(value: unknown, index: number): ModelTerrainActor {

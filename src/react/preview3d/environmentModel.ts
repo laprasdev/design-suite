@@ -1,8 +1,8 @@
 import {modelColor, type ModelColor} from './colorModel.ts';
 import {modelPresentationRotation, modelPresentationVector, type ModelRotation, type ModelVector}
   from './placementModel.ts';
-import {modelFlag, modelName, modelNumber, modelNumbers, modelRecord, modelRecordStating, modelStates}
-  from './recordModel.ts';
+import {modelFlag, modelName, modelNumber, modelNumbers, modelRecord, modelRecordStating,
+  modelStatesValue} from './recordModel.ts';
 import {ModelStageRefusal} from './refusal.ts';
 
 // The description's environment, with no renderer: a ground plane (with an optional grid) and boxes, each one colour.
@@ -52,7 +52,7 @@ function plane(value: unknown, where: string): NonNullable<ModelEnvironment['pla
   const size = dimensions(record.size, 2, `${where}.size`) as unknown as readonly [number, number];
   return Object.freeze({position: modelPresentationVector(record.position, `${where}.position`), size,
     color: modelColor(record.color, `${where}.color`),
-    ...(modelStates(record, 'grid') && {grid: grid(record.grid, size, `${where}.grid`)})});
+    ...(modelStatesValue(record, 'grid', where) && {grid: grid(record.grid, size, `${where}.grid`)})});
 }
 function box(value: unknown, where: string): ModelEnvironmentBox {
   const record = modelRecordStating(value, FIELDS.box, where);
@@ -60,7 +60,7 @@ function box(value: unknown, where: string): ModelEnvironmentBox {
     position: modelPresentationVector(record.position, `${where}.position`),
     size: dimensions(record.size, 3, `${where}.size`) as unknown as ModelVector,
     color: modelColor(record.color, `${where}.color`),
-    ...(modelStates(record, 'rotationQuaternion') && {
+    ...(modelStatesValue(record, 'rotationQuaternion', where) && {
       rotationQuaternion: modelPresentationRotation(record.rotationQuaternion, `${where}.rotationQuaternion`)})});
 }
 

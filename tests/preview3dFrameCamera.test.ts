@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import {describe, it} from 'node:test';
 import * as THREE from 'three';
-import {MODEL_ACTOR_REFUSAL, MODEL_PREVIEW_CAMERA_REFUSAL, MODEL_PREVIEW_CAPABILITIES, MODEL_STAGE,
-  modelFrameScope, modelPreviewFrame, modelStageDescription, validateModelFrame}
+import {MODEL_ACTOR_REFUSAL, MODEL_PREVIEW_CAMERA_REFUSAL, MODEL_PREVIEW_CAPABILITIES, MODEL_RECORD_REFUSAL,
+  MODEL_STAGE, modelFrameScope, modelPreviewFrame, modelStageDescription, validateModelFrame}
   from '../src/react/preview3d/model.ts';
 import {modelStageDescriptionChanges} from '../src/react/preview3d/descriptionModel.ts';
 import {modelPreviewCamera} from '../src/react/preview3d/presentation.ts';
@@ -23,7 +23,7 @@ describe('preview camera and framing fieldOfView validation', () => {
     const wide = modelPreviewCamera({position: [1, 2, 3], target: [0, 0, 0], fieldOfView: 62.5}, 'Camera');
     assert.deepEqual(wide, {position: [1, 2, 3], target: [0, 0, 0], fieldOfView: 62.5});
     assert.ok(Object.isFrozen(wide));
-    for (const bad of [0, -1, 180, 181, NaN, Infinity, -Infinity, '45', null, {}, undefined]) {
+    for (const bad of [0, -1, 180, 181, NaN, Infinity, -Infinity, '45', null, {}]) {
       refused(() => modelPreviewCamera({position: [1, 2, 3], target: [0, 0, 0], fieldOfView: bad}, 'The framing'),
         MODEL_PREVIEW_CAMERA_REFUSAL.fieldOfView('The framing'));
     }
@@ -41,7 +41,7 @@ describe('preview camera and framing fieldOfView validation', () => {
       /^The framing\.kind is one of focus, all, pose\.$/);
     refused(() => modelStageDescription(describing({
       framing: {kind: 'pose', position: [0, 2, 5], target: [0, 0, 0], fieldOfView: undefined},
-    })), /stated with no value/);
+    })), MODEL_RECORD_REFUSAL.unstated('The framing', 'fieldOfView'));
     refused(() => modelStageDescription(describing({
       framing: {kind: 'pose', position: [0, 2, 5], target: [0, 0, 0], extra: 1},
     })), /does not state extra/);
