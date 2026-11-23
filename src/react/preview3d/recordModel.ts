@@ -39,14 +39,19 @@ function statedWith(value: Record<string, unknown>, stated: readonly string[], w
   return [...stated, ...whenStated.filter(field => modelStates(value, field))];
 }
 
-// The first field that keeps a record from stating exactly its fields (one stated with no value, then one omitted, then
-// one it does not have), or none. Written as loops over the fields, so that a check on a tick's path (a frame's pose,
-// camera or emitter changes) makes no array, closure or text unless it refuses.
-function inexactField(value: Record<string, unknown>, stated: readonly string[], whenStated: readonly string[]) {
+// The first optional field a record states with no value, or none. Off a tick's path only: a number read by a computed
+// key is boxed, so a tick's reader leaves each value to its own check by name.
+function unstatedField(value: Record<string, unknown>, whenStated: readonly string[]) {
   for (let index = 0; index < whenStated.length; index++) {
     const field = whenStated[index];
     if (modelStates(value, field) && value[field] === undefined) return field;
   }
+  return undefined;
+}
+// The first field that keeps a record's keys from being exactly its fields (one omitted, then one it does not have), or
+// none. Written as loops over the fields that read no value, so that a check on a tick's path (a frame's pose, camera
+// or emitter changes) makes no array, closure, text or number unless it refuses.
+function inexactKey(value: Record<string, unknown>, stated: readonly string[], whenStated: readonly string[]) {
   for (let index = 0; index < stated.length; index++) {
     if (!modelStates(value, stated[index])) return stated[index];
   }
@@ -55,8 +60,8 @@ function inexactField(value: Record<string, unknown>, stated: readonly string[],
   }
   return undefined;
 }
-// Names why `field` keeps the record inexact, on the refusal path only: `inexactField` returns the field alone so the
-// tick's check builds no text, and this re-reads its three cases to say which one it is.
+// Names why `field` keeps the record inexact, on the refusal path only: `unstatedField` and `inexactKey` return the
+// field alone so the tick's check builds no text, and this re-reads their three cases to say which one it is.
 function inexactText(value: Record<string, unknown>, field: string, stated: readonly string[],
   whenStated: readonly string[], where: string) {
   if (!modelStates(value, field)) return refusal.omitted(where, field, statedWith(value, stated, whenStated));
@@ -66,14 +71,16 @@ function inexactText(value: Record<string, unknown>, field: string, stated: read
 function exact(value: unknown, stated: readonly string[], whenStated: readonly string[],
   where: string): Record<string, unknown> {
   if (!isRecord(value)) throw new ModelStageRefusal(refusal.record(where, [...stated, ...whenStated]));
-  const field = inexactField(value, stated, whenStated);
+  const field = unstatedField(value, whenStated) ?? inexactKey(value, stated, whenStated);
   if (field !== undefined) throw new ModelStageRefusal(inexactText(value, field, stated, whenStated, where));
   return value;
 }
-/** Whether `value` is a record `modelRecordStating` reads with `fields`; asks without naming where, so it builds no
- * text. A reader on a tick's path asks this first and reads again with its `where` only to refuse. */
+/** Whether `value` is a record whose keys are exactly `fields`; asks without naming where, so it builds no text, and
+ * reads no value, so it boxes no number. Each value, an optional one stated with none included, is its reader's check
+ * by name, as a stated field's always was. A reader on a tick's path asks this first and reads again with its `where`
+ * (`modelRecordStating`) only to refuse. */
 export const modelStatesExactly = (value: unknown, fields: ModelStatingFields): value is Record<string, unknown> =>
-  isRecord(value) && inexactField(value, fields.stated, fields.whenStated) === undefined;
+  isRecord(value) && inexactKey(value, fields.stated, fields.whenStated) === undefined;
 
 export const modelRecord = (value: unknown, fields: readonly string[], where: string): Record<string, unknown> =>
   exact(value, fields, EMPTY_FIELDS, where);
