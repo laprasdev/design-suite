@@ -1,6 +1,7 @@
 import { RoutingDimensions } from './routingLayout.ts';
 import { PageShellDimensions } from './pageShellLayout.ts';
-import { ICON_CHOICE_BOX, ICON_CHOICE_GLYPH, ModuleGridDimensions } from './moduleGridLayout.ts';
+import { CELL_PAD_H, CELL_PAD_V, ICON_CHOICE_BOX, ICON_CHOICE_GLYPH, ModuleGridDimensions }
+  from './moduleGridLayout.ts';
 import { PHI_CUBED } from './goldenRatio.ts';
 
 export { PHI, PHI_INVERSE, PHI_SQUARED, PHI_CUBED } from './goldenRatio.ts';
@@ -217,9 +218,6 @@ export const LayoutDimensions = {
 } as const;
 
 // Compact spacing — dense synthesizer strip UI
-const CELL_PAD_V = 4;
-const CELL_PAD_H = 6;
-
 export const CompactDimensions = {
   sectionGap: 4,
   itemGap: 2,

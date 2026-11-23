@@ -2,15 +2,22 @@
 // in a host the test resizes across widths and heights, once with no row that grows and once with one that does.
 import {PHI, PHI_INVERSE, PHI_SQUARED} from '../src/goldenRatio.ts';
 import {element} from '../src/react/elementContract.ts';
+import {ModuleGridDimensions as G} from '../src/moduleGridLayout.ts';
 
 // The 88 px knob a page first drew: a page's widest column steps one φ below it, and its narrowest steps one φ more.
 const FORMER_PAGE_KNOB = 88;
-const MID_WIDTH = 320, MID_COLUMN_ROOM = 70;
+const MID_WIDTH = 320;
+
+// The shortest host whose rows each hold the largest knob with its caption under it, so its knobs stack at every width.
+const ROWS = 3;
+// A mid host's column: its width less the grid's inset and gaps, over its columns.
+const MID_COLUMN_ROOM = (MID_WIDTH - G.fillPadding * 2 - G.fillGap * (G.columns - 1)) / G.columns;
+const STACKED_HEIGHT = ROWS * (G.controlMax + G.fieldTextRoom) + G.fillPadding * 2 + G.fillGap * (ROWS - 1);
 
 export const FilledGridHost = element('filled-grid-host');
 export const FilledGridCell = element('filled-grid-cell');
 export const FILLED_GRID = Object.freeze({
-  rows: 3, cellHeight: 60, heights: Object.freeze([200, 800]),
+  rows: ROWS, cellHeight: 60, heights: Object.freeze([STACKED_HEIGHT, 800]),
   widths: Object.freeze([
     {name: 'widest column', width: 700, knob: Math.round(FORMER_PAGE_KNOB / PHI)},
     {name: 'mid column', width: MID_WIDTH, knob: Math.round(MID_COLUMN_ROOM * PHI_INVERSE)},

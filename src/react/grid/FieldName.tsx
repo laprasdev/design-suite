@@ -4,12 +4,13 @@ import { hexToRgba } from '../../color.ts';
 import { D, O, T, TransitionKeys } from '../../synth/design/index.ts';
 import { FieldEmphasis, type FieldEmphasisValue } from '../../fields.ts';
 import { FieldAlign, type FieldAlignValue } from './gridContext.ts';
+import { ONE_LINE_HEIGHT } from './lineTrack.ts';
 
 const G = D.moduleGrid;
 /** How strongly a field's control reads in each emphasis. */
 export const CONTROL_OPACITY: Record<FieldEmphasisValue, number> = { set: O.full, quiet: O.medium, inert: O.medium };
 
-/** `rowTall` gives a pressable name the whole height of its row and at least a label's width, where it would
+/** `rowTall` gives a pressable name the whole height of a one-line row, and at least a label's width, where it would
  *  otherwise be only its letters. */
 interface FieldNameProps {
   label: string; icon?: React.ReactNode; emphasis: FieldEmphasisValue; onName?: () => void; nameLabel?: string;
@@ -25,7 +26,7 @@ export function FieldName({ label, icon, emphasis, onName, nameLabel, nameTitle,
     color: set ? style.primaryColor : hexToRgba(style.textColor, O.high) };
   const content = <>{icon}{label}</>;
   const pressable: React.CSSProperties = { ...nameStyle, padding: 0, border: 'none', background: 'transparent',
-    cursor: 'pointer', ...(rowTall && { minHeight: G.yesNoLine, minWidth: G.rowLabelWidth }) };
+    cursor: 'pointer', ...(rowTall && { minHeight: ONE_LINE_HEIGHT, minWidth: G.rowLabelWidth }) };
   return onName && !inert
     ? <button type="button" data-field-name aria-label={nameLabel} title={nameTitle} onClick={onName}
       style={pressable}>{content}</button>

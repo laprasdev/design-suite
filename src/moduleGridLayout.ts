@@ -15,6 +15,10 @@ const MODULE_KNOB_MIN = Math.round(MODULE_KNOB / PHI);
 // A page's column grows with its tile only so far, so a few fields stay together across a wide tile: two golden steps
 // above its largest knob.
 const MODULE_COLUMN_MAX = Math.round(MODULE_KNOB * PHI_SQUARED);
+// A module header's line, and the pitch every one-line row of a module keeps: a row is as tall as a header.
+const HEADER_LINE = 29;
+// The compact density's cell inset, the one a dense strip and a page's module both keep.
+export const CELL_PAD_V = 4, CELL_PAD_H = 6;
 
 export const ModuleGridDimensions = {
     columns: 4,
@@ -25,10 +29,10 @@ export const ModuleGridDimensions = {
     ringHeadroom: 16,
     footPadding: 0,
     tightLine: 1.15,
-    fillPadding: 8,
+    fillPadding: CELL_PAD_H,
     fillGap: 8,
     headerGap: 8,
-    headerLineHeight: 29,
+    headerLineHeight: HEADER_LINE,
     headerTitleGap: 16,
     headerInset: 12,
     tabMinWidth: 18,
@@ -57,12 +61,12 @@ export const ModuleGridDimensions = {
     rowEndWidth: 40,
     phaseGlyphHeight: 12,
     nameIconHeight: 12,
-    // A yes/no field as one line: its dot, drawn at the name's size, then the name. The line is as tall as a module
-    // header's, which is what it gives to press.
+    // A yes/no field as one line: its dot, drawn at the name's size, then the name. One-line rows sit `yesNoLine`
+    // apart; what a line gives to press is that pitch less `fillGap` (lineTrack.ts owns it).
     yesNoDot: TEXT_FLOOR,
     yesNoStroke: 1.5,
     yesNoDash: 2,
-    yesNoLine: 29,
+    yesNoLine: HEADER_LINE,
     nameIconGap: 4,
     headerControlsPadding: 8,
     noticePadding: 12,

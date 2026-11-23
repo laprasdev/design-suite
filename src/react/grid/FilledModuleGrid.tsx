@@ -1,7 +1,8 @@
 import React from 'react';
 import { D } from '../../synth/design/index.ts';
-import { FieldAlign, ModuleControlSize, ModuleFieldAlign } from './gridContext.ts';
+import { FieldAlign, ModuleControlSize, ModuleFieldAlign, ModuleFieldBeside } from './gridContext.ts';
 import { useFilledControlSize } from './useFilledControlSize.ts';
+import { LINE_TRACK } from './lineTrack.ts';
 
 const G = D.moduleGrid;
 
@@ -9,7 +10,7 @@ const GROWING_ROW = 'minmax(min-content, 1fr)';
 
 function filledStyle(rows: number, columns: number, growRows: readonly number[]): React.CSSProperties {
   const templateRows = Array.from({ length: rows },
-    (_, index) => growRows.includes(index + 1) ? GROWING_ROW : 'max-content');
+    (_, index) => growRows.includes(index + 1) ? GROWING_ROW : LINE_TRACK);
   return {
     flex: 1, minWidth: 0, minHeight: 0, overflow: 'auto', boxSizing: 'border-box', display: 'grid',
     gridTemplateColumns: `repeat(${columns}, minmax(0, ${G.fillColumnMax}px))`,
@@ -28,12 +29,15 @@ function filledStyle(rows: number, columns: number, growRows: readonly number[])
 export function FilledModuleGrid({ rows, columns = G.columns, growRows = [], children }: {
   rows: number; columns?: number; growRows?: readonly number[]; children: React.ReactNode;
 }) {
-  const { grid, size } = useFilledControlSize(columns);
+  const { grid, size, beside } = useFilledControlSize(columns, rows);
   return (
     <div ref={grid} data-module-grid data-grid-rows={rows} data-control-size={size}
+      data-field-beside={beside || undefined}
       style={filledStyle(rows, columns, growRows)}>
       <ModuleFieldAlign.Provider value={FieldAlign.START}>
-        <ModuleControlSize.Provider value={size}>{children}</ModuleControlSize.Provider>
+        <ModuleControlSize.Provider value={size}>
+          <ModuleFieldBeside.Provider value={beside}>{children}</ModuleFieldBeside.Provider>
+        </ModuleControlSize.Provider>
       </ModuleFieldAlign.Provider>
     </div>
   );

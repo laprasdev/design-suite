@@ -5,6 +5,7 @@ import { D, O, T, TransitionKeys } from '../../synth/design/index.ts';
 import { FieldEmphasis, type FieldEmphasisValue } from '../../fields.ts';
 import { FieldAlign } from './gridContext.ts';
 import { CONTROL_OPACITY, FieldName } from './FieldName.tsx';
+import { LINE_TRACK } from './lineTrack.ts';
 
 const G = D.moduleGrid;
 
@@ -24,13 +25,12 @@ const LEAD_COLUMNS = 'minmax(0, 1fr) minmax(0, 1fr) max-content';
 const SUBGRID: React.CSSProperties = { display: 'grid', gridTemplateColumns: 'subgrid', gridColumn: '1 / -1' };
 const ROWS_STYLE: React.CSSProperties = {
   flex: '0 1 auto', minWidth: 0, minHeight: 0, boxSizing: 'border-box', overflow: 'auto', display: 'grid',
-  gridTemplateColumns: RANGE_COLUMNS, gridAutoRows: 'max-content', alignContent: 'start', alignItems: 'center',
+  gridTemplateColumns: RANGE_COLUMNS, gridAutoRows: LINE_TRACK, alignContent: 'start', alignItems: 'center',
   columnGap: G.rowGap, rowGap: G.fillGap, padding: G.fillPadding, lineHeight: G.tightLine,
 };
-/** Lead rows keep their pressable pitch; their host decides how many rows fit. */
+/** Lead rows keep the rows' pitch with their controls the whole height of a row; their host decides how many fit. */
 const LEAD_ROWS_STYLE: React.CSSProperties = {
-  ...ROWS_STYLE, overflow: 'visible', gridTemplateColumns: LEAD_COLUMNS,
-  gridAutoRows: `minmax(min-content, ${G.yesNoLine}px)`, rowGap: 0, padding: 0, alignItems: 'stretch',
+  ...ROWS_STYLE, overflow: 'visible', gridTemplateColumns: LEAD_COLUMNS, padding: 0, alignItems: 'stretch',
   columnGap: G.detailLineGap,
 };
 
