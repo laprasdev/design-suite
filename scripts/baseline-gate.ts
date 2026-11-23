@@ -2,13 +2,17 @@
 // base branch's baseline, or that the base branch's baseline does not name, unless the size baseline records an
 // allowance for that file which the base branch lacks, raising it from the base branch's numbers by what the
 // allowance rule in scripts/sizeGate/compare.ts grants, with the import lines measured in the file as the base branch
-// and the working tree hold it. A baseline the base branch does not hold yet is new, and the gate says so.
+// and the working tree hold it. An allocation entry the base branch does not name enters at the measured maximum it
+// records, since a sampled ceiling has no limit to rise from, and only falls from then (`ALLOCATIONS`); a size or cast
+// entry does not.
+// A baseline the base branch does not hold yet is new, and the gate says so.
 //   node scripts/baseline-gate.ts
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { BASE_BRANCH, baseBranchAbsence } from './baseline/baseBranch.ts';
 import {
   risenFiles, type BaselinedFiles, type FileNumbers, type FilesBaseline, type FilesBaselineModule, type NumbersOf,
+  type RisenFile,
 } from './baseline/baselinedFiles.ts';
 import { gitOutput } from './repositoryFiles.ts';
 import { SUITE_BASELINE } from './size-gate.ts';
@@ -22,7 +26,7 @@ import { CAST_BASELINE } from './typeGate/castBaseline.ts';
 
 /**
  * How this gate reads one baseline: its path, its decoding in the working tree and on the base branch, when a file
- * rose, and why no record accounts for a file's rise, undefined when one does. `parseBase` is the bridge in
+ * rose, and why no record accounts for a risen file, undefined when one does. `parseBase` is the bridge in
  * scripts/sizeGate/retiredFields.ts and goes with it.
  */
 interface BaselineReading<Numbers extends FileNumbers, Baseline extends { readonly files: BaselinedFiles<Numbers> }> {
@@ -30,12 +34,14 @@ interface BaselineReading<Numbers extends FileNumbers, Baseline extends { readon
   readonly parse: (value: unknown, file: string) => Baseline;
   readonly parseBase: (value: unknown, file: string) => Baseline;
   readonly rose: (base: Numbers, head: Numbers) => boolean;
-  readonly unaccounted: (root: string, base: Baseline, head: Baseline, file: string) => string | undefined;
+  readonly unaccounted: (root: string, base: Baseline, head: Baseline, risen: RisenFile<Numbers>) => string | undefined;
 }
 
 /** Why no allowance the base branch lacks raises a size file from the base branch's version to its own, if so. */
-function allowanceUnaccounted(root: string, base: SizeBaseline, head: SizeBaseline, file: string): string | undefined {
-  if (!Object.hasOwn(base.files, file)) return `only a file ${BASE_BRANCH} baselines takes an allowance`;
+function allowanceUnaccounted(
+  root: string, base: SizeBaseline, head: SizeBaseline, { file, base: was }: RisenFile<BaselineNumbers>,
+): string | undefined {
+  if (!was) return `only a file ${BASE_BRANCH} baselines takes an allowance`;
   const before = new Set(base.allowances.map(allowance => JSON.stringify(allowance)));
   const granted = head.allowances.some(allowance => allowance.path === file && !before.has(JSON.stringify(allowance)));
   if (!granted) return `no allowance ${BASE_BRANCH} lacks raises it`;
@@ -44,23 +50,27 @@ function allowanceUnaccounted(root: string, base: SizeBaseline, head: SizeBaseli
   const headFile = path.join(root, file);
   if (!existsSync(headFile)) return 'the file is gone';
   const measured = measureText(readFileSync(headFile, 'utf8'));
-  return allowanceRefusal({ numbers: base.files[file], measured: committed }, { numbers: head.files[file], measured });
+  return allowanceRefusal({ numbers: was, measured: committed }, { numbers: head.files[file], measured });
 }
 
 const filesReading = <Kind extends string>(
   baseline: FilesBaselineModule<Kind>,
-  reason: string,
+  unaccounted: BaselineReading<NumbersOf<Kind>, FilesBaseline<Kind>>['unaccounted'],
 ): BaselineReading<NumbersOf<Kind>, FilesBaseline<Kind>> => ({
-  file: baseline.file, parse: baseline.parse, parseBase: baseline.parse, rose: baseline.rose,
-  unaccounted: () => reason,
+  file: baseline.file, parse: baseline.parse, parseBase: baseline.parse, rose: baseline.rose, unaccounted,
 });
 
 const SIZE: BaselineReading<BaselineNumbers, SizeBaseline> = {
   file: SUITE_BASELINE, parse: parseBaseline, parseBase: parseWithoutRetiredFields, rose: SIZE_RULE.rose,
   unaccounted: allowanceUnaccounted,
 };
-const CASTS = filesReading(CAST_BASELINE, 'no allowance covers a cast');
-const ALLOCATIONS = filesReading(ALLOCATION_BASELINE, 'no allowance covers per-tick allocation');
+const CASTS = filesReading(CAST_BASELINE, () => 'no allowance covers a cast');
+/**
+ * A sampled allocation ceiling has no limit to rise from until the owner sets its budget, so an entry the base branch
+ * does not name enters at the maximum it records, and only falls from then.
+ */
+const ALLOCATIONS = filesReading(ALLOCATION_BASELINE,
+  (_root, _base, _head, { base: was }) => (was ? 'no allowance covers per-tick allocation' : undefined));
 
 /** Each refusal for one baseline against the base branch's, or the notice that the base branch holds none. */
 function risen<Numbers extends FileNumbers, Baseline extends { readonly files: BaselinedFiles<Numbers> }>(
@@ -75,9 +85,9 @@ function risen<Numbers extends FileNumbers, Baseline extends { readonly files: B
   const refusals = risenFiles(base.files, head.files, rose).flatMap(entry => {
     const why = unaccounted(root, base, head, entry);
     if (!why) return [];
-    const was = Object.hasOwn(base.files, entry) ? JSON.stringify(base.files[entry]) : 'nothing';
-    const now = JSON.stringify(head.files[entry]);
-    return [`${file}: ${entry} is ${now}, above ${was} on ${BASE_BRANCH}; a baseline only falls, and ${why}`];
+    const was = entry.base ? JSON.stringify(entry.base) : 'nothing';
+    const now = JSON.stringify(head.files[entry.file]);
+    return [`${file}: ${entry.file} is ${now}, above ${was} on ${BASE_BRANCH}; a baseline only falls, and ${why}`];
   });
   return { refusals, notices: [] };
 }

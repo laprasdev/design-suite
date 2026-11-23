@@ -70,6 +70,32 @@ describe('the baseline gate', () => {
     assert.match(fresh.output, /allocation-baseline\.json is new: origin\/main holds none/);
   });
 
+  it('passes an allocation entry origin/main does not name, at the maximum it records, and refuses its rise', () => {
+    const held = { 'src/react/preview3d/frameModel.ts': { extraBytesPerTick: 96 } };
+    const entered = { ...held, 'src/react/preview3d/stageModel.ts': { extraBytesPerTick: 4096 } };
+    const added = baselines({ base: allocations(held), head: allocations(entered) });
+    assert.equal(added.status, 0, added.output);
+    const risenHeld = { ...entered, 'src/react/preview3d/frameModel.ts': { extraBytesPerTick: 97 } };
+    const heldRose = baselines({ base: allocations(held), head: allocations(risenHeld) });
+    assert.equal(heldRose.status, 1, heldRose.output);
+    assert.match(heldRose.output, /frameModel\.ts is \{"extraBytesPerTick":97\}, above \{"extraBytesPerTick":96\}/);
+    assert.doesNotMatch(heldRose.output, /stageModel\.ts/, 'only the risen entry is refused');
+    const risenEntered = { ...entered, 'src/react/preview3d/stageModel.ts': { extraBytesPerTick: 4097 } };
+    const enteredRose = baselines({ base: allocations(entered), head: allocations(risenEntered) });
+    assert.equal(enteredRose.status, 1, enteredRose.output);
+    assert.match(enteredRose.output,
+      /stageModel\.ts is \{"extraBytesPerTick":4097\}, above \{"extraBytesPerTick":4096\}/);
+  });
+
+  it('refuses a size entry origin/main does not name', () => {
+    const run = baselines({
+      base: { ...sizeBaseline({ files: {}, allowances: [] }), ...source(300, 4) },
+      head: { ...sizeBaseline({ files: entry(300), allowances: [] }), ...source(300, 4) },
+    });
+    assert.equal(run.status, 1, run.output);
+    assert.match(run.output, /src\/a\.ts is \{"lines":300.*above nothing on origin\/main/);
+  });
+
   it('refuses a size baseline that rose, unless an allowance raised it or it fell', () => {
     const unallowed = raised(303, source(303, 7), []);
     assert.equal(unallowed.status, 1, unallowed.output);

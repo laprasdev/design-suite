@@ -1,5 +1,6 @@
 // A baseline holds the numbers of each file a gate lets stand above its limits, and they only fall.
-// scripts/baseline-gate.ts refuses any baseline (size, cast or allocation) that rose above the base branch's.
+// scripts/baseline-gate.ts refuses any baseline (size, cast or allocation) that rose above the base branch's, except
+// where that gate's header says a rise is accounted for.
 // Deterministic gates (size and cast) lower their baselines through `ratchetedFiles`; sampled allocation ceilings are
 // read and formatted here and lowered by hand from recorded runs. Every reader refuses an unknown field by name.
 import { readFileSync } from 'node:fs';
@@ -72,13 +73,21 @@ export function ratchetedFiles<Numbers extends FileNumbers, Measured>(
   return kept;
 }
 
-/** Each file whose numbers rose from `base` to `head`; a file `base` does not name rose from holding its limits. */
+/** A file whose numbers rose: its path, and its numbers in the base, undefined when the base does not name it. */
+export interface RisenFile<Numbers extends FileNumbers> {
+  readonly file: string;
+  readonly base: Numbers | undefined;
+}
+
+/** Each file whose numbers rose from `base` to `head`; a file `base` does not name rose from nothing. */
 export const risenFiles = <Numbers extends FileNumbers>(
   base: BaselinedFiles<Numbers>,
   head: BaselinedFiles<Numbers>,
   rose: (base: Numbers, head: Numbers) => boolean,
-): string[] => Object.entries(head)
-  .filter(([file, numbers]) => !Object.hasOwn(base, file) || rose(base[file], numbers)).map(([file]) => file);
+): RisenFile<Numbers>[] => Object.entries(head).flatMap(([file, numbers]) => {
+  const was = Object.hasOwn(base, file) ? base[file] : undefined;
+  return was === undefined || rose(was, numbers) ? [{ file, base: was }] : [];
+});
 
 /** The numeric record a baseline stores per file for `Kind`. */
 export type NumbersOf<Kind extends string> = Readonly<Record<Kind, number>>;
