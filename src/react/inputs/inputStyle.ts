@@ -3,6 +3,7 @@ import type React from 'react';
 import { hexToRgba } from '../../color.ts';
 import { Borders } from '../../tokens.ts';
 import { D, O } from '../../synth/design/index.ts';
+import { CUTOUT_HEIGHT } from '../grid/controlBoxes.ts';
 import type { StyleTheme } from '../../synth/StyleTypes.ts';
 
 // A list or number that can't be changed fades less than a dim field around it, so the two together still read.
@@ -10,7 +11,7 @@ const LOCKED_INPUT = O.high;
 
 /** The cutout's box without its ground: its text colour, edge, corners and padding. */
 export const cutoutEdge = (style: StyleTheme): React.CSSProperties => ({
-  color: style.textColor,
+  color: style.textColor, lineHeight: D.moduleGrid.tightLine, minHeight: CUTOUT_HEIGHT, boxSizing: 'border-box',
   border: `${Borders.standard.width}px ${Borders.standard.style} ${hexToRgba(style.primaryColor, O.low)}`,
   borderRadius: D.radius.button, padding: D.moduleGrid.inputPadding,
 });

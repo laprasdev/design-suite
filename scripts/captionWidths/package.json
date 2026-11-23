@@ -1,0 +1,10 @@
+{
+  "name": "design-suite-caption-widths",
+  "private": true,
+  "description": "Font parser for scripts/captionWidths/generate.ts only; the runtime caption-width reader needs no parser.",
+  "type": "module",
+  "devDependencies": {
+    "@types/opentype.js": "^1.3.7",
+    "opentype.js": "^1.3.4"
+  }
+}

@@ -7,3 +7,8 @@ import { ONE_LINE_HEIGHT } from './lineTrack.ts';
 export const FIELD_LINE: React.CSSProperties = {
   display: 'flex', alignItems: 'center', gap: D.moduleGrid.fieldGap, maxWidth: '100%', minHeight: ONE_LINE_HEIGHT,
 };
+/** The same line where its pieces wrap beneath one another when its column has no room for them side by side. */
+export const WRAPPING_FIELD_LINE: React.CSSProperties = { ...FIELD_LINE, minWidth: 0, flexWrap: 'wrap' };
+/** The wrapping line where stacked lines share a cell taller than their own height evenly, so no fixed pad swells
+ *  their floor and a taller share leaves no empty band. */
+export const GROWING_FIELD_LINE: React.CSSProperties = { ...WRAPPING_FIELD_LINE, flex: '1 0 auto' };

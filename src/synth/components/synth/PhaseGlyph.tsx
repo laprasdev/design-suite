@@ -2,6 +2,7 @@ import React from 'react';
 import {useStyle} from '../../StyleContext.tsx';
 import {hexToRgba} from '../../../color.ts';
 import type {PhaseGlyphValue} from '../../../fields.ts';
+import {PHASE_GLYPH_VIEW} from '../../../react/grid/controlBoxes.ts';
 
 // The timeline's own silhouette: a ramp in for entrance, a block for maintain. Every corner is rounded.
 const RAMP_PATH = 'M1.58 9.5H8.42Q9.5 9.5 9.5 8.42V1.58Q9.5.5 8.69.5Q8.33.5 7.97.86'
@@ -9,7 +10,7 @@ const RAMP_PATH = 'M1.58 9.5H8.42Q9.5 9.5 9.5 8.42V1.58Q9.5.5 8.69.5Q8.33.5 7.97
 const BLOCK = {x: 11.5, y: 0.5, size: 9, radius: 1.2};
 const UNLIT_OPACITY = 0.45;
 const INHERITED_OPACITY = 0.5;
-const VIEW_WIDTH = 21, VIEW_HEIGHT = 10;
+const {width: VIEW_WIDTH, height: VIEW_HEIGHT} = PHASE_GLYPH_VIEW;
 
 export type {PhaseGlyphValue};
 /** What the glyph's fill says of the mode it sits beside: filled when set, half when inherited, outlined when not. */
