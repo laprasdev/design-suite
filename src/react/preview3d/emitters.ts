@@ -1,5 +1,6 @@
 import * as THREE from 'three';
-import {MODEL_EMITTER_CHANGE, MODEL_NO_EMITTER_CHANGES, type ModelEmitterChange} from './emitterFrameModel.ts';
+import {MODEL_EMITTER_CHANGE, MODEL_NO_EMITTER_CHANGES, type ModelEmitterChange, type ModelEmitterRouted}
+  from './emitterFrameModel.ts';
 import {MODEL_EMITTER_BUDGET, MODEL_EMITTER_ORIGIN, modelDeclaredEmitter, modelEmitterCoverage,
   type ModelEmitterForm, type ModelEmitterProfile, type ModelEmitterProfiles} from './emitterModel.ts';
 import {MODEL_EMITTER_FORMS as FORMS, MODEL_EMITTER_PLACEHOLDER, modelParticleGeometry} from './emitterForms.ts';
@@ -16,6 +17,8 @@ import type {ModelStageProgramValues} from './sharedValues.ts';
 // materials); the mesh form on three's basic mesh program, which scales the mesh's own vertices by the size.
 // A profile's times uniform: when it started, when it stopped, and whether it runs (no stop holds while it does).
 const TIMES = Object.freeze({started: 0, stopped: 1, running: 2});
+// A profile's spawn uniform: particles a second, its cap, and the radius of the sphere they start in.
+const SPAWN = Object.freeze({rate: 0, particles: 1, radius: 2});
 const RUNNING = Object.freeze({no: 0, yes: 1});
 const KEY = 'emitter';
 
@@ -74,17 +77,22 @@ function emitterChange(form: ModelEmitterForm, uniforms: Record<string, THREE.IU
 function createEmitter(profile: ModelEmitterProfile, index: number, shared: ModelStageProgramValues,
   changes: (material: THREE.Material) => readonly ModelShaderChange[]) {
   const form = FORMS[profile.particle.form], geometry = modelParticleGeometry(profile);
-  const reach = profile.radius + profile.speed.max * profile.lifetime.max + profile.size.max * profile.sizeScale.max;
-  geometry.boundingSphere = new THREE.Sphere(new THREE.Vector3(), reach);
+  // How far past its spawn sphere a particle reaches: the culling bounds are this beyond the radius in force.
+  const travel = profile.speed.max * profile.lifetime.max + profile.size.max * profile.sizeScale.max;
+  const bounds = new THREE.Sphere(new THREE.Vector3(), profile.radius + travel);
+  geometry.boundingSphere = bounds;
   const times = new THREE.Vector3(0, 0, RUNNING.no);
   const color = (tint: readonly number[]) => new THREE.Vector4(...profile.color).multiply(new THREE.Vector4(...tint));
-  const uniforms = {emitterTimes: {value: times},
-    emitterSpawn: {value: new THREE.Vector3(profile.rate, profile.maxParticles, profile.radius)},
+  // The profile's own spawn and colours, which a start's routed values replace or multiply (`start`).
+  const own = {spawn: new THREE.Vector3(profile.rate, profile.maxParticles, profile.radius),
+    colorMin: color(profile.tint.min), colorMax: color(profile.tint.max)};
+  const spawn = own.spawn.clone(), colorMin = own.colorMin.clone(), colorMax = own.colorMax.clone();
+  const uniforms = {emitterTimes: {value: times}, emitterSpawn: {value: spawn},
     emitterLifetime: {value: new THREE.Vector2(profile.lifetime.min, profile.lifetime.max)},
     emitterSpeed: {value: new THREE.Vector2(profile.speed.min, profile.speed.max)},
     emitterSize: {value: new THREE.Vector2(profile.size.min, profile.size.max)},
     emitterSizeScale: {value: new THREE.Vector2(profile.sizeScale.min, profile.sizeScale.max)},
-    emitterColorMin: {value: color(profile.tint.min)}, emitterColorMax: {value: color(profile.tint.max)}};
+    emitterColorMin: {value: colorMin}, emitterColorMax: {value: colorMax}};
   const material = form.material();
   Object.assign(material, {transparent: true, depthWrite: false, blending: MODEL_EMITTER_PLACEHOLDER.blending});
   extendModelMaterial(material, [emitterChange(profile.particle.form, uniforms, shared), ...changes(material)]);
@@ -92,10 +100,23 @@ function createEmitter(profile: ModelEmitterProfile, index: number, shared: Mode
   particles.matrixAutoUpdate = false;
   particles.matrixWorldAutoUpdate = false;
   particles.visible = false;
-  return {profile, index, coverage: modelEmitterCoverage(profile), particles, geometry, material, times};
+  return {profile, index, coverage: modelEmitterCoverage(profile), particles, geometry, material, times,
+    own, spawn, colorMin, colorMax, bounds, travel, tint: new THREE.Vector4()};
 }
 type ModelEmitter = ReturnType<typeof createEmitter>;
 const isRunning = ({times}: ModelEmitter) => times.getComponent(TIMES.running) === RUNNING.yes;
+// A start's routed values in force: the profile's own, with what the start routes in their place (emitterFrameModel.ts
+// states the rule). Writes into what the emitter made once.
+function start(item: ModelEmitter, {rate, tint, radius}: ModelEmitterRouted) {
+  item.spawn.copy(item.own.spawn);
+  if (rate !== undefined) item.spawn.setComponent(SPAWN.rate, rate);
+  if (radius !== undefined) item.spawn.setComponent(SPAWN.radius, radius);
+  if (tint === undefined) item.tint.setScalar(1);
+  else item.tint.set(tint[0], tint[1], tint[2], 1);
+  item.colorMin.copy(item.own.colorMin).multiply(item.tint);
+  item.colorMax.copy(item.own.colorMax).multiply(item.tint);
+  item.bounds.radius = item.spawn.getComponent(SPAWN.radius) + item.travel;
+}
 
 /** What an actor's emitters need from its stage: the scene they join, the shared numbers and the stage's changes. */
 export interface ModelEmittersContext {
@@ -122,8 +143,9 @@ export function createModelEmitters(entity: string, profiles: ModelEmitterProfil
   const commit: ModelStageCommit = () => {
     const {changes, items} = pending, time = pending.time[0];
     for (let index = 0; index < changes.length; index++) {
-      const item = items[index];
-      if (changes[index].change === MODEL_EMITTER_CHANGE.started) {
+      const item = items[index], change = changes[index];
+      if (change.change === MODEL_EMITTER_CHANGE.started) {
+        start(item, change);
         item.times.set(time, time, RUNNING.yes);
         // The origin's world matrix is otherwise refreshed only when the stage next draws.
         origin.updateWorldMatrix(true, false);

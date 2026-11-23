@@ -1,4 +1,4 @@
-import {isNonEmptyString, isRecord} from '../../valueChecks.ts';
+import {isFiniteNumber, isNonEmptyString, isRecord} from '../../valueChecks.ts';
 import {ModelStageRefusal} from './refusal.ts';
 
 // The one owner of a description's records. A record states exactly its fields: one it omits and one it does not
@@ -150,7 +150,7 @@ export function modelName(value: unknown, where: string): string {
 
 /** A finite number within the stated bounds, refused by its name otherwise; an unbounded end is an infinity. */
 export function modelNumber(value: unknown, where: string, least: number, most: number): number {
-  if (typeof value !== 'number' || !Number.isFinite(value) || value < least || value > most) {
+  if (!isFiniteNumber(value) || value < least || value > most) {
     const range = !Number.isFinite(least) ? '' : Number.isFinite(most) ? ` from ${least} to ${most}` :
       ` of at least ${least}`;
     throw new ModelStageRefusal(`${where} must be a finite number${range}.`);
@@ -166,7 +166,7 @@ function readCheckedNumbers<Target extends number[] | Float64Array>(
   }
   for (let index = 0; index < count; index++) {
     const item: unknown = value[index];
-    if (typeof item !== 'number' || !Number.isFinite(item)) {
+    if (!isFiniteNumber(item)) {
       throw new ModelStageRefusal(refusal.numbers(where, count));
     }
     into[offset + index] = item;

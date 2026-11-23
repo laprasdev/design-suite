@@ -46,8 +46,12 @@ export const MODEL_EMITTER_REFUSAL = Object.freeze({
     `Frame entity ${entity} names emitter ${profile}, which its actor does not declare.`,
   burst: (entity: string, profile: string) =>
     `Frame entity ${entity}: emitter ${profile} bursts, which this stage does not draw yet (Burst draws).`,
-  routed: (entity: string, field: string) =>
-    `Frame entity ${entity}: an emitter's routed ${field} is not drawn by this stage yet.`,
+  stubbed: (entity: string, field: string) =>
+    `Frame entity ${entity}: an emitter's ${field} is not drawn by this stage yet.`,
+  routedValue: (entity: string, profile: string, field: string, is: string) =>
+    `Frame entity ${entity}: emitter ${profile}'s routed ${field} must be ${is}.`,
+  routedOff: (entity: string, profile: string, field: string, change: string) =>
+    `Frame entity ${entity}: emitter ${profile} states a routed ${field} on a ${change}; only a start routes one.`,
   budget: (what: string, value: number, most: number) =>
     `The stage's live ${what} would be ${value}, over its budget of ${most}.`,
 });

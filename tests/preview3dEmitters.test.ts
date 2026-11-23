@@ -10,20 +10,11 @@ import {modelActorIdentity} from '../src/react/preview3d/actorModel.ts';
 import {MODEL_EMITTER_CHANGE, modelEmitterChanges} from '../src/react/preview3d/emitterFrameModel.ts';
 import {actorContext, applyFrame, declaration, describing, entity, frame, makeActor, refused}
   from './preview3dActorFixture.ts';
-import {curve, EMITTER_ID, emitterChange, emitterProfile} from './preview3dEmitterCases.ts';
+import {changing, starting, stopping, withEmitters} from './preview3dEmitterActors.ts';
+import {curve, EMITTER_ID, EMITTER_ROUTED, emitterChange, emitterProfile} from './preview3dEmitterCases.ts';
 import {EMITTER_REFUSAL_CASES, EMITTER_WHERE, emitterProfileWith} from './preview3dEmitterRefusals.ts';
 
 const WHERE = EMITTER_WHERE;
-// An actor with these profiles, and the points its emitters add to its scene, in the profiles' order.
-function withEmitters(id: string, profiles: Record<string, unknown>) {
-  const {context, scene} = actorContext();
-  const actor = makeActor(id, [], {emitters: modelEmitterRecords(profiles, `Actor ${id}.emitters`)}, context).actor;
-  const points = scene.children.filter(child => child instanceof THREE.Points);
-  return {actor, points, visible: () => points.filter(item => item.visible).length};
-}
-const changed = (change: string) => (...profiles: string[]) => profiles.map(profile => emitterChange(change, profile));
-const starting = changed(MODEL_EMITTER_CHANGE.started), stopping = changed(MODEL_EMITTER_CHANGE.stopped);
-const changing = (...changes: unknown[]) => ({...entity('a'), emitters: changes});
 const {emitters: EMITTERS, coverage: COVERAGE} = MODEL_EMITTER_BUDGET.load;
 
 describe('an emitter profile', () => {
@@ -107,7 +98,7 @@ describe('an emitter profile', () => {
 });
 
 describe('an engine frame\'s emitters', () => {
-  it('refuses a profile the actor does not declare or does not name, a burst and a routed value, each by name', () => {
+  it('refuses a profile the actor does not declare or does not name, a burst and an unsent field, by name', () => {
     const {actor, visible} = withEmitters('a', {[EMITTER_ID]: emitterProfile()});
     refused(() => applyFrame([actor], frame(0, changing(...starting('other')))),
       MODEL_EMITTER_REFUSAL.undeclared('a', 'other'));
@@ -115,8 +106,10 @@ describe('an engine frame\'s emitters', () => {
       'Frame entity a emitters[0].profile must be a non-empty string.');
     refused(() => applyFrame([actor], frame(0, changing(emitterChange(MODEL_EMITTER_CHANGE.burst)))),
       MODEL_EMITTER_REFUSAL.burst('a', EMITTER_ID));
-    refused(() => applyFrame([actor], frame(0, changing({...emitterChange(MODEL_EMITTER_CHANGE.started), rate: 3}))),
-      MODEL_EMITTER_REFUSAL.routed('a', 'rate'));
+    for (const field of ['burst', 'origin', 'position']) {
+      refused(() => applyFrame([actor], frame(0, changing({...emitterChange(MODEL_EMITTER_CHANGE.started),
+        [field]: 1}))), MODEL_EMITTER_REFUSAL.stubbed('a', field));
+    }
     refused(() => applyFrame([actor], frame(0, changing(...starting(EMITTER_ID), {profile: EMITTER_ID}))),
       /^Frame entity a emitters\[1\] omits change; it states profile, change\.$/);
     refused(() => applyFrame([actor], frame(0, changing({...emitterChange(MODEL_EMITTER_CHANGE.started), at: 1}))),
@@ -128,7 +121,8 @@ describe('an engine frame\'s emitters', () => {
     assert.equal(visible(), 0);
   });
   it('reads a frame\'s changes in place: the list it returns is the frame\'s own, with no record copied', () => {
-    const changes = [...starting(EMITTER_ID), ...stopping(EMITTER_ID)];
+    const changes = [...starting(EMITTER_ID), ...stopping(EMITTER_ID), {...emitterChange(MODEL_EMITTER_CHANGE.started),
+      ...EMITTER_ROUTED}, {...emitterChange(MODEL_EMITTER_CHANGE.started), radius: 0}];
     assert.equal(modelEmitterChanges(changes, 'a'), changes);
   });
   it('shows points once started, and keeps drawing them as they live out after a stop', () => {

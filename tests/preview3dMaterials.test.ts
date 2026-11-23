@@ -4,12 +4,12 @@ import * as THREE from 'three';
 import {createModelMaterialInspection, createModelSurfaceModes, modelStageChanges}
   from '../src/react/preview3d/materials.ts';
 import {MODEL_PREVIEW_SURFACE_SETTINGS, modelStageSurfaceMode} from '../src/react/preview3d/surfaceModeModel.ts';
-import {extendModelMaterial, extendModelMaterials, modelMaterialChanges, type ModelShader}
+import {extendModelMaterial, extendModelMaterials, modelMaterialChanges}
   from '../src/react/preview3d/shading.ts';
 import {createModelFog} from '../src/react/preview3d/fog.ts';
+import {compiled} from './preview3dCompiledProgram.ts';
 
-// A file's material as the stage holds it, with the Surface modes; and its program as three would hand it over for a
-// material with a base colour map, an occlusion map, a normal map and an emissive map, fogged, under a tone curve.
+// A file's material as the stage holds it, with the Surface modes.
 function fixture(material: THREE.Material = new THREE.MeshStandardMaterial()) {
   const modes = createModelSurfaceModes(), mesh = new THREE.Mesh(new THREE.BoxGeometry(), material);
   extendModelMaterial(material, [modes.change]);
@@ -17,13 +17,6 @@ function fixture(material: THREE.Material = new THREE.MeshStandardMaterial()) {
 }
 // The materials of a model with no kind: none is a kind's.
 const NO_KIND = () => false;
-const MAPS = Object.freeze({map: true, aoMap: true, normalMap: true, normalMapTangentSpace: true, emissiveMap: true,
-  roughnessMap: true, clearcoat: true, fog: true, toneMapping: THREE.ACESFilmicToneMapping});
-function compiled(material: THREE.Material, lib: 'standard' | 'physical' | 'basic' | 'points' = 'standard') {
-  const shader = {...THREE.ShaderLib[lib], ...MAPS, uniforms: {}} as unknown as ModelShader;
-  material.onBeforeCompile(shader, {} as THREE.WebGLRenderer);
-  return shader;
-}
 
 describe('the Surface modes', () => {
   it('are one change on the same material: Lit changes nothing, and each mode is its own program key', () => {

@@ -7,6 +7,8 @@ import {MODEL_ATTRACTION, MODEL_CURVE_MODE, MODEL_EMITTER_ORIGIN, MODEL_GRADIENT
 // records in ISM's candidate-19 Synth pack (`claude-engine-lead/demo/candidate-19/bundle/pack.json` in ISM's
 // artifacts, SHA-256 6a7a2ed9b039e62c...). The numbers are the test's own: the stage reads each of those 30 records
 // whole and refuses each by name at a value it does not draw yet, so none can stand in for a drawn profile.
+/** A start's routed values, each unlike the test profile's own. */
+export const EMITTER_ROUTED = Object.freeze({rate: 40, tint: Object.freeze([0.5, 0.25, 2] as const), radius: 0.75});
 export const EMITTER_ID = 'states/0/additionalModifiers/0/entranceProfile';
 export const curve = (min: number, max: number, mode: number = MODEL_CURVE_MODE.twoConstants) =>
   ({m_Mode: mode, m_CurveMultiplier: max, m_CurveMin: {}, m_CurveMax: {}, m_ConstantMin: min, m_ConstantMax: max});

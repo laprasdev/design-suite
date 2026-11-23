@@ -1,3 +1,4 @@
+import {isFiniteNumber} from '../../valueChecks.ts';
 import {modelNumbers, modelOption, modelRecord} from './recordModel.ts';
 import {ModelStageRefusal} from './refusal.ts';
 
@@ -54,7 +55,7 @@ function resolution(value: unknown, where: string): readonly [number, number] {
   return Object.freeze([pair[0], pair[1]]);
 }
 function positive(value: unknown, where: string): number {
-  if (typeof value !== 'number' || !Number.isFinite(value) || !(value > 0)) {
+  if (!isFiniteNumber(value) || !(value > 0)) {
     throw new ModelStageRefusal(refusal.positive(where));
   }
   return value;

@@ -4,7 +4,7 @@ import {modelRuntimeAssetProfile} from './actorAssetModel.ts';
 import {CAMERA_COORDS, freezeModelPreviewCamera, MODEL_PREVIEW_CAMERA_FIELDS, MODEL_PREVIEW_ENTITY_REFUSAL,
   modelPreviewCameraWhere, modelPreviewEntity, readModelPreviewCamera,
   type ModelPreviewCamera, type ModelPreviewEntity} from './presentation.ts';
-import {isNonEmptyString as named, isRecord as object} from '../../valueChecks.ts';
+import {isFiniteNumber, isNonEmptyString as named, isRecord as object} from '../../valueChecks.ts';
 import {modelRecordStating, modelStates} from './recordModel.ts';
 import {ModelStageRefusal} from './refusal.ts';
 import type {ModelSurfaceSet} from './surfaceModel.ts';
@@ -64,7 +64,7 @@ export function validateModelFrame(value: unknown, scope: ModelFrameScope,
   cameraInto: Float64Array): ModelValidatedFrame {
   const time = object(value) ? value.simulationTimeSeconds : undefined;
   const rawEntities = object(value) ? value.entities : undefined;
-  if (!object(value) || typeof time !== 'number' || !Number.isFinite(time) || time < 0 ||
+  if (!object(value) || !isFiniteNumber(time) || time < 0 ||
     !Array.isArray(rawEntities)) {
     throw new ModelStageRefusal(refusal.frame);
   }

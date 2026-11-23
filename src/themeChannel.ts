@@ -1,5 +1,5 @@
 import {createTheme, type Theme} from './theme.ts';
-import {isNonEmptyString, isRecord} from './valueChecks.ts';
+import {isFiniteNumber, isNonEmptyString, isRecord} from './valueChecks.ts';
 
 export const THEME_PROTOCOL = 'looms.theme';
 export const THEME_VERSION = 1;
@@ -21,14 +21,14 @@ export function isThemeData(data: unknown): data is ThemeData {
   if (theme.typography !== undefined && Object.entries(defaults.typography).some(([key, fallback]) => {
     const value = theme.typography[key as keyof Theme['typography']];
     return typeof fallback === 'string' ? typeof value !== 'string' || !value.trim() || value.length > 256
-      : typeof value !== 'number' || !Number.isFinite(value) || value <= 0;
+      : !isFiniteNumber(value) || value <= 0;
   })) return false;
   if (!theme.colors || Object.keys(defaults.colors).some(key =>
     typeof theme.colors[key as keyof Theme['colors']] !== 'string')) return false;
   return (['radius', 'stroke', 'space'] as const).every(group => theme[group]
     && Object.keys(defaults[group]).every(key => {
       const value = (theme[group] as Record<string, number>)[key];
-      return typeof value === 'number' && Number.isFinite(value) && value >= 0;
+      return isFiniteNumber(value) && value >= 0;
     }));
 }
 

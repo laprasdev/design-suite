@@ -1,7 +1,7 @@
 import {modelPresentationPose, type ModelPresentationPose, type ModelVector}
   from './placementModel.ts';
 import {ModelStageRefusal} from './refusal.ts';
-import {isRecord as object} from '../../valueChecks.ts';
+import {isFiniteNumber, isRecord as object} from '../../valueChecks.ts';
 import {modelStates, readModelNumbers, type ModelStatingFields} from './recordModel.ts';
 import {modelMaterialOutputs} from './runtimeMaterialModel.ts';
 import type {ModelMaterialOutput, ModelRuntimeMaterialProfile} from './runtimeMaterialModel.ts';
@@ -101,7 +101,7 @@ export function readModelPreviewCamera(value: unknown, where: ModelPreviewCamera
     return;
   }
   const {fieldOfView} = value;
-  if (typeof fieldOfView !== 'number' || !Number.isFinite(fieldOfView) || fieldOfView <= 0 || fieldOfView >= 180) {
+  if (!isFiniteNumber(fieldOfView) || fieldOfView <= 0 || fieldOfView >= 180) {
     throw new ModelStageRefusal(MODEL_PREVIEW_CAMERA_REFUSAL.fieldOfView(where.camera));
   }
   into[CAMERA_COORDS.fov] = fieldOfView;

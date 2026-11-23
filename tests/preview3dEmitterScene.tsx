@@ -1,11 +1,11 @@
 // Mounted in Chromium by preview3dEmitters.browser.test.ts: the stage with one panel actor and its two emitters, run by
-// engine frames on the external clock, and the share of the picture the emitters change.
+// engine frames on the external clock, and the share and span of the picture the emitters change.
 import {createModelFrameInbox, MODEL_STAGE_CLOCK, MODEL_STAGE_FRAMING, modelStageDescription,
   type ModelStageController} from '../src/react/preview3d/model.ts';
 import {MODEL_EMITTER_CHANGE} from '../src/react/preview3d/emitterFrameModel.ts';
 import {createModelStage} from '../src/react/preview3d/stage.ts';
 import {THEME, declaration, describing, standingAt} from './preview3dActorFixture.ts';
-import {EMITTER_HOST_ID, EMITTER_SCENE_PROFILES, EMITTER_SCENE_RUN,
+import {EMITTER_HOST_ID, EMITTER_SCENE_PROFILES, EMITTER_SCENE_ROUTED, EMITTER_SCENE_RUN,
   type EmitterDraws, type EmitterSceneDriver} from './preview3dEmitterSceneCases.ts';
 import {makePanelGlbBytes, PANEL_GLB} from './preview3dPanelGlb.ts';
 import {renderScene} from './renderScene.tsx';
@@ -41,17 +41,23 @@ function countDraws(gl: WebGL2RenderingContext) {
     return taken;
   }};
 }
-function changedPixels(before: Uint8Array, after: Uint8Array) {
-  let changed = 0;
+// How many pixels changed, and the area of the box around them.
+function changedPixels(before: Uint8Array, after: Uint8Array, width: number) {
+  let changed = 0, left = width, right = -1, bottom = Number.POSITIVE_INFINITY, top = -1;
   for (let pixel = 0; pixel < before.length; pixel += CHANNELS) {
     for (let channel = 0; channel < CHANNELS - 1; channel++) {
       if (Math.abs(before[pixel + channel] - after[pixel + channel]) > CHANGED_BYTES) {
+        const column = (pixel / CHANNELS) % width, row = Math.floor(pixel / CHANNELS / width);
         changed++;
+        left = Math.min(left, column);
+        right = Math.max(right, column);
+        bottom = Math.min(bottom, row);
+        top = Math.max(top, row);
         break;
       }
     }
   }
-  return changed;
+  return {changed, extent: right < left ? 0 : (right - left + 1) * (top - bottom + 1)};
 }
 
 async function bootEmitterScene(): Promise<EmitterSceneDriver> {
@@ -86,9 +92,12 @@ async function bootEmitterScene(): Promise<EmitterSceneDriver> {
     await nextFrame();
     return {read: pixels(canvas), draws: draws.take()};
   };
-  // Frame records made once, so the ticks measure only what the stage allocates.
-  const changes = (change: string) => Object.keys(EMITTER_SCENE_PROFILES).map(profile => ({profile, change}));
-  const turns = [changes(MODEL_EMITTER_CHANGE.started), changes(MODEL_EMITTER_CHANGE.stopped)];
+  // Frame records made once, so the ticks measure only what the stage allocates. A start routes every value, as a
+  // state that declares them does.
+  const {dark, sparse, wide} = EMITTER_SCENE_ROUTED, everyRouted = {...dark, ...sparse, ...wide};
+  const changes = (change: string, routed: object) => Object.keys(EMITTER_SCENE_PROFILES)
+    .map(profile => ({profile, change, ...routed}));
+  const turns = [changes(MODEL_EMITTER_CHANGE.started, everyRouted), changes(MODEL_EMITTER_CHANGE.stopped, {})];
   const still: readonly unknown[] = [];
   const tickEntity = {entityId: PANEL_GLB.id, modelId: PANEL_GLB.id, pose: {position, rotationQuaternion: [0, 0, 0, 1],
     scale: [1, 1, 1]}, animationLayers: still, partPoses: still, materials: still, emitters: still};
@@ -103,19 +112,19 @@ async function bootEmitterScene(): Promise<EmitterSceneDriver> {
         if (inbox.receive(tickFrame) === 'error') throw inbox.failure;
       }
     },
-    async run() {
+    async run(routed) {
       const {step, frames, travel} = EMITTER_SCENE_RUN;
       // The panel where the run ends, before any particle: what the emitters change is the only difference.
       position[0] = travel;
       const before = await drawn(0, []);
       position[0] = 0;
       let after = await drawn(step, Object.keys(EMITTER_SCENE_PROFILES).map(profile =>
-        ({profile, change: MODEL_EMITTER_CHANGE.started})));
+        ({profile, change: MODEL_EMITTER_CHANGE.started, ...routed})));
       for (let frame = 2; frame <= frames; frame++) {
         position[0] = travel * frame / frames;
         after = await drawn(frame * step, []);
       }
-      return {changed: changedPixels(before.read, after.read), pixels: canvas.width * canvas.height,
+      return {...changedPixels(before.read, after.read, canvas.width), pixels: canvas.width * canvas.height,
         draws: {before: before.draws, after: after.draws}};
     },
   };
