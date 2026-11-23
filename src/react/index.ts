@@ -79,9 +79,10 @@ export { CaretButton, type CaretButtonProps } from './CaretButton.tsx';
 export {
   PhotoStrip, PhotoCompare, PhotoCompareForm, StripTile, type StripPhoto, type CompareCapture,
 } from './Photos.tsx';
-export { Crossfade, type CrossfadeProps } from './Crossfade.tsx';
+export { Crossfade, CrossfadeForm, type CrossfadeProps } from './Crossfade.tsx';
 export {
-  CrossfadePageElement,PAGE_STACK_MOVING,PAGE_STACK_DIRECTION,type CrossfadePageProps,
+  CrossfadePageElement,PAGE_STACK_MOVING,PAGE_STACK_DIRECTION,
+  type CrossfadePageProps,type CrossfadeCarouselProps,type CrossfadeStackProps,
 } from './CrossfadePage.tsx';
 export {
   pageFrames,capturePage,capturePageScroll,restorePageScroll,placePageCopy,removePageCopy,animatePage,

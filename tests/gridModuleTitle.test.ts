@@ -35,16 +35,20 @@ describe('a module title', () => {
     assert.doesNotMatch(markup, /--module-title-gap/);
   });
 
-  it('draws its word and the chosen name as the step form\'s trigger, its carets after it, when it heads one', () => {
+  it('draws its word, then previous caret, carousel slot and next caret when it heads a choice', () => {
     const choice = {options: OPTIONS, value: 'grid', onChange: () => undefined, onRefuse: () => undefined} as const;
     const markup = drawn(choice), title = heading(markup);
     const headingTag = /<h2[^>]*>/.exec(markup)?.[0] ?? assert.fail(`no heading tag in ${markup}`);
     assert.match(markup, new RegExp(`${MODULE_HEADER_FORM_ATTRIBUTE}="${ModuleHeaderForm.CHOICE}"`));
     assert.doesNotMatch(headingTag, /white-space:nowrap|overflow:hidden/, 'the title does not clip its carets');
     const trigger = `${ListboxElement.TRIGGER.className} ${ModuleTitleChoiceElement.className}`;
-    assert.match(title, new RegExp(`class="${trigger}"`));
-    assert.match(title, new RegExp(`>${TITLE}<span[^>]*>${OPTIONS[0].label}</span>`));
-    assert.equal(title.match(new RegExp(`class="[^"]*${ListboxElement.STEP.className}`, 'g'))?.length, 2);
+    assert.match(title, new RegExp(`class="${trigger}"[^>]*>${TITLE}</button>`));
+    assert.match(title, /data-form="carousel"/);
+    const stepMatches = [...title.matchAll(new RegExp(`class="[^"]*\\b${ListboxElement.STEP.className}\\b`, 'g'))];
+    assert.equal(stepMatches.length, 2);
+    const chosenIndex = title.indexOf(`class="${ListboxElement.CHOSEN.className}"`);
+    assert.ok(stepMatches[0].index < chosenIndex && chosenIndex < stepMatches[1].index,
+      'the carets flank the chosen slot instead of sitting together');
     assert.doesNotMatch(title, /data-shows-value/, 'the title is no field, so it paints no field caret');
   });
 

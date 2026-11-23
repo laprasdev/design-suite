@@ -4,11 +4,9 @@ import { Borders, D, MODULE_TITLE } from '../../synth/design/index.ts';
 import { ModuleHeaderRow } from './ModuleHeaderRow.tsx';
 import { ListboxSelect, type ListboxOption } from '../ListboxSelect.tsx';
 import { ListboxForm } from '../listboxSelectElements.ts';
-import { Label } from '../accents.tsx';
 import { styleThemeVariables } from '../styleTheme.ts';
 import {
-  MODULE_HEADER_ATTRIBUTE, MODULE_HEADER_FORM_ATTRIBUTE, ModuleHeaderForm,
-  ModuleTitleChoiceElement, ModuleTitleChosenElement,
+  MODULE_HEADER_ATTRIBUTE, MODULE_HEADER_FORM_ATTRIBUTE, ModuleHeaderForm, ModuleTitleChoiceElement,
 } from './gridModuleElements.ts';
 
 const G = D.moduleGrid;
@@ -50,7 +48,7 @@ export function GridModule<V extends string | number>({ title, titled = true, gr
   };
   const choiceTitleStyle: React.CSSProperties = {
     ...titleBase, minWidth: 0, display: 'flex', flexWrap: 'wrap', alignItems: 'center',
-    columnGap: G.fieldGap, ...CHOICE_GAP, ...styleThemeVariables(style),
+    ...CHOICE_GAP, ...styleThemeVariables(style),
   };
   const chosen = choice?.options.find(option => option.value === choice.value);
   if (choice && !chosen) throw new Error(`${title}'s choice holds ${choice.value}, which none of its options is.`);
@@ -65,7 +63,7 @@ export function GridModule<V extends string | number>({ title, titled = true, gr
         {titled && <h2 style={choice ? choiceTitleStyle : titleStyle}>{choice && chosen
           ? <ListboxSelect form={ListboxForm.STEP} label={title} className={ModuleTitleChoiceElement.className}
             options={choice.options} value={choice.value} onChange={choice.onChange} onRefuse={choice.onRefuse}>
-            {title}<Label kind="chosen" className={ModuleTitleChosenElement.className}>{chosen.label}</Label>
+            {title}
           </ListboxSelect>
           : title}</h2>}
         <ModuleHeaderRow group={group}>{tabs}</ModuleHeaderRow>

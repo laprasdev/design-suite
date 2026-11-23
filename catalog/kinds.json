@@ -235,7 +235,7 @@
    "core": [
     "ListboxSelect"
    ],
-   "note": "ListboxSelect takes a ListboxForm. The select, the default, holds a value: a select-only combobox over a listbox that marks the chosen option. The menu form is a list of actions with no current value, such as places to go: a menu button (aria-haspopup=menu) whose children draw the trigger, inside a field with field, opening a menu of menuitems that moves focus into it; the arrows, Home, End and typing move through it, Enter, Space or a click runs onAction each time, and Escape, Tab or a choice closes it with focus back on the trigger. A select with no value is the menu form, never value null. An unavailable option names why: it draws at Opacity.low and refuses a choice, handing the option to onRefuse for the consumer's ActionBar notice. The step form is the select whose arrows on the closed trigger, and its two carets after it (CaretGlyph turned back and on, the one at an end disabled), choose the previous or next option at once, an unavailable one refusing as a press would. GridModule's choice is the step form as a module's title: its word in the title's own case and tracking and the chosen option's name in the regular-weight chosen label open the list, the carets step it. The gallery's sample is ElementKindIndex's jump at phone width."
+   "note": "ListboxSelect takes a ListboxForm. The select, the default, holds a value: a select-only combobox over a listbox that marks the chosen option. The menu form is a list of actions with no current value, such as places to go: a menu button (aria-haspopup=menu) whose children draw the trigger, inside a field with field, opening a menu of menuitems that moves focus into it; the arrows, Home, End and typing move through it, Enter, Space or a click runs onAction each time, and Escape, Tab or a choice closes it with focus back on the trigger. A select with no value is the menu form, never value null. An unavailable option names why: it draws at Opacity.low and refuses a choice, handing the option to onRefuse for the consumer's ActionBar notice. The step form is the select whose arrows on the closed trigger, and its previous and next carets flanking the chosen option's fixed-width Crossfade carousel slot (CaretGlyph turned back and on, the one at an end disabled), choose the previous or next option at once, an unavailable one refusing as a press would. GridModule's choice is the step form as a module's title: its word in the title's own case and tracking and the chosen option's name in the regular-weight chosen label open the list, the carets either side of the name step it. The gallery's sample is ElementKindIndex's jump at phone width."
   },
   "PipRow": {
    "data": "small count",
@@ -295,9 +295,10 @@
   },
   "Crossfade": {
    "data": "one visible pane at a time",
-   "note": "Compact form fades peer panes. The page form retains a controlled keyed stack, state and scroll; push and Back slide between pages. Ordered peers use activeKey, retain visited mounts and animate their existing surfaces. Page chrome stays fixed while controls fade. Callers own routes, guards and deactivating effects on hidden pages. The card-flip motion helper turns retained module surfaces in place; consumers own navigation and visible layers.",
+   "note": "Compact form fades peer panes. The page form retains a controlled keyed stack, state and scroll; push and Back slide between pages. Ordered peers use activeKey, retain visited mounts and animate their existing surfaces. CrossfadeForm.CAROUSEL mounts all ordered peers in one cell so the slot holds the widest item's measured width while activeKey slides and fades in the step's direction. Page chrome stays fixed while controls fade. Callers own routes, guards and deactivating effects on hidden pages. The card-flip motion helper turns retained module surfaces in place; consumers own navigation and visible layers.",
    "kit": [
     "Crossfade",
+    "CrossfadeForm",
     "animateCardFlip"
    ]
   },

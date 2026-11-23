@@ -26,6 +26,13 @@ const LISTBOX_ORIENTATION: ListOrientation='vertical';
 export const LISTBOX_MOVES=listMoves(LISTBOX_ORIENTATION,false);
 // The arrows that step back and on along a listbox.
 export const LISTBOX_STEP_ARROWS=LIST_ARROWS[LISTBOX_ORIENTATION];
+// Closed step triggers respond to both vertical listbox arrows and horizontal carousel arrows.
+export const STEP_MOVES: Readonly<Record<string,ListMove>>=Object.freeze({
+ [LIST_ARROWS.vertical.back]:LISTBOX_MOVES[LIST_ARROWS.vertical.back],
+ [LIST_ARROWS.vertical.next]:LISTBOX_MOVES[LIST_ARROWS.vertical.next],
+ [LIST_ARROWS.horizontal.back]:LISTBOX_MOVES[LIST_ARROWS.vertical.back],
+ [LIST_ARROWS.horizontal.next]:LISTBOX_MOVES[LIST_ARROWS.vertical.next],
+});
 // The arrows along a listbox, which a list that is searching still takes.
 export const LISTBOX_ARROWS: readonly string[]=Object.freeze([LISTBOX_STEP_ARROWS.back,LISTBOX_STEP_ARROWS.next]);
 // Keys that open a closed list, and the option each starts on, from the chosen one.

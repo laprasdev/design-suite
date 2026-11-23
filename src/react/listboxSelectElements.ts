@@ -12,11 +12,14 @@ export const ListboxElement=Object.freeze({
  CONTENT:element('listbox-select-content'),
  LABEL:element('listbox-select-label'),
  IMPACT:element('listbox-select-impact'),
+ GROUP:element('listbox-select-group'),
+ STEPPER:element('listbox-select-stepper'),
+ CHOSEN:element('listbox-select-chosen'),
  STEP:element('listbox-select-step'),
 });
 // ListboxSelect's forms: the select holds a value and shows it; the step is a select whose arrows, while it is closed,
-// and its two carets beside it step the choice to the previous or next option instead of opening the list; the menu
-// runs an action and holds none.
+// and its previous and next carets flanking the chosen option's carousel slot step the choice to the previous or next
+// option instead of opening the list; the menu runs an action and holds none.
 export const ListboxForm=Object.freeze({SELECT:'select',STEP:'step',MENU:'menu'} as const);
 export type ListboxForm=typeof ListboxForm[keyof typeof ListboxForm];
 // What each form's parts are to assistive technology: the trigger's role and the popup it opens, each item's role,
