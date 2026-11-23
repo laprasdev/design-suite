@@ -25,12 +25,12 @@
 }
 .app-root .listbox-select[data-shows-value] { text-align:left; }
 /* A step form's caret: the list's caret glyph, in the dim colour every caret takes. */
-.header-icon-button.listbox-select-step { flex:none;color:var(--dim); }
+.header-icon-button.listbox-select-step { color:var(--dim); }
 /* A module's header carrying a title choice wraps its row and carets instead of clipping them. */
 [data-module-header][data-header-form=choice] { flex-wrap:wrap; }
 /* A module's title heading a choice: its word starts where every title does, its chosen name beside it. */
-.listbox-select.module-title-choice { display:inline-flex;flex-wrap:wrap;align-items:baseline;gap:var(--module-title-gap);max-width:100%;padding:0;border:0;background:none;font:inherit;color:inherit;text-transform:inherit;letter-spacing:inherit;cursor:pointer; }
-.listbox-select.module-title-choice:focus-visible { outline:2px solid var(--pink);outline-offset:3px; }
+.listbox-select.module-title-choice { display:inline-flex;flex-wrap:wrap;align-items:baseline;gap:var(--module-title-gap);max-width:100%;text-transform:inherit;letter-spacing:inherit; }
+.listbox-select.module-title-choice:focus-visible { outline:var(--focus-outline,2px solid var(--pink));outline-offset:3px; }
 /* An anchored Modal on its trigger: Modal draws the surface and places the layer; the list lays out inside it. */
 .listbox-select-popover { display:flex;flex-direction:column;min-width:var(--anchor-width);margin:0;padding:4px;list-style:none;color:var(--text);font-family:var(--font-chrome,inherit);font-size:var(--type-control,12px);line-height:1.4; }
 .listbox-select-list { margin:0;padding:0;list-style:none;min-height:0;overflow:auto;overscroll-behavior:contain; }

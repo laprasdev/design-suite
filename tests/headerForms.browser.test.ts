@@ -21,7 +21,7 @@ import {
  MODULE_HEADER_ATTRIBUTE,MODULE_HEADER_FORM_ATTRIBUTE,ModuleHeaderForm,
  ModuleTitleChoiceElement,ModuleTitleChosenElement,
 } from '../src/react/module/gridModuleElements.ts';
-import {HeaderForm,TITLE_OPTIONS,TOGGLE_GLYPH_ATTRIBUTE,ToggleGlyph} from './headerGlyphCases.ts';
+import {CompactGlyph,HeaderForm,TITLE_OPTIONS,TOGGLE_GLYPH_ATTRIBUTE,ToggleGlyph} from './headerGlyphCases.ts';
 
 const CAPTURES=join(SUITE_ROOT,'.local','captures','headerForms');
 mkdirSync(CAPTURES,{recursive:true});
@@ -116,6 +116,13 @@ for(const viewport of [DESKTOP_VIEWPORT,HANDSET_VIEWPORT])test(`the header forms
  await page.waitForFunction(name=>document.querySelector(`[aria-label="${name}"]`)?.getAttribute('aria-pressed')
   ==='true',HeaderForm.TOGGLE);
  assert.equal(await glyph(),ToggleGlyph.ON,'a toggle that is on shows the glyph that turns it off');
+ assert.equal(await toggle.evaluate(node=>getComputedStyle(node).boxShadow),'none','a bare toggle draws no active box');
+ await toggle.focus();
+ await page.keyboard.press('Tab');
+ const barButton=named(page,CompactGlyph.BAR);
+ assert.equal(await barButton.evaluate(node=>getComputedStyle(node).outlineStyle),'solid');
+ assert.equal(await barButton.evaluate(node=>{node.style.setProperty('--focus-outline','none');
+  return getComputedStyle(node).outlineStyle;}),'none','a header icon button reads --focus-outline');
  const barBox=await bar.boundingBox()??assert.fail('the compact bar has no box');
  const box=await toggle.boundingBox()??assert.fail('the toggle has no box');
  assert.ok(box.x>=barBox.x&&box.y>=barBox.y&&box.y+box.height<=barBox.y+barBox.height
@@ -130,13 +137,27 @@ test('a title choice and its list work in a StyleProvider without app-root',asyn
   document.documentElement.style.setProperty('--card',foreignCard);
  },[SCENE_ROOT_ID,ApplicationElement.ROOT.className,FOREIGN_CARD] as const);
  const title=page.locator(ModuleTitleChoiceElement.selector);
- const read=await page.evaluate(([choice,keys])=>{
-  const trigger=document.querySelector(choice),heading=trigger?.closest('h2');
-  if(!trigger||!heading)throw new Error('the scene draws no title choice');
-  const type=(element: Element)=>keys.map(key=>getComputedStyle(element)[key]);
-  return {heading:type(heading),word:type(trigger)};
- },[ModuleTitleChoiceElement.selector,TITLE_TYPE] as const);
+ const next=page.locator(ListboxElement.STEP.selector).nth(1);
+ const nextBox=await next.boundingBox()??assert.fail('the step caret has no box without app-root');
+ assert.deepEqual({w:nextBox.width,h:nextBox.height},{w:D.moduleGrid.tabMinWidth,h:D.moduleGrid.tabMinHeight});
+ const read=await page.evaluate(([choice,step,keys])=>{
+  const trigger=document.querySelector(choice),caret=document.querySelectorAll(step)[1];
+  const heading=trigger?.closest('h2');
+  if(!trigger||!caret||!heading)throw new Error('the scene draws no title choice or step caret');
+  const style=(element: Element)=>getComputedStyle(element),type=(element: Element)=>keys.map(key=>style(element)[key]);
+  const bare=(element: Element)=>({border:style(element).borderTopWidth,bg:style(element).backgroundColor});
+  return {heading:type(heading),word:type(trigger),triggerPad:style(trigger).paddingTop,
+   triggerBare:bare(trigger),caretBare:bare(caret)};
+ },[ModuleTitleChoiceElement.selector,ListboxElement.STEP.selector,TITLE_TYPE] as const);
  assert.deepEqual(read.word,read.heading,'without app-root, the title trigger still inherits its heading type');
+ assert.equal(read.triggerPad,'0px');
+ assert.deepEqual(read.triggerBare,{border:'0px',bg:'rgba(0, 0, 0, 0)'});
+ assert.deepEqual(read.caretBare,{border:'0px',bg:'rgba(0, 0, 0, 0)'});
+ await title.focus();
+ await page.keyboard.press('Tab');
+ assert.equal(await next.evaluate(node=>getComputedStyle(node).outlineStyle),'solid');
+ assert.equal(await next.evaluate(node=>{node.style.setProperty('--focus-outline','none');
+  return getComputedStyle(node).outlineStyle;}),'none','a compact step caret reads --focus-outline without app-root');
  await title.click();
  const popover=page.locator(ListboxElement.POPOVER.selector);
  await popover.waitFor();
