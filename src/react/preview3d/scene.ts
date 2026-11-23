@@ -74,7 +74,10 @@ export function createModelScene(host: HTMLElement, theme: ModelStageTheme, poli
   observer.observe(host);
   resize();
   return {
-    renderer, scene, camera, controls, lighting, fog, shared, ...framing,
+    renderer, scene, camera, controls, lighting, fog, shared,
+    // The framing the stage drives; the far plane is the look's, set through the lighting alone.
+    requestFit: framing.requestFit, poseCoordinates: framing.poseCoordinates, frame: framing.frame, fit: framing.fit,
+    cameraSnapshot: framing.cameraSnapshot,
     /** Compiles an object's programs inside the staged build (draw.ts). */
     compile: frame.compile,
     /** The frame's one draw, straight or through the look's glow; and the triangles its scene pass drew. */

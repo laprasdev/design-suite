@@ -56,19 +56,21 @@ export const MODEL_STAGE_LOOK_FIELDS = Object.freeze({
   fog: ['near', 'far', 'height'], reach: ['distance', 'color'], height: ['base', 'top', 'strength'],
   glow: ['threshold', 'strength', 'radius'], toneCurve: ['curve', 'exposure'],
 } as const);
-/** A least value a look's number must be greater than, and how a refusal names it. */
-interface ModelStageLeast {readonly value: number; readonly name: string}
-/** Every least value a look states a number beyond: fixed ones, and ones set by the number stated before it. */
-export const MODEL_STAGE_LEAST = Object.freeze({
-  nothing: Object.freeze({value: 0, name: '0'}),
-  nearPlane: Object.freeze({value: MODEL_STAGE_NEAR_PLANE, name: `the stage's near plane, ${MODEL_STAGE_NEAR_PLANE}`}),
-  base: (value: number): ModelStageLeast => Object.freeze({value, name: 'its base'}),
-  nearDistance: (value: number): ModelStageLeast => Object.freeze({value, name: 'its near distance'}),
+/** A bound a look's number must exceed, never reach, and how a refusal names it; `modelNumber`'s `least` and `most`
+ * are reached. */
+interface ModelStageAbove {readonly value: number; readonly name: string}
+const above = (value: number, name: string): ModelStageAbove => Object.freeze({value, name});
+/** Every bound a look states a number above, each made from the number stated before it, which a fixed one ignores. */
+export const MODEL_STAGE_ABOVE = Object.freeze({
+  nothing: () => above(0, '0'),
+  nearPlane: () => above(MODEL_STAGE_NEAR_PLANE, `the stage's near plane, ${MODEL_STAGE_NEAR_PLANE}`),
+  base: (value: number) => above(value, 'its base'),
+  nearDistance: (value: number) => above(value, 'its near distance'),
 });
 export const MODEL_STAGE_LOOK_REFUSAL = Object.freeze({
-  beyond: (where: string, least: string) => `${where} must be a finite number greater than ${least}.`,
+  beyond: (where: string, bound: string) => `${where} must be a finite number greater than ${bound}.`,
 });
-const fields = MODEL_STAGE_LOOK_FIELDS, least = MODEL_STAGE_LEAST, UNBOUNDED = Number.POSITIVE_INFINITY;
+const fields = MODEL_STAGE_LOOK_FIELDS, bounds = MODEL_STAGE_ABOVE, UNBOUNDED = Number.POSITIVE_INFINITY;
 /** The widest spread the bloom mixes to (UnrealBloomPass's radius), the end of the range it is meaningful on. */
 export const MODEL_STAGE_GLOW_WIDEST = 1;
 
@@ -78,15 +80,15 @@ function direction(value: unknown, where: string): ModelVector {
   return vector;
 }
 
-// Beyond a least value, not at it, refused with one message wherever it falls short: an exposure of 0 draws nothing,
+// Above a bound, not at it, refused with one message wherever it falls short: an exposure of 0 draws nothing,
 // a far plane at the near one draws no depth, and a fog or a height layer that ends where it starts has no extent.
-function beyond(value: unknown, where: string, bound: ModelStageLeast): number {
+function beyond(value: unknown, where: string, bound: ModelStageAbove): number {
   const number = modelNumber(value, where, -UNBOUNDED, UNBOUNDED);
   if (!(number > bound.value)) throw new ModelStageRefusal(MODEL_STAGE_LOOK_REFUSAL.beyond(where, bound.name));
   return number;
 }
 
-function reach(value: unknown, where: string, bound: ModelStageLeast) {
+function reach(value: unknown, where: string, bound: ModelStageAbove) {
   const record = modelRecord(value, fields.reach, where);
   return Object.freeze({distance: beyond(record.distance, `${where}.distance`, bound),
     color: modelColor(record.color, `${where}.color`)});
@@ -94,15 +96,15 @@ function reach(value: unknown, where: string, bound: ModelStageLeast) {
 function height(value: unknown, where: string) {
   const record = modelRecord(value, fields.height, where);
   const base = modelNumber(record.base, `${where}.base`, -UNBOUNDED, UNBOUNDED);
-  const top = beyond(record.top, `${where}.top`, least.base(base));
+  const top = beyond(record.top, `${where}.top`, bounds.base(base));
   return Object.freeze({base, top, strength: modelNumber(record.strength, `${where}.strength`, 0, 1)});
 }
 // Null is the explicit "no fog" and "no height layer", as `environment: null` is; nothing missing is read as either.
 function fog(value: unknown, where: string): ModelStageFog | null {
   if (value === null) return null;
   const record = modelRecord(value, fields.fog, where);
-  const near = reach(record.near, `${where}.near`, least.nothing);
-  const far = reach(record.far, `${where}.far`, least.nearDistance(near.distance));
+  const near = reach(record.near, `${where}.near`, bounds.nothing());
+  const far = reach(record.far, `${where}.far`, bounds.nearDistance(near.distance));
   return Object.freeze({near, far,
     height: record.height === null ? null : height(record.height, `${where}.height`)});
 }
@@ -120,7 +122,7 @@ function toneCurve(value: unknown, where: string): ModelStageToneCurve | null {
   if (value === null) return null;
   const record = modelRecord(value, fields.toneCurve, where);
   return Object.freeze({curve: modelOption(record.curve, MODEL_STAGE_CURVE, `${where}.curve`),
-    exposure: beyond(record.exposure, `${where}.exposure`, least.nothing)});
+    exposure: beyond(record.exposure, `${where}.exposure`, bounds.nothing())});
 }
 
 /** One look, checked whole; `where` names it in every refusal, as `Time dusk: look`. */
@@ -144,6 +146,6 @@ export function modelStageLook(value: unknown, where: string): ModelStageLook {
     fog: fog(look.fog, `${where}.fog`),
     toneCurve: toneCurve(look.toneCurve, `${where}.toneCurve`),
     glow: glow(look.glow, `${where}.glow`),
-    farPlane: beyond(look.farPlane, `${where}.farPlane`, least.nearPlane),
+    farPlane: beyond(look.farPlane, `${where}.farPlane`, bounds.nearPlane()),
   });
 }

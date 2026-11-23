@@ -6,6 +6,10 @@ import {MODEL_STAGE_FRAMING, type ModelStageFraming} from './framingModel.ts';
 import {CAMERA_COORDS, cameraStatesFieldOfView, UNSTATED_FIELD_OF_VIEW, type ModelPreviewCamera}
   from './presentation.ts';
 
+export const MODEL_FRAMING_TEXT = Object.freeze({
+  noFarPlane: 'The camera draws to a look\'s far plane: setFarPlane comes before a fit.',
+});
+
 type CameraControls = Pick<OrbitControls, 'target' | 'enabled' | 'update'>
   & Partial<Pick<OrbitControls, 'maxDistance'>>;
 
@@ -46,10 +50,12 @@ export function createModelFraming(camera: THREE.PerspectiveCamera, controls: Ca
     poseScratch[CAMERA_COORDS.fov] = next.fieldOfView ?? UNSTATED_FIELD_OF_VIEW;
     poseCoordinates(poseScratch);
   };
-  // The far plane is the look's (lighting.ts), and never stops short of the far side of what the fit framed: a wide
-  // fit on a narrow view stands the camera further off than the look's far plane reaches, which would draw nothing.
-  const far = {look: camera.far, framed: 0};
+  // The far plane is the look's (lighting.ts), set before anything is fitted, and never stops short of the far side of
+  // what the fit framed: a wide fit on a narrow view stands the camera further off than the look's far plane reaches,
+  // which would draw nothing. Until a look sets it there is none, and a fit refuses rather than draw to three's own.
+  const far: {look: number | null; framed: number} = {look: null, framed: 0};
   const depth = () => {
+    if (far.look === null) throw new Error(MODEL_FRAMING_TEXT.noFarPlane);
     camera.far = Math.max(far.look, far.framed);
     camera.updateProjectionMatrix();
   };

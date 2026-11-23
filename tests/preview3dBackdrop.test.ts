@@ -61,6 +61,6 @@ describe('the backdrop', () => {
   it('refuses, by name, a theme whose stage colour the curve cannot show', () => {
     const colors = {...createTheme().colors, stage: '#ffffff'};
     assert.throws(() => modelStageBuiltInTimes(colors), (error: unknown) => error instanceof ModelStageRefusal &&
-      error.message === MODEL_TONE_CURVE_TEXT.unreachable('Time light: look.backdrop', 'aces-filmic', [1, 1, 1]));
+      error.message === MODEL_TONE_CURVE_TEXT.unreachable('Time light: look.backdrop', ACES_CURVE.curve, [1, 1, 1]));
   });
 });

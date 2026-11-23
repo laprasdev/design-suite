@@ -3,12 +3,12 @@ import assert from 'node:assert/strict';
 import {describe, it} from 'node:test';
 import * as THREE from 'three';
 import {MODEL_STAGE, modelStageDescription} from '../src/react/preview3d/model.ts';
-import {createModelFraming} from '../src/react/preview3d/camera.ts';
+import {createModelFraming, MODEL_FRAMING_TEXT} from '../src/react/preview3d/camera.ts';
 import {createModelFog} from '../src/react/preview3d/fog.ts';
 import {MODEL_STAGE_FRAMING} from '../src/react/preview3d/framingModel.ts';
 import {createModelSurfaceModes} from '../src/react/preview3d/materials.ts';
 import {createModelStageParts} from '../src/react/preview3d/stageParts.ts';
-import {NO_FILES, describing, makeFraming, stageLook} from './preview3dActorFixture.ts';
+import {NO_FILES, describing, makeFraming, stageFraming, stageLook} from './preview3dActorFixture.ts';
 
 // A phone held upright, 390 by 844 px: the narrowest view a fit stands back for.
 const PORTRAIT_ASPECT = 390 / 844;
@@ -22,7 +22,7 @@ describe('the stage\'s framing', () => {
       camera.position.sub(this.target).clampLength(MODEL_STAGE.cameraMinimum, this.maxDistance).add(this.target);
       return true;
     }};
-    const framing = createModelFraming(camera, controls);
+    const framing = stageFraming(camera, controls);
     let measured = 0;
     const measure = () => {
       measured++;
@@ -50,7 +50,6 @@ describe('the stage\'s framing', () => {
 
   it('never leaves the far plane short of the far side of what a fit framed', () => {
     const {camera, framing} = makeFraming(PORTRAIT_ASPECT, false);
-    framing.setFarPlane(FAR_PLANE);
     const wide = new THREE.Box3(new THREE.Vector3(-12, -2.5, -12), new THREE.Vector3(12, 1, 12));
     framing.frame({kind: MODEL_STAGE_FRAMING.all}, false);
     framing.fit(() => wide);
@@ -64,6 +63,14 @@ describe('the stage\'s framing', () => {
     framing.requestFit();
     framing.fit(() => new THREE.Box3(new THREE.Vector3(-1, 0, -1), new THREE.Vector3(1, 2, 1)));
     assert.equal(camera.far, FAR_PLANE);
+  });
+
+  it('refuses a fit before a look sets the far plane, rather than draw to three\'s own', () => {
+    const camera = new THREE.PerspectiveCamera(MODEL_STAGE.fieldOfView, 1, MODEL_STAGE.nearPlane);
+    const framing = createModelFraming(camera, {target: new THREE.Vector3(), enabled: false, update: () => true});
+    framing.frame({kind: MODEL_STAGE_FRAMING.all}, false);
+    assert.throws(() => framing.fit(() => new THREE.Box3(new THREE.Vector3(-1, 0, -1), new THREE.Vector3(1, 2, 1))),
+      {message: MODEL_FRAMING_TEXT.noFarPlane});
   });
 
   it('draws to the look\'s far plane, and to what a fit framed when that lies further', () => {

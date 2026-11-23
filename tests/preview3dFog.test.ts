@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {describe, it} from 'node:test';
 import * as THREE from 'three';
 import {createModelFog} from '../src/react/preview3d/fog.ts';
-import {MODEL_STAGE_LEAST, MODEL_STAGE_LOOK_REFUSAL, modelStageLook, type ModelStageFog}
+import {MODEL_STAGE_ABOVE, MODEL_STAGE_LOOK_REFUSAL, modelStageLook, type ModelStageFog}
   from '../src/react/preview3d/lookModel.ts';
 import {extendModelMaterial, extendModelMaterials, modelMaterialChanges, type ModelShader, type ModelShaderChange}
   from '../src/react/preview3d/shading.ts';
@@ -120,16 +120,16 @@ describe('the stage\'s fog', () => {
     const look = (fog: unknown) => ({...stageLook(), fog});
     assert.equal(modelStageLook(look(null), 'L').fog, null);
     assert.deepEqual(modelStageLook(look(FOG), 'L').fog, FOG);
-    const near = MODEL_STAGE_LOOK_REFUSAL.beyond('L.fog.near.distance', MODEL_STAGE_LEAST.nothing.name);
+    const near = MODEL_STAGE_LOOK_REFUSAL.beyond('L.fog.near.distance', MODEL_STAGE_ABOVE.nothing().name);
     for (const distance of [-1, 0]) {
       refused(() => modelStageLook(look({...FOG, near: {...FOG.near, distance}}), 'L'), near);
     }
     const far = MODEL_STAGE_LOOK_REFUSAL.beyond('L.fog.far.distance',
-      MODEL_STAGE_LEAST.nearDistance(FOG.near.distance).name);
+      MODEL_STAGE_ABOVE.nearDistance(FOG.near.distance).name);
     for (const distance of [1, FOG.near.distance]) {
       refused(() => modelStageLook(look({...FOG, far: {...FOG.far, distance}}), 'L'), far);
     }
-    const top = MODEL_STAGE_LOOK_REFUSAL.beyond('L.fog.height.top', MODEL_STAGE_LEAST.base(2).name);
+    const top = MODEL_STAGE_LOOK_REFUSAL.beyond('L.fog.height.top', MODEL_STAGE_ABOVE.base(2).name);
     for (const value of [1, 2]) {
       refused(() => modelStageLook(look({...FOG, height: {base: 2, top: value, strength: 1}}), 'L'), top);
     }

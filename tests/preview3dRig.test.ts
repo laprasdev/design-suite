@@ -2,10 +2,9 @@ import assert from 'node:assert/strict';
 import {describe, it} from 'node:test';
 import * as THREE from 'three';
 import {createModelRig} from '../src/react/preview3d/rig.ts';
-import {createModelFraming} from '../src/react/preview3d/camera.ts';
 import {disposeModelObject, MODEL_PART_PREFIX, modelObjectBounds, modelParts} from '../src/react/preview3d/asset.ts';
 import {MODEL_STAGE} from '../src/react/preview3d/model.ts';
-import {THEME} from './preview3dActorFixture.ts';
+import {THEME, stageFraming} from './preview3dActorFixture.ts';
 
 // A box skinned to two joints, base and tip. The skin also lists an end joint far above them that it weights no
 // vertex to, as a file's end markers are.
@@ -131,7 +130,7 @@ describe('shared rig display', () => {
       camera.lookAt(this.target);
       return true;
     }};
-    const framing = createModelFraming(camera, controls);
+    const framing = stageFraming(camera, controls);
     framing.frame({kind: 'focus'}, true);
     model.rig.setDisplay('rig');
     framing.fit(() => model.rig.bounds());
@@ -162,7 +161,7 @@ describe('shared rig display', () => {
       camera.lookAt(this.target);
       return true;
     }};
-    const framing = createModelFraming(camera, controls);
+    const framing = stageFraming(camera, controls);
     framing.frame({kind: 'focus'}, true);
     framing.fit(() => bounds);
     for (const point of [new THREE.Vector3(-10, -1, 0), new THREE.Vector3(10, 1, 0),
