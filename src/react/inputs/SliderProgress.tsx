@@ -1,6 +1,7 @@
 import React from 'react';
 import {progressWeights} from './progressWeights.ts';
-import {SliderTrack, SLIDER_TRACK_HEIGHT} from './SliderTrack.tsx';
+import {SliderTrack} from './SliderTrack.tsx';
+import {SLIDER_TRACK_HEIGHT} from './sliderTrackSize.ts';
 
 export interface SliderProgressSegment {
  id: string;
