@@ -53,7 +53,8 @@ test('stageParts.ts: a Surface mode an actor cannot show is a refusal and leaves
 
 test('lightingModel.ts: an unknown time is a refusal and leaves the light', () => {
   const lighting = createModelLighting(modelStageBuiltInTimes(THEME.colors),
-    {fog: createModelFog(new THREE.Scene()), output: {load: () => [], prepare: () => () => undefined},
+    {fog: createModelFog(new THREE.Scene()), framing: {setFarPlane: () => undefined},
+      output: {load: () => [], prepare: () => () => undefined},
       shared: {setLook: () => undefined}});
   const before = lighting.lights[0].intensity;
   refused(() => lighting.prepare({time: 'dusk', times: []})(), /The lighting.time names dusk/);

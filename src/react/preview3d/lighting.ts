@@ -3,6 +3,7 @@ import {writeModelColor} from './color.ts';
 import type {ModelStageLook} from './lookModel.ts';
 import type {ModelFog} from './fog.ts';
 import type {ModelDraw} from './draw.ts';
+import type {ModelFraming} from './camera.ts';
 import type {ModelStageSharedValues} from './sharedValues.ts';
 import type {ModelStageCommit} from './commit.ts';
 import {createModelBackdrop} from './backdrop.ts';
@@ -28,20 +29,23 @@ function stageAids(objects: readonly THREE.Object3D[]) {
   };
 }
 
-/** The parts of a look the scene owns: its fog, the draw that applies its tone curve and adds its glow, and the values
- * the stage shares with every kind's program (its night and shadow colour). */
+/** The parts of a look the scene owns: its fog, the draw that applies its tone curve and exposure and adds its glow,
+ * the camera's framing that draws to its far plane, and the values the stage shares with every kind's program (its
+ * night and shadow colour). */
 export interface ModelLookLayers {
   readonly fog: Pick<ModelFog, 'set'>;
+  readonly framing: Pick<ModelFraming, 'setFarPlane'>;
   readonly output: Pick<ModelDraw, 'load' | 'prepare'>;
   readonly shared: Pick<ModelStageSharedValues, 'setLook'>;
 }
-// The stage's backdrop, floor, two lights, unlit aids, fog, tone curve and glow, as the look of one time at a time. A
-// look is written into the same objects every time: a changed colour, strength or distance allocates nothing and
-// compiles nothing. What does compile, once each, read from three r180's program key (WebGLPrograms.js 420, 463):
-// fog arriving or leaving recompiles every program that takes it; a tone curve arriving, leaving or changing
-// recompiles every program the canvas pass draws; and glow arriving compiles, on its first frame, a second variant of
-// every program the scene draws, for the linear, curve-less target its source is drawn into (WebGLPrograms.js 165-171,
-// 202). Those variants stay in each material's programs after glow leaves, so a later return compiles nothing.
+// The stage's backdrop, floor, two lights, unlit aids, fog, far plane, tone curve, exposure and glow, as the look of
+// one time at a time. A look is written into the same objects every time: a changed colour, strength, distance or
+// exposure allocates nothing and compiles nothing. What does compile, once each, read from three r180's program key
+// (WebGLPrograms.js 420, 463): fog arriving or leaving recompiles every program that takes it; a tone curve arriving,
+// leaving or changing recompiles every program the canvas pass draws; and glow arriving compiles, on its first frame, a
+// second variant of every program the scene draws, for the linear, curve-less target its source is drawn into
+// (WebGLPrograms.js 165-171, 202). Those variants stay in each material's programs after glow leaves, so a later return
+// compiles nothing.
 export function createModelLighting(builtIn: readonly ModelStageTime[], layers: ModelLookLayers) {
   const ambient = new THREE.HemisphereLight();
   const key = new THREE.DirectionalLight();
@@ -52,7 +56,7 @@ export function createModelLighting(builtIn: readonly ModelStageTime[], layers: 
   const glowOf = (time: ModelStageTime) => `Time ${time.id}: look.glow`;
   const prepare = (time: ModelStageTime): ModelStageCommit => {
     const {look} = time;
-    const output = layers.output.prepare(look.toneCurve, look.glow, glowOf(time));
+    const output = layers.output.prepare(look, glowOf(time));
     return () => {
       current = time;
       apply(look);
@@ -70,6 +74,7 @@ export function createModelLighting(builtIn: readonly ModelStageTime[], layers: 
     for (const floor of floors) writeModelColor(floor.color, look.aids.floor);
     for (const hold of aids) hold(look.aids.share);
     layers.fog.set(look.fog);
+    layers.framing.setFarPlane(look.farPlane);
     layers.shared.setLook(look);
   };
   // The stage starts at the consumer's own theme, the time it shows when a description states no other.

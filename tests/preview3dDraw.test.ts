@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import {createModelDraw, MODEL_DRAW_TEXT} from '../src/react/preview3d/draw.ts';
 import {loadModelGlowPasses} from '../src/react/preview3d/glow.ts';
 import type {ModelStageGlow, ModelStageToneCurve} from '../src/react/preview3d/lookModel.ts';
+import {ACES_CURVE as ACES} from './preview3dActorFixture.ts';
 import {ModelStageRefusal} from '../src/react/preview3d/refusal.ts';
 import {MODEL_STAGE_LAYERS} from '../src/react/preview3d/layers.ts';
 
@@ -36,9 +37,9 @@ function fixture(halfFloat = true, loadPasses = loadModelGlowPasses) {
   const draw = createModelDraw(renderer as unknown as THREE.WebGLRenderer, scene, new THREE.Camera(),
     {loadPasses, inspecting: () => view.inspecting});
   // A look's curve and glow as the lighting part applies them: what they need loaded, then checked, then applied.
-  const set = async (curve: ModelStageToneCurve | null, glow: ModelStageGlow | null) => {
+  const set = async (toneCurve: ModelStageToneCurve | null, glow: ModelStageGlow | null) => {
     await Promise.all(draw.load(glow, WHERE));
-    draw.prepare(curve, glow, 'Time t: look.glow')();
+    draw.prepare({toneCurve, glow}, 'Time t: look.glow')();
   };
   return {draw, drawn, canvas, renderer, set, view};
 }
@@ -52,7 +53,7 @@ const CANVAS = {what: 'scene', into: null, clears: true, layers: MODEL_STAGE_LAY
 describe('the frame\'s draw', () => {
   it('draws once, straight to the canvas, under the look\'s tone curve or none', async () => {
     const {draw, drawn, renderer, set} = fixture();
-    await set('aces-filmic', null);
+    await set(ACES, null);
     draw.draw();
     assert.deepEqual(drawn, [{...CANVAS, toneMapping: THREE.ACESFilmicToneMapping}]);
     assert.equal(draw.triangles, 42);
@@ -64,7 +65,7 @@ describe('the frame\'s draw', () => {
   it('with glow, draws the scene once into a multisampled half-float target, the bloom added at the output, then aids',
     async () => {
       const {draw, drawn, set} = fixture();
-      await set('aces-filmic', GLOW);
+      await set(ACES, GLOW);
       draw.draw();
       const [linear, ...rest] = drawn, aids = rest.at(-1)!, output = rest.at(-2)!;
       const target = linear.into;
@@ -98,7 +99,7 @@ describe('the frame\'s draw', () => {
 
   it('draws straight to the canvas, the glow left out, while a Surface mode inspects the surfaces', async () => {
     const {draw, drawn, set, view} = fixture();
-    await set('aces-filmic', GLOW);
+    await set(ACES, GLOW);
     draw.draw();
     view.inspecting = true;
     drawn.length = 0;
@@ -112,7 +113,7 @@ describe('the frame\'s draw', () => {
 
   it('applies the look\'s curve once, to the whole frame, and to nothing drawn after it', async () => {
     const {draw, drawn, set} = fixture();
-    await set('aces-filmic', GLOW);
+    await set(ACES, GLOW);
     draw.draw();
     // Every frame alike, the second too (the first frame after a look follows its commit).
     drawn.length = 0;
@@ -155,9 +156,19 @@ describe('the frame\'s draw', () => {
     assert.deepEqual(drawn, [{...CANVAS, toneMapping: THREE.NoToneMapping}]);
   });
 
+  it('draws the canvas under each look\'s exposure, with or without glow', async () => {
+    const {draw, renderer} = fixture();
+    draw.prepare({toneCurve: {...ACES, exposure: 2}, glow: null}, WHERE)();
+    assert.equal(renderer.toneMappingExposure, 2);
+    await Promise.all(draw.load(GLOW, WHERE));
+    draw.prepare({toneCurve: {...ACES, exposure: 0.5}, glow: GLOW}, WHERE)();
+    assert.equal(renderer.toneMappingExposure, 0.5);
+  });
+
   it('loads the glow\'s passes once, when a look first brings glow, and refuses glow it cannot draw', async () => {
     const {draw} = fixture();
-    assert.throws(() => draw.prepare(null, GLOW, 'Time t: look.glow'), new RegExp(MODEL_DRAW_TEXT.unloaded));
+    assert.throws(() => draw.prepare({toneCurve: null, glow: GLOW}, 'Time t: look.glow'),
+      new RegExp(MODEL_DRAW_TEXT.unloaded));
     const first = draw.load(GLOW, WHERE);
     assert.equal(first.length, 1);
     assert.equal(draw.load(GLOW, WHERE)[0], first[0], 'one load while it is in flight');
@@ -165,9 +176,10 @@ describe('the frame\'s draw', () => {
     assert.deepEqual(draw.load(GLOW, WHERE), []);
     const plain = fixture(false);
     await Promise.all(plain.draw.load(GLOW, WHERE));
-    assert.throws(() => plain.draw.prepare(null, GLOW, 'Time t: look.glow'), (error: unknown) =>
+    assert.throws(() => plain.draw.prepare({toneCurve: null, glow: GLOW}, 'Time t: look.glow'),
+      (error: unknown) =>
       error instanceof ModelStageRefusal && error.message === MODEL_DRAW_TEXT.halfFloat('Time t: look.glow'));
-    plain.draw.prepare(null, null, 'Time t: look.glow')();
+    plain.draw.prepare({toneCurve: null, glow: null}, 'Time t: look.glow')();
   });
 
   it('fetches the passes again after a fetch that failed, which refuses naming the glow', async () => {
@@ -178,6 +190,6 @@ describe('the frame\'s draw', () => {
       error instanceof ModelStageRefusal && error.message === MODEL_DRAW_TEXT.passes(WHERE, 'offline'));
     await Promise.all(draw.load(GLOW, WHERE));
     assert.equal(calls, 2);
-    draw.prepare(null, GLOW, WHERE)();
+    draw.prepare({toneCurve: null, glow: GLOW}, WHERE)();
   });
 });

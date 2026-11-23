@@ -46,20 +46,21 @@ export function createModelScene(host: HTMLElement, theme: ModelStageTheme, poli
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   host.append(renderer.domElement);
   const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(settings.fieldOfView, 1, settings.nearPlane, settings.farPlane);
+  // The far plane is the look's, set as the lighting applies its first time.
+  const camera = new THREE.PerspectiveCamera(settings.fieldOfView, 1, settings.nearPlane);
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.minDistance = settings.cameraMinimum;
   controls.maxDistance = settings.cameraMaximum;
   controls.maxPolarAngle = Math.PI / 2;
+  const framing = createModelFraming(camera, controls);
   const fog = createModelFog(scene);
   const frame = createModelDraw(renderer, scene, camera, {loadPasses: loadModelGlowPasses, inspecting});
   const shared = createModelStageSharedValues();
-  const lighting = createModelLighting(builtIn, {fog, output: frame, shared});
+  const lighting = createModelLighting(builtIn, {fog, framing, output: frame, shared});
   const aids = createModelStageAids(theme, policy, lighting);
   markModelStageAids(aids);
   markModelStageLights(lighting.lights);
   scene.add(lighting.backdrop, ...lighting.lights, ...aids);
-  const framing = createModelFraming(camera, controls);
   const resize = () => {
     const {clientWidth: width, clientHeight: height} = host;
     if (!width || !height) return;

@@ -2,10 +2,11 @@ import assert from 'node:assert/strict';
 import {describe, it} from 'node:test';
 import * as THREE from 'three';
 import {createModelFog} from '../src/react/preview3d/fog.ts';
-import {modelStageLook, type ModelStageFog} from '../src/react/preview3d/lookModel.ts';
+import {MODEL_STAGE_LEAST, MODEL_STAGE_LOOK_REFUSAL, modelStageLook, type ModelStageFog}
+  from '../src/react/preview3d/lookModel.ts';
 import {extendModelMaterial, extendModelMaterials, modelMaterialChanges, type ModelShader, type ModelShaderChange}
   from '../src/react/preview3d/shading.ts';
-import {makeActor, stageLook} from './preview3dActorFixture.ts';
+import {makeActor, refused, stageLook} from './preview3dActorFixture.ts';
 
 const FOG: ModelStageFog = {near: {distance: 8, color: [0.22, 0.14, 0.24]},
   far: {distance: 30, color: [0.15, 0.12, 0.24]}, height: {base: 0, top: 2, strength: 0.6}};
@@ -119,12 +120,19 @@ describe('the stage\'s fog', () => {
     const look = (fog: unknown) => ({...stageLook(), fog});
     assert.equal(modelStageLook(look(null), 'L').fog, null);
     assert.deepEqual(modelStageLook(look(FOG), 'L').fog, FOG);
-    assert.throws(() => modelStageLook(look({...FOG, near: {...FOG.near, distance: 0}}), 'L'),
-      /L.fog.near.distance must be greater than 0/);
-    assert.throws(() => modelStageLook(look({...FOG, far: {...FOG.far, distance: 8}}), 'L'),
-      /L.fog.far.distance must be greater than its near distance/);
-    assert.throws(() => modelStageLook(look({...FOG, height: {base: 2, top: 2, strength: 1}}), 'L'),
-      /L.fog.height.top must be above its base/);
+    const near = MODEL_STAGE_LOOK_REFUSAL.beyond('L.fog.near.distance', MODEL_STAGE_LEAST.nothing.name);
+    for (const distance of [-1, 0]) {
+      refused(() => modelStageLook(look({...FOG, near: {...FOG.near, distance}}), 'L'), near);
+    }
+    const far = MODEL_STAGE_LOOK_REFUSAL.beyond('L.fog.far.distance',
+      MODEL_STAGE_LEAST.nearDistance(FOG.near.distance).name);
+    for (const distance of [1, FOG.near.distance]) {
+      refused(() => modelStageLook(look({...FOG, far: {...FOG.far, distance}}), 'L'), far);
+    }
+    const top = MODEL_STAGE_LOOK_REFUSAL.beyond('L.fog.height.top', MODEL_STAGE_LEAST.base(2).name);
+    for (const value of [1, 2]) {
+      refused(() => modelStageLook(look({...FOG, height: {base: 2, top: value, strength: 1}}), 'L'), top);
+    }
     assert.throws(() => modelStageLook(look({...FOG, height: {...FOG.height, strength: 2}}), 'L'),
       /L.fog.height.strength must be a finite number from 0 to 1/);
     const {height, ...heightless} = FOG;

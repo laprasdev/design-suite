@@ -46,14 +46,20 @@ export function createModelFraming(camera: THREE.PerspectiveCamera, controls: Ca
     poseScratch[CAMERA_COORDS.fov] = next.fieldOfView ?? UNSTATED_FIELD_OF_VIEW;
     poseCoordinates(poseScratch);
   };
-  // Nor does the far plane stop short of the far side of what the fit framed: a wide fit on a narrow view stands the
-  // camera further off than the stage's own far plane reaches, which would draw nothing.
-  const depth = (distance: number) => {
-    camera.far = Math.max(settings.farPlane, distance);
+  // The far plane is the look's (lighting.ts), and never stops short of the far side of what the fit framed: a wide
+  // fit on a narrow view stands the camera further off than the look's far plane reaches, which would draw nothing.
+  const far = {look: camera.far, framed: 0};
+  const depth = () => {
+    camera.far = Math.max(far.look, far.framed);
     camera.updateProjectionMatrix();
   };
   return {
     requestFit() {if (!held) fitRequested = true;},
+    /** The look's far plane, a time's own (lookModel.ts). */
+    setFarPlane(farPlane: number) {
+      far.look = farPlane;
+      depth();
+    },
     pose: applyPose,
     poseCoordinates,
     frame(framing: ModelStageFraming, orbit: boolean) {
@@ -71,7 +77,8 @@ export function createModelFraming(camera: THREE.PerspectiveCamera, controls: Ca
       if (!fitRequested) return;
       const bounds = measure(), fitted = fitModelCamera(bounds, camera, controls);
       reach(fitted);
-      depth(fitted + bounds.getBoundingSphere(new THREE.Sphere()).radius);
+      far.framed = fitted + bounds.getBoundingSphere(new THREE.Sphere()).radius;
+      depth();
       if (controls.enabled) controls.update();
       else camera.lookAt(controls.target);
       camera.updateMatrixWorld(true);
@@ -105,3 +112,5 @@ function fitModelCamera(bounds: THREE.Box3, camera: THREE.PerspectiveCamera, con
   camera.position.copy(direction.multiplyScalar(fitted).add(controls.target));
   return fitted;
 }
+
+export type ModelFraming = ReturnType<typeof createModelFraming>;

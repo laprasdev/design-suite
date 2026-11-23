@@ -293,9 +293,12 @@ exactly its fields: one it omits or one it does not have is refused by its path 
   `{id, label, look}`; ids and labels are each a time's own. Two times are built in, `MODEL_STAGE_TIME.light` (the
   consumer's theme) and `.dark`; `MODEL_STAGE_THEME_LIGHTING` is `{time: 'light', times: []}`. A look states
   `backdrop`, `key` `{color, strength, direction}`, `ambient` `{sky, ground, strength}`, `shadow`, `night` (0 to 1),
-  `aids` `{floor, share}`, `fog` (`{near, far, height}` or `null`), `toneCurve` (`'aces-filmic'` or `null`) and
-  `glow` (`{threshold, strength, radius}` with `radius` from 0 to 1, or `null`); colours are sRGB triples in [0, 1].
-  Everything the look colours, the backdrop included, passes through its curve. Under glow the scene is drawn once in
+  `aids` `{floor, share}`, `fog` (`{near, far, height}` or `null`), `toneCurve` (`{curve, exposure}` with `curve`
+  `'aces-filmic'` and `exposure` greater than 0, 1 drawing the light as lit, or `null`), `glow`
+  (`{threshold, strength, radius}` with `radius` from 0 to 1, or `null`) and `farPlane` (how far the camera draws,
+  greater than `MODEL_STAGE.nearPlane`; a fit framed further off reaches further); colours are sRGB triples in
+  [0, 1]. Everything the look colours, the backdrop included, is scaled by the curve's exposure, then passes through
+  its curve. Under glow the scene is drawn once in
   linear light, the bloom (blurred by tapered Gaussians, so a bright emitter's halo is round) added, then the curve
   and the display encoding applied once (the stage's floor, grid and rigs are drawn after, neither bloomed nor
   curved). The types and
