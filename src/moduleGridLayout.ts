@@ -54,7 +54,6 @@ export const ModuleGridDimensions = {
     optionGap: 4,
     optionPaddingBlock: 6,
     optionPaddingInline: 4,
-    rowLabelWidth: 56,
     rowValueWidth: 96,
     rowGap: 16,
     // A range row's low or high value beside its track: wide enough for a number to two decimals.

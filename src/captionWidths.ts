@@ -63,3 +63,7 @@ export function textRunWidth(text: string, style: TextRunStyle, table: CaptionWi
 /** Width in CSS pixels of an uppercase `Typography.label` caption drawn on one line, read from `table`. */
 export const captionWidth = (text: string, table: CaptionWidthTable): number =>
   textRunWidth(text, { ...Typography.label, uppercase: true }, table);
+
+/** Width in CSS pixels of a `Typography.moduleValue` reading drawn on one line, read from `table`. */
+export const readingWidth = (text: string, table: CaptionWidthTable): number =>
+  textRunWidth(text, Typography.moduleValue, table);

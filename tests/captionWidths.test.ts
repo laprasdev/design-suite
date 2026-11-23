@@ -6,7 +6,7 @@ import { execFileSync } from 'node:child_process';
 import { after, describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { writeSyntheticFont } from '../scripts/captionWidths/syntheticFont.ts';
-import { captionWidth, textRunWidth, type CaptionWidthTable } from '../src/captionWidths.ts';
+import { captionWidth, readingWidth, textRunWidth, type CaptionWidthTable } from '../src/captionWidths.ts';
 import { Typography } from '../src/tokens.ts';
 
 const GENERATOR = fileURLToPath(new URL('../scripts/captionWidths/generate.ts', import.meta.url));
@@ -19,9 +19,14 @@ describe('caption width generator and reader', () => {
 
   it('generates a table from passed font files and reads single-line widths with kerning and tracking', () => {
     writeSyntheticFont(fontFile);
-    execFileSync(process.execPath, [GENERATOR, '--out', outFile, `${Typography.label.fontWeight}=${fontFile}`]);
+    execFileSync(process.execPath, [
+      GENERATOR, '--out', outFile,
+      `${Typography.label.fontWeight}=${fontFile}`,
+      `${Typography.moduleValue.fontWeight}=${fontFile}`,
+    ]);
     const parsed: CaptionWidthTable = JSON.parse(readFileSync(outFile, 'utf8'));
     assert.equal(captionWidth('ab', parsed), 14);
+    assert.equal(readingWidth('AB', parsed), 13.4);
     assert.equal(captionWidth('', parsed), 0);
     const kerned: CaptionWidthTable = {
       cuts: {

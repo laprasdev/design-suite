@@ -50,7 +50,7 @@ export function ModuleFieldRows({ form = RowsForm.ENDS, children }: {
 
 const rowColumns = (ends: boolean, shared: RowsFormValue | null): React.CSSProperties => {
   if (shared) return SUBGRID;
-  const name = `minmax(${G.rowLabelWidth}px, max-content)`;
+  const name = 'max-content';
   const value = `minmax(${G.rowValueWidth}px, max-content)`;
   return { display: 'grid', gridTemplateColumns: ends ? `${name} ${G.rowEndWidth}px minmax(0, 1fr) ${G.rowEndWidth}px`
     : `${name} minmax(0, 1fr) ${value}` };
