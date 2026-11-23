@@ -15,6 +15,8 @@ import {SCENE_ROOT_ID} from './sceneRoot.ts';
 // inclusive), as tall as the desktop one.
 export const DESKTOP_VIEWPORT: ViewportSize=Object.freeze({width:1280,height:800});
 export const PHONE_VIEWPORT: ViewportSize=Object.freeze({width:Breakpoint.PHONE,height:DESKTOP_VIEWPORT.height});
+// A handheld phone's window, narrower than every breakpoint: where a module header has the least room.
+export const HANDSET_VIEWPORT: ViewportSize=Object.freeze({width:390,height:844});
 
 // The GL a scene draws with: the gate's software rasteriser, which every machine running the gate has, or this
 // machine's GPU through ANGLE's Metal backend, which a frame's cost is measured on.

@@ -1,6 +1,7 @@
 import {useState} from 'react';
 import {Check, MessageSquare, Star} from 'lucide-react';
 import {HeaderIconButton} from '../HeaderIconButton.tsx';
+import {Boolean as BooleanControl, BooleanForm} from '../../synth/components/synth/Boolean.tsx';
 import type {ComponentSkin} from '../../skinAssignments.ts';
 import {candidateKey, type ElementGroup, type ElementOption} from './elementCatalog.ts';
 
@@ -17,6 +18,8 @@ export function useFeedbackEditing() {
   });
   return {isEditing: (group: string, option: string) => open.has(candidateKey(group, option)), change};
 }
+/** Assigning shows the same mark either way; pressed is what says it is assigned. */
+const ASSIGN_GLYPHS = {on: <Check/>, off: <Check/>};
 interface Props {
   group: ElementGroup; option: ElementOption; skin: ComponentSkin; busy?: boolean; editing: boolean;
   onAssign(selected: boolean): void; onActivate(): void; onEdit(): void;
@@ -25,8 +28,9 @@ interface Props {
 export function CandidateActions({group, option, skin, busy, editing, onAssign, onActivate, onEdit}: Props) {
   const {selected, active} = candidateState(skin, group, option);
   return <span className="element-actions" data-candidate-actions={candidateKey(group.id, option.id)}>
-    {option.assignable !== false && <HeaderIconButton label={`Assign ${option.label} to ${skin.name}`}
-      active={selected} disabled={busy} onClick={() => onAssign(!selected)}><Check/></HeaderIconButton>}
+    {option.assignable !== false && <BooleanControl form={BooleanForm.ICON}
+      label={`Assign ${option.label} to ${skin.name}`} value={selected} disabled={busy} onChange={onAssign}
+      glyphs={ASSIGN_GLYPHS}/>}
     {option.assignable !== false && selected && !active && <HeaderIconButton
       label={`Use ${option.label} in ${skin.name}`} disabled={busy} onClick={onActivate}><Star/></HeaderIconButton>}
     <HeaderIconButton label={`Feedback on ${group.label}: ${option.label}`} active={editing}
