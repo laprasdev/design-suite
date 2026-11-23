@@ -2,6 +2,7 @@ import { RoutingDimensions } from './routingLayout.ts';
 import { PageShellDimensions } from './pageShellLayout.ts';
 import { CELL_PAD_H, CELL_PAD_V, ICON_CHOICE_BOX, ICON_CHOICE_GLYPH, ModuleGridDimensions }
   from './moduleGridLayout.ts';
+import { PHI_INVERSE } from './goldenRatio.ts';
 
 export { PHI, PHI_INVERSE, PHI_SQUARED, PHI_CUBED } from './goldenRatio.ts';
 export { TEXT_FLOOR } from './moduleGridLayout.ts';
@@ -182,19 +183,18 @@ export const LayoutDimensions = {
     iconChoiceGlyph: ICON_CHOICE_GLYPH,
   },
 
-  // The phase strip is its line's own height; its sockets take 1/φ of a curve picker.
+  // The phase strip is the owner's 1/φ⁴ of its module, or its two lines where taller; its sockets take 1/φ of a curve
+  // picker, and an event's triggers, on its name's line, sit one φ step under a choice: a choice's glyph their box.
   envelope: {
     cellGap: 6,
     pickerGlyph: ICON_CHOICE_BOX,
-    // The strip's least share of its module, over its line's own height: 0 keeps the line's height. The one value the
-    // owner's choice of a share (1/φ⁴) would change.
-    stripShare: 0,
+    stripShare: PHI_INVERSE ** 4,
     modulationSocketSize: ICON_CHOICE_GLYPH,
     enableLine: 2,
     // What a phase's on and off line gives to press: its foot of the cell, kept clear of what's above.
     enableHit: 13,
-    boostIcon: ICON_CHOICE_GLYPH,
-    boostCell: ICON_CHOICE_BOX,
+    boostIcon: ICON_CHOICE_GLYPH * PHI_INVERSE,
+    boostCell: ICON_CHOICE_GLYPH,
     cellFloor: 0.05,
     plotBand: 34,
     frameLabelWidth: 48,
