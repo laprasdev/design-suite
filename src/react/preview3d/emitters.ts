@@ -116,7 +116,7 @@ export function createModelEmitters(entity: string, profiles: ModelEmitterProfil
   const emitter = (id: string) => modelDeclaredEmitter(emitters, entity, id);
   // Whether each emitter runs once a load's changes apply, by its index.
   const loaded = new Uint8Array(all.length);
-  // The prepared changes: the frame's (frozen) records, the emitter each names, and the frame's time, held in a typed
+  // The prepared changes: the frame's own records, the emitter each names, and the frame's time, held in a typed
   // array as the stage holds its times, since a double stored in an object's field is boxed.
   const pending = {changes: MODEL_NO_EMITTER_CHANGES, items: new Array<ModelEmitter>(), time: new Float64Array(1)};
   const commit: ModelStageCommit = () => {

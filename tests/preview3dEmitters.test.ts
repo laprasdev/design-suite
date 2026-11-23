@@ -7,7 +7,7 @@ import {modelEmitterProfile, modelEmitterProfiles, modelEmitterRecords}
   from '../src/react/preview3d/emitterProfileModel.ts';
 import {modelStageDescription} from '../src/react/preview3d/descriptionModel.ts';
 import {modelActorIdentity} from '../src/react/preview3d/actorModel.ts';
-import {MODEL_EMITTER_CHANGE} from '../src/react/preview3d/emitterFrameModel.ts';
+import {MODEL_EMITTER_CHANGE, modelEmitterChanges} from '../src/react/preview3d/emitterFrameModel.ts';
 import {actorContext, applyFrame, declaration, describing, entity, frame, makeActor, refused}
   from './preview3dActorFixture.ts';
 import {curve, EMITTER_ID, emitterChange, emitterProfile} from './preview3dEmitterCases.ts';
@@ -117,7 +117,19 @@ describe('an engine frame\'s emitters', () => {
       MODEL_EMITTER_REFUSAL.burst('a', EMITTER_ID));
     refused(() => applyFrame([actor], frame(0, changing({...emitterChange(MODEL_EMITTER_CHANGE.started), rate: 3}))),
       MODEL_EMITTER_REFUSAL.routed('a', 'rate'));
+    refused(() => applyFrame([actor], frame(0, changing(...starting(EMITTER_ID), {profile: EMITTER_ID}))),
+      /^Frame entity a emitters\[1\] omits change; it states profile, change\.$/);
+    refused(() => applyFrame([actor], frame(0, changing({...emitterChange(MODEL_EMITTER_CHANGE.started), at: 1}))),
+      /^Frame entity a emitters\[0\] does not state at;/);
+    refused(() => applyFrame([actor], frame(0, changing(emitterChange('paused')))),
+      /^Frame entity a emitters\[0\]\.change is one of started, stopped, burst\.$/);
+    refused(() => applyFrame([actor], frame(0, {...entity('a'), emitters: {}})),
+      'Frame entity a emitters must be an array.');
     assert.equal(visible(), 0);
+  });
+  it('reads a frame\'s changes in place: the list it returns is the frame\'s own, with no record copied', () => {
+    const changes = [...starting(EMITTER_ID), ...stopping(EMITTER_ID)];
+    assert.equal(modelEmitterChanges(changes, 'a'), changes);
   });
   it('shows points once started, and keeps drawing them as they live out after a stop', () => {
     const {actor, visible} = withEmitters('a', {[EMITTER_ID]: emitterProfile()});

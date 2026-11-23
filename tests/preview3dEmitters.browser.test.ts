@@ -14,8 +14,9 @@ import {PANEL_GLB} from './preview3dPanelGlb.ts';
 import {TERRAIN_VIEWPORTS} from './preview3dTerrainCases.ts';
 
 const CAPTURES = join(SUITE_ROOT, '.local', 'captures', 'preview3dEmitters');
-// The frame reader owns the bytes: a list and a record per change, and its readers' `where` text. Nothing the change
-// path runs after it allocates: the load, the prepare and the commit write into what the emitters made once.
+// The frame reader owns the change path's bytes: it checks the frame's own changes in place and allocates nothing.
+// Nothing the change path runs after it allocates either: the load, the prepare and the commit write into what the
+// emitters made once.
 const CHANGES_OWNER = 'src/react/preview3d/emitterFrameModel.ts';
 // Named under the frame apply, so another owner's function of the same name elsewhere in the tick is not counted. The
 // sampled profile charges an inlined callee's bytes to its caller, so `prepare` (which inlines the materials' and

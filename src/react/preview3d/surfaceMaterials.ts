@@ -10,11 +10,11 @@ import type {ModelStageProgramValues} from './sharedValues.ts';
 import {extendModelMaterial} from './shading.ts';
 import type {ModelStageChanges} from './materials.ts';
 import {writeModelSurfaceColor} from './color.ts';
-import {modelRecordIdentity} from './recordModel.ts';
+import {modelRecordIdentity} from './recordIdentityModel.ts';
 
 // The stage's kind materials: one per record (a kind and its values: one record whatever order its fields were written
-// in, recordModel.ts `modelRecordIdentity`), built the first time a renderer needs it and shared by every renderer
-// that declares the same record, whichever actor it belongs to; never cloned and never
+// in, recordIdentityModel.ts `modelRecordIdentity`), built the first time a renderer needs it and shared by every
+// renderer that declares the same record, whichever actor it belongs to; never cloned and never
 // disposed with an actor. A record's values are written once, when its material is built, into the values the program
 // reads; a renderer the engine gives values of its own draws them through its own copy (actorSurfaces.ts). Users are
 // counted by the actors that draw with a material, and `sweep`, after a description is applied, frees what none use.

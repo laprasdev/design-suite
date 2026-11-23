@@ -10,7 +10,7 @@ import {MODEL_SURFACE_GLSL} from './surfaceGlsl.ts';
 import {writeModelSurfaceColor} from './color.ts';
 import {createModelMaterialInspection} from './materials.ts';
 import {ModelStageRefusal} from './refusal.ts';
-import {modelRecordIdentity} from './recordModel.ts';
+import {modelRecordIdentity} from './recordIdentityModel.ts';
 import {padModelBoundsByReach} from './reachBounds.ts';
 import type {ModelStageCommit} from './commit.ts';
 
