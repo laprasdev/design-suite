@@ -30,7 +30,7 @@
     "src/synth/components/synth/Knob.tsx": {"lines":529,"longLines":10},
     "src/synth/components/synth/Layout.tsx": {"lines":151,"longLines":8},
     "src/synth/components/synth/ModulationRings.tsx": {"lines":72,"longLines":12},
-    "src/synth/components/synth/ModuleGrid.tsx": {"lines":104,"longLines":10},
+    "src/synth/components/synth/ModuleGrid.tsx": {"lines":104,"longLines":9},
     "src/synth/components/synth/PhaseGlyph.tsx": {"lines":54,"longLines":4},
     "src/synth/components/synth/RangeSlider.tsx": {"lines":140,"longLines":17},
     "src/synth/components/synth/Slider.tsx": {"lines":133,"longLines":5},
