@@ -1,8 +1,8 @@
 import {modelPresentationPose, type ModelPresentationPose} from './placementModel.ts';
 import type {ModelAnimationSample} from './animationLayerModel.ts';
 import {modelRuntimeMaterialProfile, type ModelRuntimeMaterialProfile} from './runtimeMaterialModel.ts';
-import {modelDigest, modelName, modelNumber, modelRecord, modelRecordStating, modelShape, modelStates}
-  from './recordModel.ts';
+import {modelDigest, modelName, modelNumber, modelRecord, modelRecordStating, modelShape, modelStates,
+  type ModelStatingFields} from './recordModel.ts';
 import {ModelStageRefusal} from './refusal.ts';
 import {MODEL_ACTOR_SURFACES, modelActorSurfaces, type ModelActorSurfaces, type ModelSurfaceRecord,
   modelSurfaceRecord} from './surfaceModel.ts';
@@ -21,8 +21,11 @@ export type ModelStageActorAnimation =
   | {readonly kind: typeof MODEL_ACTOR_ANIMATION.playing; readonly name: string}
   | {readonly kind: typeof MODEL_ACTOR_ANIMATION.held; readonly name: string; readonly timeSeconds: number};
 // The fields each shape states, and nothing else: a field of another shape is refused, never dropped.
-const ANIMATION_FIELDS: Readonly<Record<ModelStageActorAnimation['kind'], readonly string[]>> = Object.freeze({
-  rest: ['kind'], playing: ['kind', 'name'], held: ['kind', 'name', 'timeSeconds']});
+const ANIMATION_FIELDS: Readonly<Record<ModelStageActorAnimation['kind'], ModelStatingFields>> = Object.freeze({
+  rest: {stated: ['kind'], whenStated: []},
+  playing: {stated: ['kind', 'name'], whenStated: []},
+  held: {stated: ['kind', 'name', 'timeSeconds'], whenStated: []},
+});
 /** A model file an actor draws. Its revision, digest and runtime profile are each stated or left out, never stated
  * empty. A stated `sha256` is checked on every read of the file; with none stated the file is read unverified (whether
  * every asset must state one is the owner's question). */
@@ -89,6 +92,8 @@ export const MODEL_ACTOR_REFUSAL = Object.freeze({
   terrainFocus: (id: string) => `The focus ${id} is a terrain; the focus is an actor that draws a model file.`,
   terrainFrame: (id: string) => `Frame entity ${id} names a terrain; no engine entity drives a terrain.`,
   frame: 'A frame requires a finite nonnegative simulationTimeSeconds and an entities array.',
+  unvalidated: 'A stage frame must be validated by validateModelFrame.',
+  scope: 'The frame was validated against a description this stage does not show.',
   removed: 'This stage removes no actor from an engine frame; removedEntities must be empty.',
   undeclared: (id: string) => `Frame entity ${id} names no declared actor; engine records do not create actors.`,
   twice: (id: string) => `Frame entity ${id} appears twice.`,

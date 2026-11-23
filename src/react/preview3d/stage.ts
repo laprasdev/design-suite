@@ -71,7 +71,7 @@ export function createModelStage(
     setDescription,
     setFrame(value) {
       if (!external) throw new ModelStageRefusal(MODEL_STAGE_TEXT.external);
-      times[STAGE_TIME.appliedFrame] = applyModelFrame(actors.actors, descriptions.scope, value);
+      times[STAGE_TIME.appliedFrame] = applyModelFrame(actors.actors, value, stage.poseCoordinates);
     },
     resetCamera: () => descriptions.parts.resetCamera(current().applied),
     snapshot() {
@@ -89,7 +89,7 @@ export function createModelStage(
         id: model.id, animation, time, playing, hold: held, ...model.rig.snapshot(),
         surfaceMode: modes.mode, surfaceModesAvailable: model.materials.available,
         emissiveMaterialCount: model.materials.emissiveMaterialCount,
-        lighting: stage.lighting.time,
+        lighting: stage.lighting.time, camera: stage.cameraSnapshot(),
         parts: points, poses, triangles: stage.triangles(),
         renderedModelMeshes: modelDrawnMeshCount(actors.actors.map(actor => actor.drawn.scene), stage.camera),
         canvas: {width: stage.renderer.domElement.width, height: stage.renderer.domElement.height},

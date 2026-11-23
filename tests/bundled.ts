@@ -12,13 +12,13 @@ const REACT=fileURLToPath(import.meta.resolve('react'));
 const REPLACED='replaced-hooks';
 
 // React with some of its hooks replaced, so a component renders when it is called: `hooks` is module source exporting
-// the replacements beside the rest of React, its default export included. A portal renders nothing.
+// the replacements beside the rest of React, its default export included. A portal renders its children in place.
 export const replacedHooks=(hooks: string): Plugin=>({name:REPLACED,setup(builder) {
  builder.onResolve({filter:/^react$/},()=>({path:'react',namespace:REPLACED}));
  builder.onResolve({filter:/^react-dom/},()=>({path:'react-dom',namespace:REPLACED}));
  builder.onLoad({filter:/.*/,namespace:REPLACED},args=>({resolveDir:SUITE_ROOT,contents:args.path==='react'
   ?`export * from ${JSON.stringify(REACT)};\nexport {default} from ${JSON.stringify(REACT)};\n${hooks}`
-  :'export const createPortal = () => null;'}));
+  :'export const createPortal = children => children;'}));
 }});
 
 export interface Bundled<Module> {

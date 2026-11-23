@@ -10,10 +10,13 @@ import { SIZE_RULE, readBaseline, sizeBaselineText } from '../scripts/sizeGate/b
 import {
   FILE_LINE_LIMIT, LINE_CHARACTER_LIMIT, type AllowanceGrant, type SizeBaseline,
 } from '../scripts/sizeGate/limits.ts';
-import { CAST_BASELINE, castBaselineText, type CastNumbers } from '../scripts/typeGate/castBaseline.ts';
+import { ALLOCATION_BASELINE } from '../scripts/baseline/allocationBaseline.ts';
+import { CAST_BASELINE, type CastNumbers } from '../scripts/typeGate/castBaseline.ts';
 import { GATE, runGate, type GateTree } from './gateFixture.ts';
 
-const casts = (files: Record<string, CastNumbers>) => ({ [CAST_BASELINE]: castBaselineText({ files }) });
+const casts = (files: Record<string, CastNumbers>) => ({ [CAST_BASELINE.file]: CAST_BASELINE.format({ files }) });
+const allocations = (files: Parameters<typeof ALLOCATION_BASELINE.format>[0]['files']) =>
+  ({ [ALLOCATION_BASELINE.file]: ALLOCATION_BASELINE.format({ files }) });
 const ONE_CAST = { 'src/a.ts': { casts: 1, nonNullAssertions: 0 } };
 const TWO_CASTS = { 'src/a.ts': { casts: 2, nonNullAssertions: 0 } };
 const baselines = (tree: GateTree) => runGate(GATE.baselines, tree, process.env);
@@ -52,6 +55,19 @@ describe('the baseline gate', () => {
     const fresh = baselines({ base: {}, head: casts(ONE_CAST) });
     assert.equal(fresh.status, 0, fresh.output);
     assert.match(fresh.output, /cast-baseline\.json is new: origin\/main holds none/);
+  });
+
+  it('refuses an allocation baseline that rose above origin/main, and passes one that fell or is new', () => {
+    const low = { 'src/react/preview3d/frameModel.ts': { extraBytesPerTick: 96 } };
+    const high = { 'src/react/preview3d/frameModel.ts': { extraBytesPerTick: 120 } };
+    const rose = baselines({ base: allocations(low), head: allocations(high) });
+    assert.equal(rose.status, 1, rose.output);
+    assert.match(rose.output,
+      /allocation-baseline\.json: .* is \{"extraBytesPerTick":120\}, above \{"extraBytesPerTick":96\}/);
+    assert.equal(baselines({ base: allocations(high), head: allocations(low) }).status, 0);
+    const fresh = baselines({ base: {}, head: allocations(high) });
+    assert.equal(fresh.status, 0, fresh.output);
+    assert.match(fresh.output, /allocation-baseline\.json is new: origin\/main holds none/);
   });
 
   it('refuses a size baseline that rose, unless an allowance raised it or it fell', () => {

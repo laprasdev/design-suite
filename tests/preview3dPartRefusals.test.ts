@@ -11,13 +11,9 @@ import type {ModelActor} from '../src/react/preview3d/actor.ts';
 import {createModelLighting} from '../src/react/preview3d/lighting.ts';
 import {modelStageBuiltInTimes} from '../src/react/preview3d/builtInTimes.ts';
 import {createModelStage} from '../src/react/preview3d/stage.ts';
-import {NO_FILES, THEME, describing} from './preview3dActorFixture.ts';
+import {NO_FILES, THEME, describing, refused} from './preview3dActorFixture.ts';
 import {modelStageDescription} from '../src/react/preview3d/descriptionModel.ts';
 import {createModelFog} from '../src/react/preview3d/fog.ts';
-import {ModelStageRefusal} from '../src/react/preview3d/refusal.ts';
-
-const refused = (run: () => unknown, pattern: RegExp) =>
-  assert.throws(run, (error: unknown) => error instanceof ModelStageRefusal && pattern.test(error.message));
 
 test('environment.ts: an invalid update is a refusal and moves no box', () => {
   const value = {reflectZ: false, plane: null, boxes: [{id: 'box', position: [1, 2, 3], size: [1, 1, 1],

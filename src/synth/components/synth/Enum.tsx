@@ -302,11 +302,8 @@ function FloatingGridPicker<T>({ options, value, scheme, anchor, onSelect, onDis
   const cols = getGridColumns(options.length);
   return (
     <Modal open placement={ModalPlacement.ANCHORED} anchor={anchor} onClose={onDismiss}
+      popover={{ above: true }}
       onMouseDown={event => event.stopPropagation()} onMouseUp={event => event.stopPropagation()} style={{
-        position: P.absolute as 'absolute',
-        bottom: '100%',
-        left: 0,
-        marginBottom: D.spacing.microGap,
         display: 'grid',
         gridTemplateColumns: `repeat(${cols}, 1fr)`,
         gap: D.spacing.microGap,

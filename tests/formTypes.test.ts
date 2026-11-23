@@ -16,6 +16,8 @@ const FORMS = [
     props: 'children=""', member: 'LEAD'},
   {component: 'ModuleNotice', form: 'NoticeForm', prop: 'form', from: 'src/react/module/ModuleNotice.tsx',
     props: 'children=""', member: 'EMPTY'},
+  {component: 'ListboxSelect', form: 'ListboxForm', prop: 'form', from: 'src/react/index.ts',
+    props: 'label="Go" options={[]} onAction={() => undefined} children=""', member: 'MENU'},
 ] as const;
 /** A word no form has. */
 const OUTSIDE = "'wide'";
@@ -35,7 +37,8 @@ describe('opt-in forms at the type check', () => {
 });
 
 // What a Modal's placement and form take: only a contained Modal fills its frame, keeps its frame's inset or sits at a
-// top, and an anchored or media Modal names no width. Each row's accepted usage passes and its refused one fails.
+// top, an anchored or media Modal names no width, and only an anchored Modal, which must name its anchor, says where it
+// goes beside it. Each row's accepted usage passes and its refused one fails.
 const MODAL_SHAPES = [
   {accepted: 'placement={ModalPlacement.CONTAINED} width={ModalWidth.FILL}', refused: 'width={ModalWidth.FILL}'},
   {accepted: 'placement={ModalPlacement.CONTAINED} frameInset={ModalFrameInset.GUTTER}',
@@ -43,6 +46,10 @@ const MODAL_SHAPES = [
   {accepted: 'placement={ModalPlacement.CONTAINED} top={8}', refused: 'top={8}'},
   {accepted: 'width={ModalWidth.STAGE}', refused: 'placement={ModalPlacement.ANCHORED} width={ModalWidth.STAGE}'},
   {accepted: 'form={ModalForm.MEDIA}', refused: 'form={ModalForm.MEDIA} width={ModalWidth.READING}'},
+  {accepted: 'placement={ModalPlacement.ANCHORED} anchor={{x: 0, y: 0}}',
+    refused: 'placement={ModalPlacement.ANCHORED}'},
+  {accepted: 'placement={ModalPlacement.ANCHORED} anchor={{x: 0, y: 0}} popover={{above: true}}',
+    refused: 'popover={{above: true}}'},
 ] as const;
 
 describe('a Modal\'s width, frame inset and top at the type check', () => {
@@ -50,6 +57,31 @@ describe('a Modal\'s width, frame inset and top at the type check', () => {
     it(`takes ${accepted} and refuses ${refused}`, () => {
       const usage = (value: string) => `import {${MODAL_NAMES}} from ${REACT_ENTRY};\n`
         + `export const shown = <Modal open ${value}>text</Modal>; void [${MODAL_NAMES}];\n`;
+      assertRefusesType(value => typeCheck({'usage.tsx': usage(value)}, SUITE_COMPILER_OPTIONS), accepted, refused);
+    });
+  }
+});
+
+// What each ListboxSelect form takes: the menu holds no value, so it refuses the select's value, its onChange, its
+// creating and its search, and its children, which alone draw its trigger, cannot be undefined; the select refuses
+// the menu's onAction. Each row's accepted usage passes.
+const MENU_FORM = 'form={ListboxForm.MENU} label="Go" options={[{value: \'a\', label: \'A\'}]}';
+const MENU_PROPS = `${MENU_FORM} children=""`;
+const SELECT_PROPS = 'label="Go" options={[{value: \'a\', label: \'A\'}]} value="a"';
+const LISTBOX_SHAPES = [
+  {props: `${MENU_FORM} onAction={() => undefined}`, accepted: 'children=""', refused: 'children={undefined}'},
+  ...['value="a"', 'onChange={() => undefined}', 'onCreate={() => undefined}', 'searchSubject="places"',
+    'searchSize={8}'].map(refused => ({props: MENU_PROPS, accepted: 'onAction={() => undefined}',
+    refused: `onAction={() => undefined} ${refused}`})),
+  {props: SELECT_PROPS, accepted: 'onChange={() => undefined}',
+    refused: 'onChange={() => undefined} onAction={() => undefined}'},
+] as const;
+
+describe('a ListboxSelect form\'s props at the type check', () => {
+  for (const {props, accepted, refused} of LISTBOX_SHAPES) {
+    it(`takes ${accepted} and refuses ${refused}`, () => {
+      const usage = (value: string) => `import {ListboxSelect, ListboxForm} from ${REACT_ENTRY};\n`
+        + `export const shown = <ListboxSelect ${props} ${value} />; void ListboxForm;\n`;
       assertRefusesType(value => typeCheck({'usage.tsx': usage(value)}, SUITE_COMPILER_OPTIONS), accepted, refused);
     });
   }

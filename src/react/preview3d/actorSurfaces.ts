@@ -99,16 +99,16 @@ export function createModelActorSurfaces(source: Pick<ModelDrawn, 'scene' | 'ren
     return {record: modelRecordIdentity(record), surface, effective: Float32Array.from(surface.declared),
       changed: true};
   };
-  // What a mesh is drawn with by the actor's surfaces: a kind's material where a record draws it, else its file's own.
-  const shown = (node: THREE.Mesh) => {
+  // What a mesh is currently drawn with: a kind's material where a record draws it, else its file's own.
+  const shown = ([node, original]: readonly [THREE.Mesh, THREE.Material | THREE.Material[]]) => {
     const held = heldSurfaces.get(node);
-    return held ? [held.surface.material] : [originals.get(node)!].flat();
+    return held ? [held.surface.material] : [original].flat();
   };
   return {
     /** The file's renderers by id, as a surface set names them. */
     renderers,
     /** What the materials the actor draws with allow: the Surface modes, and how many emit. */
-    inspection: createModelMaterialInspection(() => [...originals.keys()].flatMap(shown), context.materials.made),
+    inspection: createModelMaterialInspection(() => [...originals.entries()].flatMap(shown), context.materials.made),
     /** The actor's surfaces as described: a set covers the file's renderers exactly, and every renderer whose record
      * changed has its kind's material ready, compiled on the renderer; the commit swaps the changed ones only. */
     prepare({surfaces, sets}: Omit<ModelSurfaceSource, 'where'>): ModelStageCommit {

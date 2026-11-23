@@ -11,6 +11,13 @@ export function cssRect(node: Element,of: Element|Range=node): CssRect {
   width:box.width/zoom,height:box.height/zoom,
  };
 }
+// A point in a node's CSS pixels, from where the screen reports it (a pointer event's clientX and clientY).
+export interface CssPoint {readonly x: number;readonly y: number}
+export function cssPoint(node: Element,{clientX,clientY}: {readonly clientX: number;readonly clientY: number}):
+ CssPoint {
+ const zoom=zoomOf(node);
+ return {x:clientX/zoom,y:clientY/zoom};
+}
 // The window's size in the node's CSS pixels.
 export const cssViewport=(node: Element)=>({
  width:window.innerWidth/zoomOf(node),height:window.innerHeight/zoomOf(node),

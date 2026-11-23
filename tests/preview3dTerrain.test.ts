@@ -16,14 +16,11 @@ import {MODEL_ASSET_TEXT} from '../src/react/preview3d/asset.ts';
 import {MODEL_STAGE_ORIGIN, MODEL_STAGE_SIZE} from '../src/react/preview3d/sizeModel.ts';
 import {modelStageDescription} from '../src/react/preview3d/descriptionModel.ts';
 import {modelFrameScope, modelPreviewFrame} from '../src/react/preview3d/frameModel.ts';
-import {ModelStageRefusal} from '../src/react/preview3d/refusal.ts';
 import {kindMaterials, kinds, record} from './preview3dKindFixture.ts';
-import {actorContext, declaration, describing, STANDING} from './preview3dActorFixture.ts';
+import {actorContext, declaration, describing, refused, STANDING} from './preview3dActorFixture.ts';
 import {TERRAIN_GRID as GRID, TERRAIN_ID, terrainActor} from './preview3dTerrainFixture.ts';
 import {CAPTURED_SIDE, rollingTerrain} from './preview3dTerrainCases.ts';
 
-const refused = (run: () => unknown, message: string) => assert.throws(run, (error: unknown) =>
-  error instanceof ModelStageRefusal && error.message === message, message);
 const grid = (changes: Record<string, unknown> = {}) => modelStageTerrain({...GRID, ...changes}, 'T');
 const meshes = (value: ModelStageTerrain) => createModelTerrain(value).scene.children.filter(
   (node): node is THREE.Mesh => node instanceof THREE.Mesh);

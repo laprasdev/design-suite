@@ -1,5 +1,7 @@
 import type {CSSProperties,RefObject} from 'react';
 import {element} from './elementContract.ts';
+import type {CssPoint} from './cssZoom.ts';
+import type {PopoverPlacement} from './useAnchoredPopover.ts';
 
 // A titled Modal's parts, shared by its layout, its stylesheet and consumers' browser checks.
 export const ModalElement=Object.freeze({
@@ -37,14 +39,17 @@ export type ModalFrameInsetValue=(typeof ModalFrameInset)[keyof typeof ModalFram
 // within the inset or past it. A negative or non-finite top is refused when the Modal renders.
 type Contained={frameInset?: ModalFrameInsetValue;top?: number};
 type NotContained={[Key in keyof Contained]?: never};
-type NotAnchored={anchor?: never;group?: never};
-// Where a Modal sits. Only an anchored Modal names an anchor, the element it opens from, which is part of its region,
-// and a group, of which one is open at a time; it takes its content's width. Only a contained Modal fills its frame.
+type NotAnchored={anchor?: never;group?: never;popover?: never};
+// What an anchored Modal is placed from: the element it opens from, which is part of its region, or a point.
+export type ModalAnchor=RefObject<HTMLElement|null>|CssPoint;
+// Where a Modal sits. Only an anchored Modal names an anchor, where it goes beside it (`popover`), and a group, of
+// which one is open at a time; it takes its content's width. Only a contained Modal fills its frame.
 export type ModalPlacementProps=
  |{placement?: typeof ModalPlacement.VIEWPORT;width?: Exclude<ModalWidthValue,typeof ModalWidth.FILL>}
   &NotAnchored&NotContained
  |{placement: typeof ModalPlacement.CONTAINED;width?: ModalWidthValue}&NotAnchored&Contained
- |{placement: typeof ModalPlacement.ANCHORED;anchor?: RefObject<HTMLElement|null>;group?: string;width?: never}
+ |{placement: typeof ModalPlacement.ANCHORED;anchor: ModalAnchor;group?: string;width?: never;
+  popover?: Omit<PopoverPlacement,'at'>}
   &NotContained;
 // Media takes its content's size, so it names no width.
 export type ModalFormProps={form?: typeof ModalForm.DIALOG}|{form: typeof ModalForm.MEDIA;width?: never};

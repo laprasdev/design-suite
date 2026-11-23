@@ -18,7 +18,8 @@ export { Button, type ButtonProps, type ButtonVariant } from "./Button.tsx";
 export { Modal, type ModalProps } from './Modal.tsx';
 export { ModalRow, type ModalRowProps, type ModalTitleProps } from './ModalLayout.tsx';
 export { ModalElement, ModalForm, ModalPlacement, ModalWidth, ModalFrameInset, MODAL_TITLED_ATTRIBUTE,
-  MODAL_ROW_LABELLED_ATTRIBUTE, MODAL_PLACEMENT_ATTRIBUTE, type ModalWidthValue, type ModalFrameInsetValue,
+  MODAL_ROW_LABELLED_ATTRIBUTE, MODAL_PLACEMENT_ATTRIBUTE, type ModalAnchor, type ModalWidthValue,
+  type ModalFrameInsetValue,
 } from './modalElements.ts';
 export { PlayerIcon, PlayerStatusRings, type PlayerIconProps, type PhotoRing, type StatusRing, type RingSegment,
   type Hand, type ActiveHand } from './PlayerIcon.tsx';
@@ -32,6 +33,14 @@ export { BarElement, BarSlotElement, barSlotsWithin } from './barElements.ts';
 export { ActionBar, type ActionBarProps, type ActionBarNotice } from './ActionBar.tsx';
 export { ActionBarElement, ActionBarSlotElement, ActionNoticeElement, BarParticipantElement, NoticeTone }
   from './actionBarElements.ts';
+export { OverlaySlot, SidebarEdge, OverlayPattern, type OverlaySource, type OverlayElement, type OverlayElementPattern,
+  type OverlayMeasure, type OverlayCount, type OverlayPips, type OverlayFeed, type WorldMarker,
+  type OverlayPatternValue } from './overlaySource.ts';
+export { OVERLAY_FILLS, OVERLAY_TEXT, UNFILLED, overlayPatterns, overlayRefusal, type OverlayDraw, type OverlayFills }
+  from './overlayFills.ts';
+export { MenuCellKind, MenuViewKind, MenuRoot, type CellIndex, type MenuCell, type MenuChoiceOption, type MenuRow,
+  type MenuSection, type MenuDelegate, type MenuView, type MenuSource, type SidebarGroup, type SidebarSource }
+  from './menuSource.ts';
 export { HoverDetail, type HoverDetailProps } from './HoverDetail.tsx';
 export { SegmentedControl, TEXT_SEGMENT_VARIANT, JOINED_SEGMENT_VARIANT, ICON_SEGMENT_VARIANT,
   SEGMENT_GROUP_START_ATTRIBUTE, type SegmentValue, type SegmentOption,
@@ -49,10 +58,10 @@ export {
   LoadingIndicator, LoadingScreen, POKEBALL_OUTLINE, PokeballIcon, PokeballOutline, PokeballSpinner,
 } from './Pokeball.tsx';
 export { GlowParticleElement, LoadingElement } from './loadingElements.ts';
-export { CSS_ZOOM_PROPERTY, cssRect, cssViewport, zoomOf, type CssRect } from './cssZoom.ts';
-export { useAnchoredPopover, VIEWPORT_EDGE, type PopoverPlacement } from './useAnchoredPopover.ts';
+export { CSS_ZOOM_PROPERTY, cssPoint, cssRect, cssViewport, zoomOf, type CssPoint, type CssRect } from './cssZoom.ts';
+export { POPOVER_GAP, VIEWPORT_EDGE, type PopoverPlacement } from './useAnchoredPopover.ts';
 export { PARTICIPANT_GRASS, PARTICIPANT_GRASS_BEND } from './participantGrass.ts';
-export { ListboxElement } from './listboxSelectElements.ts';
+export { ListboxElement, ListboxForm } from './listboxSelectElements.ts';
 export { SettingElement, METER_VALUE_ATTRIBUTE, METER_FIXED_ATTRIBUTE } from './settingElements.ts';
 export { Boolean, BooleanForm } from '../synth/components/synth/Boolean.tsx';
 export { Slider } from '../synth/components/synth/Slider.tsx';

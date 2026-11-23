@@ -1,7 +1,7 @@
 import type {ActionBarNotice} from '../ActionBar.tsx';
 import {NoticeTone} from '../actionBarElements.ts';
 import {MODEL_PREVIEW_TEXT, MODEL_REST_POSE} from './model.ts';
-import type {ModelStageController, ModelStageDisplay} from './model.ts';
+import type {ModelStageController, ModelStageDisplay, ModelStageSnapshot} from './model.ts';
 import {MODEL_ACTOR_ANIMATION, modelStageFocus, type ModelStageActorAnimation} from './actorModel.ts';
 import type {ModelStageDescription} from './descriptionModel.ts';
 import type {ModelStageSurfaceMode} from './surfaceModeModel.ts';
@@ -119,25 +119,32 @@ const UNHELD = 'A refusal was recorded before the stage held any description.';
 export const modelPreviewHeld = (declared: ModelStageDescription, held: ModelStageDescription | undefined,
   loading: boolean) => !loading && held !== undefined && descriptionKey(declared) === descriptionKey(held);
 
+export interface ModelDescriptionStage {
+  readonly setDescription: ModelStageController['setDescription'];
+  snapshot(): Pick<ModelStageSnapshot, 'actorsPending'>;
+}
+
 // The view's side of setDescription. It knows the description the stage holds: the first, once the stage is ready,
-// then each one applied, at once or when its loads arrive. Only the latest call reports; its failure goes to the
-// view's one reader, and every taken or already-held description clears a recorded refusal through `settled`.
+// then each one applied, at once or when its loads arrive, and publishes each applied one to `applied`. Only the latest
+// call reports; its failure goes to the view's one reader, and every taken or already-held description clears a
+// recorded refusal through `settled`.
 export function createModelDescriptionRequests(pending: (value: boolean) => void,
-  failure: (error: unknown) => void, settled: () => void) {
+  failure: (error: unknown) => void, settled: () => void, applied: (value: ModelStageDescription) => void) {
   let latest = 0, loading = false, held: ModelStageDescription | undefined;
+  const hold = (value: ModelStageDescription) => {held = value; applied(value);};
   const load = (value: boolean) => {loading = value; pending(value);};
   /** Whether the stage took the description: applied at once, or loading. A refusal is handed on. */
-  const request = (api: Pick<ModelStageController, 'setDescription' | 'snapshot'>, value: ModelStageDescription) => {
-    let applied: Promise<void>;
-    try {applied = api.setDescription(value);}
+  const request = (api: ModelDescriptionStage, value: ModelStageDescription) => {
+    let stageApplied: Promise<void>;
+    try {stageApplied = api.setDescription(value);}
     catch (error) {failure(error); return false;}
     // A refused call supersedes nothing; a taken one is the latest.
     const call = ++latest, current = () => call === latest;
     settled();
     // A description that loads nothing has already been applied: readiness does not drop for it.
-    if (!api.snapshot().actorsPending) {held = value; load(false); return true;}
+    if (!api.snapshot().actorsPending) {hold(value); load(false); return true;}
     load(true);
-    applied.then(() => {if (current()) {held = value; load(false);}},
+    stageApplied.then(() => {if (current()) {hold(value); load(false);}},
       (error: unknown) => {if (!current()) return; load(false); failure(error);});
     return true;
   };
@@ -146,7 +153,7 @@ export function createModelDescriptionRequests(pending: (value: boolean) => void
     /** The description the stage holds, once it holds one. */
     get held() {return held;},
     /** The stage was created from this description and is now ready: it holds it. */
-    hold(value: ModelStageDescription) {held = value;},
+    hold,
     /**
      * What the controls show and act on: the declared selection, or, while a refusal stands, the selection of the
      * description the stage holds, since a refused description changed nothing on it.
@@ -157,7 +164,7 @@ export function createModelDescriptionRequests(pending: (value: boolean) => void
       return modelPreviewSelectionOf(held);
     },
     /** A newly declared description: one the stage already shows only clears a recorded refusal; any other is sent. */
-    declare(api: Pick<ModelStageController, 'setDescription' | 'snapshot'>, value: ModelStageDescription) {
+    declare(api: ModelDescriptionStage, value: ModelStageDescription) {
       if (!modelPreviewHeld(value, held, loading)) return request(api, value);
       settled();
       return true;
