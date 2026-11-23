@@ -46,7 +46,8 @@ const CHOICE_BOX: ControlBoxRule = (spec, query) =>
   query.choiceForm === ChoiceForm.SELECT ? { width: spec.width, height: CUTOUT_HEIGHT } : SPEC_BOX(spec, query);
 /** One option row per `G.optionColumns` options. */
 const FLAGS_BOX: ControlBoxRule = (spec, query) => {
-  const rows = Math.max(1, Math.ceil((query.optionCount ?? 1) / G.optionColumns));
+  if (query.optionCount === undefined) throw new Error('A flags box is sized by its options; this query counts none.');
+  const rows = Math.max(1, Math.ceil(query.optionCount / G.optionColumns));
   return { width: spec.width, height: rows * spec.height + (rows - 1) * G.optionGap };
 };
 

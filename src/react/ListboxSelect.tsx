@@ -141,10 +141,10 @@ export function ListboxSelect<V extends string|number>(props: ListboxSelectProps
  const stepCaret=({key,turn,label: stepLabel}: typeof STEPS[number])=>{
   const to=STEP_MOVES[key](start,shown.length);
   return <HeaderIconButton key={key} label={stepLabel(label)} bare density={Density.COMPACT}
-   className={ListboxElement.STEP.className} disabled={disabled||to===start} onClick={()=>choose(to)}>
+   className={ListboxElement.STEP.className} disabled={disabled||chosen<0||to===start} onClick={()=>choose(to)}>
    <CaretGlyph turn={turn}/></HeaderIconButton>;
  };
- const carousel=isStep&&shown.length>0?<Crossfade form={CrossfadeForm.CAROUSEL}
+ const carousel=isStep&&chosen>=0?<Crossfade form={CrossfadeForm.CAROUSEL}
   activeKey={String(shown[start].value)}
   views={shown.map(option=>({key:String(option.value),node:<Label kind="chosen">{option.label}</Label>}))}/>:null;
  const [backStep,nextStep]=STEPS;
