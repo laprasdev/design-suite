@@ -19,7 +19,6 @@
     "src/react/motion.ts": {"lines":88,"longLines":4},
     "src/react/participantGrass.ts": {"lines":38,"longLines":2},
     "src/react/participantInteraction.ts": {"lines":7,"longLines":1},
-    "src/react/useAnchoredPopover.ts": {"lines":94,"longLines":10},
     "src/react/useParticipantGrass.ts": {"lines":55,"longLines":2},
     "src/skins.ts": {"lines":95,"longLines":5},
     "src/synth/components/synth/40-IntegerIncrementer.tsx": {"lines":119,"longLines":6},

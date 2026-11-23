@@ -12,7 +12,8 @@ type Module = typeof import('../src/react/module/GridModule.tsx') & typeof impor
   & typeof import('../src/react/module/gridModuleElements.ts');
 const {module, dispose} = await bundled<Module>(['src/react/module/GridModule.tsx', 'src/react/ListboxSelect.tsx',
   'src/react/listboxSelectElements.ts', 'src/synth/StyleContext.tsx', 'src/react/module/gridModuleElements.ts']);
-const {GridModule, ListboxSelect, ListboxElement, ListboxForm, ModuleTitleChoiceElement, StyleProvider} = module;
+const {GridModule, ListboxSelect, ListboxElement, ListboxForm, MODULE_HEADER_FORM_ATTRIBUTE, ModuleHeaderForm,
+  ModuleTitleChoiceElement, StyleProvider} = module;
 after(dispose);
 const TITLE = 'Preview';
 const OPTIONS = Object.freeze([{value: 'grid', label: 'Grid'},
@@ -26,14 +27,20 @@ const heading = (markup: string) => /<h2[^>]*>(.*?)<\/h2>/.exec(markup)?.[1] ?? 
 describe('a module title', () => {
   it('draws only its word when it heads no choice', () => {
     const markup = drawn();
+    const headerTag = /<header[^>]*>/.exec(markup)?.[0] ?? assert.fail(`no header tag in ${markup}`);
     assert.equal(heading(markup), TITLE);
+    assert.doesNotMatch(headerTag, new RegExp(MODULE_HEADER_FORM_ATTRIBUTE));
+    assert.doesNotMatch(headerTag, /flex-wrap/);
     assert.doesNotMatch(markup, new RegExp(ListboxElement.TRIGGER.className));
     assert.doesNotMatch(markup, /--module-title-gap/);
   });
 
   it('draws its word and the chosen name as the step form\'s trigger, its carets after it, when it heads one', () => {
     const choice = {options: OPTIONS, value: 'grid', onChange: () => undefined, onRefuse: () => undefined} as const;
-    const title = heading(drawn(choice));
+    const markup = drawn(choice), title = heading(markup);
+    const headingTag = /<h2[^>]*>/.exec(markup)?.[0] ?? assert.fail(`no heading tag in ${markup}`);
+    assert.match(markup, new RegExp(`${MODULE_HEADER_FORM_ATTRIBUTE}="${ModuleHeaderForm.CHOICE}"`));
+    assert.doesNotMatch(headingTag, /white-space:nowrap|overflow:hidden/, 'the title does not clip its carets');
     const trigger = `${ListboxElement.TRIGGER.className} ${ModuleTitleChoiceElement.className}`;
     assert.match(title, new RegExp(`class="${trigger}"`));
     assert.match(title, new RegExp(`>${TITLE}<span[^>]*>${OPTIONS[0].label}</span>`));

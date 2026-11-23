@@ -13,10 +13,14 @@ import {SUITE_ROOT} from './bundled.ts';
 import {SCENE_ROOT_ID} from './sceneRoot.ts';
 import {Opacity,Typography} from '../src/tokens.ts';
 import {createTheme} from '../src/theme.ts';
+import {D} from '../src/synth/design/index.ts';
+import {ApplicationElement} from '../src/react/applicationElements.ts';
 import {ListboxElement} from '../src/react/listboxSelectElements.ts';
 import {ActionBarElement,ActionNoticeElement} from '../src/react/actionBarElements.ts';
-import {MODULE_HEADER_ATTRIBUTE,ModuleTitleChoiceElement,ModuleTitleChosenElement}
- from '../src/react/module/gridModuleElements.ts';
+import {
+ MODULE_HEADER_ATTRIBUTE,MODULE_HEADER_FORM_ATTRIBUTE,ModuleHeaderForm,
+ ModuleTitleChoiceElement,ModuleTitleChosenElement,
+} from '../src/react/module/gridModuleElements.ts';
 import {HeaderForm,TITLE_OPTIONS,TOGGLE_GLYPH_ATTRIBUTE,ToggleGlyph} from './headerGlyphCases.ts';
 
 const CAPTURES=join(SUITE_ROOT,'.local','captures','headerForms');
@@ -24,23 +28,34 @@ mkdirSync(CAPTURES,{recursive:true});
 // What the title's word must take from its heading, and the chosen name from its typography role.
 const TITLE_TYPE=['fontFamily','fontSize','fontWeight','letterSpacing','textTransform'] as const;
 const CHOSEN=Typography.chosen;
-// A root colour no theme uses: a bar that only inherited its text colour would show this instead of its own.
-const FOREIGN_ROOT_COLOR='rgb(1, 2, 3)';
+// Root colours no theme uses: controls carrying their own style must not inherit them.
+const FOREIGN_ROOT_COLOR='rgb(1, 2, 3)',FOREIGN_CARD='rgb(255, 255, 255)';
 const TEXT_COLOR=createTheme().colors.text;
 const [FIRST,SECOND,UNAVAILABLE]=TITLE_OPTIONS;
 
 for(const viewport of [DESKTOP_VIEWPORT,HANDSET_VIEWPORT])test(`the header forms at ${viewport.width}px`,async()=>{
  const page=await openScene('tests/headerGlyphScene.tsx',viewport,SCENE_GL.software);
+ const header=page.locator(`[${MODULE_HEADER_ATTRIBUTE}]`).first();
  const title=page.locator(ModuleTitleChoiceElement.selector),toggle=named(page,HeaderForm.TOGGLE);
+ const chosen=page.locator(ModuleTitleChosenElement.selector);
  const bar=page.locator(ActionBarElement.selector).first();
  const option=(label: string)=>page.locator(`${ListboxElement.OPTION.selector}[aria-label="${label}"]`);
  const notice=page.locator(ActionNoticeElement.ROOT.selector);
- await page.locator(`[${MODULE_HEADER_ATTRIBUTE}]`).first()
-  .screenshot({path:join(CAPTURES,`${viewport.width}-closed.png`)});
+ await header.screenshot({path:join(CAPTURES,`${viewport.width}-closed.png`)});
+ assert.equal(await header.getAttribute(MODULE_HEADER_FORM_ATTRIBUTE),ModuleHeaderForm.CHOICE);
+ assert.equal(await header.evaluate(node=>getComputedStyle(node).flexWrap),'wrap');
  assert.equal(await title.textContent(),`${HeaderForm.TITLE}${FIRST.label}`,'the title shows its word and its choice');
  const [back,next]=[0,1].map(index=>page.locator(ListboxElement.STEP.selector).nth(index));
  assert.equal(await page.locator(ListboxElement.STEP.selector).count(),2,'the title draws its two step carets');
  assert.ok(await back.isDisabled(),'the first option has no previous one');
+ const [nameBox,backBox,nextBox]=await Promise.all([chosen.boundingBox(),back.boundingBox(),next.boundingBox()]);
+ if(!nameBox||!backBox||!nextBox)throw new Error('the title choice or step carets lack a box');
+ const tabButton={w:D.moduleGrid.tabMinWidth,h:D.moduleGrid.tabMinHeight};
+ assert.deepEqual({w:backBox.width,h:backBox.height},tabButton,
+  'the step carets sit at a module header\'s icon-button size');
+ assert.deepEqual({w:nextBox.width,h:nextBox.height},tabButton);
+ assert.ok(backBox.x>=nameBox.x+nameBox.width+D.moduleGrid.fieldGap,
+  `the step carets at ${backBox.x} sit at least ${D.moduleGrid.fieldGap}px past ${nameBox.x+nameBox.width}`);
  const shows=(option: typeof TITLE_OPTIONS[number])=>page.waitForFunction(([choice,text])=>
   document.querySelector(choice)?.textContent===text,
   [ModuleTitleChoiceElement.selector,`${HeaderForm.TITLE}${option.label}`] as const);
@@ -50,17 +65,19 @@ for(const viewport of [DESKTOP_VIEWPORT,HANDSET_VIEWPORT])test(`the header forms
  await page.screenshot({path:join(CAPTURES,`${viewport.width}-stepped.png`)});
  await back.click();
  await shows(FIRST);
- const read=await page.evaluate(([choice,chosen,keys,root,text])=>{
-  const trigger=document.querySelector(choice),name=document.querySelector(chosen),heading=trigger?.closest('h2');
+ const read=await page.evaluate(([choice,chosenSel,keys,root,text])=>{
+  const trigger=document.querySelector(choice),name=document.querySelector(chosenSel),heading=trigger?.closest('h2');
   const scene=document.getElementById(root);
   if(!trigger||!name||!heading||!scene)throw new Error('the scene draws no title choice, chosen name or root');
   scene.style.color=text;
   const style=(element: Element)=>getComputedStyle(element),type=(element: Element)=>keys.map(key=>style(element)[key]);
-  return {heading:type(heading),word:type(trigger),name:{size:style(name).fontSize,weight:style(name).fontWeight,
-   case:style(name).textTransform}};
+  return {heading:type(heading),word:type(trigger),
+   headingClip:{ws:style(heading).whiteSpace,ox:style(heading).overflowX},
+   name:{size:style(name).fontSize,weight:style(name).fontWeight,case:style(name).textTransform}};
  },[ModuleTitleChoiceElement.selector,ModuleTitleChosenElement.selector,TITLE_TYPE,SCENE_ROOT_ID,FOREIGN_ROOT_COLOR] as
   const);
  assert.deepEqual(read.word,read.heading,`the title's word wears ${read.word}, every title ${read.heading}`);
+ assert.deepEqual(read.headingClip,{ws:'normal',ox:'visible'},'the choice heading wraps instead of clipping');
  assert.deepEqual(read.name,{size:`${CHOSEN.fontSize}px`,weight:String(CHOSEN.fontWeight),case:'none'},
   'the chosen name wears the chosen typography role, in the case it is written in');
  const barColor=await bar.evaluate(node=>getComputedStyle(node).color);
@@ -104,4 +121,27 @@ for(const viewport of [DESKTOP_VIEWPORT,HANDSET_VIEWPORT])test(`the header forms
  assert.ok(box.x>=barBox.x&&box.y>=barBox.y&&box.y+box.height<=barBox.y+barBox.height
   &&box.x+box.width<=barBox.x+barBox.width,
   `the toggle at ${JSON.stringify(box)} leaves its bar at ${JSON.stringify(barBox)}`);
+});
+
+test('a title choice and its list work in a StyleProvider without app-root',async()=>{
+ const page=await openScene('tests/headerGlyphScene.tsx',DESKTOP_VIEWPORT,SCENE_GL.software);
+ await page.evaluate(([rootId,rootClass,foreignCard])=>{
+  document.getElementById(rootId)?.classList.remove(rootClass);
+  document.documentElement.style.setProperty('--card',foreignCard);
+ },[SCENE_ROOT_ID,ApplicationElement.ROOT.className,FOREIGN_CARD] as const);
+ const title=page.locator(ModuleTitleChoiceElement.selector);
+ const read=await page.evaluate(([choice,keys])=>{
+  const trigger=document.querySelector(choice),heading=trigger?.closest('h2');
+  if(!trigger||!heading)throw new Error('the scene draws no title choice');
+  const type=(element: Element)=>keys.map(key=>getComputedStyle(element)[key]);
+  return {heading:type(heading),word:type(trigger)};
+ },[ModuleTitleChoiceElement.selector,TITLE_TYPE] as const);
+ assert.deepEqual(read.word,read.heading,'without app-root, the title trigger still inherits its heading type');
+ await title.click();
+ const popover=page.locator(ListboxElement.POPOVER.selector);
+ await popover.waitFor();
+ const panel=await popover.evaluate(node=>({inBody:node.parentElement===document.body,
+  bg:getComputedStyle(node).backgroundColor}));
+ assert.equal(panel.inBody,true,'without app-root, the StyleProvider portals the list into document.body');
+ assert.notEqual(panel.bg,FOREIGN_CARD,'the portaled list carries StyleProvider\'s surface instead of :root\'s');
 });

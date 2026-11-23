@@ -5,7 +5,11 @@ import { ModuleHeaderRow } from './ModuleHeaderRow.tsx';
 import { ListboxSelect, type ListboxOption } from '../ListboxSelect.tsx';
 import { ListboxForm } from '../listboxSelectElements.ts';
 import { Label } from '../accents.tsx';
-import { MODULE_HEADER_ATTRIBUTE, ModuleTitleChoiceElement, ModuleTitleChosenElement } from './gridModuleElements.ts';
+import { styleThemeVariables } from '../styleTheme.ts';
+import {
+  MODULE_HEADER_ATTRIBUTE, MODULE_HEADER_FORM_ATTRIBUTE, ModuleHeaderForm,
+  ModuleTitleChoiceElement, ModuleTitleChosenElement,
+} from './gridModuleElements.ts';
 
 const G = D.moduleGrid;
 const FILLS: React.CSSProperties = { flex: 1, minWidth: 0, minHeight: 0 };
@@ -33,21 +37,32 @@ export function GridModule<V extends string | number>({ title, titled = true, gr
 }) {
   const style = useStyle().getEffectiveStyle();
   const headerStyle: React.CSSProperties = {
-    flexShrink: 0, display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: G.headerTitleGap,
+    flexShrink: 0, display: 'flex', alignItems: 'center', gap: G.headerTitleGap,
     paddingInline: G.headerInset, borderBottom: `${Borders.standard.width}px solid ${style.borderColor}`,
   };
-  const titleStyle: React.CSSProperties = {
+  const titleBase: React.CSSProperties = {
     ...MODULE_TITLE, margin: 0, lineHeight: `${G.headerLineHeight}px`, color: style.primaryColor,
-    cursor: 'default', whiteSpace: 'nowrap', minWidth: 0,
+    cursor: 'default',
+  };
+  const titleStyle: React.CSSProperties = {
+    ...titleBase, whiteSpace: 'nowrap', minWidth: 0,
     overflow: 'hidden', textOverflow: 'ellipsis',
+  };
+  const choiceTitleStyle: React.CSSProperties = {
+    ...titleBase, minWidth: 0, display: 'flex', flexWrap: 'wrap', alignItems: 'center',
+    columnGap: G.fieldGap, ...CHOICE_GAP, ...styleThemeVariables(style),
   };
   const chosen = choice?.options.find(option => option.value === choice.value);
   if (choice && !chosen) throw new Error(`${title}'s choice holds ${choice.value}, which none of its options is.`);
+  const headerAttrs = {
+    [MODULE_HEADER_ATTRIBUTE]: title,
+    [MODULE_HEADER_FORM_ATTRIBUTE]: choice ? ModuleHeaderForm.CHOICE : undefined,
+  };
   return (
     <section data-grid-module data-module-owner={title} aria-label={title}
       style={{ ...FILLS, display: 'flex', flexDirection: 'column', fontFamily: 'var(--font-chrome, inherit)' }}>
-      {(titled || group || tabs) && <header {...{ [MODULE_HEADER_ATTRIBUTE]: title }} style={headerStyle}>
-        {titled && <h2 style={choice ? { ...titleStyle, ...CHOICE_GAP } : titleStyle}>{choice && chosen
+      {(titled || group || tabs) && <header {...headerAttrs} style={headerStyle}>
+        {titled && <h2 style={choice ? choiceTitleStyle : titleStyle}>{choice && chosen
           ? <ListboxSelect form={ListboxForm.STEP} label={title} className={ModuleTitleChoiceElement.className}
             options={choice.options} value={choice.value} onChange={choice.onChange} onRefuse={choice.onRefuse}>
             {title}<Label kind="chosen" className={ModuleTitleChosenElement.className}>{chosen.label}</Label>
