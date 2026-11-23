@@ -6,7 +6,8 @@ import {SkinDefault, SliderSkinForm as SkinSliderForm} from '../../../skinKinds.
 import {ModulationTracks} from '../../../react/inputs/ModulationTracks.tsx';
 import type {SliderModulationProps} from './modulation.ts';
 import React from 'react';
-import {SliderTrack, SLIDER_TRACK_HEIGHT as TRACK_HEIGHT} from '../../../react/inputs/SliderTrack.tsx';
+import {SliderTrack} from '../../../react/inputs/SliderTrack.tsx';
+import {SLIDER_TRACK_HEIGHT as TRACK_HEIGHT, SLIDER_TRACK_LENGTH} from '../../../react/inputs/sliderTrackSize.ts';
 import {SliderProgress, type SliderProgressProps} from '../../../react/inputs/SliderProgress.tsx';
 import { useStyle } from '../../StyleContext.tsx';
 import type { StyleTheme } from '../../StyleTypes.ts';
@@ -20,7 +21,6 @@ import {type RangeSliderProps} from './RangeSlider.tsx';
 
 const FADER_WIDTH = 6;
 const FADER_HEIGHT = 12;
-const DEFAULT_WIDTH = 100;
 
 export interface SliderProps extends SliderModulationProps {
   form?: typeof SliderForm.CELL | typeof SliderForm.THIN;
@@ -93,7 +93,7 @@ function CellSlider({ form, value, onChange, min: minProp = 0, max, label, color
 
   const colorType = resolveColorType(color);
   const scheme = getColorScheme(colorType, style);
-  const trackWidth: number | '100%' = fill ? '100%' : (width ?? DEFAULT_WIDTH);
+  const trackWidth: number | '100%' = fill ? '100%' : (width ?? SLIDER_TRACK_LENGTH);
   const range = max - minProp;
   const fraction = range > 0 ? Math.min(Math.max((value - minProp) / range, 0), 1) : 0;
   const zeroFraction = range > 0 ? Math.min(Math.max((0 - minProp) / range, 0), 1) : 0;

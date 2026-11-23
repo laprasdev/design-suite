@@ -338,14 +338,14 @@ export function Knob(props: KnobProps) {
 
   // Label element
   const textAlign = isHorizontal ? (isRightAligned ? 'right' : 'left') : 'center';
-  const labelElement = labelIcon ?? (label && <KnobLabel text={label} cutout={useCutoutLabel} size={config.size}
+  const labelElement = labelIcon ?? (label && <KnobLabel text={label} cutout={useCutoutLabel}
     color={scheme.main} style={style} align={textAlign} />);
 
   // Value element
   const valueElement = valueDisplay && (
     <EditableValue text={valueDisplay} color={scheme.main} min={min} max={max} onChange={onChange}
       style={{
-        fontSize: T.small.fontSize, color: scheme.main, fontWeight: T.small.fontWeight,
+        ...T.value, color: scheme.main,
         textAlign, opacity: O.high,
         whiteSpace: 'nowrap', cursor: onChange ? 'text' : 'default',
       }} />
@@ -436,11 +436,9 @@ export function KnobRow({ knobs, renderKnob, className = '' }: KnobRowProps) {
           <div
             key={index}
             style={{
-              fontSize: T.small.fontSize,
+              ...T.label,
               color: getColorScheme(resolveColorType(knob.color), style).main,
-              fontWeight: T.label.fontWeight,
               textTransform: 'uppercase',
-              letterSpacing: T.label.letterSpacing,
               textAlign: 'center',
               minWidth: 50
             }}

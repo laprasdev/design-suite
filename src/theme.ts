@@ -16,11 +16,30 @@ export const THEME_TYPOGRAPHY = Object.freeze({
   chrome: `"${DISPLAY_FONT_FAMILY}",-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,system-ui,sans-serif`,
   code: 'ui-monospace,"SF Mono",Menlo,monospace',
   bodySize: 15, controlSize: 13, lineHeight: 1.6,
-  headingSize:20, subheadingSize:17, titleSize:15, captionSize:12, codeSize:13,
+  headingSize:20, subheadingSize:17, titleSize:15, captionSize:Typography.caption.fontSize, codeSize:13,
   titleLeading:1.4, codeLeading:1.5, capsTracking:".1em", wideTracking:".12em",
 });
 export type ThemeTypography = { [K in keyof typeof THEME_TYPOGRAPHY]:
   typeof THEME_TYPOGRAPHY[K] extends number ? number : string };
+type NumericTypographyKey =
+  { [K in keyof ThemeTypography]: ThemeTypography[K] extends number ? K : never }[keyof ThemeTypography];
+// Every text size a theme publishes, as the custom property that carries it and the typography key that holds it.
+export const TEXT_SIZE_VARIABLES = Object.freeze({
+  "--type-body": "bodySize", "--type-control": "controlSize", "--type-heading": "headingSize",
+  "--type-subheading": "subheadingSize", "--type-title": "titleSize", "--type-caption": "captionSize",
+  "--type-meta": "controlSize", "--type-answer": "controlSize", "--type-code": "codeSize",
+} as const satisfies Record<`--type-${string}`, NumericTypographyKey>);
+// The Label's kinds (widgets.css `.bd-label--<kind>`), each drawn in its typography role: one size, the role's
+// weight and tracking, so a header is the same text given its heavier role.
+const LABEL_KIND_ROLES = Object.freeze({
+  name: "caption", value: "value", action: "label", chosen: "chosen",
+} as const satisfies Record<string, keyof typeof Typography>);
+/** The type every Label kind reads, from its typography role: a host that loads no theme spreads it on its root. */
+export const labelVariables = (): Record<`--label-${string}`, string> => Object.fromEntries(
+  Object.entries(LABEL_KIND_ROLES).flatMap(([kind, role]) => [
+    [`--label-${kind}-size`, `${Typography[role].fontSize}px`],
+    [`--label-${kind}-weight`, String(Typography[role].fontWeight)],
+    [`--label-${kind}-tracking`, Typography[role].letterSpacing]]));
 export interface ThemeSpec {
   typography?: Partial<ThemeTypography>;
   name?: string;
@@ -94,12 +113,12 @@ export function themeVariables(t: Theme): Record<string, string> {
   return {
     "--phi": String(PHI),
     "--font": type.reading, "--font-reading": type.reading, "--font-chrome": type.chrome,
-    "--font-code": type.code, "--type-body": `${type.bodySize}px`, "--type-control": `${type.controlSize}px`,
+    "--font-code": type.code,
+    ...Object.fromEntries(Object.entries(TEXT_SIZE_VARIABLES).map(([name, key]) => [name, `${type[key]}px`])),
+    ...labelVariables(),
+    "--caption-size": `${Typography.caption.fontSize}px`,
+    "--caption-tracking": Typography.caption.letterSpacing,
     "--leading-body": String(type.lineHeight),
-    "--type-heading": `${type.headingSize}px`, "--type-subheading": `${type.subheadingSize}px`,
-    "--type-title": `${type.titleSize}px`, "--type-caption": `${type.captionSize}px`,
-    "--type-meta": `${type.controlSize}px`, "--type-answer": `${type.controlSize}px`,
-      "--type-code": `${type.codeSize}px`,
     "--leading-title": String(type.titleLeading), "--leading-code": String(type.codeLeading),
     "--tracking-caps": type.capsTracking, "--tracking-caps-wide": type.wideTracking,
     ...Object.fromEntries(APPLIED_COLORS.map(name => [colorVariable(name), c[name]])), "--surface-chrome": c.surface,
@@ -116,8 +135,6 @@ export function themeVariables(t: Theme): Record<string, string> {
     "--field-gap": `${LayoutDimensions.spacing.tightGap}px`,
     "--section-gap": `${LayoutDimensions.spacing.rowGap}px`,
     "--control-hit-size": `${LayoutDimensions.sizes.buttonHeight}px`,
-    "--caption-size": `${Typography.caption.fontSize}px`,
-    "--caption-tracking": String(Typography.caption.letterSpacing),
   };
 }
 export function applyTheme(t: Theme, el: HTMLElement = document.documentElement) {

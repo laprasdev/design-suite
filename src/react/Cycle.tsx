@@ -20,12 +20,11 @@ export interface CycleProps<V> {
   glyph?: ReactNode;
   className?: string;
   disabled?: boolean;
-  variant?: "text";
   ariaLabel?: string;
 }
 import { Label, Glyph } from "./accents.tsx";
 
-export function Cycle<V>({options, value, onChange, label, glyph, className = "", disabled, variant,
+export function Cycle<V>({options, value, onChange, label, glyph, className = "", disabled,
   ariaLabel}: CycleProps<V>) {
   const idx = Math.max(
     0,
@@ -46,7 +45,6 @@ export function Cycle<V>({options, value, onChange, label, glyph, className = ""
       onClick={next}
       title={ariaLabel ? `${ariaLabel}: ${word ?? ""}` : label}
       aria-label={ariaLabel ? `${ariaLabel}: ${word ?? ""}` : undefined}
-      data-variant={variant}
     >
       {glyph && <Glyph size={12}>{glyph}</Glyph>}
       {label && <Label kind="name">{label}</Label>}

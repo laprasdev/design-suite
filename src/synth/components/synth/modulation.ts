@@ -1,4 +1,5 @@
-import {PHI, PHI_INVERSE, LayoutDimensions} from '../../../layout.ts';
+import {LayoutDimensions} from '../../../layout.ts';
+import {PHI, PHI_INVERSE} from '../../../goldenRatio.ts';
 import {Opacity} from '../../../tokens.ts';
 import type {StyleTheme} from '../../StyleTypes.ts';
 

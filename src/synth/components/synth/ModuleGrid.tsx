@@ -5,9 +5,10 @@ import { D, O, T, TransitionKeys } from '../../design/index.ts';
 import { Knob, KnobPreset, KnobLabelStyle, KnobLayout, KnobStroke, KnobValueType } from './Knob.tsx';
 import type { ModulationProps } from './modulation.ts';
 import { FieldEmphasis, YesNo, type FieldEmphasisValue, type YesNoValue } from '../../../fields.ts';
-import { FIELD_LINE } from '../../../react/grid/fieldLine.ts';
+import { WRAPPING_FIELD_LINE } from '../../../react/grid/fieldLine.ts';
 import { CONTROL_OPACITY, FieldName } from '../../../react/grid/FieldName.tsx';
-import { FieldAlign, useFieldAlign, useModuleControlSize, type FieldAlignValue } from '../../../react/grid/gridContext.ts';
+import { FieldAlign, useFieldAlign, useFieldBeside, useModuleControlSize, type FieldAlignValue }
+  from '../../../react/grid/gridContext.ts';
 
 // A field's name, the field around its control, the knob and the yes/no, until the field family takes them over.
 const G = D.moduleGrid;
@@ -21,8 +22,9 @@ export const FILLS_CELL = fillsHeight('minmax(0, 1fr)');
 /** A field that fills its cell's height: its control takes the row the name leaves. */
 const FILLS_FIELD = fillsHeight('minmax(0, 1fr) auto');
 
-/** How a field sits in its cell: stacked, its control filling the cell's height, or all on one line. */
-export const FieldForm = Object.freeze({ STACK: 'stack', FILLS: 'fills', LINE: 'line' } as const);
+/** How a field sits in its cell: stacked, or its control filling the cell's height. A stacked field is drawn on one
+ *  line where its grid's room puts its caption beside its control; nothing else chooses the line. */
+export const FieldForm = Object.freeze({ STACK: 'stack', FILLS: 'fills' } as const);
 export type FieldFormValue = typeof FieldForm[keyof typeof FieldForm];
 
 interface FieldProps {
@@ -33,9 +35,7 @@ interface FieldProps {
 interface StackFieldProps extends FieldProps { form?: typeof FieldForm.STACK; stretch?: boolean }
 /** As the stack, with the control taking the cell's whole height, for one that grows with it. */
 interface FillsFieldProps extends FieldProps { form: typeof FieldForm.FILLS; stretch?: boolean }
-/** The control, its name, then its reading, on one yes/no-high line, for a tile too short to stack them. */
-interface LineFieldProps extends FieldProps { form: typeof FieldForm.LINE }
-export type ModuleFieldProps = StackFieldProps | FillsFieldProps | LineFieldProps;
+export type ModuleFieldProps = StackFieldProps | FillsFieldProps;
 
 function fieldControl(emphasis: FieldEmphasisValue, style: React.CSSProperties): React.CSSProperties {
   const inert = emphasis === FieldEmphasis.INERT;
@@ -53,13 +53,22 @@ function FieldReading({ value, emphasis, align }: { value: React.ReactNode; emph
   </div>;
 }
 
-function LineField({ label, icon, value, emphasis, onName, nameLabel, nameTitle, children }: LineFieldProps) {
-  const name = { label, icon, emphasis, onName, nameLabel, nameTitle, align: FieldAlign.START };
+// The caption, name then reading, is one piece beside the control that wraps its own words in the room left; only
+// where even its longest word has no room beside a wide control (a curve, a choice) does it wrap beneath, never past
+// the cell over its neighbour.
+const LINE_CAPTION: React.CSSProperties = { display: 'flex', flexWrap: 'wrap', alignItems: 'center',
+  columnGap: G.fieldGap, flex: '1 1 0', minWidth: 'min-content' };
+/** The control, its name, then its reading, on one line: the form a stacked field takes where its grid's column holds
+ *  its caption beside it. */
+function LineField({ label, icon, value, emphasis, onName, nameLabel, nameTitle, children }: FieldProps) {
+  const name = { label, icon, emphasis, onName, nameLabel, nameTitle, align: FieldAlign.START, rowTall: true };
   return <div data-module-field={label} data-field-emphasis={emphasis}
-    aria-disabled={emphasis === FieldEmphasis.INERT} style={{ ...FIELD_LINE, minWidth: 0 }}>
+    aria-disabled={emphasis === FieldEmphasis.INERT} style={WRAPPING_FIELD_LINE}>
     <div data-field-control style={fieldControl(emphasis, { display: 'flex', flex: 'none' })}>{children}</div>
-    <FieldName {...name} />
-    {value !== undefined && <FieldReading value={value} emphasis={emphasis} />}
+    <div style={LINE_CAPTION}>
+      <FieldName {...name} />
+      {value !== undefined && <FieldReading value={value} emphasis={emphasis} />}
+    </div>
   </div>;
 }
 
@@ -84,10 +93,12 @@ function StackField(props: StackFieldProps | FillsFieldProps) {
 
 /**
  * A field in its cell: the control, what it reads, and its name, all staying readable when dim. Pressing the name is optional.
- * Its `form` is one of the stack, the control filling its cell's height, or one line; each takes only the props it draws.
+ * Its `form` is the stack or the control filling its cell's height; the grid's room draws a stack on one line.
  */
 export function ModuleField(props: ModuleFieldProps) {
-  return props.form === FieldForm.LINE ? <LineField {...props} /> : <StackField {...props} />;
+  const beside = useFieldBeside();
+  // A control that fills its cell's height has no room beside it; any other, stretched or not, takes its caption beside.
+  return beside && props.form !== FieldForm.FILLS ? <LineField {...props} /> : <StackField {...props} />;
 }
 
 /** The minimal knob, its value and name left to the field around it. */

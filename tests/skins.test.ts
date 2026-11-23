@@ -93,10 +93,13 @@ describe('the design system', () => {
     const flat = flatSkin('serum');
     const sizes = flat.get('forms.text.sizeScale') as number[];
     const baseIndex = flat.get('forms.text.sizeIndex') as number;
-    const tiers = ['title', 'label', 'value', 'small', 'tiny', 'micro'] as const;
-    for (const tier of tiers) {
-      const index = Math.max(0, baseIndex + (flat.get(`forms.text.tiers.${tier}.sizeAdj`) as number));
-      assert.equal(sizes[index], Typography[tier].fontSize, tier);
+    const tokens = new Map<string, {fontSize: number}>(Object.entries(Typography));
+    for (const tier of Object.keys(baseSkin.forms.text.tiers)) {
+      const index = baseIndex + (flat.get(`forms.text.tiers.${tier}.sizeAdj`) as number);
+      assert.ok(index >= 0 && index < sizes.length,
+        `skin tier ${tier} indexes step ${index}, outside the ${sizes.length}-step type scale`);
+      const token = tokens.get(tier) ?? assert.fail(`skin tier ${tier} names no Typography token`);
+      assert.equal(sizes[index], token.fontSize, tier);
     }
   });
 });

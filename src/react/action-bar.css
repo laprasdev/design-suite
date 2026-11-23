@@ -2,7 +2,7 @@
  --bar-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1fr);
  --action-bar-height:var(--header-control);
  --action-bar-inset:var(--page-gutter,var(--inset));
- position:relative;container-type:inline-size;min-height:var(--action-bar-height);padding:0 var(--action-bar-inset);background:var(--surface-chrome);
+ position:relative;container-type:inline-size;min-height:var(--action-bar-height);padding:0 var(--action-bar-inset);background:var(--surface-chrome);color:var(--text);
  border-bottom:var(--line-width) solid var(--line);box-shadow:var(--panel-shadow);
 }
 /* The bar and its notice take the compact control height, and a Button in either drops its block padding, its label

@@ -1,6 +1,6 @@
 import React, {type ReactNode} from 'react';
+import {SLIDER_TRACK_HEIGHT} from './sliderTrackSize.ts';
 
-export const SLIDER_TRACK_HEIGHT = 3;
 // The Synth rounded track. Progress scales its geometry without changing cell sliders.
 export function SliderTrack({background, width, thin = false, scale = 1, children}: {
  background: string; width: number | '100%'; thin?: boolean; scale?: number; children?: ReactNode;

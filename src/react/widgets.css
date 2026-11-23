@@ -4,19 +4,27 @@
    ============================================================================ */
 
 /* ---- accents (AccentKind) ---- */
-.bd-label { font-family:var(--font-chrome,inherit); letter-spacing:var(--label-tracking,normal);text-transform:var(--label-case,none); }
+.bd-label { font-family:var(--font-chrome,inherit); text-transform:var(--label-case,none); }
+/* A composition sets a Label's case through `--label-case` and its tracking through `--label-tracking`, never its type. */
 .bd-label--name {
-  font-size: var(--label-name-size, 12px); font-weight: 700; letter-spacing: 0.05em;
+  font-size: var(--label-name-size); font-weight: var(--label-name-weight); letter-spacing: var(--label-tracking, var(--label-name-tracking));
   text-transform: uppercase; color: var(--button-color,var(--color-dim, #82828e));
 }
 .bd-label--value {
-  font-size: var(--label-value-size,var(--type-control,12px)); font-weight: 700; color: var(--color-text, #f0f0f3);
+  font-size: var(--label-value-size); font-weight: var(--label-value-weight);
+  letter-spacing: var(--label-tracking, var(--label-value-tracking)); color: var(--color-text, #f0f0f3);
   font-variant-numeric: tabular-nums;
 }
 /* Button/label text — one source for action typography. Labels read in Title
    Case exactly as written; nothing is forced into capitals. */
 .bd-label--action {
-  font-size: var(--label-action-size, 12px); font-weight: var(--label-action-weight,700); color: inherit;
+  font-size: var(--label-action-size); font-weight: var(--label-action-weight);
+  letter-spacing: var(--label-tracking, var(--label-action-tracking)); color: inherit;
+}
+/* The chosen option's name beside the word it heads, in the text colour whatever colour the word wears. */
+.bd-label--chosen {
+  font-size: var(--label-chosen-size); font-weight: var(--label-chosen-weight);
+  letter-spacing: var(--label-tracking, var(--label-chosen-tracking)); color: var(--text);
 }
 
 /* ---- Button (composes Label) ---- */
@@ -79,12 +87,12 @@
 .bd-month[data-fit] .bd-days { grid-auto-rows:var(--month-cell-size); }
 .bd-month[data-fit] .bd-day { aspect-ratio:1;min-height:0; }
 .bd-month-label {
-  font-size: 9px; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase;
+  font-size: var(--type-caption); font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase;
   color: var(--color-dim, #82828e); padding: 4px 2px 8px;
 }
 .bd-week-head { display: grid; grid-template-columns: repeat(7, 1fr); }
 .bd-weekday {
-  text-align: center; font-size: 8px; font-weight: 700; letter-spacing: 0.05em;
+  text-align: center; font-size: var(--type-caption); font-weight: 700; letter-spacing: 0.05em;
   text-transform: uppercase; color: var(--color-faint, #55555f); padding: 2px 0 4px;
 }
 .bd-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
@@ -116,11 +124,11 @@
   box-shadow: inset 0 1px 0 var(--color-bevel, rgba(255, 255, 255, 0.05));
   transition: border-color 0.15s, box-shadow 0.15s;
 }
+.bd-cycle .bd-cycle-val { --label-case: uppercase; --label-tracking: var(--tracking-caps); }
 .bd-cycle:hover {
   border-color: rgba(255, 255, 255, 0.14);
   box-shadow: inset 0 1px 0 var(--color-bevel, rgba(255, 255, 255, 0.05)), 0 0 14px rgba(196, 103, 143, 0.22);
 }
-.bd-cycle .bd-cycle-val { text-transform: uppercase; font-size: 10px; letter-spacing: 0.1em; }
 .bd-cycle[data-accent="true"] { border-color: var(--color-accent-deep, #7d3f5b); }
 .bd-cycle[data-accent="true"] .bd-cycle-val { color: var(--color-accent, #c4678f); }
 
@@ -225,15 +233,7 @@
   mask-image:linear-gradient(90deg,transparent,#000 var(--bd-fade-start,0px),#000 calc(100% - var(--bd-fade-end,0px)),transparent);
 }
 
-/* An authored Cycle in a module header shows only its current value. */
-.bd-cycle[data-variant=text], .bd-cycle[data-variant=text]:hover {
-  padding:0; border:0; border-radius:0; background:transparent; box-shadow:none;
-  color:inherit; font:inherit; cursor:pointer;
-}
-.bd-cycle[data-variant=text] .bd-cycle-val {color:inherit; font:inherit; letter-spacing:inherit;}
-.bd-cycle[data-variant=text]:disabled {cursor:default; opacity:.6;}
-
-.bd-btn--navigation {font-family:var(--navigation-font,inherit);font-size:var(--navigation-size,var(--type-caption,12px));font-weight:700;letter-spacing:var(--tracking-caps,.1em);text-transform:uppercase;width:100%;justify-content:space-between;gap:8px;padding:var(--navigation-padding,6px 8px);background:transparent;border:0;color:var(--navigation-color,var(--text));text-align:left;}
+.bd-btn--navigation {font-family:var(--navigation-font,inherit);font-size:var(--navigation-size,var(--type-caption));font-weight:700;letter-spacing:var(--tracking-caps,.1em);text-transform:uppercase;width:100%;justify-content:space-between;gap:8px;padding:var(--navigation-padding,6px 8px);background:transparent;border:0;color:var(--navigation-color,var(--text));text-align:left;}
 .bd-btn--navigation:is(:hover,[aria-current=true]) {color:var(--pink);}
 .bd-btn--navigation:focus-visible {outline:var(--line-width) solid var(--pink);outline-offset:-1px;}
 
@@ -244,7 +244,7 @@
 .bd-check .selection-mark[data-selected=false] {border-color:var(--check-color,var(--line));}
 .bd-check .selection-mark::after {content:var(--check-content,none);position:absolute;inset:var(--check-inset,3px);border-radius:1px;background:var(--check-fill);background-size:6px 6px;}
 
-.bd-label[data-label-form=pill] {font-size:var(--type-caption,12px);letter-spacing:.06em;text-transform:uppercase;color:var(--dim);border:var(--line-width) solid var(--line);border-radius:999px;padding:1px 7px;}
+.bd-label[data-label-form=pill] {text-transform:uppercase;color:var(--dim);border:var(--line-width) solid var(--line);border-radius:999px;padding:1px 7px;}
 .bd-label[data-label-form=pill][data-on=true] {color:var(--pink);border-color:var(--pink);}
 .bd-glyph[data-glyph-form=dot] {flex:none;display:inline-block;border-radius:50%;background:var(--signal-color,var(--faint));box-shadow:var(--signal-glow,none);}
 @media (prefers-reduced-motion:no-preference) {

@@ -11,6 +11,12 @@ export const useModuleControlSize = () => useContext(ModuleControlSize);
 // dots line up from row to row.
 export const FieldAlign = Object.freeze({ CENTER: 'center', START: 'start' } as const);
 export type FieldAlignValue = typeof FieldAlign[keyof typeof FieldAlign];
+/** Whether a grid's column holds a knob with its name and reading beside it rather than beneath: chosen by the room
+ *  the column is given, so a narrow tile's one column lays a knob's caption to its right. FilledModuleGrid provides
+ *  it. */
+export const ModuleFieldBeside = React.createContext<boolean>(false);
+/** Whether this grid's fields lay their captions beside their controls. */
+export const useFieldBeside = () => useContext(ModuleFieldBeside);
 /** Where a grid's fields sit in their cells. FilledModuleGrid provides it. */
 export const ModuleFieldAlign = React.createContext<FieldAlignValue>(FieldAlign.CENTER);
 /** Where this grid's fields sit in their cells. */

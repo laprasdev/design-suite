@@ -52,7 +52,7 @@
     "src/synth/components/synth/Enum.tsx": {"casts":3,"nonNullAssertions":0},
     "src/synth/components/synth/Graph.tsx": {"casts":2,"nonNullAssertions":0},
     "src/synth/components/synth/Knob.tsx": {"casts":6,"nonNullAssertions":0},
-    "src/synth/components/synth/RangeSlider.tsx": {"casts":0,"nonNullAssertions":6},
+    "src/synth/components/synth/RangeSlider.tsx": {"casts":0,"nonNullAssertions":3},
     "src/synth/components/synth/Slider.tsx": {"casts":4,"nonNullAssertions":1},
     "src/synth/components/synth/TooltipContext.tsx": {"casts":1,"nonNullAssertions":0},
     "src/synth/components/synth/lifecycle/DualTickRangeKnob.tsx": {"casts":4,"nonNullAssertions":2},

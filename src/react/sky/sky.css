@@ -14,9 +14,9 @@
 .sky-figure-star { fill:color-mix(in srgb,var(--text) 80%,var(--gold-light)); }
 .sky-figure-hit { fill:none;stroke:transparent;stroke-width:7;pointer-events:stroke; }
 .sky-name {
-  --label-action-size:max(12px,var(--caption-size));--label-action-weight:600;
   position:absolute;z-index:2;max-width:calc(100% - var(--sky-inset) * 2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none;
-  font-family:var(--font-reading);font-size:max(12px,var(--label-action-size,12px));line-height:1.2;letter-spacing:0;color:var(--text);text-shadow:0 0 4px var(--bg);
+  font-family:var(--font-reading);font-size:var(--label-action-size);font-weight:var(--label-action-weight);
+  letter-spacing:var(--label-action-tracking);line-height:1.2;color:var(--text);text-shadow:0 0 4px var(--bg);
   animation:sky-name-in .32s ease-out,sky-name-out .35s ease-in calc(var(--name-duration) - .35s) forwards;
 }
 .sky-moon:hover,.sky-moon:has(.theme-moon[data-open]) { opacity:1 !important; }

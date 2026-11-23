@@ -38,7 +38,7 @@
   background: var(--photo-compare-background, transparent);
 }
 .bd-compare[data-photo-form="inline"] figcaption {
-  font-size: max(12px, var(--photo-compare-caption-size, var(--type-caption, 12px)));
+  font-size: var(--photo-compare-caption-size, var(--type-caption));
 }
 .bd-compare[data-photo-form="inline"] figcaption:empty { display: none; }
 
@@ -52,5 +52,5 @@
   outline-offset: calc(-1 * var(--line-width, 1.5px));
 }
 .bd-compare[data-photo-form="rows"] figcaption {
-  font-size: max(12px, var(--photo-compare-caption-size, var(--type-caption, 12px)));
+  font-size: var(--photo-compare-caption-size, var(--type-caption));
 }

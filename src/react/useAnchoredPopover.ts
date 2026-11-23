@@ -11,7 +11,9 @@ export const POPOVER_GAP=8,VIEWPORT_EDGE=8,POPOVER_MIN_HEIGHT=24;
 const ANCHOR_STYLE: readonly `--${string}`[]=['--pink','--teal','--pink-deep','--pink-wash',
  HEADER_CONTROL_PROPERTY,'--header-gap'];
 // A popover's height within `room`, scrolling within when taller.
-const within=(room: number,scroll: boolean): CSSProperties=>({maxHeight:room,overflowY:scroll?'auto':'visible',visibility:room>=POPOVER_MIN_HEIGHT?'visible':'hidden'});
+const within=(room: number,scroll: boolean): CSSProperties=>({
+ maxHeight:room,overflowY:scroll?'auto':'visible',visibility:room>=POPOVER_MIN_HEIGHT?'visible':'hidden',
+});
 // A point's box: no width or height, where the point is.
 const pointRect=({x,y}: CssPoint): CssRect=>({left:x,right:x,top:y,bottom:y,width:0,height:0});
 // A placed popover's style: its position and the custom properties it carries from its anchor.
@@ -41,7 +43,10 @@ export interface PopoverPlacement {
  scroll?: boolean;
  at?: CssPoint;
 }
-export function useAnchoredPopover(open: boolean,anchor: RefObject<HTMLElement|null>,panel: RefObject<HTMLElement|null>,{align='start',above=false,beside=false,preferBefore=false,avoid,scroll=true,at}: PopoverPlacement={}) {
+export function useAnchoredPopover(
+ open: boolean,anchor: RefObject<HTMLElement|null>,panel: RefObject<HTMLElement|null>,
+ {align='start',above=false,beside=false,preferBefore=false,avoid,scroll=true,at}: PopoverPlacement={},
+) {
  const [position,setPosition]=useState<PopoverStyle>({left:0,top:0});
  useLayoutEffect(()=>{
   if(!open)return;
@@ -50,27 +55,35 @@ export function useAnchoredPopover(open: boolean,anchor: RefObject<HTMLElement|n
   const anchorNode=anchor.current,panelNode=panel.current;
   if(!anchorNode||!panelNode)return;
   const place=()=>{
-   const theme=getComputedStyle(anchorNode),inherited: Record<`--${string}`,string>=Object.fromEntries(ANCHOR_STYLE.map(key=>[key,theme.getPropertyValue(key)]));
+   const theme=getComputedStyle(anchorNode);
+   const inherited: Record<`--${string}`,string>=Object.fromEntries(
+    ANCHOR_STYLE.flatMap(key=>{const value=theme.getPropertyValue(key);return value?[[key,value]]:[];}));
    for(const [key,value] of Object.entries(inherited))panelNode.style.setProperty(key,value);
    // Everything in the panel's CSS pixels, which a zoomed page scales on screen.
    const a=at?pointRect(at):cssRect(panelNode,anchorNode),p=cssRect(panelNode),view=cssViewport(panelNode);
    const style=getComputedStyle(panelNode);
    const height=panelNode.scrollHeight+parseFloat(style.borderTopWidth)+parseFloat(style.borderBottomWidth);
-   let left=Math.max(VIEWPORT_EDGE,Math.min(align==='center'?a.left+(a.width-p.width)/2:a.left,view.width-p.width-VIEWPORT_EDGE));
+   const startX=align==='center'?a.left+(a.width-p.width)/2:a.left;
+   let left=Math.max(VIEWPORT_EDGE,Math.min(startX,view.width-p.width-VIEWPORT_EDGE));
    const {elements=[],boundary}=avoid?.()||{},fallback=boundary?cssRect(panelNode,boundary):a;
    const obstacles=elements.map(node=>cssRect(panelNode,node)).filter(box=>box.width>0&&box.height>0);
    const across=obstacles.filter(box=>box.left<left+p.width&&box.right>left);
-   const bottom=Math.max(fallback.bottom,...across.map(box=>box.bottom)),start=Math.min(fallback.top,...across.map(box=>box.top));
-   const below=Math.max(0,view.height-VIEWPORT_EDGE-bottom-POPOVER_GAP),over=Math.max(0,start-POPOVER_GAP-VIEWPORT_EDGE);
-   const [preferred,other]=above?[over,below]:[below,over],onPreferred=height<=preferred||(height>other&&preferred>=other);
+   const bottom=Math.max(fallback.bottom,...across.map(box=>box.bottom));
+   const start=Math.min(fallback.top,...across.map(box=>box.top));
+   const below=Math.max(0,view.height-VIEWPORT_EDGE-bottom-POPOVER_GAP);
+   const over=Math.max(0,start-POPOVER_GAP-VIEWPORT_EDGE);
+   const [preferred,other]=above?[over,below]:[below,over];
+   const onPreferred=height<=preferred||(height>other&&preferred>=other);
    const down=above!==onPreferred;
    let available=down?below:over,top=down?bottom+POPOVER_GAP:start-POPOVER_GAP-Math.min(height,available);
    const before=a.left-POPOVER_GAP-VIEWPORT_EDGE,after=view.width-VIEWPORT_EDGE-a.right-POPOVER_GAP;
    // A compact edge toolbar may sit inside the usual popover inset. Keep its
    // smaller side controls centered without pushing them beyond the viewport.
-   const topInset=Math.min(VIEWPORT_EDGE,Math.max(0,a.top)),bottomInset=Math.min(VIEWPORT_EDGE,Math.max(0,view.height-a.bottom));
+   const topInset=Math.min(VIEWPORT_EDGE,Math.max(0,a.top));
+   const bottomInset=Math.min(VIEWPORT_EDGE,Math.max(0,view.height-a.bottom));
    const besideTop=Math.max(topInset,Math.min(a.top+(a.height-height)/2,view.height-bottomInset-height));
-   const clear=(left: number)=>!obstacles.some(box=>box.left<left+p.width&&box.right>left&&box.top<besideTop+height&&box.bottom>besideTop);
+   const clear=(x: number)=>!obstacles.some(box=>
+    box.left<x+p.width&&box.right>x&&box.top<besideTop+height&&box.bottom>besideTop);
    const beforeLeft=a.left-POPOVER_GAP-p.width,afterLeft=a.right+POPOVER_GAP;
    const fitsBefore=before>=p.width&&clear(beforeLeft),fitsAfter=after>=p.width&&clear(afterLeft);
    if(beside&&(fitsBefore||fitsAfter)){
@@ -92,7 +105,9 @@ export function useAnchoredPopover(open: boolean,anchor: RefObject<HTMLElement|n
   const follow=(e: Event)=>{if(!(e.target instanceof Node&&panelNode.contains(e.target)))place();};
   place();window.addEventListener('scroll',follow,true);window.addEventListener('resize',place);
   const observer=new ResizeObserver(hold);observer.observe(panelNode);
-  return()=>{observer.disconnect();window.removeEventListener('scroll',follow,true);window.removeEventListener('resize',place);};
+  return()=>{
+   observer.disconnect();window.removeEventListener('scroll',follow,true);window.removeEventListener('resize',place);
+  };
  },[open,align,above,beside,preferBefore,avoid,scroll,at?.x,at?.y]);
  return position;
 }

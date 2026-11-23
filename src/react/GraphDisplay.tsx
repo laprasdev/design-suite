@@ -3,6 +3,8 @@ import React, {forwardRef, useId, useImperativeHandle, type HTMLAttributes, type
 import {useStyle, useStyleContext} from '../synth/StyleContext.tsx';
 import {designTokens} from '../skins.ts';
 import {O, SCALE} from '../synth/design/index.ts';
+import {hexToRgba} from '../color.ts';
+import {LayoutDimensions} from '../layout.ts';
 import {graphDots, graphEdgeFade, type GraphEdge} from './graphSurface.ts';
 import {usePanZoom, detailAt, ZOOM, type GraphViewport} from './usePanZoom.ts';
 import {Button} from './Button.tsx';
@@ -70,3 +72,28 @@ export function GraphFill({path, form}: {path: string; form: GraphFillFormValue}
     <path data-graph-fill={form} d={path} fill={`url(#${id})`}/>
   </>;
 }
+
+const {graphGlow, graphHandleRadius} = LayoutDimensions.envelope;
+/** The glow a graph's curve and its handle share. */
+export const graphGlowFilter = (color: string) => `drop-shadow(0 0 ${graphGlow}px ${hexToRgba(color, O.low)})`;
+/** Where a `GraphHandle` sits, as a share of its graph's width and height. */
+export interface GraphHandlePlace {x: number; y: number}
+/** `handle` moved to `place` and shown, or hidden when `place` is null. The place moves each frame, so this writes
+ *  numbers into the circle's percentage lengths (set once by `GraphHandle`), never text. */
+export function placeGraphHandle(handle: SVGCircleElement, place: GraphHandlePlace | null) {
+  handle.style.visibility = place ? HANDLE_SHOWN : HANDLE_HIDDEN;
+  if (!place) return;
+  handle.cx.baseVal.valueInSpecifiedUnits = place.x * PERCENT;
+  handle.cy.baseVal.valueInSpecifiedUnits = place.y * PERCENT;
+}
+const HANDLE_SHOWN = 'visible', HANDLE_HIDDEN = 'hidden', PERCENT = 100, ORIGIN = '0%';
+/** The glowing mark that rides a graph's curve at the running place, laid over the whole graph in pixels so it stays
+ *  round however the curve's view stretches; hidden until its owner places it with `placeGraphHandle`. */
+export const GraphHandle = forwardRef<SVGCircleElement>(function GraphHandle(_props, ref) {
+  const {primaryColor} = useStyle().getEffectiveStyle();
+  return <svg aria-hidden width="100%" height="100%" style={{position: 'absolute', inset: 0, overflow: 'visible',
+    pointerEvents: 'none'}}>
+    <circle ref={ref} data-graph-handle cx={ORIGIN} cy={ORIGIN} r={graphHandleRadius} fill={primaryColor}
+      style={{visibility: HANDLE_HIDDEN, filter: graphGlowFilter(primaryColor)}}/>
+  </svg>;
+});

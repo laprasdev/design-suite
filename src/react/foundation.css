@@ -3,14 +3,15 @@
  --header-gap-compact:8px;--header-gap:var(--header-gap-compact);
  /* Outside a page surface (page-bar.css), a page keeps the theme's inset. */
  --header-icon-size:20px;--page-gutter:0px;--page-inset:var(--inset);--popover-layer:10000;
- --label-action-size:12px;--surface-chrome:var(--card);
+ --surface-chrome:var(--card);
 }
 /* A compact bar or header button draws its header glyphs at its action label's size. A compact choice sizes its own
    glyphs (segmented-control.css). */
 :is(.action-bar,.header-icon-button)[data-density=compact] { --header-icon-size:var(--label-action-size); }
-/* Reset plain buttons, but not composable ones. `:where` keeps the exclusion at zero
-   specificity so component button styles still win. */
-.app-root button:where(:not(.bd-btn)) { font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer; }
+/* Reset plain buttons inside an application root, and the suite's own plain-button controls outside one. `:where`
+   keeps the class filters at zero specificity so component button styles still win. */
+.app-root button:where(:not(.bd-btn)),button:where(.header-icon-button,.listbox-select,.listbox-select-chosen) { font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer; }
+button:where(.header-icon-button,.listbox-select,.listbox-select-chosen):disabled { cursor:default; }
 /* A busy button (pending.tsx), whatever control it is, shows the busy cursor; after the reset, so it wins. */
 button[aria-busy=true] { cursor:progress; }
 :where(:root) { --segment-padding-block:3px;--segment-padding-inline:10px; }

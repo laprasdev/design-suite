@@ -1,8 +1,10 @@
 import React from 'react';
+import { ControlKind } from '../../fields.ts';
 import {SkinKind, TextSkinForm} from '../../skinKinds.ts';
 import {skinForm} from '../../skinForms.ts';
 import { useStyleContext, useStyle } from '../../synth/StyleContext.tsx';
-import { D, T } from '../../synth/design/index.ts';
+import { T } from '../../synth/design/index.ts';
+import { CONTROL_KINDS } from '../grid/controlBoxes.ts';
 import { cutoutBox } from './inputStyle.ts';
 
 type ControlledField = {value: string; onChange(value: string): void; ariaLabel: string; fill?: boolean;
@@ -38,6 +40,6 @@ export function ModuleTextInput(props: TextInputProps) {
   const form = props.form ?? skinForm(context.skin, SkinKind.TEXT) ?? TextSkinForm.INPUT;
   return <TextInput {...props} className={`bd-module-text ${props.className ?? ''}`}
     style={{...T.moduleValue, color:theme.textColor, ...(props.multiline && {fontFamily: 'inherit'}),
-    width: props.fill ? '100%' : D.moduleGrid.numberInputWidth,
+    width: props.fill ? '100%' : CONTROL_KINDS[ControlKind.TEXT].width,
     ...(form === TextSkinForm.INPUT ? cutoutBox(theme) : {}), ...props.style}} />;
 }
