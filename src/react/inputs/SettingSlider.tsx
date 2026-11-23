@@ -11,7 +11,7 @@ import {SliderForm} from './sliderForm.ts';
 import {ModulationTracks, modulationRoom} from './ModulationTracks.tsx';
 import {HoverDetail} from '../HoverDetail.tsx';
 import {ResetIcon} from '../HeaderIconButton.tsx';
-import {SLIDER_TRACK_HEIGHT} from './SliderTrack.tsx';
+import {SLIDER_TRACK_HEIGHT} from './sliderTrackSize.ts';
 /** The setting's thumb, and so the height of its input: a block as tall as the thumb, with the track through the
  *  middle, so a line anchored to the input is anchored to the track and clears the thumb. controls.css draws the
  *  browser's track and thumb at exactly these sizes, from the variables below. */

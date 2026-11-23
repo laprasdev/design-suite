@@ -5,7 +5,7 @@ import { D, O, T, TransitionKeys } from '../../design/index.ts';
 import { Knob, KnobPreset, KnobLabelStyle, KnobLayout, KnobStroke, KnobValueType } from './Knob.tsx';
 import type { ModulationProps } from './modulation.ts';
 import { FieldEmphasis, YesNo, type FieldEmphasisValue, type YesNoValue } from '../../../fields.ts';
-import { FIELD_LINE } from '../../../react/grid/fieldLine.ts';
+import { WRAPPING_FIELD_LINE } from '../../../react/grid/fieldLine.ts';
 import { CONTROL_OPACITY, FieldName } from '../../../react/grid/FieldName.tsx';
 import { FieldAlign, useFieldAlign, useFieldBeside, useModuleControlSize, type FieldAlignValue }
   from '../../../react/grid/gridContext.ts';
@@ -63,7 +63,7 @@ const LINE_CAPTION: React.CSSProperties = { display: 'flex', flexWrap: 'wrap', a
 function LineField({ label, icon, value, emphasis, onName, nameLabel, nameTitle, children }: LineFieldProps) {
   const name = { label, icon, emphasis, onName, nameLabel, nameTitle, align: FieldAlign.START, rowTall: true };
   return <div data-module-field={label} data-field-emphasis={emphasis}
-    aria-disabled={emphasis === FieldEmphasis.INERT} style={{ ...FIELD_LINE, minWidth: 0, flexWrap: 'wrap' }}>
+    aria-disabled={emphasis === FieldEmphasis.INERT} style={WRAPPING_FIELD_LINE}>
     <div data-field-control style={fieldControl(emphasis, { display: 'flex', flex: 'none' })}>{children}</div>
     <div style={LINE_CAPTION}>
       <FieldName {...name} />

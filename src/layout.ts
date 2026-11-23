@@ -2,7 +2,6 @@ import { RoutingDimensions } from './routingLayout.ts';
 import { PageShellDimensions } from './pageShellLayout.ts';
 import { CELL_PAD_H, CELL_PAD_V, ICON_CHOICE_BOX, ICON_CHOICE_GLYPH, ModuleGridDimensions }
   from './moduleGridLayout.ts';
-import { PHI_CUBED } from './goldenRatio.ts';
 
 export { PHI, PHI_INVERSE, PHI_SQUARED, PHI_CUBED } from './goldenRatio.ts';
 export { TEXT_FLOOR } from './moduleGridLayout.ts';
@@ -183,13 +182,13 @@ export const LayoutDimensions = {
     iconChoiceGlyph: ICON_CHOICE_GLYPH,
   },
 
-  // The classic strip takes 1/φ³ of its module; its sockets take 1/φ of a curve picker.
+  // The phase strip is its line's own height; its sockets take 1/φ of a curve picker.
   envelope: {
     cellGap: 6,
-    cellPadding: 8,
-    cellRowGap: 6,
     pickerGlyph: ICON_CHOICE_BOX,
-    stripShare: 1 / PHI_CUBED,
+    // The strip's least share of its module, over its line's own height: 0 keeps the line's height. The one value the
+    // owner's choice of a share (1/φ⁴) would change.
+    stripShare: 0,
     modulationSocketSize: ICON_CHOICE_GLYPH,
     enableLine: 2,
     // What a phase's on and off line gives to press: its foot of the cell, kept clear of what's above.
