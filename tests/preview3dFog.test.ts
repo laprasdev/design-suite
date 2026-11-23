@@ -7,6 +7,7 @@ import {MODEL_STAGE_ABOVE, MODEL_STAGE_LOOK_REFUSAL, modelStageLook, type ModelS
 import {extendModelMaterial, extendModelMaterials, modelMaterialChanges, type ModelShader, type ModelShaderChange}
   from '../src/react/preview3d/shading.ts';
 import {makeActor, refused, stageLook} from './preview3dActorFixture.ts';
+import {compiled, program} from './preview3dCompiledProgram.ts';
 
 const FOG: ModelStageFog = {near: {distance: 8, color: [0.22, 0.14, 0.24]},
   far: {distance: 30, color: [0.15, 0.12, 0.24]}, height: {base: 0, top: 2, strength: 0.6}};
@@ -28,11 +29,9 @@ function withoutFog(source: string) {
   }
   return kept.join('\n');
 }
-const program = (name: keyof typeof THREE.ShaderLib) => ({vertexShader: THREE.ShaderLib[name].vertexShader,
-  fragmentShader: THREE.ShaderLib[name].fragmentShader, uniforms: {}}) as unknown as ModelShader;
-// A change applied to a program the way three applies it: through the hook the stage composes on a material.
+// A change applied to a program the way three applies it: through the changes the stage composes on a material.
 const compile = (change: ModelShaderChange, shader: ModelShader) =>
-  extendModelMaterial(new THREE.MeshBasicMaterial(), [change]).onBeforeCompile(shader, {} as THREE.WebGLRenderer);
+  compiled(extendModelMaterial(new THREE.MeshBasicMaterial(), [change]), shader);
 
 describe('the stage\'s fog', () => {
   it('holds one three.js Fog on the scene while the look has fog, its values written in place', () => {

@@ -12,8 +12,9 @@ export function pageStackDirection(before: readonly string[],after: readonly str
 // step past the last peer to the first goes on forward; a tie goes along the order.
 export function peerDirection(keys: readonly string[],from: string,to: string,ring: boolean): PageDirection {
  const along=keys.indexOf(to)-keys.indexOf(from);
- if(!ring||Math.abs(along)*2<=keys.length)return Math.sign(along) as PageDirection;
- return along>0?-1:1;
+ if(along===0)return 0;
+ const forward=ring&&Math.abs(along)*2>keys.length?along<0:along>0;
+ return forward?1:-1;
 }
 export function pageStackKeys(views: readonly StackView[]): string[] {
  const keys=views.map(view=>view.key);

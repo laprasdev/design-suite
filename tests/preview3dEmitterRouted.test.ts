@@ -6,7 +6,7 @@ import {modelEmitterProfile} from '../src/react/preview3d/emitterProfileModel.ts
 import {MODEL_EMITTER_CHANGE, MODEL_EMITTER_ROUTED, modelEmitterChanges}
   from '../src/react/preview3d/emitterFrameModel.ts';
 import {applyFrame, frame, refused} from './preview3dActorFixture.ts';
-import {compiled} from './preview3dCompiledProgram.ts';
+import {compiled, program} from './preview3dCompiledProgram.ts';
 import {changing, starting, withEmitters} from './preview3dEmitterActors.ts';
 import {EMITTER_ID, EMITTER_ROUTED, emitterChange, emitterProfile} from './preview3dEmitterCases.ts';
 import {EMITTER_WHERE as WHERE} from './preview3dEmitterRefusals.ts';
@@ -37,7 +37,7 @@ describe('an emitter start\'s routed values', () => {
   it('multiplies a start\'s routed tint into the profile\'s colours, and draws the profile\'s own without one',
   () => {
     const {actor, points: [points]} = withEmitters('a', {[EMITTER_ID]: emitterProfile()});
-    const {uniforms} = compiled(points.material, 'points'), held = [uniforms.emitterColorMin.value,
+    const {uniforms} = compiled(points.material, program('points')), held = [uniforms.emitterColorMin.value,
       uniforms.emitterColorMax.value];
     const profile = modelEmitterProfile(emitterProfile(), WHERE), [r, g, b] = EMITTER_ROUTED.tint;
     const colors = (tint: THREE.Vector4) => [profile.tint.min, profile.tint.max].map(stop =>

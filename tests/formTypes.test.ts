@@ -104,7 +104,8 @@ describe('a ListboxSelect form\'s props at the type check', () => {
 const SYNTH = 'src/synth/components/synth';
 const CONTAINER = {from: `${SYNTH}/base/BaseContainer.tsx`, propsFrom: `${SYNTH}/base/BaseContainer.tsx`,
   props: 'BaseContainerProps', keys: "'type'"} as const;
-const BOOLEAN = {from: `${SYNTH}/BooleanPresets.tsx`, propsFrom: `${SYNTH}/Boolean.tsx`, props: 'BooleanProps'} as const;
+const BOOLEAN = {from: `${SYNTH}/BooleanPresets.tsx`, propsFrom: `${SYNTH}/Boolean.tsx`,
+  props: 'BooleanProps'} as const;
 const WRAPPERS = [
   {wrapper: 'ModuleContainer', ...CONTAINER}, {wrapper: 'CutoutContainer', ...CONTAINER},
   {wrapper: 'NodeContainer', ...CONTAINER},
@@ -120,7 +121,8 @@ describe('a wrapper\'s fixed props at the type check', () => {
   for (const {wrapper, from, propsFrom, props, keys} of WRAPPERS) {
     it(`${wrapper} refuses ${keys} from an object held as ${props}`, () => {
       const [source, propsSource] = [from, propsFrom].map(file => JSON.stringify(join(SUITE_ROOT, file)));
-      const usage = (value: string) => `import {${wrapper}} from ${source};\nimport type {${props}} from ${propsSource};\n`
+      const usage = (value: string) => `import {${wrapper}} from ${source};\n`
+        + `import type {${props}} from ${propsSource};\n`
         + `import type {Without} from ${REFUSED_KEYS};\n`
         + `declare const wide: ${props}; declare const kept: Without<${props}, ${keys}>;\n`
         + `export const shown = <${wrapper} {...${value}} />; void [wide, kept];\n`;

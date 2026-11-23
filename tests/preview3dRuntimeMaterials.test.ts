@@ -5,6 +5,7 @@ import {createModelRuntimeMaterials, MODEL_RUNTIME_MATERIAL as channel}
   from '../src/react/preview3d/runtimeMaterials.ts';
 import {createModelFog, MODEL_FOG_CHANGE} from '../src/react/preview3d/fog.ts';
 import {extendModelMaterial, modelMaterialChanges} from '../src/react/preview3d/shading.ts';
+import {compiled, program} from './preview3dCompiledProgram.ts';
 
 const rendererId = 'body';
 const output = (changes = {}) => ({rendererId, slot: 0, visible: true, colors: {}, floats: {}, ...changes});
@@ -29,9 +30,7 @@ test('runtime output owns a clone, decodes sRGB once and keeps HDR intensity', (
   assert.equal(applied.emissiveIntensity, 2.8);
   assert.deepEqual(applied.color.toArray(), new THREE.Color().setRGB(.55, .65, .8, THREE.SRGBColorSpace).toArray());
   assert.deepEqual(applied.emissive.toArray(), new THREE.Color().setRGB(.65, .8, 1, THREE.SRGBColorSpace).toArray());
-  const shader = {uniforms: {}, vertexShader: THREE.ShaderLib.standard.vertexShader,
-    fragmentShader: THREE.ShaderLib.standard.fragmentShader};
-  applied.onBeforeCompile(shader as THREE.WebGLProgramParametersWithUniforms, {} as THREE.WebGLRenderer);
+  const shader = compiled(applied, program('standard'));
   assert.match(shader.fragmentShader, /totalEmissiveRadiance \*= diffuseColor\.rgb/);
   // The copy compiles what the original does, the stage's fog first, and then tints its emission.
   assert.deepEqual(modelMaterialChanges(applied).map(({key}) => key), [MODEL_FOG_CHANGE, channel.profile]);

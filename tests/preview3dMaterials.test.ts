@@ -7,7 +7,7 @@ import {MODEL_PREVIEW_SURFACE_SETTINGS, modelStageSurfaceMode} from '../src/reac
 import {extendModelMaterial, extendModelMaterials, modelMaterialChanges}
   from '../src/react/preview3d/shading.ts';
 import {createModelFog} from '../src/react/preview3d/fog.ts';
-import {compiled} from './preview3dCompiledProgram.ts';
+import {compiled, program} from './preview3dCompiledProgram.ts';
 
 // A file's material as the stage holds it, with the Surface modes.
 function fixture(material: THREE.Material = new THREE.MeshStandardMaterial()) {
@@ -21,7 +21,7 @@ const NO_KIND = () => false;
 describe('the Surface modes', () => {
   it('are one change on the same material: Lit changes nothing, and each mode is its own program key', () => {
     const {modes, mesh, material} = fixture();
-    const lit = compiled(material);
+    const lit = compiled(material, program('standard'));
     assert.deepEqual([lit.fragmentShader, lit.vertexShader, lit.fog, lit.normalMap],
       [THREE.ShaderLib.standard.fragmentShader, THREE.ShaderLib.standard.vertexShader, true, true]);
     assert.equal(material.customProgramCacheKey(), 'model-surface-mode:lit');
@@ -38,7 +38,7 @@ describe('the Surface modes', () => {
   it('shows Clay: the shape in a neutral colour and finish, the base colour\'s alpha kept, nothing else of it', () => {
     const {modes, material} = fixture();
     modes.set('clay');
-    const clay = compiled(material);
+    const clay = compiled(material, program('standard'));
     assert.deepEqual([clay.map, clay.aoMap, clay.normalMap, clay.normalMapTangentSpace, clay.emissiveMap,
       clay.roughnessMap, clay.clearcoat, clay.fog, clay.toneMapping],
     [true, false, false, false, false, false, false, false, THREE.ACESFilmicToneMapping]);
@@ -61,13 +61,13 @@ describe('the Surface modes', () => {
   it('shows Color untoned and Emission as it is, both without fog, through three\'s own output', () => {
     const {modes, material} = fixture();
     modes.set('color');
-    const color = compiled(material);
+    const color = compiled(material, program('standard'));
     assert.ok(color.fragmentShader.includes('outgoingLight = diffuseColor.rgb;\n#include <opaque_fragment>'));
     assert.ok(!color.fragmentShader.includes('#include <tonemapping_fragment>'));
     // The curve is left out of the program, never switched off in three's parameters, which it compares per frame.
     assert.deepEqual([color.fog, color.toneMapping, color.normalMap], [false, THREE.ACESFilmicToneMapping, true]);
     modes.set('emission');
-    const emission = compiled(material);
+    const emission = compiled(material, program('standard'));
     assert.ok(emission.fragmentShader.includes('outgoingLight = totalEmissiveRadiance;\n#include <opaque_fragment>'));
     assert.ok(emission.fragmentShader.includes('#include <tonemapping_fragment>'));
     assert.deepEqual([emission.fog, emission.emissiveMap], [false, true]);
@@ -93,7 +93,7 @@ describe('the Surface modes', () => {
       for (const mode of ['clay', 'color', 'emission'] as const) {
         modes.set(mode);
         for (const [material, lib] of programs) {
-          const shader = compiled(material, lib);
+          const shader = compiled(material, program(lib));
           const written = /modelSurfaceClay|outgoingLight = \w+(\.rgb)?;\n#include <opaque_fragment>/;
           const changed = written.test(shader.fragmentShader);
           assert.equal(changed, lib === 'standard' || lib === 'physical', `${mode} on ${lib}`);
