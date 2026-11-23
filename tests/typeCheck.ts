@@ -40,11 +40,20 @@ export function typeCheck(files: Readonly<Record<string, string>>,
   }
 }
 
-/** That a usage with `accepted` passes the type check, and one with `refused` fails it as a mistyped value (TS2322). */
-export function assertRefusesType(check: (value: string) => TypeCheck, accepted: string, refused: string) {
+/** A usage the type check accepts and the usages it refuses beside it: one row of a type test. */
+export interface TypeContract {
+  readonly accepted: string;
+  readonly refused: readonly [string, ...string[]];
+}
+
+/** That a usage with `accepted` passes the type check, once, and each `refused` usage fails it as a mistyped value
+ * (TS2322). */
+export function assertRefusesType(check: (value: string) => TypeCheck, {accepted, refused}: TypeContract) {
   const valid = check(accepted);
   assert.equal(valid.status, 0, valid.output);
-  const invalid = check(refused);
-  assert.notEqual(invalid.status, 0);
-  assert.deepEqual(invalid.errors, ['error TS2322']);
+  for (const value of refused) {
+    const invalid = check(value);
+    assert.notEqual(invalid.status, 0, value);
+    assert.deepEqual(invalid.errors, ['error TS2322'], value);
+  }
 }

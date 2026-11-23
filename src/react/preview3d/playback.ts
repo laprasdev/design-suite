@@ -6,7 +6,10 @@ import type {ModelAnimationLayer, ModelAnimationSample} from './animationLayerMo
 import {MODEL_ACTOR_ANIMATION, type ModelStageActorAnimation} from './actorModel.ts';
 import type {ModelStageCommit} from './commit.ts';
 
-interface SampleAction {clipId: string; clip: THREE.AnimationClip; action: THREE.AnimationAction}
+// `applied` is the count of the commit that last applied it, so a commit retires what it did not apply.
+interface SampleAction {clipId: string; clip: THREE.AnimationClip; action: THREE.AnimationAction; applied: number}
+const createSampleSlots = () => ({samples: new Array<ModelAnimationSample>(), clips: new Array<THREE.AnimationClip>(),
+  weights: new Array<number>(), count: 0});
 export const MODEL_PLAYBACK_REFUSAL = Object.freeze({
   local: 'Engine animation layers require an external clock.',
   layered: 'Engine animation layers drive this model; the host selection is held.',
@@ -24,7 +27,7 @@ export function createModelPlayback(root: THREE.Object3D, clips: readonly THREE.
   const mixer = new THREE.AnimationMixer(root);
   let action: THREE.AnimationAction | undefined;
   let playing = false, layered = false;
-  let samples = new Map<string, SampleAction>(), applied: readonly ModelAnimationSample[] = Object.freeze([]);
+  let samples = new Map<string, SampleAction>();
   const resolve = (clipId: string) => {
     const clip = clips.find(candidate => candidate.name === clipId);
     if (!clip) throw new ModelStageRefusal(refusal.missing(owner, clipId));
@@ -57,7 +60,37 @@ export function createModelPlayback(root: THREE.Object3D, clips: readonly THREE.
     const copy = clip.clone(), next = mixer.clipAction(copy);
     next.play();
     next.paused = true;
-    return {clipId, clip: copy, action: next};
+    return {clipId, clip: copy, action: next, applied: commits};
+  };
+  // A frame's samples, in the order its layers state them, each with its clip and its weight times its layer's: the
+  // pending slots a prepare writes and the applied ones the commit made here swaps them into, so a frame tick makes
+  // nothing (the slots grow only to the most samples a frame has stated). The sample actions are kept in place: a
+  // sample a commit does not apply is retired, never by rebuilding the map (V8's `clear` makes a new table).
+  let pending = createSampleSlots(), applied = createSampleSlots(), commits = 0;
+  const retireUnapplied = (entry: SampleAction, id: string) => {
+    if (entry.applied === commits) return;
+    retire(entry);
+    samples.delete(id);
+  };
+  const commitLayers: ModelStageCommit = () => {
+    commits++;
+    for (let index = 0; index < pending.count; index++) {
+      const sample = pending.samples[index], kept = samples.get(sample.sampleId);
+      const entry = sampleAction(sample.sampleId, sample.clipId, pending.clips[index]);
+      if (kept !== undefined && kept !== entry) retire(kept);
+      entry.action.time = sample.timeSeconds;
+      entry.action.weight = pending.weights[index];
+      entry.applied = commits;
+      samples.set(sample.sampleId, entry);
+    }
+    samples.forEach(retireUnapplied);
+    const written = applied;
+    applied = pending;
+    pending = written;
+    layered = true;
+    // With no samples the host selection stands: the held clip, or the rest pose.
+    if (action) action.enabled = samples.size === 0;
+    mixer.update(0);
   };
   const snapshot = () => ({animation: action?.getClip().name ?? MODEL_REST_POSE, time: action?.time ?? 0,
     playing: clock === 'local' && playing});
@@ -82,24 +115,17 @@ export function createModelPlayback(root: THREE.Object3D, clips: readonly THREE.
     // Check every clip and time first; the returned commit sets each sample and evaluates once, never advancing.
     prepareLayers(layers: readonly ModelAnimationLayer[]): ModelStageCommit {
       if (clock !== 'external') throw new ModelStageRefusal(refusal.local);
-      const planned = layers.flatMap(layer => layer.samples.map(sample => ({clip: sampled(sample.clipId,
-        sample.timeSeconds), sample: Object.freeze({...sample, weight: sample.weight * layer.weight})})));
-      return () => {
-        const next = new Map<string, SampleAction>();
-        for (const {clip, sample} of planned) {
-          const entry = sampleAction(sample.sampleId, sample.clipId, clip);
-          entry.action.time = sample.timeSeconds;
-          entry.action.weight = sample.weight;
-          next.set(sample.sampleId, entry);
+      let count = 0;
+      for (let layer = 0; layer < layers.length; layer++) {
+        const stated = layers[layer].samples, weight = layers[layer].weight;
+        for (let index = 0; index < stated.length; index++, count++) {
+          pending.clips[count] = sampled(stated[index].clipId, stated[index].timeSeconds);
+          pending.samples[count] = stated[index];
+          pending.weights[count] = stated[index].weight * weight;
         }
-        for (const [id, entry] of samples) if (next.get(id) !== entry) retire(entry);
-        samples = next;
-        applied = Object.freeze(planned.map(({sample}) => sample));
-        layered = true;
-        // With no samples the host selection stands: the held clip, or the rest pose.
-        if (action) action.enabled = next.size === 0;
-        mixer.update(0);
-      };
+      }
+      pending.count = count;
+      return commitLayers;
     },
     // The stage's presentation time moved by this much; only a playing clip, which the local clock alone allows,
     // moves with it.
@@ -109,8 +135,10 @@ export function createModelPlayback(root: THREE.Object3D, clips: readonly THREE.
     snapshot,
     // While samples play no single clip or time describes the pose; the applied samples do.
     review() {
-      return applied.length ? {...snapshot(), animation: MODEL_ANIMATION_SAMPLES, time: null, samples: applied}
-        : {...snapshot(), samples: applied};
+      const reviewed = Object.freeze(Array.from({length: applied.count}, (_, index) =>
+        Object.freeze({...applied.samples[index], weight: applied.weights[index]})));
+      return reviewed.length ? {...snapshot(), animation: MODEL_ANIMATION_SAMPLES, time: null, samples: reviewed}
+        : {...snapshot(), samples: reviewed};
     },
     dispose() {mixer.stopAllAction(); mixer.uncacheRoot(root);},
   };

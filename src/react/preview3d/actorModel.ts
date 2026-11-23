@@ -8,6 +8,8 @@ import {MODEL_ACTOR_SURFACES, modelActorSurfaces, type ModelActorSurfaces, type 
   modelSurfaceRecord} from './surfaceModel.ts';
 import {modelStageTerrain, type ModelStageTerrain} from './terrainModel.ts';
 import {isRecord} from '../../valueChecks.ts';
+import {MODEL_NO_EMITTERS, type ModelEmitterRecords} from './emitterModel.ts';
+import {modelEmitterRecords} from './emitterProfileModel.ts';
 
 // Actor ids are the host's. A frame's entities are keyed by actor id and the host owns the mapping from an engine's
 // entity ids to them. Two actors may share one asset, so an actor's id is never taken from its asset.
@@ -45,6 +47,8 @@ export interface ModelFileActor {
   readonly animation: ModelStageActorAnimation;
   /** What draws the file's renderers: its own materials throughout, or a named set of the description's. */
   readonly surfaces: ModelActorSurfaces;
+  /** The particle profiles the engine's frames start and stop on this actor, by id; none unless it states some. */
+  readonly emitters: ModelEmitterRecords;
 }
 /** An actor that draws a height grid. It shows its rest pose only, and one record draws every chunk of it. No engine
  * entity drives a terrain. */
@@ -79,7 +83,8 @@ export interface ModelStageActorSnapshot {
   readonly samples: readonly ModelAnimationSample[];
 }
 const ACTOR_SET_FIELDS = Object.freeze(['focus', 'actors']);
-const ACTOR_FIELDS = Object.freeze(['id', 'asset', 'placement', 'animation', 'surfaces']);
+const ACTOR_FIELDS: ModelStatingFields = Object.freeze({stated: ['id', 'asset', 'placement', 'animation', 'surfaces'],
+  whenStated: ['emitters']});
 const TERRAIN_FIELDS = Object.freeze(['id', 'terrain', 'placement', 'surface']);
 // What an asset states: its id and path always; its revision, digest and runtime profile when it has them (Workbench's
 // catalogue knows no revision; whether every asset states its digest is the owner's question). One it names is stated
@@ -129,7 +134,7 @@ function terrainActor(value: unknown, index: number): ModelTerrainActor {
 }
 function actor(value: unknown, index: number): ModelStageActor {
   if (isRecord(value) && modelStates(value, 'terrain')) return terrainActor(value, index);
-  const record = modelRecord(value, ACTOR_FIELDS, `Actor ${index}`);
+  const record = modelRecordStating(value, ACTOR_FIELDS, `Actor ${index}`);
   const id = modelName(record.id, `Actor ${index}.id`);
   const declared = asset(record.asset, `Actor ${id}.asset`);
   const surfaces = modelActorSurfaces(record.surfaces, `Actor ${id}.surfaces`);
@@ -137,7 +142,9 @@ function actor(value: unknown, index: number): ModelStageActor {
     throw new ModelStageRefusal(refusal.routes(id));
   }
   return Object.freeze({id, asset: declared, placement: modelPresentationPose(record.placement,
-    `Actor ${id} placement`), animation: animation(record.animation, `Actor ${id}.animation`), surfaces});
+    `Actor ${id} placement`), animation: animation(record.animation, `Actor ${id}.animation`), surfaces,
+    emitters: modelStates(record, 'emitters') ? modelEmitterRecords(record.emitters, `Actor ${id}.emitters`) :
+      MODEL_NO_EMITTERS});
 }
 
 /** The focused actor of a set; refused when the focus names none of them, or a terrain. */
@@ -169,32 +176,8 @@ export function modelStageActorSet(value: unknown): ModelStageActorSet {
 export function modelActorIdentity(value: ModelStageActor) {
   if (!modelActorDrawsFile(value)) return JSON.stringify([value.id, value.terrain]);
   const {id, path, revision, sha256, runtimeMaterials} = value.asset;
-  return JSON.stringify([value.id, id, path, revision, sha256, runtimeMaterials]);
+  return JSON.stringify([value.id, id, path, revision, sha256, runtimeMaterials, value.emitters]);
 }
 /** Whether a kept actor's host state (placement or animation) changes. */
 export const modelActorHostChanged = (previous: ModelStageActor, next: ModelStageActor) =>
   JSON.stringify(modelActorHost(previous)) !== JSON.stringify(modelActorHost(next));
-
-/** An actor's runtime material profile, bound to its asset's exact identity; none when its asset declares none. */
-export function modelRuntimeAssetProfile(value: ModelFileActor) {
-  const {asset} = value;
-  if (!asset.runtimeMaterials) return undefined;
-  const profile = modelRuntimeMaterialProfile(asset.runtimeMaterials);
-  if (profile.asset.id !== asset.id || profile.asset.revision !== asset.revision) {
-    throw new ModelStageRefusal(refusal.profile(value.id));
-  }
-  if (asset.sha256 !== undefined && asset.sha256 !== profile.asset.sha256) {
-    throw new ModelStageRefusal(refusal.digest(value.id));
-  }
-  return profile;
-}
-
-/**
- * The digest an actor's file is read against (files.ts): its runtime profile's while it states one (until step 5e
- * removes the profile; the asset's own, when stated, must equal it), else the asset's own; none stated, the file is
- * read unverified.
- */
-export function modelAssetDigest(value: ModelFileActor): string | undefined {
-  const profile = modelRuntimeAssetProfile(value);
-  return profile ? profile.asset.sha256 : value.asset.sha256;
-}

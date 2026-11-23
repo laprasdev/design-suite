@@ -3,17 +3,16 @@
 // fog: null.
 import * as THREE from 'three';
 import {
-  MODEL_STAGE, MODEL_STAGE_FRAMING, MODEL_STAGE_TONE_CURVE, modelStageDescription,
+  MODEL_STAGE, MODEL_STAGE_FRAMING, modelStageDescription,
   type ModelColor, type ModelFileActor, type ModelStageDescription, type ModelStageFog,
   type ModelStageSurfaceMode, type ModelStageTime, type ModelVector,
 } from '../src/react/preview3d/model.ts';
-import {declaration, describing, stageLook, standingAt} from './preview3dActorFixture.ts';
+import {ACES_CURVE, declaration, describing, stageLook, standingAt} from './preview3dActorFixture.ts';
 
 export const FOG_SCENE_ENTRY = 'tests/preview3dFogScene.tsx';
 export const FOG_HOSTS_ID = 'fog-stage-hosts';
 export const FOG_PATCH_URL = 'http://scene.local/patch.glb';
 export const FOG_VIEWPORT = Object.freeze({width: 320, height: 200});
-export const FOG_CURVE = MODEL_STAGE_TONE_CURVE.acesFilmic;
 export const PATCH_BASE_COLOR: ModelColor = Object.freeze([0.2, 0.6, 0.8]);
 export const PATCH_EMISSIVE: ModelColor = Object.freeze([0.2, 0.8, 0.2]);
 // The near patch is raised by its placement: its centre's object height is 0 and its world height is not, so the
@@ -49,7 +48,7 @@ const unlitSceneLook = (fog: ModelStageFog | null) => stageLook({
   ambient: {...DEFAULT_LOOK.ambient, strength: 0},
   aids: {floor: [0.1, 0.1, 0.1], share: 1},
   fog,
-  toneCurve: FOG_CURVE,
+  toneCurve: ACES_CURVE,
 });
 
 export const CLEAR_TIME: ModelStageTime = Object.freeze({
@@ -91,7 +90,7 @@ declare global {
 
 export function framingCamera(width: number, height: number): THREE.PerspectiveCamera {
   const camera = new THREE.PerspectiveCamera(
-    MODEL_STAGE.fieldOfView, width / height, MODEL_STAGE.nearPlane, MODEL_STAGE.farPlane,
+    MODEL_STAGE.fieldOfView, width / height, MODEL_STAGE.nearPlane, DEFAULT_LOOK.farPlane,
   );
   camera.position.fromArray(FOG_FRAMING.position);
   camera.lookAt(...FOG_FRAMING.target);

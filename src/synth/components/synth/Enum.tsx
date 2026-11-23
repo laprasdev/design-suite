@@ -3,6 +3,7 @@ export {OptionsEnum}; // Kept for synth-web's deep imports.
 import React, { useState, useCallback, useRef, type RefObject } from 'react';
 import {Modal} from '../../../react/Modal.tsx';
 import {ModalPlacement} from '../../../react/modalElements.ts';
+import type {Without} from '../../../react/refusedKeys.ts';
 import { useStyle } from '../../StyleContext.tsx';
 import type { AdvancedSettings, StyleTheme } from '../../StyleTypes.ts';
 import { getColorScheme, getInsetShadow, hexToRgba, resolveColorType, type ColorScheme } from '../../../color.ts';
@@ -17,7 +18,6 @@ export type {EnumColor, EnumVariant, EnumDisplayMode, EnumOption, SingleSelectEn
 import type {EnumOption, SingleSelectEnumProps, MultiSelectEnumProps, EnumProps}
   from '../../../react/inputs/enumProps.ts';
 
-// Type guard for multi-select
 function isMultiSelect<T>(props: EnumProps<T>): props is MultiSelectEnumProps<T> {
   return props.variant === 'multi';
 }
@@ -99,7 +99,7 @@ const multiImage = (chosen: boolean): React.CSSProperties => ({ filter: chosen ?
 /** A full display's label: lit when chosen, dimmed (or half lit when flat) when not, glowing if `glows`. */
 const fullLabel = (chosen: boolean, { scheme, flat }: EnumPaint, dimmed: string, glows: boolean):
   React.CSSProperties => ({
-  fontSize: 10, lineHeight: 1, fontWeight: 700,
+  ...T.caption, lineHeight: 1,
   color: chosen ? scheme.main : (flat ? hexToRgba(scheme.main, O.medium) : dimmed),
   textShadow: chosen && glows && !flat ? `0 0 8px ${scheme.glow}` : 'none',
 });
@@ -163,7 +163,7 @@ function multiShared({ scheme, style }: EnumPaint): EnumLook {
         icon: { color: chosen ? tone : unchosen,
           filter: chosen ? `drop-shadow(0 0 6px ${halo}) drop-shadow(0 0 3px ${tone})` : 'none' },
         image: multiImage(chosen),
-        label: { fontSize: 10, color: chosen ? style.backgroundColor : unchosen, fontWeight: 600 },
+        label: { ...T.label, color: chosen ? style.backgroundColor : unchosen },
       };
     },
   };
@@ -184,7 +184,7 @@ function multiDistinct({ scheme, style }: EnumPaint): EnumLook {
           transition: TransitionKeys.fast },
         icon: { color: chosen ? tone : unchosen },
         image: multiImage(chosen),
-        label: { fontSize: 10, color: chosen ? tone : unchosen, fontWeight: 600 },
+        label: { ...T.label, color: chosen ? tone : unchosen },
       };
     },
   };
@@ -289,7 +289,7 @@ function GridCell<T>({ option, isSelected, scheme, onSelect }: {
         boxShadow: isSelected ? `0 0 8px ${scheme.glow}` : 'none'
       }}
     >
-      <span style={{ fontSize: 10, fontWeight: 700, color: isSelected ? scheme.main : hexToRgba(scheme.main, O.medium) }}>
+      <span style={{ ...T.caption, color: isSelected ? scheme.main : hexToRgba(scheme.main, O.medium) }}>
         {fmtLabel(option)}
       </span>
     </button>
@@ -380,7 +380,7 @@ function CyclingEnumRenderer<T>({ options, value, onChange, scheme, style, size,
 
   // Sizing: when `size` is given, use compact styling; otherwise use default enum sizing
   const { unframed, compact, boxHeight, boxWidth } = cyclingGeometry(layout, size);
-  const fontSize = layout?.text?.size ?? (compact ? T.value.fontSize : T.title.fontSize - 1);
+  const fontSize = layout?.text?.size ?? T.value.fontSize;
   const pad = compact ? 0 : D.spacing.tightGap;
 
   const normalColor = hexToRgba(scheme.main, O.high);
@@ -432,19 +432,19 @@ function CyclingEnumRenderer<T>({ options, value, onChange, scheme, style, size,
 // CONVENIENCE EXPORTS for backwards compatibility
 // =====================================================
 
-export function BaseFullDisplayEnum<T = string>(props: Omit<SingleSelectEnumProps<T>, 'variant'>) {
+export function BaseFullDisplayEnum<T = string>(props: Without<SingleSelectEnumProps<T>, 'variant'>) {
   return <Enum {...props} variant="full" />;
 }
 
-export function CyclingEnum<T = string>(props: Omit<SingleSelectEnumProps<T>, 'variant'>) {
+export function CyclingEnum<T = string>(props: Without<SingleSelectEnumProps<T>, 'variant'>) {
   return <Enum {...props} variant="cycling" />;
 }
 
-export function MultiSelectEnum<T = string>(props: Omit<MultiSelectEnumProps<T>, 'variant'> & { variant?: never }) {
+export function MultiSelectEnum<T = string>(props: Without<MultiSelectEnumProps<T>, 'variant'>) {
   return <Enum {...props} variant="multi" />;
 }
 
-export function SelectEnum<T extends string | number>({ options, value, onChange }: Omit<SingleSelectEnumProps<T>, 'variant'>) {
+export function SelectEnum<T extends string | number>({ options, value, onChange }: Without<SingleSelectEnumProps<T>, 'variant'>) {
   const style = useStyle().getEffectiveStyle();
   return <select value={value} disabled={!onChange} onChange={event => {
     const selected = options.find(option => String(option.value) === event.target.value);

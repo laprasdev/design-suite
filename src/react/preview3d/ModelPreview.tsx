@@ -38,7 +38,7 @@ export interface ModelPreviewProps {
 function previewTheme(theme: ModelStageTheme): CSSProperties {
   const value = createTheme({colors: theme.colors});
   const variables = themeVariables(value);
-  variables['--caption-size'] = `${Typography.moduleLabel.fontSize}px`;
+  variables['--type-caption'] = `${Typography.label.fontSize}px`;
   return {...variables, ...colorVariables(value)};
 }
 

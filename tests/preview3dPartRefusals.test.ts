@@ -11,7 +11,7 @@ import type {ModelActor} from '../src/react/preview3d/actor.ts';
 import {createModelLighting} from '../src/react/preview3d/lighting.ts';
 import {modelStageBuiltInTimes} from '../src/react/preview3d/builtInTimes.ts';
 import {createModelStage} from '../src/react/preview3d/stage.ts';
-import {NO_FILES, THEME, describing, refused} from './preview3dActorFixture.ts';
+import {NO_FILES, THEME, describing, lookLayers, refused} from './preview3dActorFixture.ts';
 import {modelStageDescription} from '../src/react/preview3d/descriptionModel.ts';
 import {createModelFog} from '../src/react/preview3d/fog.ts';
 
@@ -52,9 +52,7 @@ test('stageParts.ts: a Surface mode an actor cannot show is a refusal and leaves
 });
 
 test('lightingModel.ts: an unknown time is a refusal and leaves the light', () => {
-  const lighting = createModelLighting(modelStageBuiltInTimes(THEME.colors),
-    {fog: createModelFog(new THREE.Scene()), output: {load: () => [], prepare: () => () => undefined},
-      shared: {setLook: () => undefined}});
+  const lighting = createModelLighting(modelStageBuiltInTimes(THEME.colors), lookLayers());
   const before = lighting.lights[0].intensity;
   refused(() => lighting.prepare({time: 'dusk', times: []})(), /The lighting.time names dusk/);
   assert.deepEqual([lighting.time, lighting.lights[0].intensity], ['light', before]);

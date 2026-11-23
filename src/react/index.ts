@@ -18,8 +18,8 @@ export { Button, type ButtonProps, type ButtonVariant } from "./Button.tsx";
 export { Modal, type ModalProps } from './Modal.tsx';
 export { ModalRow, type ModalRowProps, type ModalTitleProps } from './ModalLayout.tsx';
 export { ModalElement, ModalForm, ModalPlacement, ModalWidth, ModalFrameInset, MODAL_TITLED_ATTRIBUTE,
-  MODAL_ROW_LABELLED_ATTRIBUTE, MODAL_PLACEMENT_ATTRIBUTE, type ModalAnchor, type ModalWidthValue,
-  type ModalFrameInsetValue,
+  MODAL_ROW_LABELLED_ATTRIBUTE, MODAL_PLACEMENT_ATTRIBUTE, type ModalAnchor, type PopoverPlacementFromAnchor,
+  type ModalWidthValue, type ModalFrameInsetValue,
 } from './modalElements.ts';
 export { PlayerIcon, PlayerStatusRings, type PlayerIconProps, type PhotoRing, type StatusRing, type RingSegment,
   type Hand, type ActiveHand } from './PlayerIcon.tsx';
@@ -63,7 +63,7 @@ export { POPOVER_GAP, VIEWPORT_EDGE, type PopoverPlacement } from './useAnchored
 export { PARTICIPANT_GRASS, PARTICIPANT_GRASS_BEND } from './participantGrass.ts';
 export { ListboxElement, ListboxForm } from './listboxSelectElements.ts';
 export { SettingElement, METER_VALUE_ATTRIBUTE, METER_FIXED_ATTRIBUTE } from './settingElements.ts';
-export { Boolean, BooleanForm } from '../synth/components/synth/Boolean.tsx';
+export { Boolean, BooleanForm, type BooleanGlyphs } from '../synth/components/synth/Boolean.tsx';
 export { Slider } from '../synth/components/synth/Slider.tsx';
 export { SliderForm } from './inputs/sliderForm.ts';
 export type {SliderProgressProps, SliderProgressSegment} from './inputs/SliderProgress.tsx';
@@ -79,9 +79,10 @@ export { CaretButton, type CaretButtonProps } from './CaretButton.tsx';
 export {
   PhotoStrip, PhotoCompare, PhotoCompareForm, StripTile, type StripPhoto, type CompareCapture,
 } from './Photos.tsx';
-export { Crossfade, type CrossfadeProps } from './Crossfade.tsx';
+export { Crossfade, CrossfadeForm, type CrossfadeProps } from './Crossfade.tsx';
 export {
-  CrossfadePageElement,PAGE_STACK_MOVING,PAGE_STACK_DIRECTION,type CrossfadePageProps,
+  CrossfadePageElement,PAGE_STACK_MOVING,PAGE_STACK_DIRECTION,
+  type CrossfadePageProps,type CrossfadeCarouselProps,type CrossfadeStackProps,
 } from './CrossfadePage.tsx';
 export {
   pageFrames,capturePage,capturePageScroll,restorePageScroll,placePageCopy,removePageCopy,animatePage,
@@ -109,7 +110,8 @@ export {windowedRange, type ListViewport} from './table/useTableWindow.ts';
 export {GooExpander, GooForm, type GooExpanderProps} from './GooExpander.tsx';
 export {useDoubleTap} from './useDoubleTap.ts';
 export {graphDots, graphEdgeFade, nodeFrame} from './graphSurface.ts';
-export {GraphDisplay, GraphFill} from './GraphDisplay.tsx';
+export {GraphDisplay, GraphFill, GraphHandle, graphGlowFilter, placeGraphHandle, type GraphHandlePlace}
+  from './GraphDisplay.tsx';
 export {GraphFillForm, type GraphFillFormValue} from './graphFillForm.ts';
 export {animateCardFlip} from './cardFlip.ts';
 

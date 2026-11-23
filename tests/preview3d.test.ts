@@ -3,7 +3,7 @@ import {describe, it} from 'node:test';
 import * as THREE from 'three';
 import {MODEL_REST_POSE, MODEL_STAGE, modelStagePolicy} from '../src/react/preview3d/model.ts';
 import {applyModelTransform, disposeModelObject, prepareModelAsset} from '../src/react/preview3d/asset.ts';
-import {createModelFraming} from '../src/react/preview3d/camera.ts';
+import {stageFraming} from './preview3dActorFixture.ts';
 import {MODEL_STAGE_ORIGIN, MODEL_STAGE_SIZE} from '../src/react/preview3d/sizeModel.ts';
 import {MODEL_STAGE_FRAMING} from '../src/react/preview3d/framingModel.ts';
 
@@ -98,7 +98,7 @@ describe('shared model presentation', () => {
   it('holds a posed framing across fit requests, fits a fit framing, and takes orbit from its own field', () => {
     const camera = new THREE.PerspectiveCamera(MODEL_STAGE.fieldOfView, 1, 0.01, 100);
     const controls = {target: new THREE.Vector3(), enabled: true, update: () => true};
-    const framing = createModelFraming(camera, controls);
+    const framing = stageFraming(camera, controls);
     const asset = assetBox(), bounds = boundsOf(asset.scene);
     const pose = {kind: MODEL_STAGE_FRAMING.pose, position: [30, 40, 50], target: [1, 2, 3]} as const;
     framing.frame(pose, false);

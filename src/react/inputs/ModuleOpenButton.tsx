@@ -2,11 +2,13 @@ import React from 'react';
 import {Layers} from 'lucide-react';
 import {skinForm} from '../../skinForms.ts';
 import {OpensSkinForm, SkinKind} from '../../skinKinds.ts';
+import { ControlKind } from '../../fields.ts';
 import {ModuleToolButton} from './ModuleToolButton.tsx';
 import { useStyle } from '../../synth/StyleContext.tsx';
 import { hexToRgba } from '../../color.ts';
 import { Borders } from '../../tokens.ts';
 import { D, O, T } from '../../synth/design/index.ts';
+import { CONTROL_KINDS } from '../grid/controlBoxes.ts';
 
 const G = D.moduleGrid;
 
@@ -14,7 +16,7 @@ const G = D.moduleGrid;
 export function OpensMark({ appearance, size }: { appearance?: string; size: number }) {
   const skin = useStyle().skin;
   return (appearance ?? skinForm(skin, SkinKind.OPENS)) === OpensSkinForm.TOOL ? <Layers size={size}/>
-    : <span style={{ fontSize: T.moduleLabel.fontSize, lineHeight: 1 }}>›</span>;
+    : <span style={{ fontSize: T.label.fontSize, lineHeight: 1 }}>›</span>;
 }
 
 /**
@@ -30,8 +32,9 @@ export function ModuleOpenButton({ ariaLabel, onPress, disabled, appearance }: {
   if (tool) return <ModuleToolButton label={ariaLabel}
     icon={<OpensMark appearance={OpensSkinForm.TOOL} size={G.toolIconHeight}/>} onPress={onPress} disabled={disabled}
     iconOnly/>;
+  const { width, height } = CONTROL_KINDS[ControlKind.OPENS];
   const buttonStyle: React.CSSProperties = {
-    ...T.moduleLabel, width: G.openButtonWidth, height: G.openButtonHeight, padding: 0,
+    ...T.label, width, height, padding: 0,
     border: `${Borders.standard.width}px ${Borders.standard.style} ${hexToRgba(style.primaryColor, O.low)}`,
     borderRadius: D.radius.button, background: 'transparent', color: style.textColor,
     cursor: disabled ? 'not-allowed' : 'pointer',

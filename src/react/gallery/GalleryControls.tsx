@@ -46,15 +46,14 @@ export function GalleryControls(props: Props) {
       }}/>;
   return <PageFooter aria-label="Element preview settings" compact settings={<>
     <div className="page-footer-setting"><Label kind="action">Palette</Label>
-      <ListboxSelect label="Palette" value={palette} options={PALETTES} onChange={props.onPalette} title="Palette"
-        above/>
+      <ListboxSelect label="Palette" value={palette} options={PALETTES} onChange={props.onPalette} title="Palette"/>
     </div>
     <div className="page-footer-setting"><Label kind="action">State</Label>
-      <ListboxSelect label="Preview state" value={state} options={STATES} onChange={props.onState} title="State" above/>
+      <ListboxSelect label="Preview state" value={state} options={STATES} onChange={props.onState} title="State"/>
     </div>
     <div className="page-footer-setting"><Label kind="action">Modulation</Label>
       <ListboxSelect label="Modulation" value={modulation} options={MODULATION} onChange={props.onModulation}
-        title="Modulation" above/>
+        title="Modulation"/>
     </div>
     {props.footerSettings}
   </>} action={{disabled: busy, onClick: props.onPreview, 'aria-label': previewLabel, title: previewLabel,

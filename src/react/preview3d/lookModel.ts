@@ -2,6 +2,7 @@ import {modelColor, type ModelColor} from './colorModel.ts';
 import {modelPresentationVector, type ModelVector} from './placementModel.ts';
 import {modelNumber, modelOption, modelRecord} from './recordModel.ts';
 import {ModelStageRefusal} from './refusal.ts';
+import {MODEL_STAGE_NEAR_PLANE} from './presentation.ts';
 
 /** What one time of day gives the stage, every value stated; no renderer type, so any host can apply it. */
 export interface ModelStageLook {
@@ -19,14 +20,22 @@ export interface ModelStageLook {
   readonly aids: {readonly floor: ModelColor; readonly share: number};
   /** The time's fog, or null for none. How its fields combine is the stage's rule, stated once in fog.ts. */
   readonly fog: ModelStageFog | null;
-  /** The curve that maps the frame's light to the screen, or null for none: colours come out as stated. */
+  /** The curve that maps the frame's light to the screen and the exposure it is drawn under, or null for none:
+   * colours come out as stated. */
   readonly toneCurve: ModelStageToneCurve | null;
   /** The time's glow, or null for none: what is brighter than the threshold blooms (draw.ts). */
   readonly glow: ModelStageGlow | null;
+  /** How far from the camera the stage draws, beyond its near plane; a fit framed further off reaches further. */
+  readonly farPlane: number;
 }
-/** The tone curves the stage can draw: the one it has always used. */
-export const MODEL_STAGE_TONE_CURVE = Object.freeze({acesFilmic: 'aces-filmic'} as const);
-export type ModelStageToneCurve = typeof MODEL_STAGE_TONE_CURVE[keyof typeof MODEL_STAGE_TONE_CURVE];
+/** What the canvas's output takes from a look: its tone curve and its glow (draw.ts). */
+export type ModelStageOutput = Pick<ModelStageLook, 'toneCurve' | 'glow'>;
+/** The curves the stage can draw: the one it has always used. */
+export const MODEL_STAGE_CURVE = Object.freeze({acesFilmic: 'aces-filmic'} as const);
+export type ModelStageCurve = typeof MODEL_STAGE_CURVE[keyof typeof MODEL_STAGE_CURVE];
+/** A look's tone curve: which curve, and the exposure, greater than 0, the frame's light is scaled by before it; 1
+ * draws the light as lit. Exposure belongs to the curve because three scales light only under one. */
+export interface ModelStageToneCurve {readonly curve: ModelStageCurve; readonly exposure: number}
 /**
  * Glow: the linear luminance above which a pixel blooms; how strongly the bloom is added back; and how far it spreads,
  * from 0 (tight) to 1 (wide). The spread is the bloom's mix between its tight and wide weightings of its five blur
@@ -42,19 +51,26 @@ export interface ModelStageFog {
   readonly height: {readonly base: number; readonly top: number; readonly strength: number} | null;
 }
 export const MODEL_STAGE_LOOK_FIELDS = Object.freeze({
-  look: ['backdrop', 'key', 'ambient', 'shadow', 'night', 'aids', 'fog', 'toneCurve', 'glow'],
+  look: ['backdrop', 'key', 'ambient', 'shadow', 'night', 'aids', 'fog', 'toneCurve', 'glow', 'farPlane'],
   key: ['color', 'strength', 'direction'], ambient: ['sky', 'ground', 'strength'], aids: ['floor', 'share'],
   fog: ['near', 'far', 'height'], reach: ['distance', 'color'], height: ['base', 'top', 'strength'],
-  glow: ['threshold', 'strength', 'radius'],
+  glow: ['threshold', 'strength', 'radius'], toneCurve: ['curve', 'exposure'],
 } as const);
-export const MODEL_STAGE_FOG_REFUSAL = Object.freeze({
-  near: (where: string) => `${where}.near.distance must be greater than 0.`,
-  far: (where: string) => `${where}.far.distance must be greater than its near distance.`,
-  top: (where: string) => `${where}.top must be above its base.`,
+/** A bound a look's number must exceed, never reach, and how a refusal names it; `modelNumber`'s `least` and `most`
+ * are reached. */
+interface ModelStageAbove {readonly value: number; readonly name: string}
+const above = (value: number, name: string): ModelStageAbove => Object.freeze({value, name});
+/** Every bound a look states a number above, each made from the number stated before it, which a fixed one ignores. */
+export const MODEL_STAGE_ABOVE = Object.freeze({
+  nothing: () => above(0, '0'),
+  nearPlane: () => above(MODEL_STAGE_NEAR_PLANE, `the stage's near plane, ${MODEL_STAGE_NEAR_PLANE}`),
+  base: (value: number) => above(value, 'its base'),
+  nearDistance: (value: number) => above(value, 'its near distance'),
 });
 export const MODEL_STAGE_LOOK_REFUSAL = Object.freeze({
+  beyond: (where: string, bound: string) => `${where} must be a finite number greater than ${bound}.`,
 });
-const fields = MODEL_STAGE_LOOK_FIELDS, UNBOUNDED = Number.POSITIVE_INFINITY;
+const fields = MODEL_STAGE_LOOK_FIELDS, bounds = MODEL_STAGE_ABOVE, UNBOUNDED = Number.POSITIVE_INFINITY;
 /** The widest spread the bloom mixes to (UnrealBloomPass's radius), the end of the range it is meaningful on. */
 export const MODEL_STAGE_GLOW_WIDEST = 1;
 
@@ -64,25 +80,31 @@ function direction(value: unknown, where: string): ModelVector {
   return vector;
 }
 
-function reach(value: unknown, where: string) {
+// Above a bound, not at it, refused with one message wherever it falls short: an exposure of 0 draws nothing,
+// a far plane at the near one draws no depth, and a fog or a height layer that ends where it starts has no extent.
+function beyond(value: unknown, where: string, bound: ModelStageAbove): number {
+  const number = modelNumber(value, where, -UNBOUNDED, UNBOUNDED);
+  if (!(number > bound.value)) throw new ModelStageRefusal(MODEL_STAGE_LOOK_REFUSAL.beyond(where, bound.name));
+  return number;
+}
+
+function reach(value: unknown, where: string, bound: ModelStageAbove) {
   const record = modelRecord(value, fields.reach, where);
-  return Object.freeze({distance: modelNumber(record.distance, `${where}.distance`, 0, UNBOUNDED),
+  return Object.freeze({distance: beyond(record.distance, `${where}.distance`, bound),
     color: modelColor(record.color, `${where}.color`)});
 }
 function height(value: unknown, where: string) {
   const record = modelRecord(value, fields.height, where);
   const base = modelNumber(record.base, `${where}.base`, -UNBOUNDED, UNBOUNDED);
-  const top = modelNumber(record.top, `${where}.top`, -UNBOUNDED, UNBOUNDED);
-  if (!(top > base)) throw new ModelStageRefusal(MODEL_STAGE_FOG_REFUSAL.top(where));
+  const top = beyond(record.top, `${where}.top`, bounds.base(base));
   return Object.freeze({base, top, strength: modelNumber(record.strength, `${where}.strength`, 0, 1)});
 }
 // Null is the explicit "no fog" and "no height layer", as `environment: null` is; nothing missing is read as either.
 function fog(value: unknown, where: string): ModelStageFog | null {
   if (value === null) return null;
   const record = modelRecord(value, fields.fog, where);
-  const near = reach(record.near, `${where}.near`), far = reach(record.far, `${where}.far`);
-  if (!(near.distance > 0)) throw new ModelStageRefusal(MODEL_STAGE_FOG_REFUSAL.near(where));
-  if (!(far.distance > near.distance)) throw new ModelStageRefusal(MODEL_STAGE_FOG_REFUSAL.far(where));
+  const near = reach(record.near, `${where}.near`, bounds.nothing());
+  const far = reach(record.far, `${where}.far`, bounds.nearDistance(near.distance));
   return Object.freeze({near, far,
     height: record.height === null ? null : height(record.height, `${where}.height`)});
 }
@@ -96,8 +118,12 @@ function glow(value: unknown, where: string): ModelStageGlow | null {
     radius: modelNumber(record.radius, `${where}.radius`, 0, MODEL_STAGE_GLOW_WIDEST)});
 }
 
-const toneCurve = (value: unknown, where: string): ModelStageToneCurve | null =>
-  value === null ? null : modelOption(value, MODEL_STAGE_TONE_CURVE, `${where}.toneCurve`);
+function toneCurve(value: unknown, where: string): ModelStageToneCurve | null {
+  if (value === null) return null;
+  const record = modelRecord(value, fields.toneCurve, where);
+  return Object.freeze({curve: modelOption(record.curve, MODEL_STAGE_CURVE, `${where}.curve`),
+    exposure: beyond(record.exposure, `${where}.exposure`, bounds.nothing())});
+}
 
 /** One look, checked whole; `where` names it in every refusal, as `Time dusk: look`. */
 export function modelStageLook(value: unknown, where: string): ModelStageLook {
@@ -118,7 +144,8 @@ export function modelStageLook(value: unknown, where: string): ModelStageLook {
     aids: Object.freeze({floor: modelColor(aids.floor, `${where}.aids.floor`),
       share: modelNumber(aids.share, `${where}.aids.share`, 0, 1)}),
     fog: fog(look.fog, `${where}.fog`),
-    toneCurve: toneCurve(look.toneCurve, `${where}`),
+    toneCurve: toneCurve(look.toneCurve, `${where}.toneCurve`),
     glow: glow(look.glow, `${where}.glow`),
+    farPlane: beyond(look.farPlane, `${where}.farPlane`, bounds.nearPlane()),
   });
 }

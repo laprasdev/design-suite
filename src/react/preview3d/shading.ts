@@ -5,7 +5,9 @@ import {modelDrawnMaterials} from './renderers.ts';
 // compiles goes through `extendModelMaterial`, which composes the changes in order into one hook and one program key,
 // so two changes to one material never overwrite each other. A change is placed at three's own chunks, named once
 // through `modelShaderChunk`, and its refusals name the change by the key the program cache knows it by.
-export type ModelShader = THREE.WebGLProgramParametersWithUniforms;
+/** The part of three's program parameters a change reads and writes: its sources, its uniforms and its fog switch. */
+export type ModelShader = Pick<THREE.WebGLProgramParametersWithUniforms,
+  'vertexShader' | 'fragmentShader' | 'uniforms' | 'fog'>;
 /** One of three's chunks in a shader's source replaced: `chunk` is its name, as `fog_fragment`. */
 export type ModelShaderReplace = (source: string, chunk: string, replacement: string) => string;
 /** One change to a material's program: its name in the program's cache key (read at each lookup, so a change whose
@@ -37,10 +39,13 @@ export function modelShaderReplace(key: string): ModelShaderReplace {
   };
 }
 
+/** A material's changes applied to its program in order: what the hook `extendModelMaterial` composes runs. */
+export function applyModelShaderChanges(shader: ModelShader, changes: readonly ModelShaderChange[]) {
+  for (const change of changes) change.apply(shader, modelShaderReplace(change.key));
+}
+
 export function extendModelMaterial<T extends THREE.Material>(material: T, changes: readonly ModelShaderChange[]): T {
-  material.onBeforeCompile = shader => {
-    for (const change of changes) change.apply(shader, modelShaderReplace(change.key));
-  };
+  material.onBeforeCompile = shader => applyModelShaderChanges(shader, changes);
   // three asks for the key at every program lookup (with glow, for every material twice a frame), so the joined key
   // is held and rebuilt only when one of its changes names another state; asking allocates nothing.
   const keys = changes.map(change => change.key);

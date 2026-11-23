@@ -51,7 +51,7 @@ describe('a kind\'s forms beyond a lit surface', () => {
   it('moves a kind\'s vertices in one place: given the world position, its offset taken to the object\'s space', () => {
     const built = program(SWAY), source = built.vertexShader;
     assert.ok(at(source, 'vec3 kindDisplacement( vec3 world )') < at(source, 'void main()'), 'its program, declared');
-    assert.ok(at(source, 'uniform vec2 stageNumbers;') < at(source, 'void main()'), 'the shared values, declared');
+    assert.ok(at(source, 'uniform vec3 stageNumbers;') < at(source, 'void main()'), 'the shared values, declared');
     assert.ok(at(source, '#include <skinning_vertex>') < at(source, 'kindDisplacement( kindWorld )'));
     assert.ok(at(source, 'kindDisplacement( kindWorld )') < at(source, '#include <project_vertex>'));
     assert.ok(at(source, '#include <project_vertex>') < at(source, '#include <fog_vertex>'), 'the fog follows');

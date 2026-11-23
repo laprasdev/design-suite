@@ -1,4 +1,5 @@
-import {LayoutDimensions, PHI} from '../../layout.ts';
+import {LayoutDimensions} from '../../layout.ts';
+import {PHI} from '../../goldenRatio.ts';
 
 const {iconChoiceBox, iconChoiceGlyph} = LayoutDimensions.moduleGrid;
 /** The share of its cell an icon takes, in a grid and in a cluster alike. */

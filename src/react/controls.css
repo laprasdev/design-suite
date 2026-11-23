@@ -3,8 +3,8 @@
 .selection-mark,.bd-pending[data-form=mark] { --selection-mark:calc(2 * var(--field-gap)); }
 .range-control{--range-unfilled:color-mix(in srgb,var(--dim) 35%,transparent);--disabled-opacity:.3;display:grid;grid-template-columns:auto minmax(0,1fr) auto;grid-template-areas:"value label reset" "slider slider slider";align-items:center;gap:0 8px;min-width:0}
 .range-control[data-compact]{grid-template-columns:minmax(0,1fr) auto auto;grid-template-areas:"slider value reset"}
-.range-control-label{grid-area:label;min-width:0;overflow:hidden;font-size:max(12px,var(--caption-size,12px));color:var(--dim);text-align:right;text-overflow:ellipsis;white-space:nowrap}
-.range-control>output{grid-area:value;font-size:max(12px,var(--caption-size,12px));font-variant-numeric:tabular-nums;color:var(--text)}
+.range-control-label{grid-area:label;min-width:0;overflow:hidden;font-size:var(--type-caption);color:var(--dim);text-align:right;text-overflow:ellipsis;white-space:nowrap}
+.range-control>output{grid-area:value;font-size:var(--type-caption);font-variant-numeric:tabular-nums;color:var(--text)}
 .range-control[data-changed=true]>output{color:var(--pink)}
 .range-control>input,.range-control-track>input{grid-area:slider;width:100%;min-width:0;margin:0;accent-color:var(--pink)}
 .range-control input[data-setting-range]{-webkit-appearance:none;appearance:none;background:transparent;cursor:pointer}
@@ -24,6 +24,18 @@
   background-size:var(--select-caret) var(--select-caret);background-repeat:no-repeat;
 }
 .app-root .listbox-select[data-shows-value] { text-align:left; }
+/* A step form's group, stepper and carets: the carets flank the chosen option's carousel slot, in the dim colour. */
+.listbox-select-group { display:inline-flex;flex-wrap:wrap;align-items:center;column-gap:var(--module-title-gap,var(--header-gap));min-width:0;max-width:100%; }
+.listbox-select-stepper { display:inline-flex;align-items:center;gap:calc(var(--field-gap) / 2);min-width:0;max-width:100%; }
+/* The chosen name opens the list as its word does, hidden from the accessibility tree so the word is the one control. */
+.listbox-select-chosen { display:inline-flex;align-items:center;min-width:0;cursor:pointer; }
+.listbox-select-group:has(> .listbox-select:disabled) .listbox-select-chosen { cursor:default; }
+.header-icon-button.listbox-select-step { color:var(--dim); }
+/* A module's header carrying a title choice wraps its row and carets instead of clipping them. */
+[data-module-header][data-header-form=choice] { flex-wrap:wrap; }
+/* A module's title heading a choice: its word starts where every title does, inheriting its heading's case. */
+.listbox-select.module-title-choice { display:inline-flex;align-items:baseline;max-width:100%;text-transform:inherit;letter-spacing:inherit; }
+.listbox-select.module-title-choice:focus-visible { outline:var(--focus-outline,2px solid var(--pink));outline-offset:3px; }
 /* An anchored Modal on its trigger: Modal draws the surface and places the layer; the list lays out inside it. */
 .listbox-select-popover { display:flex;flex-direction:column;min-width:var(--anchor-width);margin:0;padding:4px;list-style:none;color:var(--text);font-family:var(--font-chrome,inherit);font-size:var(--type-control,12px);line-height:1.4; }
 .listbox-select-list { margin:0;padding:0;list-style:none;min-height:0;overflow:auto;overscroll-behavior:contain; }

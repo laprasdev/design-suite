@@ -1,6 +1,6 @@
 import React from 'react';
 import {designTokens} from '../skins.ts';
-import {PHI} from '../layout.ts';
+import {PHI} from '../goldenRatio.ts';
 
 const G = designTokens.controllerGeometry, C = designTokens.controllerControls;
 type Paint = React.SVGAttributes<SVGElement>;

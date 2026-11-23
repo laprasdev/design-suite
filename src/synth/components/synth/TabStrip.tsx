@@ -1,7 +1,7 @@
 import React from 'react';
 import { hexToRgba } from '../../../color.ts';
 import { LayoutDimensions } from '../../../layout.ts';
-import { D, DC, O, S, SYNTH_LABEL, STRIP_LABEL, TransitionKeys, Borders } from '../../design/index.ts';
+import { D, DC, O, S, T, STRIP_LABEL, TransitionKeys, Borders } from '../../design/index.ts';
 
 // =====================================================
 // TAB STRIP — flush edge-to-edge cells with dividers
@@ -186,8 +186,8 @@ export function LabeledControl({ label, value, color, opacity, align, children }
   const textAlign = align === 'right' ? ('right' as const) : undefined;
   return (
     <AlignedGrid align={align} aside={children}>
-      <span style={{ ...SYNTH_LABEL, color, textTransform: 'uppercase', textAlign }}>{label}</span>
-      {value && <span style={{ ...SYNTH_LABEL, color, opacity: opacity ?? O.inactive, textAlign }}>{value}</span>}
+      <span style={{ ...T.label, color, textTransform: 'uppercase', textAlign }}>{label}</span>
+      {value && <span style={{ ...T.label, color, opacity: opacity ?? O.inactive, textAlign }}>{value}</span>}
     </AlignedGrid>
   );
 }

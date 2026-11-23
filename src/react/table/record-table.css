@@ -4,8 +4,8 @@
 [data-record-table] .match-player-table tr[data-taken=true] { opacity: .42; }
 [data-record-table] .match-player-table thead { position: sticky; top: 0; z-index: 1; }
 [data-record-table] .match-table-wrap { border: var(--line-width) solid var(--line); border-radius: 12px;overflow:auto; flex:1;min-height:0; }
-[data-record-table] .match-player-table th { text-align: left; font-size: 9px; color: var(--faint);padding:6px var(--player-cell-inset,8px); background: var(--card); position:sticky;top:0;z-index:2; }
-.app-root [data-record-table] .match-player-table th > button { width:100%;text-align:inherit;color:inherit;white-space:nowrap;font-size:9px; }
+[data-record-table] .match-player-table th { text-align: left; font-size: var(--type-caption); color: var(--faint);padding:6px var(--player-cell-inset,8px); background: var(--card); position:sticky;top:0;z-index:2; }
+.app-root [data-record-table] .match-player-table th > button { width:100%;text-align:inherit;color:inherit;white-space:nowrap;font-size:var(--type-caption); }
 [data-record-table] .match-player-table th[aria-sort=descending], [data-record-table] .match-player-table th[aria-sort=ascending] { color:var(--pink); }
 [data-record-table] .match-player-table td { padding:3px var(--player-cell-inset,8px); border-top: var(--line-width) solid var(--line);font-variant-numeric:tabular-nums; }
 [data-record-table] .match-player-table td:not(:first-child), [data-record-table] .match-player-table th:not(:first-child) { text-align:center; }
@@ -65,7 +65,7 @@
 [data-record-table].draft-stats-panel { --draft-player-width:176px; }
 }
 [data-record-table].draft-stats-panel[data-bounded=true] { height:clamp(var(--table-min-height),55dvh,600px);flex:none; }
-[data-record-table] .player-table-heading {font-size:9px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;margin:0;color:var(--text);line-height:16px;white-space:nowrap}
+[data-record-table] .player-table-heading {font-size:var(--type-caption);font-weight:800;letter-spacing:.13em;text-transform:uppercase;margin:0;color:var(--text);line-height:16px;white-space:nowrap}
 [data-record-table] .draft-full-stats[data-identity=false] {--draft-identity-width:0px;}
 .draft-stats-panel[data-comparison] {--table-border:0px;flex:none;}
 .draft-stats-panel[data-comparison] .draft-full-stats {

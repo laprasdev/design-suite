@@ -6,7 +6,6 @@
  --header-score:calc(37px * var(--page-bar-height-scale,1));
  --page-gutter:calc(2 * var(--header-gap) + var(--header-control));
  --app-bar-height:calc(var(--header-score) + 2 * var(--header-pad) + var(--line-width));
- --label-action-size:var(--type-control);
  font:var(--type-body)/var(--leading-body) var(--font-reading);-webkit-font-smoothing:antialiased;
 }
 .page-surface :is([data-page-bar=header],[data-page-bar=footer]) {font:var(--type-control)/1.4 var(--font-chrome);}

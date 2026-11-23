@@ -23,7 +23,7 @@ const poseOf = (value: Pick<ModelPreviewFrame, 'entities'>) => value.entities[0]
 describe('one entity of a frame', () => {
   it('requires every unsupported channel to be explicitly empty before accepting a pose', () => {
     assert.deepEqual(MODEL_PREVIEW_CAPABILITIES,
-      {pose: true, animationLayers: true, partPoses: false, materials: false});
+      {pose: true, animationLayers: true, partPoses: false, materials: false, emitters: true});
     for (const key of ['partPoses', 'materials']) {
       const missing: Record<string, unknown> = input();
       delete missing[key];

@@ -56,7 +56,7 @@ import '@looms/bloom-design/react/styles.css';
 
 `createTheme` returns data without touching the document, and `applyTheme` writes it to CSS variables. `src/synth` holds the web synth's controls, which read their colors through `StyleProvider`.
 
-The stylesheet declares every face once, at `FONT_ROUTE` (`/fonts/`): `FONT_FILES` in `src/fonts.ts` lists each file, and `npm run fonts` writes `src/react/fonts.css` from it. A host serves each file on that route, looking the path up in `FONTS_BY_ROUTE` and sending the face's `format.mediaType`. A host on disk reads each file from `fontFileUrl` (`@looms/bloom-design/fontFiles`), naming only the engine repository's checkout, as the folder path it holds: the suite holds Inter, the reading face, under `OFL.txt` in `@looms/bloom-design/fonts/*`, and SF Pro, the chrome face, stays in the private engine repository, since this repository is public. A host that bundles the stylesheet with esbuild passes `FONT_ROUTE_FILES` as `external`.
+The stylesheet declares every face once, at `FONT_ROUTE` (`/fonts/`): `FONT_FILES` in `src/fonts.ts` lists each file, and `npm run fonts` writes `src/react/fonts.css` from it. A host serves each file on that route, looking the path up in `FONTS_BY_ROUTE` and sending the face's `format.mediaType`. A host on disk reads each file from `fontFileUrl` (`@looms/bloom-design/fontFiles`), naming its own font folder as an absolute folder path: the suite holds Inter, the reading face, under `OFL.txt` in `@looms/bloom-design/fonts/*`, and SF Pro, the chrome face, stays in the host's font folder, since this repository is public. A host that bundles the stylesheet with esbuild passes `FONT_ROUTE_FILES` as `external`.
 
 Inside a suite application root (`ApplicationElement.ROOT`), the stylesheet draws every `code` and `pre`, in `src/react/foundation.css`: one skin for a chip and a block, from the theme variables the host applies there (`codeWash`, line, small radius and code type). A page outside a root keeps its own code. A chip keeps its own case, tracking and weight inside a head, and takes the weight of a `strong` around it. A host places code and may map its colour to a state token, as Workbench dims a source path, but never changes its skin: Workbench's `check:styles` refuses a local wash, border, radius, face, weight, tracking or case on `code` or `pre`.
 
@@ -67,7 +67,8 @@ Inside a suite application root (`ApplicationElement.ROOT`), the stylesheet draw
 | `@looms/bloom-design` | Tokens, layout constants, colors and `createTheme`; no React |
 | `/tokens`, `/layout`, `/color`, `/theme`, `/skins` | Focused framework-independent APIs |
 | `/fonts` | The font route, families and the files each host serves there |
-| `/fontFiles` | Where a host on disk reads each font file, given the engine repository's checkout |
+| `/fontFiles` | Where a host on disk reads each font file, given its font folder |
+| `/captionWidths` | Single-line caption width reader over a generated font-metrics table |
 | `/fonts/*` | The font files the suite holds, with their licence |
 | `/react` | Composed controls: bars, segmented controls, dialogs, portraits, node graphs and the shared kinds |
 | `/modal-room` | Dialog growth and measurement contract |
@@ -102,6 +103,8 @@ direction follows their order, and their actual retained surfaces animate withou
 `PageHeaderBar` and `PageFooter` own the shared page chrome. `HeaderNavigation` takes the same typed
 segmented-control options as the sport selector: applications supply glyphs, labels, values and navigation.
 Brand, Back, settings and page controls fill the existing slots. Notices reuse `ActionBar`'s notice surface.
+A footer sets the form of the lists inside it: a `ListboxSelect` in any of its slots opens above,
+unless its own `popover` says otherwise.
 
 Keep the fixed header and footer outside the moving page body. The exported page
 motion helpers also support stationary chrome within a composed page.
@@ -139,7 +142,9 @@ it opens from: the panel and the anchor are its region, and the region also hold
 regions of the `Modal`s anchored inside its panel, such as a list opened from a detail.
 Dismissed with focus in its panel, an anchored `Modal` hands focus back to its anchor. An
 anchored `Modal` may also name a `group`, of which one is open at a time: opening one
-dismisses the others. `HoverDetail`, `ListboxSelect`, the synth `Enum`'s grid picker and a
+dismisses the others. An anchored `Modal` may also say where its panel goes beside the
+anchor with `popover` (`PopoverPlacementFromAnchor`: a `PopoverPlacement` less `at`, the
+point the anchor names). `HoverDetail`, `ListboxSelect`, the synth `Enum`'s grid picker and a
 `Knob`'s refused number compose the anchored placement, the first three with their trigger
 as the anchor. Every placement keeps the same surface and the module radius token.
 `MODAL_PLACEMENT_ATTRIBUTE` carries the placement on the panel and its frame for styling
@@ -293,9 +298,12 @@ exactly its fields: one it omits or one it does not have is refused by its path 
   `{id, label, look}`; ids and labels are each a time's own. Two times are built in, `MODEL_STAGE_TIME.light` (the
   consumer's theme) and `.dark`; `MODEL_STAGE_THEME_LIGHTING` is `{time: 'light', times: []}`. A look states
   `backdrop`, `key` `{color, strength, direction}`, `ambient` `{sky, ground, strength}`, `shadow`, `night` (0 to 1),
-  `aids` `{floor, share}`, `fog` (`{near, far, height}` or `null`), `toneCurve` (`'aces-filmic'` or `null`) and
-  `glow` (`{threshold, strength, radius}` with `radius` from 0 to 1, or `null`); colours are sRGB triples in [0, 1].
-  Everything the look colours, the backdrop included, passes through its curve. Under glow the scene is drawn once in
+  `aids` `{floor, share}`, `fog` (`{near, far, height}` or `null`), `toneCurve` (`{curve, exposure}` with `curve`
+  `'aces-filmic'` and `exposure` greater than 0, 1 drawing the light as lit, or `null`), `glow`
+  (`{threshold, strength, radius}` with `radius` from 0 to 1, or `null`) and `farPlane` (how far the camera draws,
+  greater than `MODEL_STAGE.nearPlane`; a fit framed further off reaches further); colours are sRGB triples in
+  [0, 1]. Everything the look colours, the backdrop included, is scaled by the curve's exposure, then passes through
+  its curve. Under glow the scene is drawn once in
   linear light, the bloom (blurred by tapered Gaussians, so a bright emitter's halo is round) added, then the curve
   and the display encoding applied once (the stage's floor, grid and rigs are drawn after, neither bloomed nor
   curved). The types and
@@ -570,7 +578,9 @@ npm run build
 `npm run check` runs the type, size, baseline, cycle and duplication gates: `scripts/baseline-gate.ts` refuses rises
 against `origin/main` across all three baselines (`scripts/size-baseline.json` and `scripts/cast-baseline.json`,
 lowered automatically by `scripts/size-gate.ts` and `scripts/type-gate.ts` through `ratchetedFiles`, and
-`scripts/allocation-baseline.json`, lowered by hand from recorded runs). `npm test` installs the pinned gate tools
+`scripts/allocation-baseline.json`, lowered by hand from recorded runs, where an entry `origin/main` does not name
+enters at the maximum it records), unless an allowance `origin/main` lacks (`scripts/baseline/allowance.ts`) covers a
+size or allocation rise. `npm test` installs the pinned gate tools
 (`scripts/gateTools`) and Playwright's headless Chromium, in which `tests/*.browser.test.ts` read computed sizes,
 such as each Modal width's, and sample per-tick heap allocations against `scripts/allocation-baseline.json`.
 

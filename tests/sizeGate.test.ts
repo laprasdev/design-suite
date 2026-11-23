@@ -126,12 +126,13 @@ describe('an allowance for a split\'s import lines', () => {
     const grown = measured({ 'src/a.ts': file(303, [10], 6) });
     assert.throws(() => allowed(baselineOf(base), grown, GRANT, committed), /1 lines that aren't/);
   });
-  it('refuses a long line, a file not baselined or not committed, a missing reason, and a file that needs none', () => {
+  it('refuses a long line, a missing or unbaselined file, a missing reason, and a file that needs none', () => {
     const cases: [Record<string, string>, typeof GRANT, typeof committed | undefined, RegExp][] = [
       [{ 'src/a.ts': file(303, [10, 11], 7) }, GRANT, committed, /long line/],
+      [{}, GRANT, committed, /the file is gone/],
       [{ 'src/z.ts': file(303, [], 7) }, { ...GRANT, path: 'src/z.ts' }, committed, /only a baselined file/],
       [{ 'src/a.ts': file(303, [10], 7) }, GRANT, undefined, /base branch does not hold the file/],
-      [{ 'src/a.ts': file(303, [10], 7) }, { ...GRANT, reason: '' }, committed, /names the step/],
+      [{ 'src/a.ts': file(303, [10], 7) }, { ...GRANT, reason: '' }, committed, /reason must be a non-empty string/],
       [{ 'src/a.ts': file(300, [10], 4) }, GRANT, committed, /needs none/],
     ];
     for (const [files, grant, before, refusal] of cases) {

@@ -3,8 +3,10 @@ import {skinForm} from '../../skinForms.ts';
 import {NumberSkinForm, SkinKind} from '../../skinKinds.ts';
 import {IntegerIncrementer} from '../../synth/components/synth/40-IntegerIncrementer.tsx';
 import {IncrementerForm} from '../../synth/components/synth/incrementerForm.ts';
+import { ControlKind } from '../../fields.ts';
 import { useStyle } from '../../synth/StyleContext.tsx';
-import { D, T } from '../../synth/design/index.ts';
+import { T } from '../../synth/design/index.ts';
+import { CONTROL_KINDS } from '../grid/controlBoxes.ts';
 import {useOwnedControlGesture as useControlGesture} from './useOwnedControlGesture.ts';
 import { cutoutBox, inputOpacity } from './inputStyle.ts';
 
@@ -29,8 +31,8 @@ export function ModuleNumberInput({ value, onChange, ariaLabel, disabled, fill, 
     if (Number.isFinite(next)) onChange?.(next);
   };
   const inputStyle: React.CSSProperties = {
-    ...T.moduleValue, width: fill ? '100%' : D.moduleGrid.numberInputWidth, minWidth: 0, boxSizing: 'border-box',
-    ...cutoutBox(style), opacity: inputOpacity(disabled),
+    ...T.moduleValue, width: fill ? '100%' : CONTROL_KINDS[ControlKind.NUMBER].width,
+    minWidth: 0, boxSizing: 'border-box', ...cutoutBox(style), opacity: inputOpacity(disabled),
   };
   const input = <input type="number" step="any" aria-label={ariaLabel} disabled={disabled}
     value={typing ?? String(value)}

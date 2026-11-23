@@ -4,7 +4,7 @@
 // =====================================================
 import React, { type HTMLAttributes, type ReactNode } from "react";
 
-export type LabelKind = "name" | "value" | "action";
+export type LabelKind = "name" | "value" | "action" | "chosen";
 
 /** A text accent. kind: "name" (field name, uppercase/dim) | "value" (current
  *  value, preserves case, brighter). */

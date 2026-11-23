@@ -5,7 +5,7 @@ import type {ModelValidatedFrame} from './frameModel.ts';
 import type {ModelStageDescription} from './descriptionModel.ts';
 import type {ModelRotation, ModelVector} from './placementModel.ts';
 import {MODEL_STAGE_DISPLAY, type ModelStageDisplay} from './displayModel.ts';
-import {MODEL_STAGE_FIELD_OF_VIEW} from './presentation.ts';
+import {MODEL_STAGE_FIELD_OF_VIEW, MODEL_STAGE_NEAR_PLANE} from './presentation.ts';
 export {MODEL_RUNTIME_MATERIAL, modelRuntimeMaterialProfile} from './runtimeMaterialModel.ts';
 export type {ModelRuntimeMaterialProfile, ModelMaterialOutput, ModelRendererBinding} from './runtimeMaterialModel.ts';
 export {MODEL_ENVIRONMENT_GRID, MODEL_ENVIRONMENT_REFUSAL, modelEnvironment} from './environmentModel.ts';
@@ -21,8 +21,10 @@ export {MODEL_RECORD_REFUSAL} from './recordModel.ts';
 export {MODEL_PREVIEW_LIGHTING_TEXT, MODEL_STAGE_BUILT_IN_TIMES, MODEL_STAGE_THEME_LIGHTING, MODEL_STAGE_TIME,
   modelStageLighting, modelStageTimeOptions} from './lightingModel.ts';
 export type {ModelStageLighting, ModelStageTime} from './lightingModel.ts';
-export {MODEL_STAGE_GLOW_WIDEST, MODEL_STAGE_TONE_CURVE} from './lookModel.ts';
-export type {ModelStageFog, ModelStageGlow, ModelStageLook, ModelStageToneCurve} from './lookModel.ts';
+export {MODEL_STAGE_CURVE, MODEL_STAGE_GLOW_WIDEST} from './lookModel.ts';
+export type {ModelStageCurve, ModelStageFog, ModelStageGlow, ModelStageLook, ModelStageToneCurve}
+  from './lookModel.ts';
+export {modelColorOfHex} from './colorModel.ts';
 export type {ModelColor} from './colorModel.ts';
 // A surface kind's declaration, records and sets, and what a frame's renderers take: checked here with no renderer,
 // by a host, a scene package or a kind's author.
@@ -98,7 +100,7 @@ export const MODEL_PREVIEW_DISPLAY_OPTIONS = Object.freeze([
 ] satisfies {value: ModelStageDisplay; label: string}[]);
 
 export const MODEL_STAGE = Object.freeze({
-  pixelRatioLimit: 2, fieldOfView: MODEL_STAGE_FIELD_OF_VIEW, nearPlane: 0.01, farPlane: 100,
+  pixelRatioLimit: 2, fieldOfView: MODEL_STAGE_FIELD_OF_VIEW, nearPlane: MODEL_STAGE_NEAR_PLANE,
   cameraMinimum: 1, cameraMaximum: 16, cameraDirection: [0.75, 0.4, 1], fitPadding: 1.4,
   floorRadius: 4, floorSegments: 64, floorOffset: -0.025, gridSize: 8, gridDivisions: 16,
   normalizedHeight: 2, markerRadius: 0.035, markerSegments: 12, jointRadiusRatio: 0.008, jointSegments: 8,

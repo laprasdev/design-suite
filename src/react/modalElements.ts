@@ -2,6 +2,7 @@ import type {CSSProperties,RefObject} from 'react';
 import {element} from './elementContract.ts';
 import type {CssPoint} from './cssZoom.ts';
 import type {PopoverPlacement} from './useAnchoredPopover.ts';
+import type {Refused,Without} from './refusedKeys.ts';
 
 // A titled Modal's parts, shared by its layout, its stylesheet and consumers' browser checks.
 export const ModalElement=Object.freeze({
@@ -38,21 +39,27 @@ export type ModalFrameInsetValue=(typeof ModalFrameInset)[keyof typeof ModalFram
 // A contained Modal keeps its frame's inset and may sit at a `top`: 0 or more CSS pixels below its frame's top edge,
 // within the inset or past it. A negative or non-finite top is refused when the Modal renders.
 type Contained={frameInset?: ModalFrameInsetValue;top?: number};
-type NotContained={[Key in keyof Contained]?: never};
-type NotAnchored={anchor?: never;group?: never;popover?: never};
+type NotContained=Refused<Contained>;
 // What an anchored Modal is placed from: the element it opens from, which is part of its region, or a point.
 export type ModalAnchor=RefObject<HTMLElement|null>|CssPoint;
-// Where a Modal sits. Only an anchored Modal names an anchor, where it goes beside it (`popover`), and a group, of
-// which one is open at a time; it takes its content's width. Only a contained Modal fills its frame.
+// Where a popover goes beside its anchor. The anchor names the point, so this placement refuses an `at`.
+export type PopoverPlacementFromAnchor=Without<PopoverPlacement,'at'>;
+// An anchored Modal's anchor and where its panel goes beside it: what its anchored layer reads.
+export type AnchoredPlacement={anchor: ModalAnchor;popover?: PopoverPlacementFromAnchor};
+// An anchored Modal also names a group, of which one is open at a time.
+type Anchored=AnchoredPlacement&{group?: string};
+type NotAnchored=Refused<Anchored>;
+// The width a Modal's panel names; a Modal that takes its content's width refuses it.
+type Sized={width?: ModalWidthValue};
+// Where a Modal sits. Only an anchored Modal names an anchor, where it goes beside it (`popover`) and a group; it
+// takes its content's width. Only a contained Modal fills its frame.
 export type ModalPlacementProps=
  |{placement?: typeof ModalPlacement.VIEWPORT;width?: Exclude<ModalWidthValue,typeof ModalWidth.FILL>}
   &NotAnchored&NotContained
- |{placement: typeof ModalPlacement.CONTAINED;width?: ModalWidthValue}&NotAnchored&Contained
- |{placement: typeof ModalPlacement.ANCHORED;anchor: ModalAnchor;group?: string;width?: never;
-  popover?: Omit<PopoverPlacement,'at'>}
-  &NotContained;
+ |{placement: typeof ModalPlacement.CONTAINED}&Sized&NotAnchored&Contained
+ |{placement: typeof ModalPlacement.ANCHORED}&Refused<Sized>&Anchored&NotContained;
 // Media takes its content's size, so it names no width.
-export type ModalFormProps={form?: typeof ModalForm.DIALOG}|{form: typeof ModalForm.MEDIA;width?: never};
+export type ModalFormProps={form?: typeof ModalForm.DIALOG}|{form: typeof ModalForm.MEDIA}&Refused<Sized>;
 
 // A contained panel set at `top` below its frame's top edge: a top within the frame's inset gives a negative margin
 // past the inset, which sets the panel into it.
@@ -61,11 +68,10 @@ function placedAt(top: number): CSSProperties {
   throw new RangeError(`A contained Modal's top is 0 or more CSS pixels below its frame's top edge, not ${top}.`);
  return {alignSelf:'start',marginTop:`calc(${top}px - var(${MODAL_FRAME_INSET_PROPERTY}))`};
 }
-interface ModalShape extends Contained {
+interface ModalShape extends Contained,Sized {
  form: ModalFormValue;
  placement: ModalPlacementValue;
  titled: boolean;
- width?: ModalWidthValue;
 }
 // What a Modal's stylesheet sizes and places it by. A dialog's panel names its width: its own, or else titled when it
 // has a title and compact when it has none. A media or anchored panel takes its content's. A contained frame names its

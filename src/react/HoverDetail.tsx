@@ -1,9 +1,8 @@
 import {Modal} from './Modal.tsx';
-import {ModalPlacement} from './modalElements.ts';
+import {ModalPlacement,type PopoverPlacementFromAnchor} from './modalElements.ts';
 import { useEffect, useId, useRef, useState, type AriaRole, type FocusEvent,
   type KeyboardEvent, type MouseEvent, type ReactNode } from 'react';
 import type {PendingButtonAttributes,PendingPress} from './pending.tsx';
-import type { PopoverPlacement } from './useAnchoredPopover.ts';
 
 // A term or control with detail on hover, focus or a tap (or, `interactive`, a
 // click-opened panel): its content and accessible label, how it opens and where
@@ -19,15 +18,13 @@ export interface HoverDetailProps {
   press?: PendingPress<MouseEvent<HTMLButtonElement>>;
   disabled?: boolean;
   exclusiveGroup?: string;
-  align?: PopoverPlacement['align'];
-  above?: boolean;
-  beside?: boolean;
+  popover?: PopoverPlacementFromAnchor;
   openOnHover?: boolean;
   panelRole?: AriaRole;
   triggerProps?: PendingButtonAttributes&{[attribute: `data-${string}`]: unknown};
 }
 
-export function HoverDetail({triggerRef,children,content,label,className='',interactive=false,panelClassName='',press,disabled=false,exclusiveGroup,align='start',above=false,beside=false,openOnHover=true,panelRole=interactive?'dialog':'tooltip',triggerProps={}}: HoverDetailProps) {
+export function HoverDetail({triggerRef,children,content,label,className='',interactive=false,panelClassName='',press,disabled=false,exclusiveGroup,popover,openOnHover=true,panelRole=interactive?'dialog':'tooltip',triggerProps={}}: HoverDetailProps) {
   const id=useId(),dragging=useRef(false),tapped=useRef(false);
   const anchor=useRef<HTMLElement|null>(null),panel=useRef<HTMLDivElement|null>(null),[open,setOpen]=useState(false);
   const closeTimer=useRef<ReturnType<typeof setTimeout>|undefined>(undefined);
@@ -68,5 +65,5 @@ export function HoverDetail({triggerRef,children,content,label,className='',inte
     setOpen(false);
   };
   const anchorRef=(node: HTMLElement|null)=>{anchor.current=node;if(node instanceof HTMLButtonElement||node===null)triggerRef?.(node);};
-  return <>{interactive?<button type="button" {...triggerProps} aria-busy={press?.['aria-busy']} ref={anchorRef} disabled={disabled} className={`gp-hover-anchor ${className}`} data-open-on={openOnHover?'hover':'click'} aria-label={label} aria-haspopup={panelRole==='dialog'?'dialog':undefined} aria-expanded={panelRole==='dialog'?open:undefined} aria-controls={panelRole==='dialog'&&open?id:undefined} aria-describedby={panelRole==='tooltip'&&open?id:undefined} onMouseEnter={openOnHover?show:undefined} onMouseLeave={hoverLeave} onFocus={openOnHover?show:undefined} onBlur={blur} onKeyDown={triggerKey} onClick={e=>{e.currentTarget.focus();if(press?.onClick){press.onClick(e);if(!e.defaultPrevented)setOpen(false);}else if(openOnHover)show();else toggle();}}>{children}</button>:<span ref={anchorRef} tabIndex={0} title="" className={`gp-hover-anchor ${className}`} data-open-on={openOnHover?'hover':'click'} aria-label={label} aria-describedby={open?id:undefined} onPointerEnter={openOnHover?e=>{if(e.pointerType==='mouse')show();}:undefined} onPointerLeave={openOnHover?e=>{if(e.pointerType==='mouse')setOpen(false);}:undefined} onPointerDown={e=>{tapped.current=e.pointerType!=='mouse';}} onPointerUp={()=>{if(tapped.current&&!dragging.current)setOpen(v=>!v);}} onFocus={openOnHover?show:undefined} onBlur={()=>setOpen(false)} onClick={e=>{e.stopPropagation();if(!tapped.current&&!dragging.current)setOpen(v=>!v);}}>{children}</span>}{open&&<Modal open placement={ModalPlacement.ANCHORED} anchor={anchor} popover={{align,above,beside}} group={exclusiveGroup} onClose={()=>setOpen(false)} id={id} panelRef={panel} role={panelRole} ariaLabel={interactive?label:undefined} className={`gp-hover-detail ${panelClassName}`} onMouseEnter={interactive&&openOnHover?show:undefined} onMouseLeave={interactive?hoverLeave:undefined} onFocus={interactive?show:undefined} onBlur={interactive?blur:undefined} onKeyDown={interactive?panelKey:undefined}>{content}</Modal>}</>;
+  return <>{interactive?<button type="button" {...triggerProps} aria-busy={press?.['aria-busy']} ref={anchorRef} disabled={disabled} className={`gp-hover-anchor ${className}`} data-open-on={openOnHover?'hover':'click'} aria-label={label} aria-haspopup={panelRole==='dialog'?'dialog':undefined} aria-expanded={panelRole==='dialog'?open:undefined} aria-controls={panelRole==='dialog'&&open?id:undefined} aria-describedby={panelRole==='tooltip'&&open?id:undefined} onMouseEnter={openOnHover?show:undefined} onMouseLeave={hoverLeave} onFocus={openOnHover?show:undefined} onBlur={blur} onKeyDown={triggerKey} onClick={e=>{e.currentTarget.focus();if(press?.onClick){press.onClick(e);if(!e.defaultPrevented)setOpen(false);}else if(openOnHover)show();else toggle();}}>{children}</button>:<span ref={anchorRef} tabIndex={0} title="" className={`gp-hover-anchor ${className}`} data-open-on={openOnHover?'hover':'click'} aria-label={label} aria-describedby={open?id:undefined} onPointerEnter={openOnHover?e=>{if(e.pointerType==='mouse')show();}:undefined} onPointerLeave={openOnHover?e=>{if(e.pointerType==='mouse')setOpen(false);}:undefined} onPointerDown={e=>{tapped.current=e.pointerType!=='mouse';}} onPointerUp={()=>{if(tapped.current&&!dragging.current)setOpen(v=>!v);}} onFocus={openOnHover?show:undefined} onBlur={()=>setOpen(false)} onClick={e=>{e.stopPropagation();if(!tapped.current&&!dragging.current)setOpen(v=>!v);}}>{children}</span>}{open&&<Modal open placement={ModalPlacement.ANCHORED} anchor={anchor} popover={popover} group={exclusiveGroup} onClose={()=>setOpen(false)} id={id} panelRef={panel} role={panelRole} ariaLabel={interactive?label:undefined} className={`gp-hover-detail ${panelClassName}`} onMouseEnter={interactive&&openOnHover?show:undefined} onMouseLeave={interactive?hoverLeave:undefined} onFocus={interactive?show:undefined} onBlur={interactive?blur:undefined} onKeyDown={interactive?panelKey:undefined}>{content}</Modal>}</>;
 }

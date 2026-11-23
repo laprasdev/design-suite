@@ -15,6 +15,9 @@ export const MODEL_STAGE_SHARED = Object.freeze({
    * on either of the stage's clocks. It is never the game's time: a kind uses it for decoration only, and anything the
    * game decides reaches a kind as an engine value. */
   seconds: 'stageDecorativeSeconds',
+  /** The stage's presentation time, in seconds: the applied engine frame's under the external clock, the local
+   * clock's otherwise. What the engine started (an emitter) ages on it. */
+  presentation: 'stagePresentationSeconds',
   /** Where the time in force sits between day (0) and night (1): the look's `night`. */
   night: 'stageNight',
   /** The time in force's shadow colour, linear: the look's `shadow`, its one owner. */
@@ -27,12 +30,12 @@ export const MODEL_STAGE_SHARED = Object.freeze({
   ambientSky: 'stageAmbientSky',
   ambientGround: 'stageAmbientGround',
 });
-/** The uniforms that carry them: the numbers in one vec2 (seconds in x, night in y), each colour and the direction on
- * its own. */
+/** The uniforms that carry them: the numbers in one vec3 (seconds in x, night in y, presentation in z), each colour and
+ * the direction on its own. */
 export const MODEL_STAGE_SHARED_UNIFORM = Object.freeze({numbers: 'stageNumbers', shadow: MODEL_STAGE_SHARED.shadow,
   keyDirection: MODEL_STAGE_SHARED.keyDirection, keyColor: MODEL_STAGE_SHARED.keyColor,
   ambientSky: MODEL_STAGE_SHARED.ambientSky, ambientGround: MODEL_STAGE_SHARED.ambientGround});
-const NUMBER = Object.freeze({seconds: 0, night: 1});
+const NUMBER = Object.freeze({seconds: 0, night: 1, presentation: 2});
 const U = MODEL_STAGE_SHARED_UNIFORM;
 
 export function createModelStageSharedValues() {
@@ -43,9 +46,10 @@ export function createModelStageSharedValues() {
   return {
     uniforms,
     /** Their GLSL declarations, as a kind's program reads them. */
-    declarations: [modelShaderUniforms({[U.numbers]: 'vec2', [U.shadow]: 'vec3', [U.keyDirection]: 'vec3',
+    declarations: [modelShaderUniforms({[U.numbers]: 'vec3', [U.shadow]: 'vec3', [U.keyDirection]: 'vec3',
       [U.keyColor]: 'vec3', [U.ambientSky]: 'vec3', [U.ambientGround]: 'vec3'}),
-    `#define ${MODEL_STAGE_SHARED.seconds} ${U.numbers}.x`, `#define ${MODEL_STAGE_SHARED.night} ${U.numbers}.y`]
+    `#define ${MODEL_STAGE_SHARED.seconds} ${U.numbers}.x`, `#define ${MODEL_STAGE_SHARED.night} ${U.numbers}.y`,
+    `#define ${MODEL_STAGE_SHARED.presentation} ${U.numbers}.z`]
       .join('\n'),
     /** The look in force's night, shadow and light. */
     setLook(look: Pick<ModelStageLook, 'night' | 'shadow' | 'key' | 'ambient'>) {
@@ -59,6 +63,10 @@ export function createModelStageSharedValues() {
     /** The numbers the frame loop writes decorative time into, at `secondsAt`. */
     numbers,
     secondsAt: NUMBER.seconds,
+    /** Where the frame loop writes the presentation time. */
+    presentationAt: NUMBER.presentation,
   };
 }
 export type ModelStageSharedValues = ReturnType<typeof createModelStageSharedValues>;
+/** What a program reads of them: the uniforms and their GLSL declarations. */
+export type ModelStageProgramValues = Pick<ModelStageSharedValues, 'uniforms' | 'declarations'>;

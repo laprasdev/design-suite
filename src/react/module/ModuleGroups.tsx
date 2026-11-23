@@ -17,7 +17,7 @@ export const GROUP_ROW: React.CSSProperties = {
 };
 const CONTROL: React.CSSProperties = { ...GROUP_ROW, flexWrap: 'wrap', gap: G.groupGap };
 // The label type every other label on a module wears, so a group reads as part of the same page.
-const LABEL: React.CSSProperties = { ...T.moduleLabel, textTransform: 'uppercase' };
+const LABEL: React.CSSProperties = { ...T.label, textTransform: 'uppercase' };
 // Inline, the group being shown stands apart from the ones that only hold something: bold as a title, glowing, in the
 // primary colour, while the others that hold something take the secondary.
 const shownLabel = (glow: string): React.CSSProperties => ({

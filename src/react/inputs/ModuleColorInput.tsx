@@ -1,7 +1,9 @@
 import React from 'react';
+import { ControlKind } from '../../fields.ts';
 import { useStyle } from '../../synth/StyleContext.tsx';
 import { D, T } from '../../synth/design/index.ts';
 import { useControlGesture } from '../../synth/components/synth/base/useControlBehavior.ts';
+import { CONTROL_KINDS } from '../grid/controlBoxes.ts';
 import { ModuleNumberInput } from './ModuleNumberInput.tsx';
 
 const G = D.moduleGrid;
@@ -17,8 +19,8 @@ export function ModuleColorInput({ hex, alpha, onHex, onAlpha, ariaLabel, disabl
   const style = useStyle().getEffectiveStyle();
   const gesture = useControlGesture();
   const swatchStyle: React.CSSProperties = {
-    width: G.swatchWidth, height: G.swatchHeight, padding: 0, border: 'none', background: 'transparent',
-    cursor: disabled ? 'not-allowed' : 'pointer',
+    width: CONTROL_KINDS[ControlKind.COLOR].width, height: G.swatchHeight, padding: 0, border: 'none',
+    background: 'transparent', cursor: disabled ? 'not-allowed' : 'pointer',
   };
   const alphaStyle: React.CSSProperties = {
     ...T.moduleValue, display: 'flex', alignItems: 'center', gap: G.groupGap, color: style.textColor,

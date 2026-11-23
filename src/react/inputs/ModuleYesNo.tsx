@@ -31,7 +31,7 @@ export function ModuleYesNo(props: Props) {
     {form === YesNoSkinForm.SETTING ? <BooleanControl {...common} form={BooleanForm.SETTING} label={label}/>
       : <><BooleanControl {...common} {...(form === YesNoSkinForm.SWITCH
         ? {form: BooleanForm.SWITCH, ariaLabel: label, height: G.yesNoDot} : {form: BooleanForm.CELL, label})}/>
-        <span style={T.moduleLabel}>{label}</span></>}
+        <span style={T.label}>{label}</span></>}
   </div>;
 }
 
@@ -67,7 +67,7 @@ function DotYesNo({label, state, emphasis, onPress, title, slot}: Props & {slot:
   return <button type="button" role="switch" aria-checked={state === YesNo.ON} aria-label={label}
     data-module-field={label} data-field-emphasis={emphasis} data-yes-no={state}
     title={title} disabled={locked} onClick={onPress}
-    style={{...T.moduleLabel, ...FIELD_LINE, padding: 0, border: 'none', background: 'transparent',
+    style={{...T.label, ...FIELD_LINE, padding: 0, border: 'none', background: 'transparent',
       textAlign: 'left', textTransform: 'uppercase', cursor: locked ? 'default' : 'pointer',
       color: set ? style.primaryColor : hexToRgba(style.textColor, O.high)}}>
     <span style={{display: 'flex', justifyContent: 'center', flex: 'none', width: slot,

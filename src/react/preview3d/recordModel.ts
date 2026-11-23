@@ -1,4 +1,4 @@
-import {isNonEmptyString, isRecord} from '../../valueChecks.ts';
+import {isFiniteNumber, isNonEmptyString, isRecord} from '../../valueChecks.ts';
 import {ModelStageRefusal} from './refusal.ts';
 
 // The one owner of a description's records. A record states exactly its fields: one it omits and one it does not
@@ -25,7 +25,6 @@ export const MODEL_RECORD_REFUSAL = Object.freeze({
 });
 const DIGEST = /^[a-f0-9]{64}$/;
 const EMPTY_FIELDS: readonly string[] = Object.freeze([]);
-const INSTANCE_TAG_PREFIX = '\u0000model-instance:';
 const refusal = MODEL_RECORD_REFUSAL;
 
 /** Whether a record states a field of its own. */
@@ -40,29 +39,48 @@ function statedWith(value: Record<string, unknown>, stated: readonly string[], w
   return [...stated, ...whenStated.filter(field => modelStates(value, field))];
 }
 
-// Written as loops over the fields, so that a check on a tick's path (a frame's pose or camera) makes no array or
-// closure unless it refuses.
+// The first optional field a record states with no value, or none. Off a tick's path only: a number read by a computed
+// key is boxed, so a tick's reader leaves each value to its own check by name.
+function unstatedField(value: Record<string, unknown>, whenStated: readonly string[]) {
+  for (let index = 0; index < whenStated.length; index++) {
+    const field = whenStated[index];
+    if (modelStates(value, field) && value[field] === undefined) return field;
+  }
+  return undefined;
+}
+// The first field that keeps a record's keys from being exactly its fields (one omitted, then one it does not have), or
+// none. Written as loops over the fields that read no value, so that a check on a tick's path (a frame's pose, camera
+// or emitter changes) makes no array, closure, text or number unless it refuses.
+function inexactKey(value: Record<string, unknown>, stated: readonly string[], whenStated: readonly string[]) {
+  for (let index = 0; index < stated.length; index++) {
+    if (!modelStates(value, stated[index])) return stated[index];
+  }
+  for (const field in value) {
+    if (modelStates(value, field) && !stated.includes(field) && !whenStated.includes(field)) return field;
+  }
+  return undefined;
+}
+// Names why `field` keeps the record inexact, on the refusal path only: `unstatedField` and `inexactKey` return the
+// field alone so the tick's check builds no text, and this re-reads their three cases to say which one it is.
+function inexactText(value: Record<string, unknown>, field: string, stated: readonly string[],
+  whenStated: readonly string[], where: string) {
+  if (!modelStates(value, field)) return refusal.omitted(where, field, statedWith(value, stated, whenStated));
+  if (whenStated.includes(field) && value[field] === undefined) return refusal.unstated(where, field);
+  return refusal.stray(where, field, statedWith(value, stated, whenStated));
+}
 function exact(value: unknown, stated: readonly string[], whenStated: readonly string[],
   where: string): Record<string, unknown> {
   if (!isRecord(value)) throw new ModelStageRefusal(refusal.record(where, [...stated, ...whenStated]));
-  for (let index = 0; index < whenStated.length; index++) {
-    const field = whenStated[index];
-    if (modelStates(value, field) && value[field] === undefined) {
-      throw new ModelStageRefusal(refusal.unstated(where, field));
-    }
-  }
-  for (let index = 0; index < stated.length; index++) {
-    if (!modelStates(value, stated[index])) {
-      throw new ModelStageRefusal(refusal.omitted(where, stated[index], statedWith(value, stated, whenStated)));
-    }
-  }
-  for (const field in value) {
-    if (modelStates(value, field) && !stated.includes(field) && !whenStated.includes(field)) {
-      throw new ModelStageRefusal(refusal.stray(where, field, statedWith(value, stated, whenStated)));
-    }
-  }
+  const field = unstatedField(value, whenStated) ?? inexactKey(value, stated, whenStated);
+  if (field !== undefined) throw new ModelStageRefusal(inexactText(value, field, stated, whenStated, where));
   return value;
 }
+/** Whether `value` is a record whose keys are exactly `fields`; asks without naming where, so it builds no text, and
+ * reads no value, so it boxes no number. Each value, an optional one stated with none included, is its reader's check
+ * by name, as a stated field's always was. A reader on a tick's path asks this first and reads again with its `where`
+ * (`modelRecordStating`) only to refuse. */
+export const modelStatesExactly = (value: unknown, fields: ModelStatingFields): value is Record<string, unknown> =>
+  isRecord(value) && inexactKey(value, fields.stated, fields.whenStated) === undefined;
 
 export const modelRecord = (value: unknown, fields: readonly string[], where: string): Record<string, unknown> =>
   exact(value, fields, EMPTY_FIELDS, where);
@@ -103,29 +121,6 @@ export function modelOneOf<Name extends string>(value: unknown, names: readonly 
   return {name, content: modelRecord(value, [name], where)[name]};
 }
 
-const instanceIds = new WeakMap<object, string>();
-let nextInstanceId = 0;
-function instanceTag(value: object): string {
-  const held = instanceIds.get(value);
-  if (held !== undefined) return held;
-  const fresh = `${INSTANCE_TAG_PREFIX}${++nextInstanceId}`;
-  instanceIds.set(value, fresh);
-  return fresh;
-}
-
-/**
- * A value's identity: its text with every record's fields in one order (sorted), so that two values equal by value
- * are one, whatever order they were written in (a record's values, a texture's fields), while a host instance (an
- * image source) keeps its own identity without retaining it. Lists keep their order: in the description an order is
- * data (the actors, a colour's channels).
- */
-export const modelRecordIdentity = (value: unknown): string => JSON.stringify(value, (_, item: unknown) => {
-  if (!isRecord(item)) return item;
-  const prototype: unknown = Object.getPrototypeOf(item);
-  if (prototype !== Object.prototype && prototype !== null) return instanceTag(item);
-  return Object.fromEntries(Object.entries(item).sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0));
-});
-
 /** Whether a value is a SHA-256 as the description states every file's: 64 lowercase hex digits. */
 export const modelIsDigest = (value: unknown): value is string => typeof value === 'string' && DIGEST.test(value);
 /** A SHA-256, refused by its name otherwise. */
@@ -136,9 +131,16 @@ export function modelDigest(value: unknown, where: string): string {
 
 /** One of a closed set of values, refused by its name otherwise, listing the set. */
 export function modelOption<Option>(value: unknown, options: Readonly<Record<string, Option>>, where: string): Option {
-  const all = Object.values(options), found = all.find(option => option === value);
-  if (found === undefined) throw new ModelStageRefusal(refusal.option(where, all));
-  return found;
+  if (modelIsOption(value, options)) return value;
+  throw new ModelStageRefusal(refusal.option(where, Object.values(options)));
+}
+/** Whether `value` is one of a closed set, asked without naming where. A loop, not `Object.values`: a frame reader
+ * asks this per tick, and only a refusal lists the set. */
+export function modelIsOption<Option>(value: unknown, options: Readonly<Record<string, Option>>): value is Option {
+  for (const name in options) {
+    if (options[name] === value) return true;
+  }
+  return false;
 }
 
 /** True or false, refused by its name otherwise. */
@@ -155,7 +157,7 @@ export function modelName(value: unknown, where: string): string {
 
 /** A finite number within the stated bounds, refused by its name otherwise; an unbounded end is an infinity. */
 export function modelNumber(value: unknown, where: string, least: number, most: number): number {
-  if (typeof value !== 'number' || !Number.isFinite(value) || value < least || value > most) {
+  if (!isFiniteNumber(value) || value < least || value > most) {
     const range = !Number.isFinite(least) ? '' : Number.isFinite(most) ? ` from ${least} to ${most}` :
       ` of at least ${least}`;
     throw new ModelStageRefusal(`${where} must be a finite number${range}.`);
@@ -171,7 +173,7 @@ function readCheckedNumbers<Target extends number[] | Float64Array>(
   }
   for (let index = 0; index < count; index++) {
     const item: unknown = value[index];
-    if (typeof item !== 'number' || !Number.isFinite(item)) {
+    if (!isFiniteNumber(item)) {
       throw new ModelStageRefusal(refusal.numbers(where, count));
     }
     into[offset + index] = item;

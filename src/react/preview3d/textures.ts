@@ -4,7 +4,7 @@ import {createModelFileCache} from './fileCache.ts';
 import {MODEL_TEXTURE_CONSTANT, MODEL_TEXTURE_WRAP, type ModelSurfaceImageSource, type ModelSurfaceTexture,
   type ModelTextureSampling} from './surfaceTextureModel.ts';
 import {MODEL_COLOR_SPACE, type ModelColorSpace} from './surfaceKindModel.ts';
-import {modelRecordIdentity} from './recordModel.ts';
+import {modelRecordIdentity} from './recordIdentityModel.ts';
 
 // The stage's textures for surface records. A file is read once by its SHA-256 and decoded once (fileCache.ts),
 // as three's glTF loader decodes a file's own images: no premultiplied alpha, no colour-space conversion, glTF's

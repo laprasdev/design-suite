@@ -4,7 +4,7 @@ import {useStyle} from '../../synth/StyleContext.tsx';
 import {hexToRgba} from '../../color.ts';
 import {D, O} from '../../synth/design/index.ts';
 import {Borders} from '../../tokens.ts';
-import {MODULE_TEXT_SIZE} from '../../moduleGridLayout.ts';
+import {TEXT_FLOOR} from '../../moduleGridLayout.ts';
 import {ModulationPart} from './modulationParts.ts';
 
 type SocketProps = Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'children'> & {
@@ -18,7 +18,7 @@ type SocketProps = Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'children
 /** A fixed square assignment target, one per control however many sources it holds. The host owns source
  *  compatibility, drops and the chooser. */
 export const ModulationSocket = forwardRef<HTMLButtonElement, SocketProps>(
-  function ModulationSocket({colors = [], size = MODULE_TEXT_SIZE, open, style: extra, ...props}, ref) {
+  function ModulationSocket({colors = [], size = TEXT_FLOOR, open, style: extra, ...props}, ref) {
     const style = useStyle().getEffectiveStyle();
     const fills = colors.map(color => hexToRgba(color, O.medium));
     const background = fills.length > 1 ? `linear-gradient(90deg, ${fills.join(', ')})` : fills[0] ?? 'transparent';

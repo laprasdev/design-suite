@@ -1,10 +1,11 @@
 import type {ModelStageCameraSnapshot, ModelStageFog, ModelStageSurfaceMode} from '../src/react/preview3d/model.ts';
 import {TERRAIN_VIEWPORTS} from './preview3dTerrainCases.ts';
+import {PANEL_GLB} from './preview3dPanelGlb.ts';
 
 export const CAMERA_SCENE_ENTRY = 'tests/preview3dFrameCameraScene.tsx';
 export const CAMERA_HOST_ID = 'frame-camera-host';
 export const CAMERA_ROUTES = Object.freeze({
-  panel: 'http://scene.local/panel.glb',
+  panel: PANEL_GLB.route,
   program: 'http://scene.local/painted.glsl',
 });
 export const PAINTED_KIND_ID = 'painted-panel';
@@ -45,7 +46,6 @@ export interface FrameCameraSceneDriver {
 
 declare global {
   interface Window {
-    makePanelGlbBytes: () => Promise<number[]>;
     bootFrameCameraScene: (programSha256: string) => Promise<void>;
     frameCameraScene: FrameCameraSceneDriver;
   }

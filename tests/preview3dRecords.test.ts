@@ -66,7 +66,8 @@ describe('every record of the description', () => {
     const posed = {...whole, actors: {...whole.actors, actors: [{...actor, animation: held('run', 0.5)}]}};
     const rows: Array<[Path, string, string[], string[]?]> = [
       [[], 'The stage description', Object.keys(whole)], [['actors'], 'The actors', ['focus', 'actors']],
-      [['actors', 'actors', 0], 'Actor 0', ['id', 'asset', 'placement', 'animation', 'surfaces']],
+      [['actors', 'actors', 0], 'Actor 0', ['id', 'asset', 'placement', 'animation', 'surfaces', 'emitters'],
+        ['emitters']],
       [['actors', 'actors', 0, 'animation'], `Actor ${actor.id}.animation`, ['kind', 'name', 'timeSeconds']],
       [['framing'], 'The framing', ['kind', 'position', 'target']], [['size'], 'The stage size', ['rule', 'height']],
       [['actors', 'actors', 0, 'placement'], `Actor ${actor.id} placement`,

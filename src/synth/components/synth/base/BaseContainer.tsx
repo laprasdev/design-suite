@@ -3,6 +3,7 @@ import {useStyleContext} from '../../../StyleContext.tsx';
 import {LayoutAPI, ContainerType, type ContainerTypeValue} from '../../../design/index.ts';
 import {ContainerForm, SkinKind, type ContainerFormValue} from '../../../../skinKinds.ts';
 import {skinForm} from '../../../../skinForms.ts';
+import type {Without} from '../../../../react/refusedKeys.ts';
 export interface BaseContainerProps extends HTMLAttributes<HTMLElement> {
   type?: ContainerTypeValue;
   as?: 'div' | 'section' | 'aside' | 'a';
@@ -28,12 +29,12 @@ export const BaseContainer = forwardRef<HTMLElement, BaseContainerProps>(functio
     data-container-form={type ? undefined : form ?? skinForm(context?.skin, SkinKind.CONTAINER) ?? ContainerForm.CUTOUT}
     style={{...containerStyle, ...style}}>{children}</Tag>;
 });
-export function ModuleContainer(props: Omit<BaseContainerProps, 'type'>) {
+export function ModuleContainer(props: Without<BaseContainerProps, 'type'>) {
   return <BaseContainer type={ContainerType.MODULE} {...props}/>;
 }
-export function CutoutContainer(props: Omit<BaseContainerProps, 'type'>) {
+export function CutoutContainer(props: Without<BaseContainerProps, 'type'>) {
   return <BaseContainer type={ContainerType.CUTOUT} {...props}/>;
 }
-export function NodeContainer(props: Omit<BaseContainerProps, 'type'>) {
+export function NodeContainer(props: Without<BaseContainerProps, 'type'>) {
   return <BaseContainer type={ContainerType.NODE} {...props}/>;
 }

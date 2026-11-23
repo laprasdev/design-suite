@@ -1,4 +1,4 @@
-import {BooleanForm} from './synth/components/synth/booleanForm.ts';
+import {BooleanForm} from './react/inputs/booleanForm.ts';
 import {IncrementerForm} from './synth/components/synth/incrementerForm.ts';
 import {SliderForm} from './react/inputs/sliderForm.ts';
 
@@ -26,9 +26,12 @@ export const KnobSkinForm = {CUTOUT: 'cutout', MINIMAL: 'minimal', FINE: 'fine',
 export const SliderSkinForm = {MINIMAL: 'minimal', LINE: 'line', TRACK: 'track', SETTING: SliderForm.SETTING} as const;
 export type SliderSkinFormValue = typeof SliderSkinForm[keyof typeof SliderSkinForm];
 export const RangeSkinForm = {TRACK: 'track', DIAL: 'dial'} as const;
-export const YesNoSkinForm = {DOT: 'dot', ...BooleanForm} as const;
+/** The Boolean forms a skin can choose: the icon form draws glyphs only its consumer supplies, so data chooses it. */
+export const YesNoSkinForm = {DOT: 'dot', CELL: BooleanForm.CELL, SETTING: BooleanForm.SETTING,
+  SWITCH: BooleanForm.SWITCH} as const;
 export const NumberSkinForm = {INPUT: 'input', HORIZONTAL: IncrementerForm.HORIZONTAL,
   VERTICAL: IncrementerForm.VERTICAL, METER: IncrementerForm.METER} as const;
+/** The choice forms a skin can choose: the module header that draws a picker chooses its form, so no skin lists it. */
 export const ChoiceSkinForm = {
   JOINED: 'joined', TEXT: 'text', ICONS: 'icons', GRID: 'grid', CYCLE: 'cycle', SELECT: 'select',
 } as const;

@@ -35,7 +35,7 @@ export function ModuleVectorInput({label, vector, onAxis, disabled, appearance, 
   return <div data-field-vector style={{display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
     gap: D.moduleGrid.fieldGap, width: '100%'}}>
     {AXES.map(axis => <div key={axis} data-vector-axis={axis} style={{minWidth: 0}}>
-      {form !== VectorSkinForm.KNOBS && <span style={T.moduleLabel}>{axis.toUpperCase()}</span>}
+      {form !== VectorSkinForm.KNOBS && <span style={T.label}>{axis.toUpperCase()}</span>}
       <AxisInput label={`${label} ${axis}`} value={vector[axis]} disabled={disabled}
         bounds={form === VectorSkinForm.KNOBS ? limits?.[axis] : undefined} onChange={value => onAxis(axis, value)}/>
     </div>)}

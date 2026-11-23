@@ -9,21 +9,24 @@ import {MODEL_STAGE_THEME_LIGHTING, MODEL_STAGE_TIME, modelStageLighting, modelS
   type ModelStageTime} from '../src/react/preview3d/lightingModel.ts';
 import {modelStageBuiltInTimes} from '../src/react/preview3d/builtInTimes.ts';
 import type {ModelStageTheme} from '../src/react/preview3d/model.ts';
-import {stageLook} from './preview3dActorFixture.ts';
+import type {ModelStageOutput} from '../src/react/preview3d/lookModel.ts';
+import {ACES_CURVE, lookLayers, stageLook} from './preview3dActorFixture.ts';
 import {shownBytes} from './preview3dToneCurveOracle.ts';
 
-// What Light and Dark set at 62368ac, before the look became data, read from the Three objects themselves. Their
-// backdrop was then the canvas's clear colour, drawn under no curve: what the canvas showed is its bytes.
+// What Light and Dark set at 62368ac, before the look became data, read from the Three objects themselves (the far
+// plane the camera's). Their backdrop was then the canvas's clear colour, drawn under no curve: what the canvas showed
+// is its bytes.
 const fixed = JSON.parse(readFileSync(new URL('./preview3dLighting.fixture.json', import.meta.url), 'utf8'));
 const recorded = Object.fromEntries(['light', 'dark'].map(id => [id, {...fixed[id],
   backdrop: shownBytes(fixed[id].backdrop, null)}]));
 const theme: ModelStageTheme = fixed.theme;
 function fixture() {
   const scene = new THREE.Scene();
-  const outputs: [string | null, unknown][] = [];
+  const outputs: ModelStageOutput[] = [], farPlanes: number[] = [];
   const shared = createModelStageSharedValues();
-  const lighting = createModelLighting(modelStageBuiltInTimes(theme.colors), {fog: createModelFog(scene), shared,
-    output: {load: () => [], prepare: (curve, glow) => () => {outputs.push([curve, glow]);}}});
+  const lighting = createModelLighting(modelStageBuiltInTimes(theme.colors), lookLayers({fog: createModelFog(scene),
+    shared, framing: {setFarPlane: farPlane => {farPlanes.push(farPlane);}},
+    output: {load: () => [], prepare: output => () => {outputs.push(output);}}}));
   // A described lighting as the stage applies it: checked with the description, then prepared and committed.
   const set = (value: unknown) => lighting.prepare(modelStageLighting(value))();
   const floor = new THREE.MeshStandardMaterial();
@@ -34,17 +37,18 @@ function fixture() {
   const rgb = (color: THREE.Color) => [color.r, color.g, color.b];
   // The backdrop is drawn under the curve in force, as everything the look colours: what the canvas shows of it.
   const backdrop = () => shownBytes(rgb((lighting.backdrop.material as THREE.ShaderMaterial).uniforms
-    .modelStageBackdrop.value), outputs.at(-1)![0]);
+    .modelStageBackdrop.value), outputs.at(-1)!.toneCurve);
   const read = () => ({backdrop: backdrop(), ambient: {sky: rgb(ambient.color),
     ground: rgb(ambient.groundColor), intensity: ambient.intensity}, key: {color: rgb(key.color),
-    intensity: key.intensity, position: key.position.toArray()}, floor: rgb(floor.color), aid: rgb(aid.color)});
+    intensity: key.intensity, position: key.position.toArray()}, floor: rgb(floor.color), aid: rgb(aid.color),
+    farPlane: farPlanes.at(-1)});
   return {lighting, read, scene, outputs, set, shared};
 }
 const at = (time: string, times: readonly unknown[] = []) => ({time, times}) as never;
 const dusk: ModelStageTime = {id: 'dusk', label: 'Dusk', look: stageLook({backdrop: [0.2, 0.1, 0.3],
   key: {color: [1, 0.5, 0], strength: 1.5, direction: [-2, 1, 0]},
   ambient: {sky: [0.4, 0.2, 0.5], ground: [0.1, 0, 0.2], strength: 0.75}, shadow: [0.15, 0.1, 0.25], night: 0.5,
-  aids: {floor: [0.3, 0.2, 0.1], share: 0.5}})};
+  aids: {floor: [0.3, 0.2, 0.1], share: 0.5}, farPlane: 800})};
 
 describe('stage lighting', () => {
   it('draws Light and Dark with exactly the values they had before the look became data, and no fog', () => {
@@ -72,7 +76,7 @@ describe('stage lighting', () => {
       ambient: {sky: linear(look.ambient.sky),
       ground: linear(look.ambient.ground), intensity: look.ambient.strength}, key: {color: linear(look.key.color),
       intensity: look.key.strength, position: [...look.key.direction]}, floor: linear(look.aids.floor),
-      aid: [look.aids.share, look.aids.share, look.aids.share]});
+      aid: [look.aids.share, look.aids.share, look.aids.share], farPlane: look.farPlane});
     assert.equal(lighting.time, 'dusk');
     set(at(MODEL_STAGE_TIME.light, [dusk]));
     assert.deepEqual(read(), recorded.light);
@@ -92,18 +96,12 @@ describe('stage lighting', () => {
   it('hands a time\'s tone curve and glow to the draw: Light and Dark keep the curve the stage always used', () => {
     const {outputs, set} = fixture();
     const glow = {threshold: 1.5, strength: 0.8, radius: 0.4};
-    set(at('dusk', [{...dusk, look: {...dusk.look, glow}}]));
+    const toneCurve = {...ACES_CURVE, exposure: 2.5};
+    set(at('dusk', [{...dusk, look: {...dusk.look, toneCurve, glow}}]));
     set(at(MODEL_STAGE_TIME.dark));
-    assert.deepEqual(outputs, [['aces-filmic', null], [null, glow], ['aces-filmic', null]]);
+    assert.deepEqual(outputs.map(({toneCurve, glow}) => ({toneCurve, glow})),
+      [{toneCurve: ACES_CURVE, glow: null}, {toneCurve, glow}, {toneCurve: ACES_CURVE, glow: null}]);
   });
-
-  it('takes a time with a tone curve and glow (the output pass applies the curve after the bloom), and no other curve',
-    () => {
-    const look = {...dusk.look, toneCurve: 'aces-filmic', glow: {threshold: 1, strength: 1, radius: 0}};
-    assert.equal(modelStageLighting(at('dusk', [{...dusk, look}])).times[0].look.toneCurve, 'aces-filmic');
-    assert.throws(() => modelStageLighting(at('dusk', [{...dusk, look: {...dusk.look, toneCurve: 'reinhard'}}])),
-      /Time dusk: look.toneCurve is one of aces-filmic\./);
-    });
 
   it('lights a kind with one ambient and one key, as three hands them on: hemisphereLights[0], directionalLights[0]',
     () => {

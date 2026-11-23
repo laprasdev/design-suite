@@ -4,7 +4,7 @@
 // enter the list, on at its first option and back at its last.
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
-import {LISTBOX_ARROWS,LISTBOX_MOVES,LISTBOX_OPENS,listMoves,NO_ACTIVE,type ListOrientation}
+import {LISTBOX_ARROWS,LISTBOX_MOVES,LISTBOX_OPENS,STEP_MOVES,listMoves,NO_ACTIVE,type ListOrientation}
  from '../src/react/listboxNavigation.ts';
 
 const COUNT=4,LAST=COUNT-1;
@@ -40,5 +40,13 @@ test('a listbox\'s arrows are the vertical ones, and each moves through it and o
  for(const key of LISTBOX_ARROWS){
   assert.ok(LISTBOX_MOVES[key],key);
   assert.equal(LISTBOX_OPENS[key]?.(1,COUNT),1,key);
+ }
+});
+
+test('a closed step trigger\'s arrows, along either orientation, go round the ring past each end',()=>{
+ for(const {back,next} of ARROWS){
+  assert.equal(STEP_MOVES[next]?.(LAST,COUNT),0,`${next} past the last comes round to the first`);
+  assert.equal(STEP_MOVES[back]?.(0,COUNT),LAST,`${back} before the first comes round to the last`);
+  assert.equal(STEP_MOVES[next]?.(1,COUNT),2,next);
  }
 });

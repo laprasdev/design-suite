@@ -13,6 +13,6 @@ test('CSS custom properties merge across pinned and local suite copies without w
  for(const other of [declaration,previous]) {
   assertRefusesType(value=>typeCheck({'first.d.ts':declaration,'second.d.ts':other,
    'usage.ts':`import type {CSSProperties} from 'react';const style:CSSProperties={'--tone':${value}}; void style;`},
-  OPTIONS),"'pink'",'false');
+  OPTIONS),{accepted:"'pink'",refused:['false']});
  }
 });
