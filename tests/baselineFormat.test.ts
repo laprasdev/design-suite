@@ -70,6 +70,7 @@ describe('reading a size baseline', () => {
       [files({ lines: '259', longLines: 1 }), /files\["src\/a\.ts"\]\.lines must be a number\./],
       [files(null), /files\["src\/a\.ts"\] must be a record\./],
       [{ ...CURRENT, allowances: [{ ...GRANT, date: 5 }] }, /allowances\[0\]\.date must be a string\./],
+      [{ ...CURRENT, allowances: [{ ...GRANT, step: '' }] }, /allowances\[0\]\.step must be a non-empty string\./],
       [{ ...CURRENT, scope: { ...SCOPE, dirs: [3] } }, /scope\.dirs\[0\] must be a string\./],
       [{ ...CURRENT, scope: { ...SCOPE, skip } }, /scope\.skip\.suffixes must be a list\./],
     ];
@@ -84,8 +85,20 @@ describe('reading a size baseline', () => {
     const value = { files: { 'src/a.ts': { casts: 1, nonNullAssertions: 0, importLines: 2 } } };
     assert.throws(() => CAST_BASELINE.parse(value, 'casts.json'),
       /type gate: casts\.json files\["src\/a\.ts"\] holds importLines; it takes casts, nonNullAssertions\./);
-    assert.throws(() => ALLOCATION_BASELINE.parse({ files: { 'src/a.ts': { extraBytesPerTick: 108, slack: 1 } } },
-      'alloc.json'), /allocation gate: alloc\.json files\["src\/a\.ts"\] holds slack; it takes extraBytesPerTick\./);
+    assert.throws(() => ALLOCATION_BASELINE.parse(
+      { files: { 'src/a.ts': { extraBytesPerTick: 108, slack: 1 } }, allowances: [] },
+      'alloc.json',
+    ), /allocation gate: alloc\.json files\["src\/a\.ts"\] holds slack; it takes extraBytesPerTick\./);
+    assert.throws(() => ALLOCATION_BASELINE.parse({ files: {} }, 'alloc.json'),
+      /allocation gate: alloc\.json allowances must be a list\./);
+    assert.throws(() => ALLOCATION_BASELINE.parse({
+      files: { 'src/a.ts': { extraBytesPerTick: 128 } },
+      allowances: [{ path: 'src/a.ts', decision: '' }],
+    }, 'alloc.json'), /allocation gate: alloc\.json allowances\[0\]\.decision must be a non-empty string\./);
+    assert.throws(() => ALLOCATION_BASELINE.parse({
+      files: { 'src/a.ts': { extraBytesPerTick: 128 } },
+      allowances: [{ path: 'src/a.ts', ceiling: { extraBytesPerTick: 128 }, decision: 'x' }],
+    }, 'alloc.json'), /allocation gate: alloc\.json allowances\[0\] holds ceiling; it takes path, decision\./);
   });
 });
 
