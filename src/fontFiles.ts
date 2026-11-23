@@ -30,7 +30,7 @@ function folderUrl(folder: string): URL {
 }
 const HOLDER_FOLDERS: Readonly<Record<FontHolder, (fontFolder: string) => URL>> = Object.freeze({
   [FONT_HOLDERS.suite]: () => HELD_FONTS,
-  [FONT_HOLDERS.engine]: folderUrl,
+  [FONT_HOLDERS.host]: folderUrl,
 });
 
 /** The file `face` is read from, given the host's font folder as an absolute folder path. */

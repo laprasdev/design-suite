@@ -133,7 +133,7 @@ export function CrossfadePage(props: CrossfadeStackProps) {
    return <div key={view.key} ref={node=>{
     if(node)pages.current.set(view.key,node);else pages.current.delete(view.key);
    }} className={CrossfadePageElement.PAGE} hidden={!carousel&&!active}
-    data-inactive={carousel&&!active?'':undefined} aria-hidden={!active||undefined}
+    {...{[CAROUSEL_INACTIVE]:carousel&&!active?'':undefined}} aria-hidden={!active||undefined}
     tabIndex={carousel?undefined:-1}>{view.node}</div>;
   })}
  </div>;

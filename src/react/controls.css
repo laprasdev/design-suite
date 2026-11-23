@@ -27,7 +27,9 @@
 /* A step form's group, stepper and carets: the carets flank the chosen option's carousel slot, in the dim colour. */
 .listbox-select-group { display:inline-flex;flex-wrap:wrap;align-items:center;column-gap:var(--module-title-gap,var(--header-gap));min-width:0;max-width:100%; }
 .listbox-select-stepper { display:inline-flex;align-items:center;gap:calc(var(--field-gap) / 2);min-width:0;max-width:100%; }
-.listbox-select-chosen { display:inline-flex;align-items:center;min-width:0; }
+/* The chosen name opens the list as its word does, hidden from the accessibility tree so the word is the one control. */
+.listbox-select-chosen { display:inline-flex;align-items:center;min-width:0;cursor:pointer; }
+.listbox-select-group:has(> .listbox-select:disabled) .listbox-select-chosen { cursor:default; }
 .header-icon-button.listbox-select-step { color:var(--dim); }
 /* A module's header carrying a title choice wraps its row and carets instead of clipping them. */
 [data-module-header][data-header-form=choice] { flex-wrap:wrap; }

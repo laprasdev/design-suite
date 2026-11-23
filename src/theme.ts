@@ -116,8 +116,6 @@ export function themeVariables(t: Theme): Record<string, string> {
     "--font-code": type.code,
     ...Object.fromEntries(Object.entries(TEXT_SIZE_VARIABLES).map(([name, key]) => [name, `${type[key]}px`])),
     ...labelVariables(),
-    "--caption-size": `${Typography.caption.fontSize}px`,
-    "--caption-tracking": Typography.caption.letterSpacing,
     "--leading-body": String(type.lineHeight),
     "--leading-title": String(type.titleLeading), "--leading-code": String(type.codeLeading),
     "--tracking-caps": type.capsTracking, "--tracking-caps-wide": type.wideTracking,
@@ -135,6 +133,8 @@ export function themeVariables(t: Theme): Record<string, string> {
     "--field-gap": `${LayoutDimensions.spacing.tightGap}px`,
     "--section-gap": `${LayoutDimensions.spacing.rowGap}px`,
     "--control-hit-size": `${LayoutDimensions.sizes.buttonHeight}px`,
+    "--module-tab-width": `${LayoutDimensions.moduleGrid.tabMinWidth}px`,
+    "--module-tab-height": `${LayoutDimensions.moduleGrid.tabMinHeight}px`,
   };
 }
 export function applyTheme(t: Theme, el: HTMLElement = document.documentElement) {

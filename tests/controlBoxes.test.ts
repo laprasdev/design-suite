@@ -39,6 +39,15 @@ describe('suite control kind boxes and stacked vs beside fit', () => {
       controlBoxOf({ kind: ControlKind.FLAGS, knobSize: 40, columns: 4, optionCount: G.optionColumns * 2 }),
       { width: G.openButtonWidth, height: OPTION_BUTTON_HEIGHT * 2 + G.optionGap },
     );
+    assert.deepEqual(controlBoxOf({ kind: ControlKind.KNOB, knobSize: 40, columns: 2 }), { width: 40, height: 40 });
+    assert.deepEqual(controlBoxOf({ kind: ControlKind.RANGE, knobSize: 40, columns: 1 }), { width: 40, height: 40 });
+    assert.deepEqual(
+      controlBoxOf({ kind: ControlKind.YES_NO, knobSize: 40, columns: 1 }), { width: 0, height: ONE_LINE_HEIGHT },
+    );
+    assert.deepEqual(
+      controlBoxOf({ kind: ControlKind.CURVE, knobSize: 40, columns: 1 }),
+      { width: G.curveWidth, height: G.curveHeight },
+    );
   });
 
   it('keeps multi-column knobs stacked when the widest piece fits the column even if name + reading exceeds it', () => {

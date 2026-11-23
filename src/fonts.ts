@@ -1,6 +1,6 @@
 // FONTS — every face the suite declares, each once, at the one route every host serves. This repository is public:
-// it ships Inter (SIL Open Font License, src/fonts/OFL.txt) and never SF Pro, whose files stay in the private engine
-// repository and are served on the same route by each host. A host on disk finds each file through `./fontFiles`.
+// it ships Inter (SIL Open Font License, src/fonts/OFL.txt) and never SF Pro, whose files stay in each host's own
+// font folder and are served on the same route by each host. A host on disk finds each file through `./fontFiles`.
 
 /** The path every host serves the files of `FONT_FILES` on. */
 export const FONT_ROUTE = "/fonts/";
@@ -9,8 +9,8 @@ export const FONT_ROUTE_FILES = `${FONT_ROUTE}*`;
 export const DISPLAY_FONT_FAMILY = "Bloom SF Pro Display";
 export const READING_FONT_FAMILY = "Bloom Inter";
 
-/** Who holds a face's file: this package (`./fonts/*`), or the private engine repository. */
-export const FONT_HOLDERS = Object.freeze({ suite: "suite", engine: "engine" });
+/** Who holds a face's file: this package (`./fonts/*`), or the host, in the font folder it names. */
+export const FONT_HOLDERS = Object.freeze({ suite: "suite", host: "host" });
 export type FontHolder = typeof FONT_HOLDERS[keyof typeof FONT_HOLDERS];
 /** Each font file format: the name a stylesheet's `format()` gives it, and the media type a host serves it as. */
 export const FONT_FORMATS = Object.freeze({
@@ -36,7 +36,7 @@ const DISPLAY_CUTS = Object.freeze([["Regular", 400], ["Medium", 500], ["Semibol
 export const FONT_FILES: readonly FontFile[] = Object.freeze([
   ...DISPLAY_CUTS.map(([cut, weight]) => fontFile({
     family: DISPLAY_FONT_FAMILY, file: `SF-Pro-Display-${cut}.otf`, format: FONT_FORMATS.opentype,
-    weight: Object.freeze({ min: weight, max: weight }), holder: FONT_HOLDERS.engine,
+    weight: Object.freeze({ min: weight, max: weight }), holder: FONT_HOLDERS.host,
   })),
   fontFile({
     family: READING_FONT_FAMILY, file: "InterVariable-Latin.woff2", format: FONT_FORMATS.woff2,

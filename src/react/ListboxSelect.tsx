@@ -158,8 +158,7 @@ export function ListboxSelect<V extends string|number>(props: ListboxSelectProps
     <span className={ListboxElement.STEPPER.className}>
      {stepCaret(backStep)}
      {children!==undefined
-      ? <button type="button" tabIndex={-1} className={ListboxElement.CHOSEN.className} disabled={disabled}
-       onClick={toggle}>{carousel}</button>
+      ? <span aria-hidden className={ListboxElement.CHOSEN.className} onClick={toggle}>{carousel}</span>
       : renderTrigger(carousel,field)}
      {stepCaret(nextStep)}
     </span>

@@ -4,8 +4,8 @@
 .app-root .header-icon-button { --header-control-radius:9px;width:var(--header-control);height:var(--header-control);padding:var(--header-control-padding,5px);border:var(--line-width) solid var(--header-border-color,var(--line));border-radius:var(--header-control-radius);background:var(--card);color:var(--pink);text-decoration:none;transition:border-color .18s,background .18s,box-shadow .18s; }
 /* Header icons share one drawn size; the jar reads a touch larger. */
 .header-icon-button>svg { width:var(--header-icon-size);height:var(--header-icon-size); }
-/* A compact control sits at a module header's icon-button size. */
-.header-icon-button[data-density=compact] { width:auto;height:auto;padding:calc(var(--field-gap) / 4) calc(var(--field-gap) / 2); }
+/* A compact control sits in a module header at its tabs' box (ModuleTabs), its glyph centred. */
+.header-icon-button[data-density=compact] { width:auto;height:auto;min-width:var(--module-tab-width);min-height:var(--module-tab-height);padding:0; }
 /* Hover and focus glow. A button that opts in with data-dim-disabled (the season
    footer's Play and Sim) dims instead while disabled; `:where` leaves the glow's
    specificity as it is for every other icon button. */
