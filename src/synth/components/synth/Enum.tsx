@@ -3,6 +3,7 @@ export {OptionsEnum}; // Kept for synth-web's deep imports.
 import React, { useState, useCallback, useRef, type RefObject } from 'react';
 import {Modal} from '../../../react/Modal.tsx';
 import {ModalPlacement} from '../../../react/modalElements.ts';
+import type {Without} from '../../../react/refusedKeys.ts';
 import { useStyle } from '../../StyleContext.tsx';
 import type { AdvancedSettings, StyleTheme } from '../../StyleTypes.ts';
 import { getColorScheme, getInsetShadow, hexToRgba, resolveColorType, type ColorScheme } from '../../../color.ts';
@@ -17,7 +18,6 @@ export type {EnumColor, EnumVariant, EnumDisplayMode, EnumOption, SingleSelectEn
 import type {EnumOption, SingleSelectEnumProps, MultiSelectEnumProps, EnumProps}
   from '../../../react/inputs/enumProps.ts';
 
-// Type guard for multi-select
 function isMultiSelect<T>(props: EnumProps<T>): props is MultiSelectEnumProps<T> {
   return props.variant === 'multi';
 }
@@ -432,19 +432,19 @@ function CyclingEnumRenderer<T>({ options, value, onChange, scheme, style, size,
 // CONVENIENCE EXPORTS for backwards compatibility
 // =====================================================
 
-export function BaseFullDisplayEnum<T = string>(props: Omit<SingleSelectEnumProps<T>, 'variant'>) {
+export function BaseFullDisplayEnum<T = string>(props: Without<SingleSelectEnumProps<T>, 'variant'>) {
   return <Enum {...props} variant="full" />;
 }
 
-export function CyclingEnum<T = string>(props: Omit<SingleSelectEnumProps<T>, 'variant'>) {
+export function CyclingEnum<T = string>(props: Without<SingleSelectEnumProps<T>, 'variant'>) {
   return <Enum {...props} variant="cycling" />;
 }
 
-export function MultiSelectEnum<T = string>(props: Omit<MultiSelectEnumProps<T>, 'variant'> & { variant?: never }) {
+export function MultiSelectEnum<T = string>(props: Without<MultiSelectEnumProps<T>, 'variant'>) {
   return <Enum {...props} variant="multi" />;
 }
 
-export function SelectEnum<T extends string | number>({ options, value, onChange }: Omit<SingleSelectEnumProps<T>, 'variant'>) {
+export function SelectEnum<T extends string | number>({ options, value, onChange }: Without<SingleSelectEnumProps<T>, 'variant'>) {
   const style = useStyle().getEffectiveStyle();
   return <select value={value} disabled={!onChange} onChange={event => {
     const selected = options.find(option => String(option.value) === event.target.value);

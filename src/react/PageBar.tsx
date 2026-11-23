@@ -7,6 +7,7 @@ import {SegmentedControl, ICON_SEGMENT_VARIANT, type SingleSegmentProps,
 import {HeaderIconButton} from './HeaderIconButton.tsx';
 import {ActionNotice, type ActionBarNotice} from './ActionBar.tsx';
 import {HeaderNoticesElement, PageHeaderFloatElement} from './pageBarElements.ts';
+import {ListPopoverDefaultsContext, type ListPopoverPlacement} from './listPopoverContext.ts';
 
 /** Product data supplies the glyphs and destinations, as in core's sport selector. */
 export function HeaderNavigation<Value extends SegmentValue>(props: SingleSegmentProps<Value>) {
@@ -55,6 +56,10 @@ export interface PageFooterProps extends Omit<BarProps, 'as' | 'slots'> {
   /** At phone width the settings drop their labels, which stay as each control's hover hint. */
   compact?: boolean;
 }
+/** A footer sits at the page's bottom edge, so the lists opened inside it open above. */
+const FOOTER_POPOVERS: ListPopoverPlacement = Object.freeze({above: true});
+const inFooter = (content: ReactNode) =>
+  <ListPopoverDefaultsContext.Provider value={FOOTER_POPOVERS}>{content}</ListPopoverDefaultsContext.Provider>;
 /** Persistent core surfaces and standalone pages use the same settings and proceed action. */
 export function pageFooterSlots({slots, settings, action}: Pick<PageFooterProps, 'slots' | 'settings' | 'action'>) {
   const {label, className = '', ...button} = action ?? {};
@@ -63,12 +68,12 @@ export function pageFooterSlots({slots, settings, action}: Pick<PageFooterProps,
       className={`setup-footer-action ${className}`}>{label}</Button>}</>};
 }
 export function PageFooterContents(props: Pick<PageFooterProps, 'slots' | 'settings' | 'action'>) {
-  return <BarContents {...pageFooterSlots(props)}/>;
+  return inFooter(<BarContents {...pageFooterSlots(props)}/>);
 }
 export const PageFooter = forwardRef<HTMLElement, PageFooterProps>(function PageFooter(
   {slots, settings, action, compact, className = '', ...props}, ref,
 ) {
-  return <Bar {...props} ref={ref} as="footer" data-page-bar="footer" className={`match-footer ${className}`}
+  return inFooter(<Bar {...props} ref={ref} as="footer" data-page-bar="footer" className={`match-footer ${className}`}
     data-footer-action={!!action} data-footer-compact={compact || undefined}
-    slots={pageFooterSlots({slots, settings, action})}/>;
+    slots={pageFooterSlots({slots, settings, action})}/>);
 });

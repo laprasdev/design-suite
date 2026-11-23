@@ -5,6 +5,7 @@
    confirmed value it passes afterwards. The content keeps its own inline layout. */
 import type {ButtonHTMLAttributes,ReactNode} from 'react';
 import {PokeballSpinner} from './Pokeball.tsx';
+import type {Without} from './refusedKeys.ts';
 import {PENDING_FORM_ATTRIBUTE,PendingElement,type PendingForm} from './pendingElements.ts';
 
 // What a control shows, and whether it shows it pending.
@@ -24,7 +25,7 @@ export interface PendingPress<E extends Refusable=Refusable> {'aria-busy': true|
 
 // A pending control's button attributes: its busy state is pendingPress's alone. Declared as never, because the type
 // check passes any undeclared hyphenated attribute, so a consumer's own value would compile and be dropped.
-export type PendingButtonAttributes=Omit<ButtonHTMLAttributes<HTMLButtonElement>,'aria-busy'>&{'aria-busy'?: never};
+export type PendingButtonAttributes=Without<ButtonHTMLAttributes<HTMLButtonElement>,'aria-busy'>;
 
 const refuse=(event: Refusable)=>event.preventDefault();
 

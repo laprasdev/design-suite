@@ -102,6 +102,8 @@ direction follows their order, and their actual retained surfaces animate withou
 `PageHeaderBar` and `PageFooter` own the shared page chrome. `HeaderNavigation` takes the same typed
 segmented-control options as the sport selector: applications supply glyphs, labels, values and navigation.
 Brand, Back, settings and page controls fill the existing slots. Notices reuse `ActionBar`'s notice surface.
+A footer sets the form of the lists inside it: a `ListboxSelect` in any of its slots opens above,
+unless its own `popover` says otherwise.
 
 Keep the fixed header and footer outside the moving page body. The exported page
 motion helpers also support stationary chrome within a composed page.

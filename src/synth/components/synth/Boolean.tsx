@@ -10,6 +10,7 @@ import {HoverDetail} from '../../../react/HoverDetail.tsx';
 import {SelectionMark} from '../../../react/SelectionMark.tsx';
 import {pendingContent,pendingPress} from '../../../react/pending.tsx';
 import {PendingForm} from '../../../react/pendingElements.ts';
+import type {Without} from '../../../react/refusedKeys.ts';
 
 type BooleanSize = 'xs' | 'sm' | 'md' | 'lg';
 type BooleanColor = 'primary' | 'secondary' | 'green' | 'cyan' | 'pink';
@@ -148,15 +149,15 @@ function CellBoolean({
 }
 
 
-export function LightUpBoolean(props: Omit<BooleanProps, 'color' | 'variant'>) {
+export function LightUpBoolean(props: Without<BooleanProps, 'color' | 'variant'>) {
   return <Boolean {...props} color="primary" variant="standard" />;
 }
 
-export function PinkBoolean(props: Omit<BooleanProps, 'color' | 'variant'>) {
+export function PinkBoolean(props: Without<BooleanProps, 'color' | 'variant'>) {
   return <Boolean {...props} color="secondary" variant="standard" />;
 }
 
-export function BasicBoolean(props: Omit<BooleanProps, 'variant'>) {
+export function BasicBoolean(props: Without<BooleanProps, 'variant'>) {
   return <Boolean {...props} variant="basic" />;
 }
 

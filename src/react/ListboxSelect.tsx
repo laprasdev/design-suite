@@ -1,8 +1,10 @@
 import {Button} from './Button.tsx';
 import {Modal} from './Modal.tsx';
-import {ModalPlacement,type PopoverPlacementFromAnchor} from './modalElements.ts';
+import {ModalPlacement} from './modalElements.ts';
+import {ListPopoverDefaultsContext,type ListPopoverPlacement} from './listPopoverContext.ts';
+import type {Refused} from './refusedKeys.ts';
 import {Label} from './accents.tsx';
-import {useEffect,useId,useLayoutEffect,useRef,useState,type KeyboardEvent,type ReactNode} from 'react';
+import {useContext,useEffect,useId,useLayoutEffect,useRef,useState,type KeyboardEvent,type ReactNode} from 'react';
 import {SearchField} from './SearchField.tsx';
 import {Density} from './density.ts';
 import {searchCopy} from './interfaceCopy.ts';
@@ -11,9 +13,9 @@ import {LISTBOX_ARROWS,LISTBOX_MOVES,LISTBOX_OPENS,typesText,typeahead,searching
 
 // The app's own select: a trigger and, when open, a listbox popover of `options`
 // (a searchable label, optional leading/trailing content and hover title) anchored
-// to it, below it or where its `popover` places it; the list scrolls in its own frame, not the popover. The trigger
-// shows the chosen option as a field unless `children` draw it; with `field`,
-// `children` are drawn inside the field (a portrait beside a name, or a menu's name). It follows the
+// to it, below it or where its `popover`, or else its surface (ListPopoverDefaultsContext), places it; the list
+// scrolls in its own frame, not the popover. The trigger shows the chosen option as a field unless `children` draw
+// it; with `field`, `children` are drawn inside the field (a portrait beside a name, or a menu's name). It follows the
 // select-only combobox pattern (listboxNavigation): focus stays on the trigger;
 // arrows, Home and End move through the options, typing jumps to a label, Enter
 // or Space chooses and Tab closes. A click chooses. The popover is an anchored
@@ -37,37 +39,36 @@ interface ListboxProps<V extends string|number> {
  field?: boolean;
  title?: string;
  disabled?: boolean;
- popover?: PopoverPlacementFromAnchor;
+ popover?: ListPopoverPlacement;
  className?: string;
  iconOnly?: boolean;
  renderOption?(option: ListboxOption<V>): ReactNode;
 }
-interface ListboxSelectForm<V extends string|number> extends ListboxProps<V> {
- form?: typeof ListboxForm.SELECT;
+// What only the select form takes: the value it holds, its change, its creating and its search.
+interface ListboxSelectOnly<V extends string|number> {
  value: V|null|undefined;
  onChange(value: NoInfer<V>): void;
- onAction?: never;
  onCreate?(name: string): void;
- children?: ReactNode;
  searchSubject?: string;
  searchSize?: number;
 }
-interface ListboxMenuForm<V extends string|number> extends ListboxProps<V> {
+// What only the menu form takes: the action it runs.
+interface ListboxMenuOnly<V extends string|number> {onAction(value: NoInfer<V>): void}
+type ListboxSelectForm<V extends string|number>=ListboxProps<V>&ListboxSelectOnly<V>&Refused<ListboxMenuOnly<V>>&{
+ form?: typeof ListboxForm.SELECT;
+ children?: ReactNode;
+};
+type ListboxMenuForm<V extends string|number>=ListboxProps<V>&ListboxMenuOnly<V>&Refused<ListboxSelectOnly<V>>&{
  form: typeof ListboxForm.MENU;
  // The menu's trigger is drawn by its children alone, so it always has some.
  children: Exclude<ReactNode,undefined>;
- onAction(value: NoInfer<V>): void;
- value?: never;
- onChange?: never;
- onCreate?: never;
- searchSubject?: never;
- searchSize?: never;
-}
+};
 export type ListboxSelectProps<V extends string|number>=ListboxSelectForm<V>|ListboxMenuForm<V>;
 export function ListboxSelect<V extends string|number>(props: ListboxSelectProps<V>) {
  const {form=ListboxForm.SELECT,options,value,label,title,disabled=false,popover,field=false,className='',children,
   searchSubject,searchSize,iconOnly=false,renderOption,onCreate}=props;
  // The select reports a changed value; the menu, which holds none, runs every chosen action.
+ const surface=useContext(ListPopoverDefaultsContext);
  const run=props.form===ListboxForm.MENU?props.onAction:props.onChange;
  const roles=LISTBOX_FORM_ROLES[form];
  const id=useId(),listId=`${id}-list`,optionId=(index: number)=>`${id}-option-${index}`;
@@ -116,7 +117,7 @@ export function ListboxSelect<V extends string|number>(props: ListboxSelectProps
    aria-label={label} title={title} aria-haspopup={roles.popup} aria-expanded={open} aria-controls={open?listId:undefined}
    aria-activedescendant={activeOn==='trigger'?optionId(active):undefined}
    disabled={disabled} onClick={()=>open?setOpen(false):show(start)} onKeyDown={open?openKey:closedKey}>{triggerContent}</button>
-  {open&&<Modal open placement={ModalPlacement.ANCHORED} anchor={trigger} popover={{...popover,scroll:false}}
+  {open&&<Modal open placement={ModalPlacement.ANCHORED} anchor={trigger} popover={{...surface,...popover,scroll:false}}
    onClose={settle} role="presentation" className={ListboxElement.POPOVER.className}
    data-icon-only={iconOnly||undefined}>
    {searchSubject&&<SearchField density={Density.COMPACT} size={searchSize}
