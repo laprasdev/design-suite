@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {pageStackDirection,pageStackKeys} from '../src/react/pageStack.ts';
+import {pageStackDirection,pageStackKeys,peerDirection} from '../src/react/pageStack.ts';
 import {pageFrames,PAGE_FADE,PAGE_FADE_IN,PAGE_FADE_OUT} from '../src/react/pageMotion.ts';
 import {PAGE_MOTION} from '../src/react/motion.ts';
 
@@ -19,6 +19,16 @@ test('unrelated or same-depth replacements fade instead of inventing a back dire
  assert.equal(pageStackDirection(['list','detail'],['search']),0);
  assert.equal(pageStackDirection([],root),0);
  assert.equal(pageStackDirection(root,[]),0);
+});
+
+test('ordered peers move along their order; a carousel goes round its ring the shorter way',()=>{
+ const peers=['a','b','c','d'];
+ assert.equal(peerDirection(peers,'a','b',false),1);
+ assert.equal(peerDirection(peers,'d','a',false),-1);
+ assert.equal(peerDirection(peers,'d','a',true),1,'past the last peer the carousel goes on forward');
+ assert.equal(peerDirection(peers,'a','d',true),-1,'before the first it goes on back');
+ assert.equal(peerDirection(peers,'a','c',true),1,'a tie goes along the order');
+ assert.equal(peerDirection(peers,'b','b',true),0);
 });
 
 test('page identity comes from stable unique keys, not node identity',()=>{

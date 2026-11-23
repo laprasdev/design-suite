@@ -48,7 +48,7 @@ for(const viewport of [DESKTOP_VIEWPORT,HANDSET_VIEWPORT])test(`the header forms
  assert.equal(await shownName(),FIRST.label,'the carousel slot shows the active option');
  const [back,next]=[0,1].map(index=>page.locator(ListboxElement.STEP.selector).nth(index));
  assert.equal(await page.locator(ListboxElement.STEP.selector).count(),2,'the title draws its two step carets');
- assert.ok(await back.isDisabled(),'the first option has no previous one');
+ assert.ok(!await back.isDisabled(),'the carets go round a ring: the first option\'s previous one is the last');
  const [titleBox,nameBox,backBox,nextBox]=await Promise.all([
   title.boundingBox(),chosen.boundingBox(),back.boundingBox(),next.boundingBox(),
  ]);
@@ -144,7 +144,7 @@ test('a title choice and its list work in a StyleProvider without app-root',asyn
   document.documentElement.style.setProperty('--card',foreignCard);
  },[SCENE_ROOT_ID,ApplicationElement.ROOT.className,FOREIGN_CARD] as const);
  const title=page.locator(ModuleTitleChoiceElement.selector);
- const next=page.locator(ListboxElement.STEP.selector).nth(1);
+ const [back,next]=[0,1].map(index=>page.locator(ListboxElement.STEP.selector).nth(index));
  const nextBox=await next.boundingBox()??assert.fail('the step caret has no box without app-root');
  assert.deepEqual({w:nextBox.width,h:nextBox.height},{w:D.moduleGrid.tabMinWidth,h:D.moduleGrid.tabMinHeight});
  const read=await page.evaluate(([choice,step,keys])=>{
@@ -162,8 +162,8 @@ test('a title choice and its list work in a StyleProvider without app-root',asyn
  assert.deepEqual(read.caretBare,{border:'0px',bg:'rgba(0, 0, 0, 0)'});
  await title.focus();
  await page.keyboard.press('Tab');
- assert.equal(await next.evaluate(node=>getComputedStyle(node).outlineStyle),'solid');
- assert.equal(await next.evaluate(node=>{node.style.setProperty('--focus-outline','none');
+ assert.equal(await back.evaluate(node=>getComputedStyle(node).outlineStyle),'solid');
+ assert.equal(await back.evaluate(node=>{node.style.setProperty('--focus-outline','none');
   return getComputedStyle(node).outlineStyle;}),'none','a compact step caret reads --focus-outline without app-root');
  await title.click();
  const popover=page.locator(ListboxElement.POPOVER.selector);

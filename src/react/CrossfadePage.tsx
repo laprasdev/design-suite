@@ -1,7 +1,7 @@
 import {useLayoutEffect,useRef,type RefObject} from 'react';
 import type {StackView} from './ViewStack.tsx';
 import {reducedMotion} from './motion.ts';
-import {pageStackDirection,pageStackKeys} from './pageStack.ts';
+import {pageStackDirection,pageStackKeys,peerDirection} from './pageStack.ts';
 import {
  animatePage,capturePage,captureRetainedPageScroll,restoreRetainedPageScroll,placePageCopy,removePageCopy,pageFrames,
  type PageCopy,type RetainedPageScroll,
@@ -87,7 +87,7 @@ export function CrossfadePage(props: CrossfadeStackProps) {
   const retained=key===undefined?undefined:saved.current.get(key);
   if(retained)restoreRetainedPageScroll(node,retained.scroll);
   const direction=activeKey!==undefined&&previous?.key!==undefined
-   ? Math.sign(keys.indexOf(key!)-keys.indexOf(previous.key)) as -1|0|1
+   ? peerDirection(keys,previous.key,key!,carousel)
    : pageStackDirection(previous?.keys??[],keys);
   const focus=()=>{
    if(carousel)return;
