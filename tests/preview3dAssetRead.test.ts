@@ -3,7 +3,8 @@ import {createHash} from 'node:crypto';
 import {after, before, describe, it} from 'node:test';
 import {loadModelStageAsset} from '../src/react/preview3d/asset.ts';
 import {MODEL_FILE_TEXT} from '../src/react/preview3d/files.ts';
-import {modelAssetDigest, modelStageActorSet} from '../src/react/preview3d/actorModel.ts';
+import {modelStageActorSet} from '../src/react/preview3d/actorModel.ts';
+import {modelAssetDigest} from '../src/react/preview3d/actorAssetModel.ts';
 import {declaration} from './preview3dActorFixture.ts';
 
 // A model file as the page's server would answer it: a whole glTF (one node), served from memory. Every read goes

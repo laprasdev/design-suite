@@ -7,17 +7,23 @@ export const MODEL_STAGE_COMMIT_TEXT = Object.freeze({
   partial: 'A checked change failed while it was applied; the stage may show part of it.',
 });
 
+/** Applies the first `count` of `commits` in order. A commit that throws has left part of the change applied: never a
+ * refusal, which promises nothing changed. Allocates nothing, so a frame applies through it every tick. */
+export function applyModelStageCommits(commits: readonly ModelStageCommit[], count: number) {
+  try {
+    for (let index = 0; index < count; index++) commits[index]();
+  } catch (error) {
+    throw new Error(MODEL_STAGE_COMMIT_TEXT.partial, {cause: error});
+  }
+}
+
 export function prepareWhole(prepares: Iterable<ModelStagePrepare>): ModelStageCommit {
   const commits = Array.from(prepares, prepare => prepare());
-  return () => {
-    // A commit that throws has left part of the change applied: never a refusal, which promises nothing changed.
-    try {
-      for (const commit of commits) commit();
-    } catch (error) {
-      throw new Error(MODEL_STAGE_COMMIT_TEXT.partial, {cause: error});
-    }
-  };
+  return () => applyModelStageCommits(commits, commits.length);
 }
+
+/** A commit that applies nothing: what a slot holds before its first prepare. */
+export const MODEL_STAGE_UNCHANGED: ModelStageCommit = () => {};
 
 /** A prepare with nothing to check. */
 export const modelStageCommit = (commit: ModelStageCommit): ModelStagePrepare => () => commit;

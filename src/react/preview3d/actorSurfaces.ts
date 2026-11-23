@@ -10,7 +10,7 @@ import {MODEL_SURFACE_GLSL} from './surfaceGlsl.ts';
 import {writeModelSurfaceColor} from './color.ts';
 import {createModelMaterialInspection} from './materials.ts';
 import {ModelStageRefusal} from './refusal.ts';
-import {modelRecordIdentity} from './recordModel.ts';
+import {modelRecordIdentity} from './recordIdentityModel.ts';
 import {padModelBoundsByReach} from './reachBounds.ts';
 import type {ModelStageCommit} from './commit.ts';
 
@@ -50,6 +50,37 @@ export function createModelActorSurfaces(source: Pick<ModelDrawn, 'scene' | 'ren
   const padded = new Map<THREE.Mesh, () => void>();
   const {renderers} = source;
   let heldSurfaces = new Map<THREE.Mesh, HeldSurface>();
+  // A frame's values, prepared into what the one commit made here reads, so a frame tick makes nothing: the frame's
+  // outputs and each one's renderer, by the output's index, and the one set of renderers the frame hides, refilled by
+  // each commit.
+  const pendingValues: {outputs: readonly ModelMaterialOutput[]; nodes: THREE.Object3D[]} = {outputs: [], nodes: []};
+  const hidden = new Set<THREE.Object3D>();
+  const restoreDeclared = (held: HeldSurface) => {
+    held.effective.set(held.surface.declared);
+    held.changed = true;
+  };
+  const commitValues = (): ReadonlySet<THREE.Object3D> => {
+    const {outputs, nodes} = pendingValues;
+    heldSurfaces.forEach(restoreDeclared);
+    // V8's `clear` makes the set a new table, so an empty set is left as it is.
+    if (hidden.size) hidden.clear();
+    for (let index = 0; index < outputs.length; index++) {
+      const output = outputs[index], node = nodes[index];
+      if (!output.visible) hidden.add(node);
+      // A renderer drawn with its file's own material takes visibility only (the frame check refuses a value).
+      const held = node instanceof THREE.Mesh ? heldSurfaces.get(node) : undefined;
+      if (!held) continue;
+      for (const name in output.colors) {
+        const {index: slot, parameter} = held.surface.slots.get(name)!;
+        if (parameter.type !== MODEL_SURFACE_PARAMETER.color) continue;
+        writeModelSurfaceColor(held.effective, slot * SLOT, output.colors[name], parameter.space);
+      }
+      for (const name in output.floats) {
+        held.effective[held.surface.slots.get(name)!.index * SLOT] = output.floats[name];
+      }
+    }
+    return hidden;
+  };
   const draw = (node: THREE.Mesh, held: HeldSurface) => {
     const {material} = held.surface, uniform = material.uniforms[MODEL_SURFACE_GLSL.values];
     node.material = material;
@@ -140,29 +171,11 @@ export function createModelActorSurfaces(source: Pick<ModelDrawn, 'scene' | 'ren
     /** A frame's values and visibility for this actor, already checked against what its renderers take: every drawn
      * renderer shows its record's values except where the frame states one; returns the renderers the frame hides. */
     prepareValues(outputs: readonly ModelMaterialOutput[]): () => ReadonlySet<THREE.Object3D> {
-      const named = outputs.map(output => ({output, node: renderers().get(output.rendererId)!}));
-      return () => {
-        for (const held of heldSurfaces.values()) {
-          held.effective.set(held.surface.declared);
-          held.changed = true;
-        }
-        const hidden = new Set<THREE.Object3D>();
-        for (const {output, node} of named) {
-          if (!output.visible) hidden.add(node);
-          // A renderer drawn with its file's own material takes visibility only (the frame check refuses a value).
-          const held = node instanceof THREE.Mesh ? heldSurfaces.get(node) : undefined;
-          if (!held) continue;
-          for (const [name, value] of Object.entries(output.colors)) {
-            const {index, parameter} = held.surface.slots.get(name)!;
-            if (parameter.type !== MODEL_SURFACE_PARAMETER.color) continue;
-            writeModelSurfaceColor(held.effective, index * SLOT, value, parameter.space);
-          }
-          for (const [name, value] of Object.entries(output.floats)) {
-            held.effective[held.surface.slots.get(name)!.index * SLOT] = value;
-          }
-        }
-        return hidden;
-      };
+      for (let index = 0; index < outputs.length; index++) {
+        pendingValues.nodes[index] = renderers().get(outputs[index].rendererId)!;
+      }
+      pendingValues.outputs = outputs;
+      return commitValues;
     },
     /** The file's own materials go back on every renderer before the model is freed; kinds' materials are shared. */
     dispose() {

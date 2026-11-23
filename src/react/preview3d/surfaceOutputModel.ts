@@ -1,4 +1,4 @@
-import {isRecord as object} from '../../valueChecks.ts';
+import {isFiniteNumber, isRecord as object} from '../../valueChecks.ts';
 import {modelStates} from './recordModel.ts';
 import {ModelStageRefusal} from './refusal.ts';
 import {MODEL_SURFACE_PARAMETER, type ModelSurfaceKind} from './surfaceKindModel.ts';
@@ -36,7 +36,6 @@ export const MODEL_SURFACE_OUTPUT_REFUSAL = Object.freeze({
 });
 const refusal = MODEL_SURFACE_OUTPUT_REFUSAL;
 const index = (value: unknown) => Number.isSafeInteger(value) && Number(value) >= 0;
-const finite = (value: unknown) => typeof value === 'number' && Number.isFinite(value);
 
 /** One output's shape, without its names: whole, finite, and copied, so no caller-owned array is retained. */
 export function modelMaterialOutputShape(value: unknown, where: string): ModelMaterialOutput {
@@ -47,11 +46,11 @@ export function modelMaterialOutputShape(value: unknown, where: string): ModelMa
   const colors = Object.entries(value.colors).map(([name, components]) => {
     // Copied first: a sparse array's holes read as undefined, never skipped.
     const copy: unknown[] = Array.isArray(components) ? Array.from(components) : [];
-    if (copy.length !== 4 || !copy.every(finite)) throw new ModelStageRefusal(refusal.color(where, name));
+    if (copy.length !== 4 || !copy.every(isFiniteNumber)) throw new ModelStageRefusal(refusal.color(where, name));
     return [name, Object.freeze(copy)] as const;
   });
   const floats = Object.entries(value.floats).map(([name, number]) => {
-    if (!finite(number)) throw new ModelStageRefusal(refusal.float(where, name));
+    if (!isFiniteNumber(number)) throw new ModelStageRefusal(refusal.float(where, name));
     return [name, number] as const;
   });
   return Object.freeze({rendererId: value.rendererId, slot: Number(value.slot), visible: value.visible,

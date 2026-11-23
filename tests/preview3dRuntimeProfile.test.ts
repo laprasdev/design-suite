@@ -1,3 +1,4 @@
+import {MODEL_NO_EMITTERS} from '../src/react/preview3d/emitterModel.ts';
 import {modelFileDrawn} from '../src/react/preview3d/drawn.ts';
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
@@ -10,7 +11,7 @@ import {MODEL_RUNTIME_MATERIAL as channel, modelRuntimeMaterialProfile}
   from '../src/react/preview3d/runtimeMaterialModel.ts';
 import {bindModelRuntimeMaterials} from '../src/react/preview3d/runtimeMaterialBinding.ts';
 import {modelPreviewCamera} from '../src/react/preview3d/presentation.ts';
-import {modelRuntimeAssetProfile} from '../src/react/preview3d/actorModel.ts';
+import {modelRuntimeAssetProfile} from '../src/react/preview3d/actorAssetModel.ts';
 import {createModelFrameInbox} from '../src/react/preview3d/frameInbox.ts';
 import {NO_FILES, actorContext, applyFrame, describing, fileScene, FILE_SURFACES, REST, STANDING}
   from './preview3dActorFixture.ts';
@@ -28,7 +29,8 @@ const material = () => ({rendererId, slot: 0, visible: true, colors: {},
   floats: {[channel.emissionStrength]: 2.8}});
 // The one declared actor otter, whose asset carries the profile, and an inbox of one-entity frames for it.
 const actor = (runtimeMaterials: unknown = profile()) => ({id: 'otter', placement: STANDING,
-  animation: REST, surfaces: FILE_SURFACES, asset: {id: 'otter', revision: 'tested', path: '/otter.glb',
+  animation: REST, surfaces: FILE_SURFACES, emitters: MODEL_NO_EMITTERS,
+  asset: {id: 'otter', revision: 'tested', path: '/otter.glb',
     attachments: {}, sha256: '1'.repeat(64), runtimeMaterials: runtimeMaterials as ReturnType<typeof profile>}});
 const createInbox = (runtimeMaterials?: unknown) => {
   const inbox = createModelFrameInbox(), actors = [actor(runtimeMaterials)];

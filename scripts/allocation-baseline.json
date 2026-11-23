@@ -1,5 +1,6 @@
 {
   "files": {
+    "src/react/preview3d/emitterFrameModel.ts": {"extraBytesPerTick":12},
     "src/react/preview3d/frameModel.ts": {"extraBytesPerTick":128}
   },
   "allowances": [
