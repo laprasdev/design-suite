@@ -21,8 +21,8 @@ export function FieldName({ label, icon, emphasis, onName, nameLabel, nameTitle,
   const style = useStyle().getEffectiveStyle();
   const set = emphasis === FieldEmphasis.SET, inert = emphasis === FieldEmphasis.INERT;
   const nameStyle: React.CSSProperties = {
-    ...T.label, display: 'inline-flex', alignItems: 'center', justifyContent: align, gap: G.nameIconGap,
-    textTransform: 'uppercase', textAlign: align, transition: TransitionKeys.fast,
+    ...T.label, lineHeight: G.tightLine, display: 'inline-flex', alignItems: 'center', justifyContent: align,
+    gap: G.nameIconGap, textTransform: 'uppercase', textAlign: align, transition: TransitionKeys.fast,
     color: set ? style.primaryColor : hexToRgba(style.textColor, O.high) };
   const content = <>{icon}{label}</>;
   const pressable: React.CSSProperties = { ...nameStyle, padding: 0, border: 'none', background: 'transparent',

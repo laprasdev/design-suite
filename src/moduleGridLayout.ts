@@ -82,7 +82,7 @@ export const ModuleGridDimensions = {
     curveWidth: 96,
     curveHeight: 40,
     curveLine: 1.5,
-    openButtonWidth: 44,
+    openButtonWidth: 20,
     openButtonHeight: 20,
     swatchHeight: 24,
     swatchWidth: 44,
