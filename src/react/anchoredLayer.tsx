@@ -7,15 +7,9 @@ import {useCallback,useRef,useState,type CSSProperties,type ReactNode,type RefOb
 import {createPortal} from 'react-dom';
 import {useStyleContext} from '../synth/StyleContext.tsx';
 import {ApplicationElement} from './applicationElements.ts';
-import type {ModalAnchor} from './modalElements.ts';
+import type {AnchoredPlacement} from './modalElements.ts';
 import {styleThemeVariables} from './styleTheme.ts';
-import {useAnchoredPopover,type PopoverPlacement} from './useAnchoredPopover.ts';
-
-// An anchored Modal's anchor and where it goes beside it.
-export interface AnchoredPlacement {
- readonly anchor: ModalAnchor;
- readonly popover: Omit<PopoverPlacement,'at'>|undefined;
-}
+import {useAnchoredPopover} from './useAnchoredPopover.ts';
 
 // The layer root `node` renders in: the enclosing application root, or in a StyleProvider scope the document's body;
 // refused by name when it renders in neither.

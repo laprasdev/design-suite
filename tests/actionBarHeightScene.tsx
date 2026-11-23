@@ -2,15 +2,19 @@
 // each bar's height: the cases actionBarHeightCases.ts names.
 import {ActionNotice} from '../src/react/ActionBar.tsx';
 import {NoticeTone} from '../src/react/actionBarElements.ts';
-import {ActionBar,Button,Label,ListboxSelect,PageFooter} from '../src/react/index.ts';
-import {ACTION_BAR_BUTTONS,FLAT_SURFACE,FOOTER_ACTIONS,FOOTER_SETTING,NOTICE_BUTTONS,NOTICE_MESSAGES,OUTSIDE_BUTTON}
- from './actionBarHeightCases.ts';
+import {ActionBar,Button,Label,ListboxSelect,PageFooter,PageFooterContents} from '../src/react/index.ts';
+import {ACTION_BAR_BUTTONS,FLAT_SURFACE,FOOTER_ACTIONS,FOOTER_OPTIONS,FOOTER_SETTINGS,NOTICE_BUTTONS,NOTICE_MESSAGES,
+ OUTSIDE_BUTTON} from './actionBarHeightCases.ts';
 import {renderScene} from './renderScene.tsx';
 
 const ignore=()=>undefined;
 const notice=(label: string)=>
  ({message:NOTICE_MESSAGES.withButton,tone:NoticeTone.ERROR,action:{label,onClick:ignore}} as const);
-const [option]=FOOTER_SETTING.options;
+const [option]=FOOTER_OPTIONS;
+const setting=(label: string)=><div className="page-footer-setting">
+ <Label kind="action">{label}</Label>
+ <ListboxSelect label={label} value={option.value} options={FOOTER_OPTIONS} onChange={ignore}/>
+</div>;
 renderScene(<><div className="page-surface">
  <ActionBar notice={notice(NOTICE_BUTTONS.inBar)} slots={{
   left:<Button variant="primary">{ACTION_BAR_BUTTONS.left}</Button>,
@@ -19,10 +23,8 @@ renderScene(<><div className="page-surface">
  }}/>
  <ActionNotice notice={notice(NOTICE_BUTTONS.alone)}/>
  <ActionNotice notice={{message:NOTICE_MESSAGES.bare,tone:NoticeTone.INFO}}/>
- <PageFooter action={{label:FOOTER_ACTIONS.set}} settings={<div className="page-footer-setting">
-  <Label kind="action">{FOOTER_SETTING.label}</Label>
-  <ListboxSelect label={FOOTER_SETTING.label} value={option.value} options={FOOTER_SETTING.options} onChange={ignore}/>
- </div>}/>
+ <PageFooter action={{label:FOOTER_ACTIONS.set}} settings={setting(FOOTER_SETTINGS.PageFooter)}/>
  <Button>{OUTSIDE_BUTTON}</Button>
 </div>
-<div className="page-surface" style={FLAT_SURFACE}><PageFooter action={{label:FOOTER_ACTIONS.flat}}/></div></>);
+<div className="page-surface" style={FLAT_SURFACE}><PageFooter action={{label:FOOTER_ACTIONS.flat}}/></div>
+<div className="page-surface"><PageFooterContents settings={setting(FOOTER_SETTINGS.PageFooterContents)}/></div></>);

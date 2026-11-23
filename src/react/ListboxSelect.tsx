@@ -2,10 +2,12 @@ import {Button} from './Button.tsx';
 import {Crossfade,CrossfadeForm} from './Crossfade.tsx';
 import {Modal} from './Modal.tsx';
 import {ModalPlacement} from './modalElements.ts';
+import {ListPopoverDefaultsContext,type ListPopoverPlacement} from './listPopoverContext.ts';
+import type {Refused} from './refusedKeys.ts';
 import {Label} from './accents.tsx';
 import {CARET_TURN,CaretGlyph} from './caretGlyph.tsx';
 import {HeaderIconButton} from './HeaderIconButton.tsx';
-import {useEffect,useId,useLayoutEffect,useRef,useState,type KeyboardEvent,type ReactNode} from 'react';
+import {useContext,useEffect,useId,useLayoutEffect,useRef,useState,type KeyboardEvent,type ReactNode} from 'react';
 import {SearchField} from './SearchField.tsx';
 import {Opacity} from '../tokens.ts';
 import {Density} from './density.ts';
@@ -16,8 +18,9 @@ import {
  typesText,typeahead,searching,typeaheadMatch,matchesOption,type TypeaheadSearch,
 } from './listboxNavigation.ts';
 
-// The app's own select: a trigger and, when open, a listbox popover of `options` anchored to it, below it or, with
-// `above`, above it. The trigger shows the chosen option as a field unless `children` draw it; with `field`, `children`
+// The app's own select: a trigger and, when open, a listbox popover of `options` anchored to it, below it or where its
+// `popover`, or else its surface (ListPopoverDefaultsContext), places it; the list scrolls in its own frame, not the
+// popover. The trigger shows the chosen option as a field unless `children` draw it; with `field`, `children`
 // are drawn inside the field. In the step form, previous and next carets flank a fixed-width Crossfade carousel slot of
 // the options, while `children` (such as a module's title word) and the chosen name both open the list, and arrows on
 // the closed trigger step it. An `unavailable` option draws faded and refuses a choice via `onRefuse`.
@@ -42,39 +45,39 @@ interface ListboxProps<V extends string|number> {
  field?: boolean;
  title?: string;
  disabled?: boolean;
- above?: boolean;
+ popover?: ListPopoverPlacement;
  className?: string;
  iconOnly?: boolean;
  renderOption?(option: ListboxOption<V>): ReactNode;
  onRefuse?(option: ListboxOption<V>): void;
 }
-interface ListboxSelectForm<V extends string|number> extends ListboxProps<V> {
- form?: typeof ListboxForm.SELECT|typeof ListboxForm.STEP;
+// What only the select and step forms take: the value they hold, its change, its creating and its search.
+interface ListboxSelectOnly<V extends string|number> {
  value: V|null|undefined;
  onChange(value: NoInfer<V>): void;
- onAction?: never;
  onCreate?(name: string): void;
- children?: ReactNode;
  searchSubject?: string;
  searchSize?: number;
 }
-interface ListboxMenuForm<V extends string|number> extends ListboxProps<V> {
+// What only the menu form takes: the action it runs.
+interface ListboxMenuOnly<V extends string|number> {onAction(value: NoInfer<V>): void}
+type ListboxSelectForm<V extends string|number>=ListboxProps<V>&ListboxSelectOnly<V>&Refused<ListboxMenuOnly<V>>&{
+ form?: typeof ListboxForm.SELECT|typeof ListboxForm.STEP;
+ children?: ReactNode;
+};
+type ListboxMenuForm<V extends string|number>=ListboxProps<V>&ListboxMenuOnly<V>&Refused<ListboxSelectOnly<V>>&{
  form: typeof ListboxForm.MENU;
  children: Exclude<ReactNode,undefined>;
- onAction(value: NoInfer<V>): void;
- value?: never;
- onChange?: never;
- onCreate?: never;
- searchSubject?: never;
- searchSize?: never;
-}
+};
 export type ListboxSelectProps<V extends string|number>=ListboxSelectForm<V>|ListboxMenuForm<V>;
 
 export function ListboxSelect<V extends string|number>(props: ListboxSelectProps<V>) {
- const {form=ListboxForm.SELECT,options,value,label,title,disabled=false,above=false,field=false,className='',children,
+ const {form=ListboxForm.SELECT,options,value,label,title,disabled=false,popover,field=false,className='',children,
   searchSubject,searchSize,iconOnly=false,renderOption,onCreate,onRefuse}=props;
  const refused=options.find(option=>option.unavailable!==undefined);
  if(refused&&!onRefuse)throw new Error(`${label} offers ${refused.label}, unavailable, with no onRefuse to say why.`);
+ const surface=useContext(ListPopoverDefaultsContext);
+ // The select reports a changed value; the menu, which holds none, runs every chosen action.
  const run=props.form===ListboxForm.MENU?props.onAction:props.onChange;
  const roles=LISTBOX_FORM_ROLES[form],isStep=form===ListboxForm.STEP;
  const id=useId(),listId=`${id}-list`,optionId=(index: number)=>`${id}-option-${index}`;
@@ -163,7 +166,7 @@ export function ListboxSelect<V extends string|number>(props: ListboxSelectProps
    </span>
    : renderTrigger(triggerContent,children===undefined||field)}
   {open&&<Modal open placement={ModalPlacement.ANCHORED} anchor={isStep?stepGroup:trigger}
-   popover={{above,scroll:false}} onClose={settle} role="presentation" className={ListboxElement.POPOVER.className}
+   popover={{...surface,...popover,scroll:false}} onClose={settle} role="presentation" className={ListboxElement.POPOVER.className}
    data-icon-only={iconOnly||undefined}>
    {searchSubject&&<SearchField density={Density.COMPACT} size={searchSize} style={searchStyle} ref={input}
     subject={searchSubject} value={query} onChange={next=>{setQuery(next);setActive(0);}} role="combobox"

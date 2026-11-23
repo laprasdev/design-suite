@@ -1,16 +1,17 @@
 // The Boolean cell's fixed looks, each a colour and variant of the one cell, and a cell beside its name.
 import { Boolean, type BooleanProps, type BooleanSize, type BooleanColor } from './Boolean.tsx';
 import { D, DC, T } from '../../design/index.ts';
+import type { Without } from '../../../react/refusedKeys.ts';
 
-export function LightUpBoolean(props: Omit<BooleanProps, 'color' | 'variant'>) {
+export function LightUpBoolean(props: Without<BooleanProps, 'color' | 'variant'>) {
   return <Boolean {...props} color="primary" variant="standard" />;
 }
 
-export function PinkBoolean(props: Omit<BooleanProps, 'color' | 'variant'>) {
+export function PinkBoolean(props: Without<BooleanProps, 'color' | 'variant'>) {
   return <Boolean {...props} color="secondary" variant="standard" />;
 }
 
-export function BasicBoolean(props: Omit<BooleanProps, 'variant'>) {
+export function BasicBoolean(props: Without<BooleanProps, 'variant'>) {
   return <Boolean {...props} variant="basic" />;
 }
 

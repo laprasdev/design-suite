@@ -3,6 +3,7 @@
 // far side and back in at the near one. Clicking a figure says its name for a moment. The moon carries the theme.
 import React, { type RefObject, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {FanSide, ThemeMoon, type ThemeMoonProps} from './ThemeMoon.tsx';
+import type {Without} from '../refusedKeys.ts';
 import { CONSTELLATIONS, DOTS } from './stars.ts';
 import {horizontal, inStrip, type SkyObserver, type SkyPoint, type SkyPosition} from './skyPosition.ts';
 import { ConstellationName, NAME_MS } from './ConstellationName.tsx';
@@ -71,7 +72,9 @@ function figuresInSky(place: SkyObserver, date: Date, toPixels: (point: SkyPoint
   });
 }
 
-export function HeaderSky({observer, theme}: {observer: SkyObserver; theme: Omit<ThemeMoonProps, "fan" | "onOpen">}) {
+export function HeaderSky({observer, theme}: {
+  observer: SkyObserver; theme: Without<ThemeMoonProps, "fan" | "onOpen">;
+}) {
   const root = useRef<HTMLDivElement>(null), moon = useRef<HTMLDivElement>(null), { width, height } = useSize(root);
   const now = useNow(SKY_REFRESH_MS);
   const [named, setNamed] = useState<string | null>(null);

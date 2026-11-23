@@ -3,7 +3,7 @@
 import {describe, it} from 'node:test';
 import {join} from 'node:path';
 import {SUITE_ROOT} from './bundled.ts';
-import {SUITE_COMPILER_OPTIONS, assertRefusesType, typeCheck} from './typeCheck.ts';
+import {SUITE_COMPILER_OPTIONS, assertRefusesType, typeCheck, type TypeContract} from './typeCheck.ts';
 
 const FORMS = [
   {component: 'PhotoCompare', form: 'PhotoCompareForm', prop: 'form', from: 'src/react/index.ts',
@@ -32,59 +32,98 @@ describe('opt-in forms at the type check', () => {
       const module = JSON.stringify(join(SUITE_ROOT, from));
       const usage = (value: string) => `import {${component}, ${form}} from ${module};\n`
         + `export const row = <${component} ${props} ${prop}={${value}} />; void ${form};\n`;
-      assertRefusesType(value => typeCheck({'usage.tsx': usage(value)}, SUITE_COMPILER_OPTIONS), `${form}.${member}`,
-        OUTSIDE);
+      assertRefusesType(value => typeCheck({'usage.tsx': usage(value)}, SUITE_COMPILER_OPTIONS),
+        {accepted: `${form}.${member}`, refused: [OUTSIDE]});
     });
   }
 });
 
 // What a Modal's placement and form take: only a contained Modal fills its frame, keeps its frame's inset or sits at a
-// top, an anchored or media Modal names no width, and only an anchored Modal, which must name its anchor, says where it
-// goes beside it. Each row's accepted usage passes and its refused one fails.
-const MODAL_SHAPES = [
-  {accepted: 'placement={ModalPlacement.CONTAINED} width={ModalWidth.FILL}', refused: 'width={ModalWidth.FILL}'},
+// top, an anchored or media Modal names no width, and only an anchored Modal, which must name its anchor, names a group
+// and says where it goes beside it, never at a point of its own, since the anchor names the point: not in a literal,
+// and not in a placement held as a full `PopoverPlacement`. Each row's accepted usage passes and every refused one
+// fails.
+const AT_POINT = 'placement={ModalPlacement.ANCHORED} anchor={{x: 0, y: 0}}';
+const PLACED = 'placed';
+const PLACED_DECLARATION = `const ${PLACED}: PopoverPlacement = {above: true, at: {x: 0, y: 0}};`;
+const MODAL_SHAPES: readonly TypeContract[] = [
+  {accepted: 'placement={ModalPlacement.CONTAINED} width={ModalWidth.FILL}', refused: ['width={ModalWidth.FILL}']},
   {accepted: 'placement={ModalPlacement.CONTAINED} frameInset={ModalFrameInset.GUTTER}',
-    refused: 'frameInset={ModalFrameInset.GUTTER}'},
-  {accepted: 'placement={ModalPlacement.CONTAINED} top={8}', refused: 'top={8}'},
-  {accepted: 'width={ModalWidth.STAGE}', refused: 'placement={ModalPlacement.ANCHORED} width={ModalWidth.STAGE}'},
-  {accepted: 'form={ModalForm.MEDIA}', refused: 'form={ModalForm.MEDIA} width={ModalWidth.READING}'},
-  {accepted: 'placement={ModalPlacement.ANCHORED} anchor={{x: 0, y: 0}}',
-    refused: 'placement={ModalPlacement.ANCHORED}'},
-  {accepted: 'placement={ModalPlacement.ANCHORED} anchor={{x: 0, y: 0}} popover={{above: true}}',
-    refused: 'popover={{above: true}}'},
-] as const;
+    refused: ['frameInset={ModalFrameInset.GUTTER}']},
+  {accepted: 'placement={ModalPlacement.CONTAINED} top={8}', refused: ['top={8}']},
+  {accepted: 'width={ModalWidth.STAGE}',
+    refused: ['placement={ModalPlacement.ANCHORED} anchor={{x: 0, y: 0}} width={ModalWidth.STAGE}']},
+  {accepted: 'form={ModalForm.MEDIA}', refused: ['form={ModalForm.MEDIA} width={ModalWidth.READING}']},
+  {accepted: AT_POINT, refused: ['placement={ModalPlacement.ANCHORED}']},
+  {accepted: `${AT_POINT} group="g"`, refused: ['group="g"']},
+  {accepted: `${AT_POINT} popover={{above: true}}`, refused: ['popover={{above: true}}',
+    `${AT_POINT} popover={{at: {x: 0, y: 0}}}`, `${AT_POINT} popover={${PLACED}}`]},
+];
 
-describe('a Modal\'s width, frame inset and top at the type check', () => {
-  for (const {accepted, refused} of MODAL_SHAPES) {
-    it(`takes ${accepted} and refuses ${refused}`, () => {
-      const usage = (value: string) => `import {${MODAL_NAMES}} from ${REACT_ENTRY};\n`
-        + `export const shown = <Modal open ${value}>text</Modal>; void [${MODAL_NAMES}];\n`;
-      assertRefusesType(value => typeCheck({'usage.tsx': usage(value)}, SUITE_COMPILER_OPTIONS), accepted, refused);
+describe('a Modal\'s placement and form at the type check', () => {
+  for (const shape of MODAL_SHAPES) {
+    it(`takes ${shape.accepted} and refuses ${shape.refused.join(' or ')}`, () => {
+      const usage = (value: string) => `import {${MODAL_NAMES}, type PopoverPlacement} from ${REACT_ENTRY};\n`
+        + `${PLACED_DECLARATION}\n`
+        + `export const shown = <Modal open ${value}>text</Modal>; void [${MODAL_NAMES}, ${PLACED}];\n`;
+      assertRefusesType(value => typeCheck({'usage.tsx': usage(value)}, SUITE_COMPILER_OPTIONS), shape);
     });
   }
 });
 
 // What each ListboxSelect form takes: the menu holds no value, so it refuses the select's value, its onChange, its
 // creating and its search, and its children, which alone draw its trigger, cannot be undefined; the select refuses
-// the menu's onAction. Each row's accepted usage passes.
+// the menu's onAction; and the list scrolls in its own frame, so a placement refuses `scroll`, and `at` as any
+// anchored placement does. Each row's accepted usage passes.
 const MENU_FORM = 'form={ListboxForm.MENU} label="Go" options={[{value: \'a\', label: \'A\'}]}';
 const MENU_PROPS = `${MENU_FORM} children=""`;
 const SELECT_PROPS = 'label="Go" options={[{value: \'a\', label: \'A\'}]} value="a"';
-const LISTBOX_SHAPES = [
-  {props: `${MENU_FORM} onAction={() => undefined}`, accepted: 'children=""', refused: 'children={undefined}'},
-  ...['value="a"', 'onChange={() => undefined}', 'onCreate={() => undefined}', 'searchSubject="places"',
-    'searchSize={8}'].map(refused => ({props: MENU_PROPS, accepted: 'onAction={() => undefined}',
-    refused: `onAction={() => undefined} ${refused}`})),
-  {props: SELECT_PROPS, accepted: 'onChange={() => undefined}',
-    refused: 'onChange={() => undefined} onAction={() => undefined}'},
-] as const;
+const ON_ACTION = 'onAction={() => undefined}';
+const LISTBOX_SHAPES: readonly (TypeContract & {readonly props: string})[] = [
+  {props: `${MENU_FORM} ${ON_ACTION}`, accepted: 'children=""', refused: ['children={undefined}']},
+  {props: MENU_PROPS, accepted: ON_ACTION, refused: [`${ON_ACTION} value="a"`,
+    `${ON_ACTION} onChange={() => undefined}`, `${ON_ACTION} onCreate={() => undefined}`,
+    `${ON_ACTION} searchSubject="places"`, `${ON_ACTION} searchSize={8}`]},
+  {props: SELECT_PROPS, accepted: 'onChange={() => undefined}', refused: [`onChange={() => undefined} ${ON_ACTION}`]},
+  {props: `${SELECT_PROPS} onChange={() => undefined}`, accepted: 'popover={{above: true}}',
+    refused: ['popover={{scroll: true}}', 'popover={{at: {x: 0, y: 0}}}']},
+];
 
 describe('a ListboxSelect form\'s props at the type check', () => {
-  for (const {props, accepted, refused} of LISTBOX_SHAPES) {
-    it(`takes ${accepted} and refuses ${refused}`, () => {
+  for (const {props, ...shape} of LISTBOX_SHAPES) {
+    it(`takes ${shape.accepted} and refuses ${shape.refused.join(' or ')}`, () => {
       const usage = (value: string) => `import {ListboxSelect, ListboxForm} from ${REACT_ENTRY};\n`
         + `export const shown = <ListboxSelect ${props} ${value} />; void ListboxForm;\n`;
-      assertRefusesType(value => typeCheck({'usage.tsx': usage(value)}, SUITE_COMPILER_OPTIONS), accepted, refused);
+      assertRefusesType(value => typeCheck({'usage.tsx': usage(value)}, SUITE_COMPILER_OPTIONS), shape);
+    });
+  }
+});
+
+// A wrapper that fixes some of its component's props refuses them, so an object held as the component's wider props
+// cannot carry one through. Each row spreads the wider props, refused, and the same props less the fixed keys.
+const SYNTH = 'src/synth/components/synth';
+const CONTAINER = {from: `${SYNTH}/base/BaseContainer.tsx`, props: 'BaseContainerProps', keys: "'type'"} as const;
+const BOOLEAN = {from: `${SYNTH}/Boolean.tsx`, props: 'BooleanProps'} as const;
+const WRAPPERS = [
+  {wrapper: 'ModuleContainer', ...CONTAINER}, {wrapper: 'CutoutContainer', ...CONTAINER},
+  {wrapper: 'NodeContainer', ...CONTAINER},
+  {wrapper: 'LightUpBoolean', ...BOOLEAN, keys: "'color' | 'variant'"},
+  {wrapper: 'PinkBoolean', ...BOOLEAN, keys: "'color' | 'variant'"},
+  {wrapper: 'BasicBoolean', ...BOOLEAN, keys: "'variant'"},
+  {wrapper: 'MultiSelectEnum', from: `${SYNTH}/Enum.tsx`, props: 'MultiSelectEnumProps', keys: "'variant'"},
+] as const;
+const REFUSED_KEYS = JSON.stringify(join(SUITE_ROOT, 'src/react/refusedKeys.ts'));
+
+describe('a wrapper\'s fixed props at the type check', () => {
+  for (const {wrapper, from, props, keys} of WRAPPERS) {
+    it(`${wrapper} refuses ${keys} from an object held as ${props}`, () => {
+      const source = JSON.stringify(join(SUITE_ROOT, from));
+      const usage = (value: string) => `import {${wrapper}, type ${props}} from ${source};\n`
+        + `import type {Without} from ${REFUSED_KEYS};\n`
+        + `declare const wide: ${props}; declare const kept: Without<${props}, ${keys}>;\n`
+        + `export const shown = <${wrapper} {...${value}} />; void [wide, kept];\n`;
+      assertRefusesType(value => typeCheck({'usage.tsx': usage(value)}, SUITE_COMPILER_OPTIONS),
+        {accepted: 'kept', refused: ['wide']});
     });
   }
 });

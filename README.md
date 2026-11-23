@@ -103,6 +103,8 @@ direction follows their order, and their actual retained surfaces animate withou
 `PageHeaderBar` and `PageFooter` own the shared page chrome. `HeaderNavigation` takes the same typed
 segmented-control options as the sport selector: applications supply glyphs, labels, values and navigation.
 Brand, Back, settings and page controls fill the existing slots. Notices reuse `ActionBar`'s notice surface.
+A footer sets the form of the lists inside it: a `ListboxSelect` in any of its slots opens above,
+unless its own `popover` says otherwise.
 
 Keep the fixed header and footer outside the moving page body. The exported page
 motion helpers also support stationary chrome within a composed page.
@@ -140,7 +142,9 @@ it opens from: the panel and the anchor are its region, and the region also hold
 regions of the `Modal`s anchored inside its panel, such as a list opened from a detail.
 Dismissed with focus in its panel, an anchored `Modal` hands focus back to its anchor. An
 anchored `Modal` may also name a `group`, of which one is open at a time: opening one
-dismisses the others. `HoverDetail`, `ListboxSelect`, the synth `Enum`'s grid picker and a
+dismisses the others. An anchored `Modal` may also say where its panel goes beside the
+anchor with `popover` (`PopoverPlacementFromAnchor`: a `PopoverPlacement` less `at`, the
+point the anchor names). `HoverDetail`, `ListboxSelect`, the synth `Enum`'s grid picker and a
 `Knob`'s refused number compose the anchored placement, the first three with their trigger
 as the anchor. Every placement keeps the same surface and the module radius token.
 `MODAL_PLACEMENT_ATTRIBUTE` carries the placement on the panel and its frame for styling

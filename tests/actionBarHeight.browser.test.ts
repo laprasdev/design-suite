@@ -5,16 +5,18 @@
 // action stretches to a footer its setting makes taller, is the footer's control height on a surface scaled flat, is
 // its min width (PHI squared control heights) at a phone width where its label is narrower, and a Button outside any
 // bar keeps its own padding, the same at its block start and end, and its height. Under a safe area, a footer's action
-// pads only its block end to it. Read in Chromium from actionBarHeightScene.tsx, on a page
-// surface, at a desktop and a phone width.
+// pads only its block end to it. Each footer surface, a PageFooter and the PageFooterContents a persistent footer
+// hosts, sets the form of the lists inside it: its setting's list opens above it, with room below. Read in Chromium
+// from actionBarHeightScene.tsx, on a page surface, at a desktop and a phone width.
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import type {Locator} from '../scripts/gateTools/node_modules/playwright/index.js';
 import {ActionBarElement,ActionNoticeElement} from '../src/react/actionBarElements.ts';
+import {ListboxElement} from '../src/react/listboxSelectElements.ts';
 import {HEADER_CONTROL_PROPERTY} from '../src/react/headerControl.ts';
 import {PHI_SQUARED} from '../src/goldenRatio.ts';
 import {DESKTOP_VIEWPORT,PHONE_VIEWPORT,openScene,SCENE_GL} from './browserScene.ts';
-import {ACTION_BAR_BUTTONS,FOOTER_ACTIONS,LAYOUT_UNIT,NOTICE_BUTTONS,OUTSIDE_BUTTON,SAFE_AREA}
+import {ACTION_BAR_BUTTONS,FOOTER_ACTIONS,FOOTER_SETTINGS,LAYOUT_UNIT,NOTICE_BUTTONS,OUTSIDE_BUTTON,SAFE_AREA}
  from './actionBarHeightCases.ts';
 
 const page=await openScene('tests/actionBarHeightScene.tsx',DESKTOP_VIEWPORT,SCENE_GL.software);
@@ -105,3 +107,17 @@ test('a PageFooter\'s action pads its block end, not its start, to the bottom sa
  assert.deepEqual(await blockPadding(),{start,end:SAFE_AREA.bottom});
  await insets.send('Emulation.setSafeAreaInsetsOverride',{insets:{}});
 });
+for(const [surface,label] of Object.entries(FOOTER_SETTINGS))
+ test(`a ListboxSelect in a ${surface} opens above its trigger, with room below it`,async()=>{
+  await page.setViewportSize(DESKTOP_VIEWPORT);
+  const select=page.getByRole('combobox',{name:label});
+  const popover=page.locator(ListboxElement.POPOVER.selector);
+  await select.click();
+  await popover.waitFor();
+  const trigger=await select.boundingBox()??assert.fail('no trigger');
+  const list=await popover.boundingBox()??assert.fail('no list');
+  assert.ok(DESKTOP_VIEWPORT.height-trigger.y-trigger.height>list.height,'the scene leaves the list no room below');
+  assert.ok(list.y+list.height<=trigger.y,`the list, ${JSON.stringify(list)}, is not above ${JSON.stringify(trigger)}`);
+  await page.keyboard.press('Escape');
+  await popover.waitFor({state:'detached'});
+ });

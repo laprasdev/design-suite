@@ -126,7 +126,7 @@ for (const {component, accepted, usage} of BUSY_OWNERS) {
     const module = JSON.stringify(join(SUITE_ROOT, `src/react/${component}.tsx`));
     const file = (attribute: string) =>
       `import {${component}} from ${module};\nexport const row = ${usage(attribute)};\n`;
-    assertRefusesType(attribute => typeCheck({'usage.tsx': file(attribute)}, SUITE_COMPILER_OPTIONS), accepted,
-      'aria-busy');
+    assertRefusesType(attribute => typeCheck({'usage.tsx': file(attribute)}, SUITE_COMPILER_OPTIONS),
+      {accepted, refused: ['aria-busy']});
   });
 }
