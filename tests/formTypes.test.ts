@@ -102,23 +102,25 @@ describe('a ListboxSelect form\'s props at the type check', () => {
 // A wrapper that fixes some of its component's props refuses them, so an object held as the component's wider props
 // cannot carry one through. Each row spreads the wider props, refused, and the same props less the fixed keys.
 const SYNTH = 'src/synth/components/synth';
-const CONTAINER = {from: `${SYNTH}/base/BaseContainer.tsx`, props: 'BaseContainerProps', keys: "'type'"} as const;
-const BOOLEAN = {from: `${SYNTH}/Boolean.tsx`, props: 'BooleanProps'} as const;
+const CONTAINER = {from: `${SYNTH}/base/BaseContainer.tsx`, propsFrom: `${SYNTH}/base/BaseContainer.tsx`,
+  props: 'BaseContainerProps', keys: "'type'"} as const;
+const BOOLEAN = {from: `${SYNTH}/BooleanPresets.tsx`, propsFrom: `${SYNTH}/Boolean.tsx`, props: 'BooleanProps'} as const;
 const WRAPPERS = [
   {wrapper: 'ModuleContainer', ...CONTAINER}, {wrapper: 'CutoutContainer', ...CONTAINER},
   {wrapper: 'NodeContainer', ...CONTAINER},
   {wrapper: 'LightUpBoolean', ...BOOLEAN, keys: "'color' | 'variant'"},
   {wrapper: 'PinkBoolean', ...BOOLEAN, keys: "'color' | 'variant'"},
   {wrapper: 'BasicBoolean', ...BOOLEAN, keys: "'variant'"},
-  {wrapper: 'MultiSelectEnum', from: `${SYNTH}/Enum.tsx`, props: 'MultiSelectEnumProps', keys: "'variant'"},
+  {wrapper: 'MultiSelectEnum', from: `${SYNTH}/Enum.tsx`, propsFrom: `${SYNTH}/Enum.tsx`, props: 'MultiSelectEnumProps',
+    keys: "'variant'"},
 ] as const;
 const REFUSED_KEYS = JSON.stringify(join(SUITE_ROOT, 'src/react/refusedKeys.ts'));
 
 describe('a wrapper\'s fixed props at the type check', () => {
-  for (const {wrapper, from, props, keys} of WRAPPERS) {
+  for (const {wrapper, from, propsFrom, props, keys} of WRAPPERS) {
     it(`${wrapper} refuses ${keys} from an object held as ${props}`, () => {
-      const source = JSON.stringify(join(SUITE_ROOT, from));
-      const usage = (value: string) => `import {${wrapper}, type ${props}} from ${source};\n`
+      const [source, propsSource] = [from, propsFrom].map(file => JSON.stringify(join(SUITE_ROOT, file)));
+      const usage = (value: string) => `import {${wrapper}} from ${source};\nimport type {${props}} from ${propsSource};\n`
         + `import type {Without} from ${REFUSED_KEYS};\n`
         + `declare const wide: ${props}; declare const kept: Without<${props}, ${keys}>;\n`
         + `export const shown = <${wrapper} {...${value}} />; void [wide, kept];\n`;
@@ -132,20 +134,18 @@ describe('a wrapper\'s fixed props at the type check', () => {
 // takes no form at all (a module header's picker is GridModule's title choice).
 const BOOLEAN_ICON = 'form={BooleanForm.ICON} value onChange={() => undefined}';
 const SHAPES = [
-  {component: 'Boolean', props: BOOLEAN_ICON, accepted: 'label="Play" glyphs={{on: "", off: ""}}',
-    refused: 'label="Play"'},
-  {component: 'Boolean', props: BOOLEAN_ICON, accepted: 'label="Play" glyphs={{on: "", off: ""}}',
-    refused: 'ariaLabel="Play" glyphs={{on: "", off: ""}}'},
-  {component: 'Cycle', props: 'options={[]} value="a" onChange={() => undefined}', accepted: '',
-    refused: 'variant="text"'},
+  {component: 'Boolean', props: BOOLEAN_ICON, contract: {accepted: 'label="Play" glyphs={{on: "", off: ""}}',
+    refused: ['label="Play"', 'ariaLabel="Play" glyphs={{on: "", off: ""}}']}},
+  {component: 'Cycle', props: 'options={[]} value="a" onChange={() => undefined}',
+    contract: {accepted: '', refused: ['variant="text"']}},
 ] as const;
 
 describe('an icon Boolean\'s and a Cycle\'s props at the type check', () => {
-  for (const {component, props, accepted, refused} of SHAPES) {
-    it(`${component} takes ${accepted || 'its own props'} and refuses ${refused}`, () => {
+  for (const {component, props, contract} of SHAPES) {
+    it(`${component} takes ${contract.accepted || 'its own props'} and refuses ${contract.refused.join(', ')}`, () => {
       const usage = (value: string) => `import {${component}, BooleanForm} from ${REACT_ENTRY};\n`
         + `export const shown = <${component} ${props} ${value} />; void BooleanForm;\n`;
-      assertRefusesType(value => typeCheck({'usage.tsx': usage(value)}, SUITE_COMPILER_OPTIONS), accepted, refused);
+      assertRefusesType(value => typeCheck({'usage.tsx': usage(value)}, SUITE_COMPILER_OPTIONS), contract);
     });
   }
 });

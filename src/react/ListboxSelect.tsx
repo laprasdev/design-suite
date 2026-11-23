@@ -166,7 +166,8 @@ export function ListboxSelect<V extends string|number>(props: ListboxSelectProps
    </span>
    : renderTrigger(triggerContent,children===undefined||field)}
   {open&&<Modal open placement={ModalPlacement.ANCHORED} anchor={isStep?stepGroup:trigger}
-   popover={{...surface,...popover,scroll:false}} onClose={settle} role="presentation" className={ListboxElement.POPOVER.className}
+   popover={{...surface,...popover,scroll:false}} onClose={settle} role="presentation"
+   className={ListboxElement.POPOVER.className}
    data-icon-only={iconOnly||undefined}>
    {searchSubject&&<SearchField density={Density.COMPACT} size={searchSize} style={searchStyle} ref={input}
     subject={searchSubject} value={query} onChange={next=>{setQuery(next);setActive(0);}} role="combobox"
