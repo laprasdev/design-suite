@@ -9,14 +9,18 @@ import {createModelPlayback} from './playback.ts';
 import type {ModelStageChanges, ModelSurfaceModes} from './materials.ts';
 import {createModelActorSurfaces, type ModelActorSurfacesContext} from './actorSurfaces.ts';
 import {markModelStageAids} from './layers.ts';
-import {MODEL_ACTOR_REFUSAL, MODEL_STAGE_DRIVER, modelActorDrawsFile, modelActorHost} from './actorModel.ts';
+import {MODEL_STAGE_DRIVER, modelActorDrawsFile, modelActorHost} from './actorModel.ts';
 import type {ModelDrawn} from './drawn.ts';
 import type {ModelStageActor, ModelStageActorSnapshot, ModelStageDriver} from './actorModel.ts';
-import {isModelValidatedFrame, type ModelValidatedFrame} from './frameModel.ts';
 import type {ModelPreviewEntity} from './presentation.ts';
-import {MODEL_STAGE_COMMIT_TEXT, modelStageCommit, prepareWhole, type ModelStageCommit} from './commit.ts';
+import {MODEL_STAGE_UNCHANGED, type ModelStageCommit} from './commit.ts';
 import {ModelStageRefusal} from './refusal.ts';
 import {extendModelMaterials} from './shading.ts';
+import {createModelEmitters} from './emitters.ts';
+import {modelEmitterProfiles} from './emitterProfileModel.ts';
+import {MODEL_NO_EMITTER_CHANGES} from './emitterFrameModel.ts';
+import {MODEL_NO_EMITTERS} from './emitterModel.ts';
+import type {ModelStageProgramValues} from './sharedValues.ts';
 
 // What every actor shares from its stage: the policy, the theme, the scene it joins, the lighting of its aids and the
 // changes its file's materials take.
@@ -31,6 +35,8 @@ export interface ModelActorContext {
   readonly surfaceModes: Pick<ModelSurfaceModes, 'inspecting'>;
   /** The stage's kind materials, its kinds and its compile, which the actor's surfaces draw with. */
   readonly surfaces: ModelActorSurfacesContext;
+  /** The stage's shared numbers, which its emitters age on. */
+  readonly shared: ModelStageProgramValues;
 }
 /** How an actor's model sits in its placement: the stage's size rule and origin. */
 export interface ModelActorSizing {readonly size: ModelStageSize; readonly origin: ModelStageOrigin}
@@ -61,6 +67,10 @@ export function createModelActor(drawn: ModelDrawn, declaration: ModelStageActor
     acquired.push(context.lighting.attach([rig.root, ...points.map(({marker}) => marker)]));
     const playback = createModelPlayback(drawn.scene, drawn.clips, context.policy.clock, id);
     acquired.push(() => playback.dispose());
+    const profiles = modelEmitterProfiles(modelActorDrawsFile(declaration) ? declaration.emitters : MODEL_NO_EMITTERS,
+      `Actor ${id}.emitters`);
+    const emitters = createModelEmitters(id, profiles, placement, context);
+    acquired.push(() => emitters.dispose());
     let current = declaration, driver: ModelStageDriver = MODEL_STAGE_DRIVER.host;
     // Built at its file's own size and origin; the description's size and origin apply with its other stage-wide parts.
     let sizing: ModelActorSizing = Object.freeze({size: {rule: MODEL_STAGE_SIZE.real},
@@ -89,10 +99,23 @@ export function createModelActor(drawn: ModelDrawn, declaration: ModelStageActor
       };
     };
     prepareHost(declaration)();
+    // A frame's prepared parts, written by each prepare into what the one commit made here reads, so a frame tick
+    // makes no step of its own. Every prepare writes all four before its commit runs.
+    const framed = {hidden: (): ReadonlySet<THREE.Object3D> => engineHidden, layers: MODEL_STAGE_UNCHANGED,
+      pose: declaration.placement, emitters: emitters.prepare(MODEL_NO_EMITTER_CHANGES, 0)};
+    const commitFrame: ModelStageCommit = () => {
+      engineHidden = framed.hidden();
+      framed.layers();
+      // The pose applies first: an emitter started in this frame starts where the frame puts its actor.
+      applyModelTransform(placement, framed.pose);
+      driver = MODEL_STAGE_DRIVER.engine;
+      showRenderables();
+      framed.emitters();
+    };
     markModelStageAids([rig.root, ...points.map(({marker}) => marker)]);
     context.scene.add(placement, rig.root, ...points.map(({marker}) => marker));
     return {
-      id, drawn, placement, points, rig, playback, prepareHost,
+      id, drawn, placement, points, rig, playback, emitters, prepareHost,
       /** What draws the file's renderers, as the description's surfaces state it. */
       surfaces,
       /** What the materials the actor draws with allow: the Surface modes, and how many emit. */
@@ -105,21 +128,16 @@ export function createModelActor(drawn: ModelDrawn, declaration: ModelStageActor
       /** What the actor draws in its display: the model, its rig, or both. */
       bounds: () => rig.display === MODEL_STAGE_DISPLAY.model ? modelObjectBounds(placement) : rig.bounds(),
       // Everything that can refuse runs here; the returned commit only applies.
-      prepare(entity: ModelPreviewEntity): ModelStageCommit {
+      prepare(entity: ModelPreviewEntity, time: number): ModelStageCommit {
         if (context.surfaceModes.inspecting) throw new ModelStageRefusal(MODEL_ACTOR_TEXT.unlit);
         // The engine's values and visibility reach the renderers through the runtime profile when the asset states
         // one (the description refuses one beside a set; the route leaves in step 5e), else through the surfaces.
-        const values = runtimeMaterials ? runtimeMaterials.prepare(entity.materials) :
+        framed.hidden = runtimeMaterials ? runtimeMaterials.prepare(entity.materials) :
           surfaces.prepareValues(entity.materials);
-        return prepareWhole([
-          modelStageCommit(() => {engineHidden = values();}),
-          () => playback.prepareLayers(entity.animationLayers),
-          modelStageCommit(() => {
-            applyModelTransform(placement, entity.pose);
-            driver = MODEL_STAGE_DRIVER.engine;
-            showRenderables();
-          }),
-        ]);
+        framed.layers = playback.prepareLayers(entity.animationLayers);
+        framed.pose = entity.pose;
+        framed.emitters = emitters.prepare(entity.emitters, time);
+        return commitFrame;
       },
       snapshot(): ModelStageActorSnapshot {
         const {animation, samples} = playback.review();
@@ -136,23 +154,3 @@ export function createModelActor(drawn: ModelDrawn, declaration: ModelStageActor
   }
 }
 export type ModelActor = ReturnType<typeof createModelActor>;
-
-// Prepare every named actor from a validated frame before any commits: a refusal leaves every actor and the camera as
-// they were. An actor the frame does not name keeps what it shows.
-export function applyModelFrame(actors: readonly ModelActor[], value: ModelValidatedFrame,
-  applyCamera: (coordinates: Float64Array) => void) {
-  if (!isModelValidatedFrame(value)) throw new ModelStageRefusal(MODEL_ACTOR_REFUSAL.unvalidated);
-  const prepares: Array<() => ModelStageCommit> = [];
-  for (const actor of actors) {
-    const entity = value.entities.find(candidate => candidate.entityId === actor.id);
-    if (entity) prepares.push(() => actor.prepare(entity));
-  }
-  if (prepares.length !== value.entities.length) throw new ModelStageRefusal(MODEL_ACTOR_REFUSAL.scope);
-  prepareWhole(prepares)();
-  if (value.cameraCoordinates !== null) {
-    try {applyCamera(value.cameraCoordinates);} catch (error) {
-      throw new Error(MODEL_STAGE_COMMIT_TEXT.partial, {cause: error});
-    }
-  }
-  return value.simulationTimeSeconds;
-}

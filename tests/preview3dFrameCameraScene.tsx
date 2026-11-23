@@ -1,5 +1,3 @@
-import * as THREE from 'three';
-import {GLTFExporter} from 'three/addons/exporters/GLTFExporter.js';
 import {createModelFrameInbox, MODEL_ACTOR_SURFACES, MODEL_STAGE_CLOCK, MODEL_STAGE_FRAMING,
   MODEL_STAGE_SURFACE_MODE, modelRendererId, modelStageDescription, modelSurfaceKind, type ModelColor,
   type ModelStageController, type ModelStageDescription, type ModelStageSurfaceMode}
@@ -8,6 +6,7 @@ import {createModelStage} from '../src/react/preview3d/stage.ts';
 import {THEME, declaration, describing, stageLook, standingAt} from './preview3dActorFixture.ts';
 import {ALT_CANVAS_SRGB, BOTTOM_CANVAS_SRGB, CAMERA_FOG, CAMERA_HOST_ID, CAMERA_ROUTES, FRAME_CAMERA_POSE,
   PAINTED_KIND_ID, TOP_CANVAS_SRGB, type FrameCameraSceneDriver} from './preview3dFrameCameraCases.ts';
+import {makePanelGlbBytes, PANEL_GLB} from './preview3dPanelGlb.ts';
 import {renderScene} from './renderScene.tsx';
 
 const SETTLE_FRAMES = 6;
@@ -26,14 +25,6 @@ function paintStripedCanvas(top: ModelColor, bottom: ModelColor): HTMLCanvasElem
   ctx.fillStyle = cssRgb(bottom);
   ctx.fillRect(0, 32, 64, 32);
   return canvas;
-}
-
-async function makePanelGlbBytes(): Promise<number[]> {
-  const geometry = new THREE.BoxGeometry(1.6, 1.6, 0.2).translate(0, 1, 0);
-  const material = new THREE.MeshStandardMaterial({color: new THREE.Color(0.55, 0.56, 0.6), roughness: 0.85});
-  const glb = await new GLTFExporter().parseAsync(new THREE.Mesh(geometry, material), {binary: true});
-  if (!(glb instanceof ArrayBuffer)) throw new Error('Expected binary GLB from GLTFExporter.');
-  return Array.from(new Uint8Array(glb));
 }
 
 function readPixelAt(canvas: HTMLCanvasElement, fx: number, fy: number): readonly [number, number, number] {
@@ -70,8 +61,8 @@ async function bootFrameCameraScene(programSha256: string): Promise<void> {
     readonly fogged: boolean;
     readonly frontPose: boolean;
   }) => {
-    const actor = declaration('panel', 'panel', {
-      asset: {id: 'panel', path: CAMERA_ROUTES.panel},
+    const actor = declaration(PANEL_GLB.id, PANEL_GLB.id, {
+      asset: {id: PANEL_GLB.id, path: CAMERA_ROUTES.panel},
       placement: standingAt([0, 0, 0]),
       surfaces: options.image === null
         ? {from: MODEL_ACTOR_SURFACES.file}
@@ -86,7 +77,7 @@ async function bootFrameCameraScene(programSha256: string): Promise<void> {
       },
     };
     return modelStageDescription(describing({
-      actors: {focus: 'panel', actors: [actor]},
+      actors: {focus: PANEL_GLB.id, actors: [actor]},
       surfaceSets,
       surfaceMode: options.mode,
       framing: options.frontPose
@@ -126,7 +117,7 @@ async function bootFrameCameraScene(programSha256: string): Promise<void> {
   const entityRot: [number, number, number, number] = [0, 0, 0, 1];
   const entityScale: [number, number, number] = [1, 1, 1];
   const entityRecord = {
-    entityId: 'panel', modelId: 'panel',
+    entityId: PANEL_GLB.id, modelId: PANEL_GLB.id,
     pose: {position: entityPos, rotationQuaternion: entityRot, scale: entityScale},
     animationLayers: [] as const, partPoses: [] as const, materials: [] as const,
   };

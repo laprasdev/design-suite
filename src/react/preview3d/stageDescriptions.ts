@@ -4,7 +4,8 @@ import type {ModelStageTheme} from './model.ts';
 import type {ModelStagePolicy} from './stageOptionsModel.ts';
 import {createModelActor, type ModelActor, type ModelActorContext} from './actor.ts';
 import {createModelActorSet} from './actorSet.ts';
-import {modelActorDrawsFile, modelAssetDigest, modelRuntimeAssetProfile, type ModelStageActor} from './actorModel.ts';
+import {modelActorDrawsFile, type ModelStageActor} from './actorModel.ts';
+import {modelAssetDigest, modelRuntimeAssetProfile} from './actorAssetModel.ts';
 import {modelFileDrawn, type ModelDrawn} from './drawn.ts';
 import {createModelTerrain} from './terrain.ts';
 import {modelStageDescription, modelStageDescriptionChanges, modelStageFramed, modelStageRefit,
@@ -49,7 +50,8 @@ export function createModelStageDescriptions(context: ModelStageDescriptionsCont
   const materials = createModelSurfaceMaterials({kinds: policy.kinds, read: context.read, textures,
     shared: stage.shared, changes});
   const actorContext: ModelActorContext = {policy, theme: context.theme, scene: stage.scene, lighting: stage.lighting,
-    changes, surfaceModes: modes, surfaces: {materials, kinds: policy.kinds, compile: stage.compile}};
+    changes, shared: stage.shared, surfaceModes: modes,
+    surfaces: {materials, kinds: policy.kinds, compile: stage.compile}};
   // Loading picks by source: a file is read through the one loader, a terrain is built from its record.
   const draw = (declaration: ModelStageActor, signal: AbortSignal): Promise<ModelDrawn> =>
     modelActorDrawsFile(declaration) ? context.load(declaration.asset.path, modelAssetDigest(declaration), signal)

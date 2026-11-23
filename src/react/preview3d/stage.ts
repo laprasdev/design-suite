@@ -5,7 +5,7 @@ import type {ModelStageController, ModelStageHold, ModelStageOptions, ModelStage
 import {MODEL_STAGE_CLOCK} from './stageOptionsModel.ts';
 import {loadModelStageAsset, modelDrawnMeshCount} from './asset.ts';
 import {createModelScene} from './scene.ts';
-import {applyModelFrame} from './actor.ts';
+import {applyModelFrame, createModelFrameSlots} from './actorFrame.ts';
 import type {ModelStageDescription} from './descriptionModel.ts';
 import {createModelSurfaceModes} from './materials.ts';
 import {decodeModelImage} from './textures.ts';
@@ -67,11 +67,13 @@ export function createModelStage(
     return descriptions.set(value);
   };
   const external = policy.clock === MODEL_STAGE_CLOCK.external;
+  // What applying a frame writes into, made once here.
+  const frameSlots = createModelFrameSlots();
   const api: ModelStageController = {
     setDescription,
     setFrame(value) {
       if (!external) throw new ModelStageRefusal(MODEL_STAGE_TEXT.external);
-      times[STAGE_TIME.appliedFrame] = applyModelFrame(actors.actors, value, stage.poseCoordinates);
+      times[STAGE_TIME.appliedFrame] = applyModelFrame(actors.actors, value, stage.poseCoordinates, frameSlots);
     },
     resetCamera: () => descriptions.parts.resetCamera(current().applied),
     snapshot() {
@@ -102,7 +104,7 @@ export function createModelStage(
   // the local clock that is the presentation time itself; under the external one it is kept on its own. It is written
   // into the shared numbers once a frame, typed array to typed array (each double the loop computes costs a boxed
   // number while the loop runs unoptimised, measured: harness/measure.mjs).
-  const {numbers: shared, secondsAt} = stage.shared;
+  const {numbers: shared, secondsAt, presentationAt} = stage.shared;
   const decorative = external ? STAGE_TIME.decorative : STAGE_TIME.presentation;
   const animate = (now: number) => {
     const previous = times[STAGE_TIME.presentation];
@@ -111,6 +113,7 @@ export function createModelStage(
       times[STAGE_TIME.decorative] += modelLocalAdvance(now - times[STAGE_TIME.lastFrame], hold());
     } else times[STAGE_TIME.presentation] = previous + modelLocalAdvance(now - times[STAGE_TIME.lastFrame], hold());
     shared[secondsAt] = times[decorative];
+    shared[presentationAt] = times[STAGE_TIME.presentation];
     times[STAGE_TIME.lastFrame] = now;
     const drawn = actors.actors;
     for (let index = 0; index < drawn.length; index++) {
@@ -118,6 +121,7 @@ export function createModelStage(
       actor.playback.update(times[STAGE_TIME.presentation] - previous);
       actor.placement.updateMatrixWorld(true);
       actor.rig.update();
+      actor.emitters.follow();
     }
     // Before the first description is shown there is nothing to frame; a held pose frames no actor.
     if (descriptions.framed.length) stage.fit(measure);

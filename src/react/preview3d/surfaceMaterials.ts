@@ -6,7 +6,7 @@ import {MODEL_SURFACE_GLSL, modelSurfaceSlots, type ModelSurfaceSlot} from './su
 import {MODEL_SURFACE_PARAMETER, type ModelSurfaceKind} from './surfaceKindModel.ts';
 import type {ModelSurfaceRecord, ModelSurfaceValue} from './surfaceModel.ts';
 import type {ModelTextures} from './textures.ts';
-import type {ModelStageSharedValues} from './sharedValues.ts';
+import type {ModelStageProgramValues} from './sharedValues.ts';
 import {extendModelMaterial} from './shading.ts';
 import type {ModelStageChanges} from './materials.ts';
 import {writeModelSurfaceColor} from './color.ts';
@@ -30,7 +30,7 @@ export interface ModelSurfaceMaterialsContext {
   readonly kinds: ReadonlyMap<string, ModelSurfaceKind>;
   readonly read: ModelFileReader;
   readonly textures: Pick<ModelTextures, 'acquire' | 'release'>;
-  readonly shared: Pick<ModelStageSharedValues, 'uniforms' | 'declarations'>;
+  readonly shared: ModelStageProgramValues;
   /** The stage's changes a model material takes: its fog, and its Surface mode where the mode covers the program. */
   readonly changes: ModelStageChanges;
 }

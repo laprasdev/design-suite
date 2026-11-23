@@ -1,5 +1,6 @@
 import type {ModelStageActor, ModelStageActorSet} from './actorModel.ts';
-import {MODEL_ACTOR_REFUSAL as refusal, modelActorDrawsFile, modelRuntimeAssetProfile} from './actorModel.ts';
+import {MODEL_ACTOR_REFUSAL as refusal, modelActorDrawsFile} from './actorModel.ts';
+import {modelRuntimeAssetProfile} from './actorAssetModel.ts';
 import {CAMERA_COORDS, freezeModelPreviewCamera, MODEL_PREVIEW_CAMERA_FIELDS, MODEL_PREVIEW_ENTITY_REFUSAL,
   modelPreviewCameraWhere, modelPreviewEntity, readModelPreviewCamera,
   type ModelPreviewCamera, type ModelPreviewEntity} from './presentation.ts';

@@ -8,6 +8,7 @@ import type {ModelMaterialOutput, ModelRuntimeMaterialProfile} from './runtimeMa
 import {modelSurfaceOutputs, type ModelSurfaceTakes} from './surfaceOutputModel.ts';
 import {modelAnimationLayers} from './animationLayerModel.ts';
 import type {ModelAnimationLayer} from './animationLayerModel.ts';
+import {MODEL_NO_EMITTER_CHANGES, modelEmitterChanges, type ModelEmitterChange} from './emitterFrameModel.ts';
 
 export const MODEL_STAGE_FIELD_OF_VIEW = 38;
 export const MODEL_PREVIEW_ENTITY_REFUSAL = Object.freeze({
@@ -15,7 +16,7 @@ export const MODEL_PREVIEW_ENTITY_REFUSAL = Object.freeze({
   model: (id: string, expected: string) => `Entity ${id}: modelId must match the declared model ${expected}.`,
 });
 export const MODEL_PREVIEW_CAPABILITIES = Object.freeze({
-  pose: true, animationLayers: true, partPoses: false, materials: false,
+  pose: true, animationLayers: true, partPoses: false, materials: false, emitters: true,
 });
 // One entity of an engine frame: the actor it names and every channel the engine published for it.
 export interface ModelPreviewEntity {
@@ -25,6 +26,8 @@ export interface ModelPreviewEntity {
   readonly animationLayers: readonly ModelAnimationLayer[];
   readonly partPoses: readonly unknown[];
   readonly materials: readonly ModelMaterialOutput[];
+  /** The emitter changes of this tick, in order; the engine states `emitters` only on a tick with one. */
+  readonly emitters: readonly ModelEmitterChange[];
 }
 
 // Validate every channel before any pose is applied; refusals name the entity. Accepted values never retain
@@ -46,7 +49,9 @@ export function modelPreviewEntity(value: unknown, modelId: string,
     animationLayers: modelAnimationLayers(value.animationLayers, value.entityId), partPoses: Object.freeze([]),
     materials: materials !== undefined && 'surfaces' in materials ?
       modelSurfaceOutputs(value.materials, materials, `Entity ${value.entityId}`) :
-      modelMaterialOutputs(value.materials, materials)});
+      modelMaterialOutputs(value.materials, materials),
+    emitters: modelStates(value, 'emitters') ?
+      modelEmitterChanges(value.emitters, value.entityId) : MODEL_NO_EMITTER_CHANGES});
 }
 
 /** A camera pose: eye position, look-at target, and optional vertical field of view in degrees within (0, 180). */

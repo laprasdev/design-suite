@@ -136,9 +136,11 @@ export function modelDigest(value: unknown, where: string): string {
 
 /** One of a closed set of values, refused by its name otherwise, listing the set. */
 export function modelOption<Option>(value: unknown, options: Readonly<Record<string, Option>>, where: string): Option {
-  const all = Object.values(options), found = all.find(option => option === value);
-  if (found === undefined) throw new ModelStageRefusal(refusal.option(where, all));
-  return found;
+  // A loop, not `Object.values`: a frame reader calls this per tick, and only the refusal lists the set.
+  for (const name in options) {
+    if (options[name] === value) return options[name];
+  }
+  throw new ModelStageRefusal(refusal.option(where, Object.values(options)));
 }
 
 /** True or false, refused by its name otherwise. */
