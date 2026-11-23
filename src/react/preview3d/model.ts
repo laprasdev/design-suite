@@ -24,6 +24,7 @@ export type {ModelStageLighting, ModelStageTime} from './lightingModel.ts';
 export {MODEL_STAGE_CURVE, MODEL_STAGE_GLOW_WIDEST} from './lookModel.ts';
 export type {ModelStageCurve, ModelStageFog, ModelStageGlow, ModelStageLook, ModelStageToneCurve}
   from './lookModel.ts';
+export {modelColorOfHex} from './colorModel.ts';
 export type {ModelColor} from './colorModel.ts';
 // A surface kind's declaration, records and sets, and what a frame's renderers take: checked here with no renderer,
 // by a host, a scene package or a kind's author.
