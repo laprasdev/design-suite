@@ -8,8 +8,9 @@ import {
   MODEL_STAGE_SURFACE_MODE, type ModelColor, type ModelStageFog, type ModelStageSurfaceMode, type ModelVector,
 } from '../src/react/preview3d/model.ts';
 import {openScene, SCENE_GL} from './browserScene.ts';
+import {ACES_CURVE} from './preview3dActorFixture.ts';
 import {
-  FAR_CENTER, FOG_CURVE, FOG_HOSTS_ID, FOG_LAYER_SPEC, FOG_PATCH_URL, FOG_SCENE_ENTRY, FOG_SPEC, FOG_TIME_ID,
+  FAR_CENTER, FOG_HOSTS_ID, FOG_LAYER_SPEC, FOG_PATCH_URL, FOG_SCENE_ENTRY, FOG_SPEC, FOG_TIME_ID,
   FOG_VIEWPORT, framingCamera, NEAR_CENTER, PATCH_BASE_COLOR, PATCH_EMISSIVE, type FogTimeId, type RgbBytes,
 } from './preview3dFogCases.ts';
 import {shownBytes, statedBytes} from './preview3dToneCurveOracle.ts';
@@ -27,7 +28,8 @@ function expectedFoggedBytes(center: ModelVector, {near, far, height}: ModelStag
   const layer = height === null ? 0 :
     height.strength * (1 - smoothstep(center[1], height.base, height.top)) * smoothstep(depth, 0, near.distance);
   const fogColor = linearColor(near.color).lerp(linearColor(far.color), distance);
-  return shownBytes(linearColor(PATCH_EMISSIVE).lerp(fogColor, distance + layer * (1 - distance)).toArray(), FOG_CURVE);
+  const fogged = linearColor(PATCH_EMISSIVE).lerp(fogColor, distance + layer * (1 - distance));
+  return shownBytes(fogged.toArray(), ACES_CURVE);
 }
 
 function assertBytesWithin(actual: RgbBytes, expected: readonly number[], tolerance: number, label: string): void {
@@ -69,7 +71,7 @@ test('every Surface mode other than Lit shows no fog on either patch', async () 
   assert.deepEqual(colorSample.farRgb, colorSample.nearRgb, 'Color far equals near');
 
   const emissionSample = await samplePatch(FOG_TIME_ID.haze, MODEL_STAGE_SURFACE_MODE.emission);
-  const unfoggedEmission = shownBytes(linearColor(PATCH_EMISSIVE).toArray(), FOG_CURVE);
+  const unfoggedEmission = shownBytes(linearColor(PATCH_EMISSIVE).toArray(), ACES_CURVE);
   assertBytesWithin(emissionSample.nearRgb, unfoggedEmission, BYTE_TOLERANCE, 'Emission near');
   assert.deepEqual(emissionSample.farRgb, emissionSample.nearRgb, 'Emission far equals near');
 

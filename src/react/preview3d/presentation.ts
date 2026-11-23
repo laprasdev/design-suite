@@ -10,6 +10,8 @@ import {modelAnimationLayers} from './animationLayerModel.ts';
 import type {ModelAnimationLayer} from './animationLayerModel.ts';
 
 export const MODEL_STAGE_FIELD_OF_VIEW = 38;
+/** How near the camera the stage draws, the plane every look's far plane lies beyond. */
+export const MODEL_STAGE_NEAR_PLANE = 0.01;
 export const MODEL_PREVIEW_ENTITY_REFUSAL = Object.freeze({
   entity: 'Every frame entity requires an entityId.',
   model: (id: string, expected: string) => `Entity ${id}: modelId must match the declared model ${expected}.`,

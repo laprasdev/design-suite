@@ -3,7 +3,7 @@ import {describe, it} from 'node:test';
 import * as THREE from 'three';
 import {createModelBackdrop} from '../src/react/preview3d/backdrop.ts';
 import {modelStageBuiltInTimes} from '../src/react/preview3d/builtInTimes.ts';
-import {MODEL_TONE_CURVE_TEXT} from '../src/react/preview3d/toneCurve.ts';
+import {MODEL_TONE_CURVE_TEXT, modelToneCurveSource} from '../src/react/preview3d/toneCurve.ts';
 import {modelColorOfHex} from '../src/react/preview3d/colorModel.ts';
 import {ModelStageRefusal} from '../src/react/preview3d/refusal.ts';
 import {MODEL_STAGE_LAYERS} from '../src/react/preview3d/layers.ts';
@@ -11,6 +11,7 @@ import {createTheme} from '../src/theme.ts';
 import {createSkinTheme} from '../src/skinTheme.ts';
 import {SKIN_NAMES} from '../src/skins.ts';
 import {shownBytes, statedBytes} from './preview3dToneCurveOracle.ts';
+import {ACES_CURVE} from './preview3dActorFixture.ts';
 
 const linear = (srgb: readonly number[]) => new THREE.Color().setRGB(srgb[0], srgb[1], srgb[2], THREE.SRGBColorSpace)
   .toArray();
@@ -36,21 +37,30 @@ describe('the backdrop', () => {
     () => {
     for (const theme of THEMES) {
       const [light, dark] = modelStageBuiltInTimes(theme.colors);
-      assert.equal(light.look.toneCurve, 'aces-filmic');
-      assert.deepEqual(shownBytes(linear(light.look.backdrop), light.look.toneCurve),
+      assert.deepEqual([light.look.toneCurve, dark.look.toneCurve], [ACES_CURVE, ACES_CURVE]);
+      assert.deepEqual(shownBytes(linear(light.look.backdrop), ACES_CURVE),
         statedBytes(modelColorOfHex(theme.colors.stage, 'stage')), theme.name);
       // Dark shows its deep colour behind, and keeps it as its ambient's ground and its shadow.
       const deep = modelColorOfHex('#05080f', 'Dark');
-      assert.deepEqual(shownBytes(linear(dark.look.backdrop), dark.look.toneCurve), statedBytes(deep), theme.name);
+      assert.deepEqual(shownBytes(linear(dark.look.backdrop), ACES_CURVE), statedBytes(deep), theme.name);
       assert.deepEqual([dark.look.shadow, dark.look.ambient.ground], [deep, deep]);
       assert.deepEqual([light.look.shadow, light.look.ambient.ground], [modelColorOfHex(theme.colors.surface, 's'),
         modelColorOfHex(theme.colors.surface, 's')]);
     }
   });
 
+  it('is stated, under any exposure a look gives, as the colour the curve shows as the one behind', () => {
+    const shown = modelColorOfHex('#2a3140', 'shown');
+    for (const exposure of [0.5, 1, 2]) {
+      const toneCurve = {...ACES_CURVE, exposure};
+      const source = modelToneCurveSource(toneCurve, shown, 'Time t: look.backdrop');
+      assert.deepEqual(shownBytes(linear(source), toneCurve), statedBytes(shown), `exposure ${exposure}`);
+    }
+  });
+
   it('refuses, by name, a theme whose stage colour the curve cannot show', () => {
     const colors = {...createTheme().colors, stage: '#ffffff'};
     assert.throws(() => modelStageBuiltInTimes(colors), (error: unknown) => error instanceof ModelStageRefusal &&
-      error.message === MODEL_TONE_CURVE_TEXT.unreachable('Time light: look.backdrop', 'aces-filmic', [1, 1, 1]));
+      error.message === MODEL_TONE_CURVE_TEXT.unreachable('Time light: look.backdrop', ACES_CURVE.curve, [1, 1, 1]));
   });
 });

@@ -8,14 +8,15 @@ import type {GLTF} from 'three/addons/loaders/GLTFLoader.js';
 import {applyModelFrame, createModelActor, type ModelActor, type ModelActorContext}
   from '../src/react/preview3d/actor.ts';
 import {createModelFraming} from '../src/react/preview3d/camera.ts';
+import type {ModelLookLayers} from '../src/react/preview3d/lighting.ts';
 import {CAMERA_COORDS} from '../src/react/preview3d/presentation.ts';
 import {modelFrameScope, validateModelFrame} from '../src/react/preview3d/frameModel.ts';
 import {createModelSurfaceMaterials} from '../src/react/preview3d/surfaceMaterials.ts';
 import {createModelStageSharedValues} from '../src/react/preview3d/sharedValues.ts';
-import {MODEL_ACTOR_ANIMATION, MODEL_ANIMATION_LAYER, MODEL_STAGE, MODEL_STAGE_DISPLAY, MODEL_STAGE_FRAMING,
-  MODEL_STAGE_ORIGIN, MODEL_STAGE_SIZE, MODEL_STAGE_SURFACE_MODE, MODEL_STAGE_THEME_LIGHTING, ModelStageRefusal,
-  modelStagePolicy, type ModelFileActor, type ModelStageActor, type ModelStageClock, type ModelStageLook,
-  type ModelStageTheme}
+import {MODEL_ACTOR_ANIMATION, MODEL_ANIMATION_LAYER, MODEL_STAGE, MODEL_STAGE_CURVE, MODEL_STAGE_DISPLAY,
+  MODEL_STAGE_FRAMING, MODEL_STAGE_ORIGIN, MODEL_STAGE_SIZE, MODEL_STAGE_SURFACE_MODE, MODEL_STAGE_THEME_LIGHTING,
+  ModelStageRefusal, modelStagePolicy, type ModelFileActor, type ModelStageActor, type ModelStageClock,
+  type ModelStageLook, type ModelStageTheme}
   from '../src/react/preview3d/model.ts';
 
 export const BONE = 'tip';
@@ -109,10 +110,17 @@ export function refused(run: () => unknown, expected: RegExp | string) {
   if (!matches) throw new Error(`Expected ${String(expected)}, caught "${caught.message}".`);
 }
 // A whole stage look with neutral lighting and no post effects; a test overrides the parts it is about.
+// The ACES curve at exposure 1: what the built-in times have always drawn under, stated here rather than read back.
+export const ACES_CURVE = Object.freeze({curve: MODEL_STAGE_CURVE.acesFilmic, exposure: 1});
 export const stageLook = (changes: Partial<ModelStageLook> = {}): ModelStageLook => ({
   backdrop: [0, 0, 0], key: {color: [1, 1, 1], strength: 1, direction: [0, 1, 0]},
   ambient: {sky: [1, 1, 1], ground: [0, 0, 0], strength: 1}, shadow: [0, 0, 0], night: 0,
-  aids: {floor: [0, 0, 0], share: 1}, fog: null, toneCurve: null, glow: null, ...changes});
+  aids: {floor: [0, 0, 0], share: 1}, fog: null, toneCurve: null, glow: null, farPlane: 100,
+  ...changes});
+// The layers a look is applied to, each taking it and doing nothing; a test overrides the layers it reads.
+export const lookLayers = (changes: Partial<ModelLookLayers> = {}): ModelLookLayers => ({
+  fog: {set: () => undefined}, framing: {setFarPlane: () => undefined},
+  output: {load: () => [], prepare: () => () => undefined}, shared: {setLook: () => undefined}, ...changes});
 // A whole stage description with one declared actor a; a test overrides the parts it is about.
 export const describing = (changes: Record<string, unknown> = {}) => ({
   actors: {focus: 'a', actors: [declaration('a')]}, environment: null, framing: {kind: MODEL_STAGE_FRAMING.focus},
@@ -137,10 +145,17 @@ export const NO_LOAD = Object.freeze({pending: [], release: () => undefined});
 export const NO_FILES = Object.freeze({textures: {load: () => NO_LOAD, keep: () => undefined},
   materials: {load: () => NO_LOAD, keep: () => undefined, sweep: () => undefined}});
 
-export function makeFraming(aspect = 1, near = 0.01, far = 100, enabled = true) {
-  const camera = new THREE.PerspectiveCamera(MODEL_STAGE.fieldOfView, aspect, near, far);
-  const controls = {target: new THREE.Vector3(), enabled, maxDistance: MODEL_STAGE.cameraMaximum, update: () => true};
+/** A framing as the scene makes it, its far plane a look's, set through the framing as the lighting sets it. */
+export function stageFraming(...[camera, controls]: Parameters<typeof createModelFraming>) {
   const framing = createModelFraming(camera, controls);
+  framing.setFarPlane(stageLook().farPlane);
+  return framing;
+}
+// The camera as the scene makes it.
+export function makeFraming(aspect = 1, enabled = true) {
+  const camera = new THREE.PerspectiveCamera(MODEL_STAGE.fieldOfView, aspect, MODEL_STAGE.nearPlane);
+  const controls = {target: new THREE.Vector3(), enabled, maxDistance: MODEL_STAGE.cameraMaximum, update: () => true};
+  const framing = stageFraming(camera, controls);
   const coordinates = new Float64Array(CAMERA_COORDS.length);
   return {camera, controls, framing, coordinates, applyCamera: framing.poseCoordinates};
 }
