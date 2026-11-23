@@ -1,6 +1,6 @@
 // A module's title: without a choice it is its word alone, the markup every GridModule consumer has always drawn; with
-// one it is the step form's trigger. A list holding an unavailable option with no onRefuse to say why fails as it
-// draws.
+// one it is the step form's trigger and its carets. A list holding an unavailable option with no onRefuse to say why
+// fails as it draws.
 import assert from 'node:assert/strict';
 import {after, describe, it} from 'node:test';
 import {renderToStaticMarkup} from 'react-dom/server';
@@ -31,13 +31,14 @@ describe('a module title', () => {
     assert.doesNotMatch(markup, /--module-title-gap/);
   });
 
-  it('draws its word, the chosen name and the caret as the step form\'s trigger when it heads one', () => {
+  it('draws its word and the chosen name as the step form\'s trigger, its carets after it, when it heads one', () => {
     const choice = {options: OPTIONS, value: 'grid', onChange: () => undefined, onRefuse: () => undefined} as const;
     const title = heading(drawn(choice));
     const trigger = `${ListboxElement.TRIGGER.className} ${ModuleTitleChoiceElement.className}`;
     assert.match(title, new RegExp(`class="${trigger}"`));
     assert.match(title, new RegExp(`>${TITLE}<span[^>]*>${OPTIONS[0].label}</span>`));
-    assert.match(title, new RegExp(ListboxElement.CARET.className));
+    assert.equal(title.match(new RegExp(`class="[^"]*${ListboxElement.STEP.className}`, 'g'))?.length, 2);
+    assert.doesNotMatch(title, /data-shows-value/, 'the title is no field, so it paints no field caret');
   });
 
   it('fails as it draws a list that holds an unavailable option and no onRefuse', () => {

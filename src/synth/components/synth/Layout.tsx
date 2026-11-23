@@ -1,4 +1,5 @@
 import React from 'react';
+import { MODULE_HEADER_ATTRIBUTE } from '../../../react/module/gridModuleElements.ts';
 import { useStyle } from '../../StyleContext.tsx';
 import { LayoutAPI, D, DC, F, O, Borders, STRIP_LABEL } from '../../design/index.ts';
 import { hexToRgba } from '../../../color.ts';
@@ -86,7 +87,7 @@ function ModuleCardHeader({ title, controls, showTitle }: { title?: string; cont
     display: 'flex', alignItems: 'stretch', flexShrink: 0,
     minHeight: D.cellSize.small, gap: showTitle ? DC.itemGap : 0,
   };
-  return <header aria-label={title} data-module-header={title} style={{ ...HEADER_ROW, borderBottom: `${Borders.standard.width}px solid ${hexToRgba(theme.accentColor, O.low)}` }}>
+  return <header aria-label={title} {...{ [MODULE_HEADER_ATTRIBUTE]: title }} style={{ ...HEADER_ROW, borderBottom: `${Borders.standard.width}px solid ${hexToRgba(theme.accentColor, O.low)}` }}>
     {showTitle && title && <h2 style={{ ...STRIP_LABEL, color: theme.primaryColor, textTransform: 'uppercase', cursor: 'default', margin: 0, padding: DC.cellPad, alignSelf: 'center', flexShrink: 0 }}>{title}</h2>}
     {controls && <div style={{ display: 'flex', alignItems: 'stretch', justifyContent: 'flex-end', flex: 1, minWidth: 0 }}
       onMouseDown={event => event.stopPropagation()} onPointerDown={event => event.stopPropagation()}>{controls}</div>}

@@ -4,7 +4,7 @@
 // `appearance: none` and this in its place.
 import type React from 'react';
 import type {StyleTheme} from '../../synth/StyleTypes.ts';
-import {CARET_CENTRE, CARET_DOWN_TURN, CARET_PATH, CARET_SIZE, CARET_STROKE, CARET_VIEW} from '../caretGlyph.tsx';
+import {CARET_CENTRE, CARET_TURN, CARET_PATH, CARET_SIZE, CARET_STROKE, CARET_VIEW} from '../caretGlyph.tsx';
 import {dimColor} from '../styleTheme.ts';
 
 /** A native list sets its text on a line of this many times its size and ignores `line-height`; with `appearance:none`
@@ -14,7 +14,7 @@ const NATIVE_LINE = 4 / 3;
 const caretImage = (color: string) => `url("data:image/svg+xml,${encodeURIComponent(
   `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${CARET_VIEW} ${CARET_VIEW}" width="${CARET_SIZE}" `
   + `height="${CARET_SIZE}"><path d="${CARET_PATH}" `
-  + `transform="rotate(${CARET_DOWN_TURN} ${CARET_CENTRE} ${CARET_CENTRE})" fill="none" `
+  + `transform="rotate(${CARET_TURN.down} ${CARET_CENTRE} ${CARET_CENTRE})" fill="none" `
   + `stroke="${color}" stroke-width="${CARET_STROKE}" stroke-linecap="round" stroke-linejoin="round"/></svg>`)}")`;
 
 /** `inset` is the padding the text keeps from the box's left edge; the caret keeps the same from the right. */

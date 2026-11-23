@@ -5,7 +5,7 @@
 // it reveals and keeps the title visible beside it.
 // =====================================================
 import React, { type ReactNode, type ButtonHTMLAttributes } from "react";
-import { CaretGlyph } from "./caretGlyph.tsx";
+import { CARET_TURN, CaretGlyph } from "./caretGlyph.tsx";
 
 export interface CaretButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, "children"> {
   open: boolean;
@@ -23,7 +23,7 @@ export function CaretButton({ open, label, className = "", children, ...rest }: 
       aria-label={label}
       {...rest}
     >
-      <CaretGlyph turn={0} />
+      <CaretGlyph turn={CARET_TURN.right} />
       {children}
     </button>
   );

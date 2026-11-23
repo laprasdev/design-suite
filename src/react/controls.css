@@ -17,17 +17,17 @@
 .app-root .range-control-reset{grid-area:reset;display:grid;place-items:center;width:18px;height:18px;color:var(--dim)}
 .range-control-reset>svg{width:12px;height:12px}
 .range-control-reset:disabled{opacity:var(--disabled-opacity);cursor:default}
-.app-root select:not([multiple]) {
+.app-root select:not([multiple]),.app-root .listbox-select[data-shows-value] {
   appearance:none;padding-inline:var(--select-inset) calc(var(--select-inset) + 2 * var(--select-caret) + 6px);
   background-image:linear-gradient(45deg,transparent 50%,currentColor 50%),linear-gradient(135deg,currentColor 50%,transparent 50%);
   background-position:calc(100% - var(--select-inset) - var(--select-caret)) 55%,calc(100% - var(--select-inset)) 55%;
   background-size:var(--select-caret) var(--select-caret);background-repeat:no-repeat;
 }
-/* A list's field: what it shows, then the list's caret (CaretGlyph) at the field's far end. */
-.app-root .listbox-select[data-shows-value] { display:inline-flex;align-items:center;justify-content:space-between;gap:var(--field-gap);padding-inline:var(--select-inset);text-align:left; }
-.app-root .listbox-select-caret { flex:none;color:var(--dim); }
+.app-root .listbox-select[data-shows-value] { text-align:left; }
+/* A step form's caret: the list's caret glyph, in the dim colour every caret takes. */
+.app-root .listbox-select-step { flex:none;color:var(--dim); }
 /* A module's title heading a choice: its word starts where every title does, its chosen name beside it. */
-.app-root .listbox-select.module-title-choice { display:inline-flex;align-items:baseline;gap:var(--module-title-gap);max-width:100%;padding-inline:0;text-transform:inherit;letter-spacing:inherit; }
+.app-root .listbox-select.module-title-choice { display:inline-flex;flex-wrap:wrap;align-items:baseline;gap:var(--module-title-gap);max-width:100%;padding-inline:0;text-transform:inherit;letter-spacing:inherit; }
 /* An anchored Modal on its trigger: Modal draws the surface and places the layer; the list lays out inside it. */
 .listbox-select-popover { display:flex;flex-direction:column;min-width:var(--anchor-width);margin:0;padding:4px;list-style:none;color:var(--text);font-family:var(--font-chrome,inherit);font-size:var(--type-control,12px);line-height:1.4; }
 .listbox-select-list { margin:0;padding:0;list-style:none;min-height:0;overflow:auto;overscroll-behavior:contain; }

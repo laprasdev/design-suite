@@ -5,16 +5,16 @@ import { ModuleHeaderRow } from './ModuleHeaderRow.tsx';
 import { ListboxSelect, type ListboxOption } from '../ListboxSelect.tsx';
 import { ListboxForm } from '../listboxSelectElements.ts';
 import { Label } from '../accents.tsx';
-import { ModuleHeaderElement, ModuleTitleChoiceElement, ModuleTitleChosenElement } from './gridModuleElements.ts';
+import { MODULE_HEADER_ATTRIBUTE, ModuleTitleChoiceElement, ModuleTitleChosenElement } from './gridModuleElements.ts';
 
 const G = D.moduleGrid;
 const FILLS: React.CSSProperties = { flex: 1, minWidth: 0, minHeight: 0 };
 /** The room between a title's word and its chosen name, set only where a title heads a choice. */
 const CHOICE_GAP: Record<'--module-title-gap', string> = { '--module-title-gap': `${G.headerTitleGap}px` };
 
-/** What a module's name heads: one of `options`, each named as the title shows it, the module's word opening the list
- *  beside the chosen one's name and the list's caret, the arrows on the closed title stepping to the next option. An
- *  option that is unavailable refuses with its reason. */
+/** What a module's name heads: one of `options`, each named as the title shows it, the module's word and the chosen
+ *  one's name opening the list, the two carets after them and the arrows on the closed title stepping to the previous
+ *  or next option. An option that is unavailable refuses with its reason. */
 export interface ModuleTitleChoice<V extends string | number> {
   options: readonly ListboxOption<V>[];
   value: V;
@@ -33,7 +33,7 @@ export function GridModule<V extends string | number>({ title, titled = true, gr
 }) {
   const style = useStyle().getEffectiveStyle();
   const headerStyle: React.CSSProperties = {
-    flexShrink: 0, display: 'flex', alignItems: 'center', gap: G.headerTitleGap,
+    flexShrink: 0, display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: G.headerTitleGap,
     paddingInline: G.headerInset, borderBottom: `${Borders.standard.width}px solid ${style.borderColor}`,
   };
   const titleStyle: React.CSSProperties = {
@@ -46,10 +46,9 @@ export function GridModule<V extends string | number>({ title, titled = true, gr
   return (
     <section data-grid-module data-module-owner={title} aria-label={title}
       style={{ ...FILLS, display: 'flex', flexDirection: 'column', fontFamily: 'var(--font-chrome, inherit)' }}>
-      {(titled || group || tabs) && <header data-module-header={title} className={ModuleHeaderElement.className}
-        style={headerStyle}>
+      {(titled || group || tabs) && <header {...{ [MODULE_HEADER_ATTRIBUTE]: title }} style={headerStyle}>
         {titled && <h2 style={choice ? { ...titleStyle, ...CHOICE_GAP } : titleStyle}>{choice && chosen
-          ? <ListboxSelect form={ListboxForm.STEP} field label={title} className={ModuleTitleChoiceElement.className}
+          ? <ListboxSelect form={ListboxForm.STEP} label={title} className={ModuleTitleChoiceElement.className}
             options={choice.options} value={choice.value} onChange={choice.onChange} onRefuse={choice.onRefuse}>
             {title}<Label kind="chosen" className={ModuleTitleChosenElement.className}>{chosen.label}</Label>
           </ListboxSelect>

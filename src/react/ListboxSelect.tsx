@@ -2,14 +2,15 @@ import {Button} from './Button.tsx';
 import {Modal} from './Modal.tsx';
 import {ModalPlacement} from './modalElements.ts';
 import {Label} from './accents.tsx';
-import {CARET_DOWN_TURN,CaretGlyph} from './caretGlyph.tsx';
+import {CARET_TURN,CaretGlyph} from './caretGlyph.tsx';
+import {HeaderIconButton} from './HeaderIconButton.tsx';
 import {useEffect,useId,useLayoutEffect,useRef,useState,type KeyboardEvent,type ReactNode} from 'react';
 import {SearchField} from './SearchField.tsx';
 import {Opacity} from '../tokens.ts';
 import {Density} from './density.ts';
-import {searchCopy} from './interfaceCopy.ts';
+import {searchCopy,stepCopy} from './interfaceCopy.ts';
 import {LISTBOX_FORM_ROLES,ListboxElement,ListboxForm} from './listboxSelectElements.ts';
-import {LISTBOX_ARROWS,LISTBOX_MOVES,LISTBOX_OPENS,typesText,typeahead,searching,typeaheadMatch,matchesOption,type TypeaheadSearch} from './listboxNavigation.ts';
+import {LISTBOX_ARROWS,LISTBOX_STEP_ARROWS,LISTBOX_MOVES,LISTBOX_OPENS,typesText,typeahead,searching,typeaheadMatch,matchesOption,type TypeaheadSearch} from './listboxNavigation.ts';
 
 // The app's own select: a trigger and, when open, a listbox popover of `options`
 // (a searchable label, optional leading/trailing content and hover title) anchored
@@ -17,8 +18,9 @@ import {LISTBOX_ARROWS,LISTBOX_MOVES,LISTBOX_OPENS,typesText,typeahead,searching
 // shows the chosen option as a field unless `children` draw it; with `field`,
 // `children` are drawn inside the field (a portrait beside a name, or a menu's name). It follows the
 // select-only combobox pattern (listboxNavigation): focus stays on the trigger;
-// arrows, Home and End move through the options (in the step form the arrows on the closed trigger choose the next
-// option at once, an unavailable one refusing as a press would), typing jumps to a label, Enter
+// arrows, Home and End move through the options (in the step form the arrows on the closed trigger, and its two
+// carets beside it, choose the previous or next option at once, an unavailable one refusing as a press would, a caret
+// at an end disabled), typing jumps to a label, Enter
 // or Space chooses and Tab closes. A click chooses. The popover is an anchored
 // Modal on the trigger, which closes it on Escape and on a press elsewhere.
 // `searchSubject` adds a search over the labels. The select form's `onChange` runs when the
@@ -27,6 +29,9 @@ import {LISTBOX_ARROWS,LISTBOX_MOVES,LISTBOX_OPENS,typesText,typeahead,searching
 // runs the chosen action each time; Escape or a choice returns focus. An `unavailable` option, which names why, draws
 // faded and refuses a choice: the list closes and hands it to `onRefuse`, whose consumer shows the reason in its bar's
 // notice. A list that holds an unavailable option without `onRefuse` fails as it draws.
+// The step form's carets, in the order they sit: each steps as its arrow does on the closed trigger, turned that way.
+const STEPS=Object.freeze([{key:LISTBOX_STEP_ARROWS.back,turn:CARET_TURN.left,label:stepCopy.previous},
+ {key:LISTBOX_STEP_ARROWS.next,turn:CARET_TURN.right,label:stepCopy.next}]);
 export interface ListboxOption<V> {
  value: V;
  label: string;
@@ -89,7 +94,6 @@ export function ListboxSelect<V extends string|number>(props: ListboxSelectProps
  const selectedContent=children??(roles.holdsValue?options.find(option=>option.value===value)?.label:undefined);
  const triggerContent=typeof selectedContent==='string'||typeof selectedContent==='number'
   ? <Label kind="action">{selectedContent}</Label> : selectedContent;
- const showsValue=children===undefined||field;
  // Modal's dismissal returns focus itself; `close` returns it for the closes Modal does not see.
  const settle=()=>{setOpen(false);setQuery('');};
  const close=()=>{settle();trigger.current?.focus();};
@@ -124,11 +128,16 @@ export function ListboxSelect<V extends string|number>(props: ListboxSelectProps
   ?.focus({preventScroll:true});},[list,searchSubject,roles.focus]);
  useLayoutEffect(()=>{list?.children[active]?.scrollIntoView({block:'nearest'});},[list,active,query]);
  return <>
-  <button ref={trigger} type="button" role={roles.trigger} className={`${ListboxElement.TRIGGER.className}${className?` ${className}`:''}`} data-shows-value={showsValue||undefined}
+  <button ref={trigger} type="button" role={roles.trigger} className={`${ListboxElement.TRIGGER.className}${className?` ${className}`:''}`} data-shows-value={children===undefined||field||undefined}
    aria-label={label} title={title} aria-haspopup={roles.popup} aria-expanded={open} aria-controls={open?listId:undefined}
    aria-activedescendant={activeOn==='trigger'?optionId(active):undefined}
-   disabled={disabled} onClick={()=>open?setOpen(false):show(start)} onKeyDown={open?openKey:closedKey}>{triggerContent}
-   {showsValue&&<CaretGlyph turn={CARET_DOWN_TURN} className={ListboxElement.CARET.className}/>}</button>
+   disabled={disabled} onClick={()=>open?setOpen(false):show(start)} onKeyDown={open?openKey:closedKey}>
+   {triggerContent}</button>
+  {roles.closedArrowsStep&&STEPS.map(({key,turn,label: step})=>{
+   const to=LISTBOX_MOVES[key](start,shown.length);
+   return <HeaderIconButton key={key} label={step(label)} bare density={Density.COMPACT}
+    className={ListboxElement.STEP.className} disabled={disabled||to===start} onClick={()=>choose(to)}>
+    <CaretGlyph turn={turn}/></HeaderIconButton>;})}
   {open&&<Modal open placement={ModalPlacement.ANCHORED} anchor={trigger} popover={{above,scroll:false}}
    onClose={settle} role="presentation" className={ListboxElement.POPOVER.className}
    data-icon-only={iconOnly||undefined}>

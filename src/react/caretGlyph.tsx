@@ -1,13 +1,13 @@
 import React from "react";
 
-// The disclosure chevron, drawn once: CaretButton draws it pointing along its open edge, a list's field draws it turned
-// down, and a native select paints the same shape as its background (selectCaret.ts). Each takes its own colour; the
-// shape, size and stroke are only here.
+// The chevron, drawn once: CaretButton draws it pointing along its open edge, a step form's carets turned back and
+// on, and a native select paints the same shape turned down as its background (selectCaret.ts). Each takes its own
+// colour; the shape, size and stroke are only here.
 export const CARET_VIEW = 10, CARET_SIZE = 7, CARET_STROKE = 1.7;
 /** Pointing right, from the view's centre-left edge. */
 export const CARET_PATH = 'M3 1.2 L7.2 5 L3 8.8';
-/** Turned a quarter, so it points down from a list's box. */
-export const CARET_DOWN_TURN = 90;
+/** The turns, in degrees from the drawn shape, that point it each way. */
+export const CARET_TURN = Object.freeze({ right: 0, down: 90, left: 180 } as const);
 /** The point the shape turns about. */
 export const CARET_CENTRE = CARET_VIEW / 2;
 

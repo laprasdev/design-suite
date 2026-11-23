@@ -1,9 +1,9 @@
 // A module header's title choice and icon toggle, on a desktop and a handset window: the title's word, in the title's
-// own case and tracking, the chosen option's name in its regular-weight typography role and the list's caret are one
-// trigger, a press opening the list and an arrow on the closed title stepping the choice; choosing moves the name, and
-// an unavailable option draws faded, keeps the choice and says why in the bar's notice. A press flips the toggle, whose
-// glyph is what the next press does, and the toggle sits inside its bar, whose text colour its own rule gives it. Read
-// in Chromium from headerGlyphScene.tsx; each window's capture lands in .local/captures.
+// own case and tracking, and the chosen option's name in its regular-weight typography role are one trigger, a press
+// opening the list and an arrow on the closed title, or a caret beside it, stepping the choice; choosing moves the
+// name, and an unavailable option draws faded, keeps the choice and says why in the bar's notice. A press flips the
+// toggle, whose glyph is what the next press does, and the toggle sits inside its bar, whose text colour its own rule
+// gives it. Read in Chromium from headerGlyphScene.tsx; each window's capture lands in .local/captures.
 import assert from 'node:assert/strict';
 import {mkdirSync} from 'node:fs';
 import {join} from 'node:path';
@@ -15,7 +15,7 @@ import {Opacity,Typography} from '../src/tokens.ts';
 import {createTheme} from '../src/theme.ts';
 import {ListboxElement} from '../src/react/listboxSelectElements.ts';
 import {ActionBarElement,ActionNoticeElement} from '../src/react/actionBarElements.ts';
-import {ModuleHeaderElement,ModuleTitleChoiceElement,ModuleTitleChosenElement}
+import {MODULE_HEADER_ATTRIBUTE,ModuleTitleChoiceElement,ModuleTitleChosenElement}
  from '../src/react/module/gridModuleElements.ts';
 import {HeaderForm,TITLE_OPTIONS,TOGGLE_GLYPH_ATTRIBUTE,ToggleGlyph} from './headerGlyphCases.ts';
 
@@ -35,10 +35,21 @@ for(const viewport of [DESKTOP_VIEWPORT,HANDSET_VIEWPORT])test(`the header forms
  const bar=page.locator(ActionBarElement.selector).first();
  const option=(label: string)=>page.locator(`${ListboxElement.OPTION.selector}[aria-label="${label}"]`);
  const notice=page.locator(ActionNoticeElement.ROOT.selector);
- await page.locator(ModuleHeaderElement.selector).first()
+ await page.locator(`[${MODULE_HEADER_ATTRIBUTE}]`).first()
   .screenshot({path:join(CAPTURES,`${viewport.width}-closed.png`)});
  assert.equal(await title.textContent(),`${HeaderForm.TITLE}${FIRST.label}`,'the title shows its word and its choice');
- assert.equal(await title.locator(ListboxElement.CARET.selector).count(),1,'the title draws the list\'s one caret');
+ const [back,next]=[0,1].map(index=>page.locator(ListboxElement.STEP.selector).nth(index));
+ assert.equal(await page.locator(ListboxElement.STEP.selector).count(),2,'the title draws its two step carets');
+ assert.ok(await back.isDisabled(),'the first option has no previous one');
+ const shows=(option: typeof TITLE_OPTIONS[number])=>page.waitForFunction(([choice,text])=>
+  document.querySelector(choice)?.textContent===text,
+  [ModuleTitleChoiceElement.selector,`${HeaderForm.TITLE}${option.label}`] as const);
+ await next.click();
+ await shows(SECOND);
+ assert.equal(await title.getAttribute('aria-expanded'),'false','a caret steps without opening the list');
+ await page.screenshot({path:join(CAPTURES,`${viewport.width}-stepped.png`)});
+ await back.click();
+ await shows(FIRST);
  const read=await page.evaluate(([choice,chosen,keys,root,text])=>{
   const trigger=document.querySelector(choice),name=document.querySelector(chosen),heading=trigger?.closest('h2');
   const scene=document.getElementById(root);
@@ -72,9 +83,6 @@ for(const viewport of [DESKTOP_VIEWPORT,HANDSET_VIEWPORT])test(`the header forms
  assert.equal(await title.textContent(),`${HeaderForm.TITLE}${SECOND.label}`,'an unavailable option keeps the choice');
  assert.equal(await notice.getAttribute('title'),UNAVAILABLE.unavailable,'the bar\'s notice says why it was refused');
  await title.focus();
- const shows=(option: typeof TITLE_OPTIONS[number])=>page.waitForFunction(([choice,text])=>
-  document.querySelector(choice)?.textContent===text,
-  [ModuleTitleChoiceElement.selector,`${HeaderForm.TITLE}${option.label}`] as const);
  await page.keyboard.press('ArrowUp');
  await shows(FIRST);
  assert.equal(await title.getAttribute('aria-expanded'),'false','an arrow on the closed title steps without opening');

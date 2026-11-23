@@ -24,8 +24,10 @@ export function listMoves(orientation: ListOrientation,wraps: boolean): Readonly
 }
 const LISTBOX_ORIENTATION: ListOrientation='vertical';
 export const LISTBOX_MOVES=listMoves(LISTBOX_ORIENTATION,false);
+// The arrows that step back and on along a listbox.
+export const LISTBOX_STEP_ARROWS=LIST_ARROWS[LISTBOX_ORIENTATION];
 // The arrows along a listbox, which a list that is searching still takes.
-export const LISTBOX_ARROWS: readonly string[]=Object.freeze(Object.values(LIST_ARROWS[LISTBOX_ORIENTATION]));
+export const LISTBOX_ARROWS: readonly string[]=Object.freeze([LISTBOX_STEP_ARROWS.back,LISTBOX_STEP_ARROWS.next]);
 // Keys that open a closed list, and the option each starts on, from the chosen one.
 const onChosen: ListMove=i=>i;
 export const LISTBOX_OPENS: Readonly<Record<string,ListMove>>=Object.freeze({

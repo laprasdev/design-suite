@@ -127,11 +127,11 @@ for(const viewport of [DESKTOP_VIEWPORT,PHONE_VIEWPORT])test(`at ${viewport.widt
   assert.ok(box.x>=0&&box.y>=0&&box.x+box.width<=viewport.width&&box.y+box.height<=viewport.height,
    JSON.stringify(box));
   assert.ok(box.width>=(await trigger.boundingBox()??assert.fail('no trigger')).width);
-  // The trigger draws the list's one caret, as the select does, and the focused menu no outline beside its active
-  // item's wash.
-  const carets=(scope: typeof trigger)=>scope.locator(ListboxElement.CARET.selector).count();
-  assert.equal(await carets(page.getByRole('combobox',{name:SELECT_LABEL})),1);
-  assert.equal(await carets(trigger),1);
+  // The trigger draws the select's caret, and the focused menu no outline beside its active item's wash.
+  const caret=(node: Element)=>getComputedStyle(node).backgroundImage;
+  const selectCaret=await page.getByRole('combobox',{name:SELECT_LABEL}).evaluate(caret);
+  assert.notEqual(selectCaret,'none');
+  assert.equal(await trigger.evaluate(caret),selectCaret);
   assert.equal(await menu.evaluate(node=>getComputedStyle(node).outlineStyle),'none');
   await page.keyboard.press('Escape');
   await closed();
