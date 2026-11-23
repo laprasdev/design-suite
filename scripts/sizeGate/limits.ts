@@ -1,7 +1,9 @@
 // The size rules this repo and the web synth hold their code to.
 import {
-  OTHER_FIELDS, holdsListOf, holdsRecordOf, holdsShape, holdsString, holdsStringList, type FieldCheck, type ShapeOf,
+  OTHER_FIELDS, holdsNonEmptyString, holdsRecordOf, holdsShape, holdsString, holdsStringList,
+  type FieldCheck, type ShapeOf,
 } from '../build/fieldChecks.ts';
+import { holdsAllowance, holdsAllowances, type AllowanceOf } from '../baseline/allowance.ts';
 import { holdsNumbers } from '../baseline/baselinedFiles.ts';
 
 export const FILE_LINE_LIMIT = 200;
@@ -32,13 +34,16 @@ const SCOPE_SHAPE = Object.freeze({
 });
 export type SizeScope = ShapeOf<typeof SCOPE_SHAPE>;
 
-const ALLOWANCE_SHAPE = Object.freeze({ path: holdsString, step: holdsString, reason: holdsString, date: holdsString });
-export type AllowanceGrant = ShapeOf<typeof ALLOWANCE_SHAPE>;
+const SIZE_ALLOWANCE_SHAPE = Object.freeze({
+  step: holdsNonEmptyString, reason: holdsNonEmptyString, date: holdsString,
+});
+export type AllowanceGrant = AllowanceOf<typeof SIZE_ALLOWANCE_SHAPE>;
+export const holdsSizeAllowance: FieldCheck<AllowanceGrant> = holdsAllowance(SIZE_ALLOWANCE_SHAPE);
 
 const SIZE_BASELINE_SHAPE = Object.freeze({
   scope: holdsShape(SCOPE_SHAPE, OTHER_FIELDS.refused),
   files: holdsRecordOf(holdsNumbers(SIZE_KINDS)),
-  allowances: holdsListOf(holdsShape(ALLOWANCE_SHAPE, OTHER_FIELDS.refused)),
+  allowances: holdsAllowances(SIZE_ALLOWANCE_SHAPE),
 });
 export type SizeBaseline = ShapeOf<typeof SIZE_BASELINE_SHAPE>;
 export const holdsSizeBaseline: FieldCheck<SizeBaseline> = holdsShape(SIZE_BASELINE_SHAPE, OTHER_FIELDS.refused);

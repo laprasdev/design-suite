@@ -47,6 +47,12 @@ export function measureCommitted(root: string, ref: string, file: string): FileM
   return gitSucceeds(root, ['cat-file', '-e', blob]) ? measureText(gitOutput(root, ['show', blob])) : undefined;
 }
 
+/** The numbers of `file`, a path from `root`, in the working tree, or undefined when it holds no such file. */
+export function measureWorking(root: string, file: string): FileMeasurement | undefined {
+  const full = path.join(root, file);
+  return existsSync(full) ? measureText(readFileSync(full, 'utf8')) : undefined;
+}
+
 /** Whether a suffix or a folder on the way to `file` puts it out of scope. */
 const skipped = (file: string, skip: SizeSkip): boolean => skip.suffixes.some(suffix => file.endsWith(suffix))
   || file.split('/').slice(0, -1).some(folder => skip.directories.includes(folder));
@@ -72,6 +78,10 @@ function scopeFiles(root: string, scope: SizeScope): string[] {
 
 /** The numbers of every file in scope, by path. */
 export function measureScope(root: string, scope: SizeScope): Map<string, FileMeasurement> {
-  const read = (file: string): FileMeasurement => measureText(readFileSync(path.join(root, file), 'utf8'));
+  const read = (file: string): FileMeasurement => {
+    const measured = measureWorking(root, file);
+    if (!measured) throw new Error(`size-gate: ${file} is gone from ${root}.`);
+    return measured;
+  };
   return new Map(scopeFiles(root, scope).map(file => [file, read(file)]));
 }

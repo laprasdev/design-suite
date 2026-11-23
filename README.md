@@ -571,7 +571,8 @@ npm run build
 against `origin/main` across all three baselines (`scripts/size-baseline.json` and `scripts/cast-baseline.json`,
 lowered automatically by `scripts/size-gate.ts` and `scripts/type-gate.ts` through `ratchetedFiles`, and
 `scripts/allocation-baseline.json`, lowered by hand from recorded runs, where an entry `origin/main` does not name
-enters at the maximum it records). `npm test` installs the pinned gate tools
+enters at the maximum it records), unless an allowance `origin/main` lacks (`scripts/baseline/allowance.ts`) covers a
+size or allocation rise. `npm test` installs the pinned gate tools
 (`scripts/gateTools`) and Playwright's headless Chromium, in which `tests/*.browser.test.ts` read computed sizes,
 such as each Modal width's, and sample per-tick heap allocations against `scripts/allocation-baseline.json`.
 

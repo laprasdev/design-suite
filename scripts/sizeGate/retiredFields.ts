@@ -2,8 +2,9 @@
 // dropped. That format held each file's import lines in its entry (`importLines`) and in each allowance (`from`,
 // `to`), until the allowance rule measured them in both files. Only scripts/baseline-gate.ts reads it, for the base
 // branch's baseline, since a branch cannot change its base; every other reader refuses those fields by name.
-// Removed, with `BaselineReading.parseBase` in scripts/baseline-gate.ts, once design-suite pull request 13 and
-// infinite-state-machine's `chore/suite-typescript-entries` have landed and no base branch holds those fields.
+// Removed once design-suite pull request 13 and infinite-state-machine's `chore/suite-typescript-entries` have landed
+// and no base branch holds those fields (`BaselineReading.parseBase` in scripts/baseline-gate.ts leaves once
+// `parseBaseAllocationBaseline` in scripts/baseline/allocationBaseline.ts is gone too).
 import { isRecord } from '../../src/valueChecks.ts';
 import { parseBaseline } from './baselineFile.ts';
 import type { SizeBaseline } from './limits.ts';

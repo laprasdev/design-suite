@@ -41,7 +41,7 @@ export const lowest = <Kind extends string>(kinds: readonly Kind[]) =>
 const anyRose = <Numbers extends FileNumbers>(base: Numbers, head: Numbers): boolean =>
   Object.entries(head).some(([name, value]) => value > base[name]);
 
-export const OBJECT = ['{', '}'] as const;
+const OBJECT = ['{', '}'] as const;
 export const LIST = ['[', ']'] as const;
 
 /** A JSON object or list of `entries`, one to a line, so a baseline's diff reads entry by entry. */
@@ -49,9 +49,13 @@ export const jsonBlock = (entries: readonly string[], [open, close]: typeof OBJE
   entries.length ? `${open}\n${entries.map(entry => `    ${entry}`).join(',\n')}\n  ${close}` : `${open}${close}`;
 
 /** The entries of `files`, sorted by path. */
-export const fileEntries = <Numbers extends FileNumbers>(files: BaselinedFiles<Numbers>): string[] =>
+const fileEntries = <Numbers extends FileNumbers>(files: BaselinedFiles<Numbers>): string[] =>
   Object.entries(files).sort(([a], [b]) => (a < b ? -1 : 1))
     .map(([file, numbers]) => `${JSON.stringify(file)}: ${JSON.stringify(numbers)}`);
+
+/** A baseline's `files` member as JSON, one file to a line. */
+export const filesJson = <Numbers extends FileNumbers>(files: BaselinedFiles<Numbers>): string =>
+  jsonBlock(fileEntries(files), OBJECT);
 
 /** A baseline's text: each member, already JSON, on its own line. */
 export function baselineText(members: Readonly<Record<string, string>>): string {
@@ -97,27 +101,31 @@ export interface FilesBaseline<Kind extends string> {
   readonly files: BaselinedFiles<NumbersOf<Kind>>;
 }
 
-/** One `files`-only numeric baseline: its path, kinds, rise check, parser, reader and formatter. */
-export interface FilesBaselineModule<Kind extends string> {
+/** One numeric baseline: its path, kinds, rise check, parser, reader and formatter. */
+export interface BaselineModule<
+  Kind extends string,
+  Baseline extends { readonly files: BaselinedFiles<NumbersOf<Kind>> },
+> {
   readonly file: string;
   readonly kinds: readonly Kind[];
   readonly rose: (base: NumbersOf<Kind>, head: NumbersOf<Kind>) => boolean;
-  readonly parse: (value: unknown, file: string) => FilesBaseline<Kind>;
-  readonly read: (file: string) => FilesBaseline<Kind>;
-  readonly format: (baseline: FilesBaseline<Kind>) => string;
+  readonly parse: (value: unknown, file: string) => Baseline;
+  readonly read: (file: string) => Baseline;
+  readonly format: (baseline: Baseline) => string;
 }
 
-/** Builds the path, kinds, rise check, parser, reader and formatter for a `files`-only numeric baseline. */
-export function filesBaseline<Kind extends string>(
+/** Builds the path, kinds, rise check, parser, reader and formatter for a numeric baseline of `check` and `members`. */
+export function baselineModule<
+  Kind extends string,
+  Baseline extends { readonly files: BaselinedFiles<NumbersOf<Kind>> },
+>(
   gate: string,
   file: string,
   kinds: readonly Kind[],
-): FilesBaselineModule<Kind> {
-  const check: FieldCheck<FilesBaseline<Kind>> = holdsShape(
-    { files: holdsRecordOf(holdsNumbers(kinds)) },
-    OTHER_FIELDS.refused,
-  );
-  const parse = (value: unknown, source: string): FilesBaseline<Kind> => {
+  check: FieldCheck<Baseline>,
+  members: (baseline: Baseline) => Readonly<Record<string, string>>,
+): BaselineModule<Kind, Baseline> {
+  const parse = (value: unknown, source: string): Baseline => {
     check(value, '', baselineRefusal(`${gate}: ${source}`));
     return value;
   };
@@ -126,8 +134,20 @@ export function filesBaseline<Kind extends string>(
     kinds,
     rose: anyRose,
     parse,
-    read: (source: string): FilesBaseline<Kind> => parse(JSON.parse(readFileSync(source, 'utf8')), source),
-    format: (baseline: FilesBaseline<Kind>): string =>
-      baselineText({ files: jsonBlock(fileEntries(baseline.files), OBJECT) }),
+    read: (source: string): Baseline => parse(JSON.parse(readFileSync(source, 'utf8')), source),
+    format: (baseline: Baseline): string => baselineText(members(baseline)),
   });
 }
+
+/** Builds the path, kinds, rise check, parser, reader and formatter for a `files`-only numeric baseline. */
+export const filesBaseline = <Kind extends string>(
+  gate: string,
+  file: string,
+  kinds: readonly Kind[],
+): BaselineModule<Kind, FilesBaseline<Kind>> => baselineModule(
+  gate,
+  file,
+  kinds,
+  holdsShape({ files: holdsRecordOf(holdsNumbers(kinds)) }, OTHER_FIELDS.refused),
+  baseline => ({ files: filesJson(baseline.files) }),
+);
