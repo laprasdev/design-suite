@@ -39,7 +39,8 @@
    "web": [],
    "kit": [
     "Cycle"
-   ]
+   ],
+   "note": "CycleForm.TEXT is a module header's picker: only the current option, in Label's action type without the cell, a press moving to the next."
   },
   "Boolean": {
    "data": "bool",
@@ -50,7 +51,7 @@
     "Boolean",
     "LabeledToggle"
    ],
-   "note": "Forms: cell, setting, switch. Open: is it a Cycle form in Unity, which has no enum entry but does have SynthBooleanShader? The setting form can show only its selection mark; checkbox semantics and the toggle stay in Boolean. The setting form takes Container's pending form: pending shows the Poké Ball beside its name, or over its mark when it shows only the mark.",
+   "note": "Forms: cell, setting, switch, icon. The icon form is HeaderIconButton pressed while on, drawing the consumer's glyph for each value (play while paused, pause while running), so data chooses it and no skin does. Open: is it a Cycle form in Unity, which has no enum entry but does have SynthBooleanShader? The setting form can show only its selection mark; checkbox semantics and the toggle stay in Boolean. The setting form takes Container's pending form: pending shows the Poké Ball beside its name, or over its mark when it shows only the mark.",
    "core": [
     "SettingToggle"
    ],

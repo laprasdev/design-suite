@@ -11,7 +11,7 @@ export { isPanKeyHeld } from "./panKey.ts";
 export { bezierPath, edgePoint, linkPath, verticalBezierPath, type NodeBox, type NodeSide } from "./geometry.ts";
 export { Label, Glyph, Divider, LightBox, type LabelKind } from "./accents.tsx";
 export { MonthGrid, type DayCell, type MonthGridProps } from "./Calendar.tsx";
-export { Cycle, type CycleOption, type CycleProps } from "./Cycle.tsx";
+export { Cycle, CycleForm, type CycleFormValue, type CycleOption, type CycleProps } from "./Cycle.tsx";
 export { ViewStack, type StackView, type ViewStackProps } from "./ViewStack.tsx";
 export { PipRow, PipRowForm, type PipRowFormValue, type PipRowProps } from "./PipRow.tsx";
 export { Button, type ButtonProps, type ButtonVariant } from "./Button.tsx";
@@ -63,7 +63,7 @@ export { POPOVER_GAP, VIEWPORT_EDGE, type PopoverPlacement } from './useAnchored
 export { PARTICIPANT_GRASS, PARTICIPANT_GRASS_BEND } from './participantGrass.ts';
 export { ListboxElement, ListboxForm } from './listboxSelectElements.ts';
 export { SettingElement, METER_VALUE_ATTRIBUTE, METER_FIXED_ATTRIBUTE } from './settingElements.ts';
-export { Boolean, BooleanForm } from '../synth/components/synth/Boolean.tsx';
+export { Boolean, BooleanForm, type BooleanGlyphs } from '../synth/components/synth/Boolean.tsx';
 export { Slider } from '../synth/components/synth/Slider.tsx';
 export { SliderForm } from './inputs/sliderForm.ts';
 export type {SliderProgressProps, SliderProgressSegment} from './inputs/SliderProgress.tsx';

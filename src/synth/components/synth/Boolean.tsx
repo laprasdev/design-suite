@@ -1,6 +1,7 @@
 import {SwitchBoolean} from '../../../react/inputs/SwitchBoolean.tsx';
-import {BooleanForm, type SwitchBooleanProps} from './booleanForm.ts';
-export {BooleanForm, type SwitchBooleanProps};
+import {IconBoolean} from '../../../react/inputs/IconBoolean.tsx';
+import {BooleanForm, type BooleanGlyphs, type IconBooleanProps, type SwitchBooleanProps} from './booleanForm.ts';
+export {BooleanForm, type BooleanGlyphs, type IconBooleanProps, type SwitchBooleanProps};
 import React, { useEffect, useState, useCallback } from 'react';
 import { useStyle } from '../../StyleContext.tsx';
 import { getColorScheme, getBooleanStyles, getInsetShadow, type ColorType } from '../../../color.ts';
@@ -58,8 +59,9 @@ function SettingBoolean({value,onChange,label,detail,iconOnly=false,title,disabl
     <button type="button" {...props} {...press} role={iconOnly?'checkbox':undefined} aria-label={label}
       aria-checked={iconOnly?value:undefined} aria-pressed={iconOnly?undefined:value}>{content}</button>;
 }
-export function Boolean(props: BooleanProps|SettingBooleanProps|SwitchBooleanProps) {
+export function Boolean(props: BooleanProps|SettingBooleanProps|SwitchBooleanProps|IconBooleanProps) {
   if(props.form===BooleanForm.SWITCH) return <SwitchBoolean {...props}/>;
+  if(props.form===BooleanForm.ICON) return <IconBoolean {...props}/>;
   if(props.form===BooleanForm.SETTING) return <SettingBoolean {...props}/>;
   return <CellBoolean {...props}/>;
 }

@@ -14,6 +14,10 @@ const FORMS = [
     member: 'READING'},
   {component: 'ListboxSelect', form: 'ListboxForm', prop: 'form', from: 'src/react/index.ts',
     props: 'label="Go" options={[]} onAction={() => undefined} children=""', member: 'MENU'},
+  {component: 'Cycle', form: 'CycleForm', prop: 'variant', from: 'src/react/index.ts',
+    props: 'options={[]} value="a" onChange={() => undefined}', member: 'TEXT'},
+  {component: 'Boolean', form: 'BooleanForm', prop: 'form', from: 'src/react/index.ts',
+    props: 'value onChange={() => undefined} label="Play" glyphs={{on: "", off: ""}}', member: 'ICON'},
 ] as const;
 /** A word no form has. */
 const OUTSIDE = "'wide'";

@@ -5,6 +5,11 @@
 // =====================================================
 import React, { type ReactNode } from "react";
 
+/** Cycle's opt-in forms. Text shows only the current value, as an action label without the cell, as a module header's
+ *  picker. */
+export const CycleForm = Object.freeze({TEXT: "text"} as const);
+export type CycleFormValue = typeof CycleForm[keyof typeof CycleForm];
+
 export interface CycleOption<V> {
   value: V;
   label: ReactNode;
@@ -20,7 +25,7 @@ export interface CycleProps<V> {
   glyph?: ReactNode;
   className?: string;
   disabled?: boolean;
-  variant?: "text";
+  variant?: CycleFormValue;
   ariaLabel?: string;
 }
 import { Label, Glyph } from "./accents.tsx";
@@ -50,7 +55,7 @@ export function Cycle<V>({options, value, onChange, label, glyph, className = ""
     >
       {glyph && <Glyph size={12}>{glyph}</Glyph>}
       {label && <Label kind="name">{label}</Label>}
-      <Label kind="value" className="bd-cycle-val">
+      <Label kind={variant === CycleForm.TEXT ? "action" : "value"} className="bd-cycle-val">
         {cur?.label}
       </Label>
     </button>
