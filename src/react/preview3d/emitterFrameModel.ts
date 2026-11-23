@@ -34,13 +34,15 @@ function isTint(value: unknown): value is ModelEmitterTint {
   }
   return true;
 }
-/** The routed values the stage draws, each with its check and what it must be. A rate of 0 emits nothing, which a
- * profile is refused for too. */
+/** The routed values the stage draws, each with its check of a change and what it must be. A rate of 0 emits nothing,
+ * which a profile is refused for too. Each check reads its own field by name: a number read by a computed key and
+ * passed on is boxed, an allocation on every frame that changes an emitter. */
 export const MODEL_EMITTER_ROUTED = Object.freeze({
-  rate: Object.freeze({drawn: (value: unknown) => isFiniteNumber(value) && value > 0,
+  rate: Object.freeze({drawn: ({rate}: Record<string, unknown>) => isFiniteNumber(rate) && rate > 0,
     is: 'a finite number of particles a second above 0'}),
-  tint: Object.freeze({drawn: isTint, is: 'three finite channels, each at least 0'}),
-  radius: Object.freeze({drawn: (value: unknown) => isFiniteNumber(value) && value >= 0,
+  tint: Object.freeze({drawn: ({tint}: Record<string, unknown>) => isTint(tint),
+    is: 'three finite channels, each at least 0'}),
+  radius: Object.freeze({drawn: ({radius}: Record<string, unknown>) => isFiniteNumber(radius) && radius >= 0,
     is: 'a finite number of metres of at least 0'}),
 });
 // Listed once: the check runs on every frame that changes an emitter.
@@ -66,7 +68,7 @@ function undrawnRouted(record: Record<string, unknown>) {
   for (let index = 0; index < ROUTED.length; index++) {
     const routed = ROUTED[index];
     if (modelStates(record, routed.field) &&
-      (record.change !== DRAWN_CHANGE.started || !routed.drawn(record[routed.field]))) return routed;
+      (record.change !== DRAWN_CHANGE.started || !routed.drawn(record))) return routed;
   }
   return undefined;
 }
