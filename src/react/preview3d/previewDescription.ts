@@ -1,5 +1,3 @@
-import type {ActionBarNotice} from '../ActionBar.tsx';
-import {NoticeTone} from '../actionBarElements.ts';
 import {MODEL_PREVIEW_TEXT, MODEL_REST_POSE} from './model.ts';
 import type {ModelStageController, ModelStageDisplay, ModelStageSnapshot} from './model.ts';
 import {MODEL_ACTOR_ANIMATION, modelStageFocus, type ModelStageActorAnimation} from './actorModel.ts';
@@ -180,12 +178,4 @@ export const modelPreviewFailure = (request: ModelStageFailure | null, frame: Mo
 export function modelPreviewReady(loaded: boolean, external: boolean, poseStatus: ModelFrameStatus,
   loading: boolean) {
   return loaded && (!external || poseStatus === 'ready') && !loading;
-}
-
-/** The one place a failure becomes visible: what failed in a few words, its own message, and the recovery. */
-export function modelPreviewNotice(failure: ModelStageFailure | null, retry: () => void): ActionBarNotice | null {
-  if (!failure) return null;
-  const stopped = failure.kind === MODEL_STAGE_FAILURE.unusable;
-  return {message: stopped ? MODEL_PREVIEW_TEXT.stopped : MODEL_PREVIEW_TEXT.refused, tone: NoticeTone.ERROR,
-    detail: failure.message, ...(stopped && {action: {label: MODEL_PREVIEW_TEXT.retry, onClick: retry}})};
 }

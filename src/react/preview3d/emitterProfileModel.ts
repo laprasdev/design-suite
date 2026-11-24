@@ -1,14 +1,11 @@
-import {modelEntries, modelFlag, modelNumber, modelOption, modelRecord} from './recordModel.ts';
-import {modelStatedRecord} from './statedValueModel.ts';
-import {ModelStageRefusal} from './refusal.ts';
+import {modelFlag, modelNumber, modelOption, modelRecord} from './recordModel.ts';
+import {ModelStageRefusal, ModelStageUndrawn} from './refusal.ts';
 import {MODEL_ASSET_REFERENCE_FIELDS, MODEL_ATTRACTION, MODEL_CURVE_MODE, MODEL_EMITTER_BUDGET, MODEL_EMITTER_FORM,
   MODEL_EMITTER_ORIGIN, MODEL_UNITY_BUILTIN_MESH,
   MODEL_EMITTER_REFUSAL as refusal, MODEL_GRADIENT_MODE, MODEL_RENDER_MODE, MODEL_SHADOW_CASTING, MODEL_SHAPE_TYPE,
   MODEL_SIMULATION_SPACE,
   type ModelEmitterColors, type ModelEmitterMesh, type ModelEmitterParticle, type ModelEmitterProfile,
-  type ModelEmitterProfiles, type ModelEmitterRange,
-  type ModelEmitterRecord, type ModelEmitterRecords,
-  type ModelEmitterRgba, type ModelEmitterValue} from './emitterModel.ts';
+  type ModelEmitterRange, type ModelEmitterRgba, type ModelEmitterValue} from './emitterModel.ts';
 import {MODEL_PARTICLE_FIELDS as FIELDS} from './particleSubmoduleFields.ts';
 
 // Reads the pack's whole `ParticleSubmodule` record as ISM's C# serializes it, checked with no renderer. Each struct
@@ -44,7 +41,7 @@ const WHITE: ModelEmitterRgba = Object.freeze([1, 1, 1, 1]);
 const UNTINTED: ModelEmitterColors = Object.freeze({min: WHITE, max: WHITE});
 
 function drawn<V extends ModelEmitterValue>(value: V, options: readonly ModelEmitterValue[], where: string): V {
-  if (!options.includes(value)) throw new ModelStageRefusal(refusal.undrawn(where, value, options));
+  if (!options.includes(value)) throw new ModelStageUndrawn(where, refusal.undrawn(where, value, options));
   return value;
 }
 function drawnOption<O extends number>(value: unknown, options: Readonly<Record<string, O>>,
@@ -126,7 +123,9 @@ const radius = (value: unknown, where: string) => module(value, FIELDS.shape, wh
   drawnVector(shape.position, DRAWN_VALUE.centred, `${where}.position`);
   drawnVector(shape.scale, DRAWN_VALUE.unstretched, `${where}.scale`);
   drawnFlag(shape.alignToDirection, DRAWN_VALUE.off, `${where}.alignToDirection`);
-  if (shape.texture !== null) throw new ModelStageRefusal(refusal.undrawnAsset(`${where}.texture`));
+  if (shape.texture !== null) {
+    throw new ModelStageUndrawn(`${where}.texture`, refusal.undrawnAsset(`${where}.texture`));
+  }
   return unbounded(shape.radius, `${where}.radius`);
 }, 0);
 
@@ -136,7 +135,8 @@ function builtinMesh(value: unknown, where: string): ModelEmitterMesh {
   const {meshes} = MODEL_UNITY_BUILTIN_MESH;
   const named = guid === MODEL_UNITY_BUILTIN_MESH.guid ? meshes.find(builtin => builtin.fileID === fileID) : undefined;
   if (!named) {
-    throw new ModelStageRefusal(refusal.undrawnMesh(where, String(guid), String(fileID), meshes.map(({mesh}) => mesh)));
+    throw new ModelStageUndrawn(where,
+      refusal.undrawnMesh(where, String(guid), String(fileID), meshes.map(({mesh}) => mesh)));
   }
   return named;
 }
@@ -175,17 +175,3 @@ export function modelEmitterProfile(value: unknown, where: string): ModelEmitter
       tint => gradient(tint.color, `${where}.colorOverLifetime.color`), UNTINTED),
   });
 }
-const byId = <T>(value: unknown, where: string, read: (record: unknown, where: string) => T) =>
-  Object.freeze(Object.fromEntries(modelEntries(value, where, 'emitter profiles by id')
-    .map(([id, record]) => [id, read(record, `${where}.${id}`)])));
-// The description's form: each record checked whole by drawing its profile, then kept as stated, so a description
-// read again reads as itself.
-function record(value: unknown, where: string): ModelEmitterRecord {
-  modelEmitterProfile(value, where);
-  return modelStatedRecord(value, where);
-}
-/** An actor's records, by the id the engine's frame names them by, as the description holds them. */
-export const modelEmitterRecords = (value: unknown, where: string): ModelEmitterRecords => byId(value, where, record);
-/** What the stage draws of an actor's records, by the same ids. */
-export const modelEmitterProfiles = (value: ModelEmitterRecords, where: string): ModelEmitterProfiles =>
-  byId(value, where, modelEmitterProfile);

@@ -86,8 +86,21 @@ export interface ModelEmitterProfile {
   readonly tint: ModelEmitterColors;
 }
 export type ModelEmitterProfiles = Readonly<Record<string, ModelEmitterProfile>>;
+/** A record of actor `actor` the stage does not draw yet, by its profile id: the `setting` (its path in the record)
+ * holding the first value the stage does not draw, and the refusal its reader made. */
+export interface ModelEmitterSkip {
+  readonly actor: string;
+  readonly profile: string;
+  readonly setting: string;
+  readonly refusal: string;
+}
+/** What the stage draws of an actor's records, and each record it skips: a skipped profile never refuses the stage. */
+export interface ModelEmitterDrawing {
+  readonly drawn: ModelEmitterProfiles;
+  readonly skipped: readonly ModelEmitterSkip[];
+}
 /** A pack's `ParticleSubmodule` record, checked whole and kept as stated: the description's form, which reads back as
- * itself. The stage draws its profile from it (`modelEmitterProfiles`). */
+ * itself. The stage draws its profile from it (`modelEmitterDrawing`). */
 export type ModelEmitterRecord = {readonly [field: string]: ModelStatedValue};
 export type ModelEmitterRecords = Readonly<Record<string, ModelEmitterRecord>>;
 export const MODEL_NO_EMITTERS: ModelEmitterRecords = Object.freeze({});

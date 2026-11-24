@@ -17,7 +17,7 @@ import {MODEL_STAGE_UNCHANGED, type ModelStageCommit} from './commit.ts';
 import {ModelStageRefusal} from './refusal.ts';
 import {extendModelMaterials} from './shading.ts';
 import {createModelEmitters} from './emitters.ts';
-import {modelEmitterProfiles} from './emitterProfileModel.ts';
+import {modelEmitterDrawing} from './emitterRecordModel.ts';
 import {MODEL_NO_EMITTER_CHANGES} from './emitterFrameModel.ts';
 import {MODEL_NO_EMITTERS} from './emitterModel.ts';
 import type {ModelStageProgramValues} from './sharedValues.ts';
@@ -67,9 +67,8 @@ export function createModelActor(drawn: ModelDrawn, declaration: ModelStageActor
     acquired.push(context.lighting.attach([rig.root, ...points.map(({marker}) => marker)]));
     const playback = createModelPlayback(drawn.scene, drawn.clips, context.policy.clock, id);
     acquired.push(() => playback.dispose());
-    const profiles = modelEmitterProfiles(modelActorDrawsFile(declaration) ? declaration.emitters : MODEL_NO_EMITTERS,
-      `Actor ${id}.emitters`);
-    const emitters = createModelEmitters(id, profiles, placement, context);
+    const drawing = modelEmitterDrawing(modelActorDrawsFile(declaration) ? declaration.emitters : MODEL_NO_EMITTERS);
+    const emitters = createModelEmitters(id, drawing, placement, context);
     acquired.push(() => emitters.dispose());
     let current = declaration, driver: ModelStageDriver = MODEL_STAGE_DRIVER.host;
     // Built at its file's own size and origin; the description's size and origin apply with its other stage-wide parts.
@@ -142,7 +141,7 @@ export function createModelActor(drawn: ModelDrawn, declaration: ModelStageActor
       snapshot(): ModelStageActorSnapshot {
         const {animation, samples} = playback.review();
         const modelId = modelActorDrawsFile(declaration) ? declaration.asset.id : null;
-        return Object.freeze({id, modelId, driver, animation, samples,
+        return Object.freeze({id, modelId, driver, animation, samples, skipped: drawing.skipped,
           pose: Object.freeze({position: placement.position.toArray(),
             rotationQuaternion: placement.quaternion.toArray(), scale: placement.scale.toArray()})});
       },

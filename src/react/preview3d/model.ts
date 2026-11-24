@@ -90,6 +90,7 @@ export const MODEL_PREVIEW_TEXT = Object.freeze({
   loading: 'Loading model…', retry: 'Retry',
   unavailable: 'No model is available.', orbit: 'Drag to orbit. Scroll or pinch to zoom.',
   runtimeWaiting: 'Waiting for a runtime pose…', refused: 'Not applied', stopped: 'Preview stopped',
+  skipped: 'Effects skipped', effects: (count: number) => `${count} ${count === 1 ? 'effect' : 'effects'}`,
   runtimeReady: (name: string) => `${name} runtime pose ready`,
   ready: (name: string) => `${name} ready`, canvas: (name: string) => `${name} animation viewer`,
 });

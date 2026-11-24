@@ -30,10 +30,10 @@ const ALLOCATING_NOTHING = Object.freeze(['commitFrame', 'changesEmitters', 'fra
   'applyModelStageCommits']);
 const REPORTED = Object.freeze(['addLoad', 'commit', 'prepare', FRAME_APPLY]);
 // What the scene's emitters add to a frame's draws: one instanced draw of a particle per instance for the mesh
-// profile, one points draw for each point profile.
+// profile, one points draw for each point profile, and nothing for the skipped one.
 const SPHERES = modelEmitterProfile(EMITTER_SCENE_PROFILES.spheres, 'Emitter scene spheres');
 const POINT_PROFILES = Object.values(EMITTER_SCENE_PROFILES)
-  .filter(profile => profile !== EMITTER_SCENE_PROFILES.spheres);
+  .filter(profile => profile !== EMITTER_SCENE_PROFILES.spheres && profile !== EMITTER_SCENE_PROFILES.skipped);
 // The sparse run's rate (EMITTER_SCENE_ROUTED) changes under this share of the pixels the profile's own rate does.
 const SPARSE_SHARE = 0.25;
 mkdirSync(CAPTURES, {recursive: true});

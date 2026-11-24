@@ -1,16 +1,20 @@
 import {modelRendererId} from '../src/react/preview3d/surfaceModel.ts';
 
-// A glTF file whose nodes 0 and 1 draw their meshes instanced (EXT_mesh_gpu_instancing): node 0 a mesh of two
+// A glTF file whose nodes 0, 1 and 3 draw their meshes instanced (EXT_mesh_gpu_instancing): node 0 a mesh of two
 // primitives, which three's loader makes a group of instanced meshes, node 1 a mesh of one, which it makes the node
-// itself; node 2 draws node 1's mesh plain. Each primitive has its own triangle and material, so a renderer read as the
-// wrong primitive draws the wrong material. It is a binary glTF, its buffer in its own chunk, so it loads with no file.
+// itself; node 2 draws node 1's mesh plain; node 3 draws node 0's mesh beside a camera, so the loader makes the node a
+// group holding the camera and the mesh's group of instanced meshes. Each primitive has its own triangle and material,
+// so a renderer read as the wrong primitive draws the wrong material. It is a binary glTF, its buffer in its own chunk,
+// so it loads with no file.
 const EXTENSION = 'EXT_mesh_gpu_instancing';
 const FLOAT = 5126, VEC3 = 3, FLOATS_PER_VEC3 = 3, BYTES_PER_FLOAT = 4;
 const TRIANGLES = Object.freeze([[0, 0, 0, 1, 0, 0, 0, 1, 0], [0, 0, 0, 0, 1, 0, 0, 0, 1]]);
 const TRANSLATIONS = Object.freeze([0, 0, 0, 2, 0, 0]);
 // Each node: its mesh and whether it is instanced; each mesh: the triangle and material of each primitive.
 const MESHES = Object.freeze([[{triangle: 0, material: 0}, {triangle: 1, material: 1}], [{triangle: 1, material: 2}]]);
-const NODES = Object.freeze([{mesh: 0, instanced: true}, {mesh: 1, instanced: true}, {mesh: 1, instanced: false}]);
+const NODES = Object.freeze([{mesh: 0, instanced: true, camera: false}, {mesh: 1, instanced: true, camera: false},
+  {mesh: 1, instanced: false, camera: false}, {mesh: 0, instanced: true, camera: true}]);
+const CAMERA = Object.freeze({type: 'perspective', perspective: {yfov: 1, znear: 0.1}});
 
 /** Every renderer the file draws, in the order the loader makes them, with the primitive and material each draws. */
 export const INSTANCED_FILE = Object.freeze({renderers: Object.freeze(NODES.flatMap(({mesh, instanced}, node) =>
@@ -60,8 +64,9 @@ function instancedGltf() {
   const laid = accessors(runs);
   const json = {asset: {version: '2.0'}, extensionsUsed: [EXTENSION], scene: 0,
     scenes: [{nodes: NODES.map((_, at) => at)}],
-    nodes: NODES.map(({mesh, instanced}) => ({mesh,
+    nodes: NODES.map(({mesh, instanced, camera}) => ({mesh, ...(camera && {camera: 0}),
       ...(instanced && {extensions: {[EXTENSION]: {attributes: {TRANSLATION: translation}}}})})),
+    cameras: [CAMERA],
     meshes: MESHES.map(primitives => ({primitives: primitives.map(({triangle, material}) =>
       ({attributes: {POSITION: triangle}, material}))})),
     materials: MESHES.flat().map(() => ({pbrMetallicRoughness: {}})),

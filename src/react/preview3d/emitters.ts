@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import {MODEL_EMITTER_CHANGE, MODEL_NO_EMITTER_CHANGES, type ModelEmitterChange, type ModelEmitterRouted}
   from './emitterFrameModel.ts';
 import {MODEL_EMITTER_BUDGET, MODEL_EMITTER_ORIGIN, modelDeclaredEmitter, modelEmitterCoverage,
-  type ModelEmitterForm, type ModelEmitterProfile, type ModelEmitterProfiles} from './emitterModel.ts';
+  type ModelEmitterDrawing, type ModelEmitterForm, type ModelEmitterProfile} from './emitterModel.ts';
 import {MODEL_EMITTER_FORMS as FORMS, MODEL_EMITTER_PLACEHOLDER, modelParticleGeometry} from './emitterForms.ts';
 import type {ModelStageCommit} from './commit.ts';
 import {extendModelMaterial, type ModelShaderChange, type ModelShaderReplace} from './shading.ts';
@@ -125,33 +125,35 @@ export interface ModelEmittersContext {
   readonly changes: (material: THREE.Material) => readonly ModelShaderChange[];
 }
 
-/** Actor `entity`'s emitters, at `origin` (its placement). Neither a load nor a change allocates: each writes into
- * what the emitters made once. */
-export function createModelEmitters(entity: string, profiles: ModelEmitterProfiles, origin: THREE.Object3D,
-  context: ModelEmittersContext) {
-  const emitters: Readonly<Record<string, ModelEmitter>> = Object.freeze(Object.fromEntries(Object.entries(profiles)
+/** Actor `entity`'s emitters, at `origin` (its placement): one per drawn profile. A change naming a skipped profile
+ * changes nothing. Neither a load nor a change allocates: each writes into what the emitters made once. */
+export function createModelEmitters(entity: string, {drawn, skipped}: ModelEmitterDrawing,
+  origin: THREE.Object3D, context: ModelEmittersContext) {
+  const emitters: Readonly<Record<string, ModelEmitter>> = Object.freeze(Object.fromEntries(Object.entries(drawn)
     .map(([id, profile], index) => [id, createEmitter(profile, index, context.shared, context.changes)])));
   const all = Object.values(emitters);
   const following = all.filter(({profile}) => profile.origin === MODEL_EMITTER_ORIGIN.character);
   for (const {particles} of all) context.scene.add(particles);
-  const emitter = (id: string) => modelDeclaredEmitter(emitters, entity, id);
+  const skips: ReadonlySet<string> = new Set(skipped.map(({profile}) => profile));
+  const emitter = (id: string) => skips.has(id) ? null : modelDeclaredEmitter(emitters, entity, id);
   // Whether each emitter runs once a load's changes apply, by its index.
   const loaded = new Uint8Array(all.length);
   // The prepared changes: the frame's own records, the emitter each names, and the frame's time, held in a typed
   // array as the stage holds its times, since a double stored in an object's field is boxed.
-  const pending = {changes: MODEL_NO_EMITTER_CHANGES, items: new Array<ModelEmitter>(), time: new Float64Array(1)};
+  const pending = {changes: MODEL_NO_EMITTER_CHANGES, items: new Array<ModelEmitter | null>(),
+    time: new Float64Array(1)};
   const commit: ModelStageCommit = () => {
     const {changes, items} = pending, time = pending.time[0];
     for (let index = 0; index < changes.length; index++) {
       const item = items[index], change = changes[index];
-      if (change.change === MODEL_EMITTER_CHANGE.started) {
+      if (item !== null && change.change === MODEL_EMITTER_CHANGE.started) {
         start(item, change);
         item.times.set(time, time, RUNNING.yes);
         // The origin's world matrix is otherwise refreshed only when the stage next draws.
         origin.updateWorldMatrix(true, false);
         item.particles.matrixWorld.copy(origin.matrixWorld);
         item.particles.visible = true;
-      } else if (isRunning(item)) {
+      } else if (item !== null && isRunning(item)) {
         item.times.setComponent(TIMES.stopped, time).setComponent(TIMES.running, RUNNING.no);
       }
     }
@@ -161,8 +163,9 @@ export function createModelEmitters(entity: string, profiles: ModelEmitterProfil
     addLoad(changes: readonly ModelEmitterChange[], into: Float64Array) {
       for (let index = 0; index < all.length; index++) loaded[index] = isRunning(all[index]) ? RUNNING.yes : RUNNING.no;
       for (let index = 0; index < changes.length; index++) {
-        loaded[emitter(changes[index].profile).index] =
-          changes[index].change === MODEL_EMITTER_CHANGE.started ? RUNNING.yes : RUNNING.no;
+        const item = emitter(changes[index].profile);
+        if (item === null) continue;
+        loaded[item.index] = changes[index].change === MODEL_EMITTER_CHANGE.started ? RUNNING.yes : RUNNING.no;
       }
       let running = 0, coverage = 0;
       for (let index = 0; index < all.length; index++) {

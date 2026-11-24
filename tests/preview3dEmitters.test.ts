@@ -3,8 +3,8 @@ import {describe, it} from 'node:test';
 import * as THREE from 'three';
 import {MODEL_CURVE_MODE, MODEL_EMITTER_BUDGET, MODEL_EMITTER_FORM, MODEL_EMITTER_ORIGIN, MODEL_EMITTER_REFUSAL,
   MODEL_RENDER_MODE, MODEL_SHAPE_TYPE, MODEL_UNITY_BUILTIN_MESH} from '../src/react/preview3d/emitterModel.ts';
-import {modelEmitterProfile, modelEmitterProfiles, modelEmitterRecords}
-  from '../src/react/preview3d/emitterProfileModel.ts';
+import {modelEmitterProfile} from '../src/react/preview3d/emitterProfileModel.ts';
+import {modelEmitterDrawing, modelEmitterRecords} from '../src/react/preview3d/emitterRecordModel.ts';
 import {modelStageDescription} from '../src/react/preview3d/descriptionModel.ts';
 import {modelActorIdentity} from '../src/react/preview3d/actorModel.ts';
 import {MODEL_EMITTER_CHANGE, modelEmitterChanges} from '../src/react/preview3d/emitterFrameModel.ts';
@@ -34,12 +34,13 @@ describe('an emitter profile', () => {
     });
   }
   it('reads a description\'s records back as themselves, and draws the profile they check', () => {
-    const read = modelEmitterRecords({[EMITTER_ID]: emitterProfile()}, WHERE);
-    assert.deepEqual(modelEmitterRecords(read, WHERE), read);
+    const read = modelEmitterRecords('a', {[EMITTER_ID]: emitterProfile()});
+    assert.deepEqual(modelEmitterRecords('a', read), read);
     assert.deepEqual(read[EMITTER_ID], emitterProfile());
     assert.ok(Object.isFrozen(read[EMITTER_ID].mainSettings));
     assert.ok(Object.isFrozen(read[EMITTER_ID].submodules));
-    assert.deepEqual(modelEmitterProfiles(read, WHERE)[EMITTER_ID], modelEmitterProfile(emitterProfile(), WHERE));
+    assert.deepEqual(modelEmitterDrawing(read).drawn[EMITTER_ID],
+      modelEmitterProfile(emitterProfile(), 'Actor a.emitters.' + EMITTER_ID));
     const once = modelStageDescription(describing({actors: {focus: 'a',
       actors: [{...declaration('a'), emitters: {[EMITTER_ID]: emitterProfile()}}]}}));
     assert.deepEqual(modelStageDescription(once), once);
@@ -73,7 +74,7 @@ describe('an emitter profile', () => {
     const profiles = {[EMITTER_ID]: emitterProfile(), spheres: {...emitterProfile(), renderMode: MODEL_RENDER_MODE.mesh,
       mesh: {guid: MODEL_UNITY_BUILTIN_MESH.guid, fileID: sphere.fileID}}};
     const {context, scene} = actorContext();
-    makeActor('a', [], {emitters: modelEmitterRecords(profiles, 'Actor a.emitters')}, context);
+    makeActor('a', [], {emitters: modelEmitterRecords('a', profiles)}, context);
     const {maxParticles} = modelEmitterProfile(profiles.spheres, WHERE);
     const meshes = scene.children.filter(child => child instanceof THREE.Mesh);
     assert.equal(scene.children.filter(child => child instanceof THREE.Points).length, 1);

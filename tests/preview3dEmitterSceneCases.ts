@@ -3,15 +3,18 @@ import {MODEL_EMITTER_ORIGIN, MODEL_RENDER_MODE, MODEL_UNITY_BUILTIN_MESH}
 import type {ModelEmitterRouted} from '../src/react/preview3d/emitterFrameModel.ts';
 import {emitterProfile} from './preview3dEmitterCases.ts';
 
-// The emitter browser scene: one panel actor with three profiles, a point profile following it and one left where it
-// started, and a mesh profile of Unity's built-in sphere following it.
+// The emitter browser scene: one panel actor with four profiles, a point profile following it and one left where it
+// started, a mesh profile of Unity's built-in sphere following it, and one naming a mesh the stage does not draw yet,
+// which it skips: its frames' starts and stops run the skipped route.
 const [SPHERE] = MODEL_UNITY_BUILTIN_MESH.meshes;
 export const EMITTER_SCENE_ENTRY = 'tests/preview3dEmitterScene.tsx';
 export const EMITTER_HOST_ID = 'emitter-host';
 export const EMITTER_SCENE_PROFILES = Object.freeze({follows: emitterProfile(),
   stays: {...emitterProfile(), emitterOrigin: MODEL_EMITTER_ORIGIN.environment},
   spheres: {...emitterProfile(), renderMode: MODEL_RENDER_MODE.mesh,
-    mesh: {guid: MODEL_UNITY_BUILTIN_MESH.guid, fileID: SPHERE.fileID}}});
+    mesh: {guid: MODEL_UNITY_BUILTIN_MESH.guid, fileID: SPHERE.fileID}},
+  skipped: {...emitterProfile(), renderMode: MODEL_RENDER_MODE.mesh,
+    mesh: {guid: MODEL_UNITY_BUILTIN_MESH.guid, fileID: `${SPHERE.fileID}0`}}});
 // Seconds between the frames that run the emitters, and how many: long enough for the oldest particles to die.
 export const EMITTER_SCENE_RUN = Object.freeze({step: 1 / 30, frames: 60, travel: 0.6});
 /** The routed values the scene's runs start every emitter with: none (each profile's own), and each value moved far
