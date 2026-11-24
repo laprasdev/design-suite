@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 
-// The bounds three culls a renderer by, grown by how far its kind may move its vertices. three r180 culls a mesh by a
+// The bounds three culls a renderer by, grown by how far its kind may move its vertices. three r182 culls a mesh by a
 // sphere (Frustum.intersectsObject): the mesh's own `boundingSphere` where it has that field (a skinned, instanced or
 // batched mesh), else its geometry's, carried into world space by the mesh's world matrix, whose largest scale on an
 // axis multiplies the radius. A kind moves a vertex at most its reach, in metres of world space. So while a moving

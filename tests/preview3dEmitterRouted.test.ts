@@ -1,12 +1,11 @@
 import assert from 'node:assert/strict';
 import {describe, it} from 'node:test';
-import * as THREE from 'three';
+import {ConstantColor, ConstantValue, SphereEmitter, Vector4} from 'three.quarks';
 import {MODEL_EMITTER_REFUSAL} from '../src/react/preview3d/emitterModel.ts';
 import {modelEmitterProfile} from '../src/react/preview3d/emitterProfileModel.ts';
 import {MODEL_EMITTER_CHANGE, MODEL_EMITTER_ROUTED, modelEmitterChanges}
   from '../src/react/preview3d/emitterFrameModel.ts';
 import {applyFrame, frame, refused} from './preview3dActorFixture.ts';
-import {compiled, program} from './preview3dCompiledProgram.ts';
 import {changing, starting, withEmitters} from './preview3dEmitterActors.ts';
 import {EMITTER_ID, EMITTER_ROUTED, emitterChange, emitterProfile} from './preview3dEmitterCases.ts';
 import {EMITTER_WHERE as WHERE} from './preview3dEmitterRefusals.ts';
@@ -24,31 +23,35 @@ describe('an emitter start\'s routed values', () => {
     refused(() => modelEmitterChanges([{...emitterChange(MODEL_EMITTER_CHANGE.stopped), rate: 3}], 'a'),
       MODEL_EMITTER_REFUSAL.routedOff('a', EMITTER_ID, 'rate', MODEL_EMITTER_CHANGE.stopped));
   });
-  it('bounds a start by its routed radius, and by the profile\'s own when a later start leaves it out', () => {
-    const {actor, points: [points]} = withEmitters('a', {[EMITTER_ID]: emitterProfile()});
-    const profile = modelEmitterProfile(emitterProfile(), WHERE), reach = () => points.geometry.boundingSphere?.radius;
-    applyFrame([actor], frame(0, changing(...starting(EMITTER_ID))));
-    const own = reach();
-    applyFrame([actor], frame(1, changing({...emitterChange(MODEL_EMITTER_CHANGE.started), ...EMITTER_ROUTED})));
-    assert.equal(reach(), (own ?? Number.NaN) + EMITTER_ROUTED.radius - profile.radius);
-    applyFrame([actor], frame(2, changing(...starting(EMITTER_ID))));
-    assert.equal(reach(), own);
+  it('emits at a start\'s routed rate and radius, and at the profile\'s own when a later start leaves them out', () => {
+    const {actor, systems: [system]} = withEmitters('a', {[EMITTER_ID]: emitterProfile()});
+    const profile = modelEmitterProfile(emitterProfile(), WHERE);
+    const {emissionOverTime: rate, emitterShape: shape} = system;
+    assert.ok(rate instanceof ConstantValue && shape instanceof SphereEmitter, 'not a constant rate from a sphere');
+    applyFrame([actor], frame(0, changing({...emitterChange(MODEL_EMITTER_CHANGE.started), ...EMITTER_ROUTED})));
+    assert.deepEqual([rate.value, shape.radius], [EMITTER_ROUTED.rate, EMITTER_ROUTED.radius]);
+    applyFrame([actor], frame(1, changing(...starting(EMITTER_ID))));
+    assert.deepEqual([rate.value, shape.radius], [profile.rate, profile.radius]);
+  });
+  it('refuses by name a routed rate whose particles its cap cannot hold, changing nothing', () => {
+    const {actor, visible} = withEmitters('a', {[EMITTER_ID]: emitterProfile()});
+    const {lifetime, maxParticles} = modelEmitterProfile(emitterProfile(), WHERE);
+    const over = maxParticles / lifetime.max * 2;
+    refused(() => applyFrame([actor], frame(0, changing({...emitterChange(MODEL_EMITTER_CHANGE.started), rate: over}))),
+      MODEL_EMITTER_REFUSAL.overCap(`Frame entity a: emitter ${EMITTER_ID}`, over, lifetime.max, maxParticles));
+    assert.equal(visible(), 0);
   });
   it('multiplies a start\'s routed tint into the profile\'s colours, and draws the profile\'s own without one',
   () => {
-    const {actor, points: [points]} = withEmitters('a', {[EMITTER_ID]: emitterProfile()});
-    const {uniforms} = compiled(points.material, program('points')), held = [uniforms.emitterColorMin.value,
-      uniforms.emitterColorMax.value];
+    const {actor, systems: [{startColor}]} = withEmitters('a', {[EMITTER_ID]: emitterProfile()});
+    assert.ok(startColor instanceof ConstantColor, 'the start colour is not a constant');
     const profile = modelEmitterProfile(emitterProfile(), WHERE), [r, g, b] = EMITTER_ROUTED.tint;
-    const colors = (tint: THREE.Vector4) => [profile.tint.min, profile.tint.max].map(stop =>
-      new THREE.Vector4(...profile.color).multiply(new THREE.Vector4(...stop)).multiply(tint).toArray());
-    const drawn = () => held.map(value => {
-      assert.ok(value instanceof THREE.Vector4, 'an emitter colour is not a four-channel vector');
-      return value.toArray();
-    });
+    const colors = (tint: Vector4) => [new Vector4(...profile.color).multiply(new Vector4(...profile.tint))
+      .multiply(tint)].map(({x, y, z, w}) => [x, y, z, w]);
+    const drawn = () => [startColor.color].map(({x, y, z, w}) => [x, y, z, w]);
     applyFrame([actor], frame(0, changing({...emitterChange(MODEL_EMITTER_CHANGE.started), ...EMITTER_ROUTED})));
-    assert.deepEqual(drawn(), colors(new THREE.Vector4(r, g, b, 1)));
+    assert.deepEqual(drawn(), colors(new Vector4(r, g, b, 1)));
     applyFrame([actor], frame(1, changing(...starting(EMITTER_ID))));
-    assert.deepEqual(drawn(), colors(new THREE.Vector4(1, 1, 1, 1)));
+    assert.deepEqual(drawn(), colors(new Vector4(1, 1, 1, 1)));
   });
 });

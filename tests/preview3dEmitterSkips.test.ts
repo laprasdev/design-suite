@@ -9,7 +9,7 @@ import {MODEL_PREVIEW_TEXT} from '../src/react/preview3d/model.ts';
 import {MODEL_STAGE_FAILURE} from '../src/react/preview3d/refusal.ts';
 import {NoticeTone} from '../src/react/actionBarElements.ts';
 import {applyFrame, declaration, describing, frame, refused} from './preview3dActorFixture.ts';
-import {changing, starting, withEmitters} from './preview3dEmitterActors.ts';
+import {changing, starting, stopping, withEmitters} from './preview3dEmitterActors.ts';
 import {EMITTER_ID, emitterProfile} from './preview3dEmitterCases.ts';
 import {EMITTER_REFUSAL_CASES, EMITTER_WHERE, emitterProfileWith, type EmitterRefusalCase}
   from './preview3dEmitterRefusals.ts';
@@ -25,12 +25,16 @@ const caseAt = (...path: string[]): EmitterRefusalCase => {
 };
 const [module] = Object.keys(MODEL_EMITTER_UNDRAWN_MODULES);
 const PROJECT_MESH = {guid: '07b42f3ac947778439b43247de193bd0', fileID: '6149864076678568875'};
-// Each kind of value the stage does not draw yet, by the setting that holds it: a module, an asset and a mesh.
+// Each kind of value the stage does not draw yet, by the setting that holds it.
 const UNDRAWN = Object.freeze([
   {profile: 'module', setting: `${module}.enabled`, record: emitterProfileWith(caseAt(module, 'enabled'))},
   {profile: 'asset', setting: 'shapeSettings.texture', record: emitterProfileWith(caseAt('shapeSettings', 'texture'))},
   {profile: 'mesh', setting: 'mesh', record: {...emitterProfile(), renderMode: MODEL_RENDER_MODE.mesh,
     mesh: PROJECT_MESH}},
+  {profile: 'curve', setting: 'mainSettings.startSpeed.m_Mode',
+    record: emitterProfileWith(caseAt('mainSettings', 'startSpeed'))},
+  {profile: 'gradient', setting: 'colorOverLifetime.color.m_Mode',
+    record: emitterProfileWith(caseAt('colorOverLifetime', 'color'))},
 ]);
 const profiles = {[EMITTER_ID]: emitterProfile(),
   ...Object.fromEntries(UNDRAWN.map(({profile, record}) => [profile, record]))};
@@ -38,7 +42,7 @@ const described = (emitters: unknown) => modelStageDescription(describing({actor
   actors: [{...declaration(ACTOR), emitters}]}}));
 
 describe('an emitter profile the stage does not draw yet', () => {
-  it('is skipped by the setting holding the value, for a module, an asset and a mesh', () => {
+  it('is skipped by the setting holding the undrawn value', () => {
     const description = described(profiles);
     const [actor] = description.actors.actors;
     assert.ok('emitters' in actor);
@@ -52,10 +56,12 @@ describe('an emitter profile the stage does not draw yet', () => {
       PROJECT_MESH.guid, PROJECT_MESH.fileID, ['sphere']));
   });
   it('draws the drawable profile, reports the skips in its snapshot, and a frame starting one is inert', () => {
-    const {actor, points, visible} = withEmitters(ACTOR, profiles);
-    assert.equal(points.length, 1);
+    const {actor, systems, visible} = withEmitters(ACTOR, profiles);
+    assert.equal(systems.length, 1);
     assert.deepEqual(actor.snapshot().skipped.map(({profile}) => profile), UNDRAWN.map(({profile}) => profile));
     applyFrame([actor], frame(0, changing(...starting('module'))));
+    assert.equal(visible(), 0);
+    applyFrame([actor], frame(0.05, changing(...stopping('curve', 'gradient'))));
     assert.equal(visible(), 0);
     applyFrame([actor], frame(0.1, changing(...starting(EMITTER_ID, 'mesh'))));
     assert.equal(visible(), 1);

@@ -15,7 +15,7 @@ import {modelRecordIdentity} from './recordIdentityModel.ts';
 export interface ModelDecodedImage {readonly image: TexImageSource; close(): void}
 /** Turns a file's verified bytes into an image three can upload. */
 export type ModelImageDecoder = (bytes: ArrayBuffer) => Promise<ModelDecodedImage>;
-/** The browser's decoder, as three's GLTFLoader uses it (ImageBitmapLoader's options, r180). */
+/** The browser's decoder, as three's GLTFLoader uses it (ImageBitmapLoader's options, r182). */
 export const decodeModelImage: ModelImageDecoder = async bytes => {
   const image = await createImageBitmap(new Blob([bytes]), {premultiplyAlpha: 'none', colorSpaceConversion: 'none'});
   return {image, close: () => image.close()};
@@ -33,13 +33,16 @@ export const MODEL_TEXTURE_TEXT = Object.freeze({
   unheld: (name: string) => `The texture ${name} was released, but the registry does not hold it: released more ` +
     'often than acquired, or acquired elsewhere.',
 });
-type Decoded = {readonly source: THREE.Source; readonly close: () => void};
+/** What a decoded image is held as: three's source of its pixels, which every texture made from it shares. */
+type ModelImageSource = THREE.Source<ModelDecodedImage['image']>;
+type Decoded = {readonly source: ModelImageSource; readonly close: () => void};
 
 export function createModelTextures(read: ModelFileReader, decode: ModelImageDecoder) {
   const textures = new Map<string, {readonly texture: THREE.Texture; users: number}>();
   const keys = new Map<THREE.Texture, string>();
-  const images = new Map<ModelSurfaceImageSource, THREE.Source>();
-  const sourceUsed = (source: THREE.Source) => [...textures.values()].some(({texture}) => texture.source === source);
+  const images = new Map<ModelSurfaceImageSource, ModelImageSource>();
+  const sourceUsed = (source: ModelImageSource) =>
+    [...textures.values()].some(({texture}) => texture.source === source);
   const dropUnusedImages = () => {
     for (const [image, source] of images) {
       if (!sourceUsed(source)) images.delete(image);
@@ -51,7 +54,7 @@ export function createModelTextures(read: ModelFileReader, decode: ModelImageDec
       return {source: new THREE.Source(image), close};
     },
     used: decoded => sourceUsed(decoded.source)});
-  const sampled = (name: string, source: THREE.Source, value: ModelTextureSampling, space: ModelColorSpace) => {
+  const sampled = (name: string, source: ModelImageSource, value: ModelTextureSampling, space: ModelColorSpace) => {
     const texture = new THREE.Texture();
     texture.name = name;
     texture.source = source;

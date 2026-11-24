@@ -93,7 +93,9 @@ describe('the stage\'s textures', () => {
     assert.throws(() => textures.release(new THREE.Texture()), /was released, but the registry does not hold it/);
     const white = textures.acquire({constant: 'white'}, 'srgb');
     assert.ok(white instanceof THREE.DataTexture);
-    assert.deepEqual([...white.image.data], [255, 255, 255, 255]);
+    const {data} = white.image;
+    assert.ok(data, 'a constant texture holds its pixel');
+    assert.deepEqual([...data], [255, 255, 255, 255]);
   });
 
   it('keeps the files the description in force names or a texture uses, and frees and closes the others', async () => {
