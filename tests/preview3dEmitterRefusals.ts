@@ -34,7 +34,8 @@ const {constant, curve: oneCurve, twoCurves, twoConstants} = MODEL_CURVE_MODE;
 export const EMITTER_REFUSAL_CASES: readonly EmitterRefusalCase[] = Object.freeze([
   ...[oneCurve, twoCurves].map(mode => curveCase(main('startSpeed'), curve(0, 1, mode), 'm_Mode', mode, DRAWN.curve)),
   curveCase(emission('rateOverTime'), curve(0, 9, twoConstants), 'm_Mode', twoConstants, DRAWN.rate),
-  ...[MODEL_GRADIENT_MODE.gradient, MODEL_GRADIENT_MODE.twoGradients, MODEL_GRADIENT_MODE.randomColor].map(mode =>
+  ...[MODEL_GRADIENT_MODE.gradient, MODEL_GRADIENT_MODE.twoColors, MODEL_GRADIENT_MODE.twoGradients,
+    MODEL_GRADIENT_MODE.randomColor].map(mode =>
     ({path: ['colorOverLifetime', 'color'], value: gradient(mode),
       refusal: refusal.undrawn(where(['colorOverLifetime', 'color', 'm_Mode']), mode, DRAWN.gradient)})),
   setting(main('looping'), !VALUE.on, [VALUE.on]),

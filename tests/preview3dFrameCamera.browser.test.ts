@@ -98,5 +98,6 @@ test('verifies sRGB colour space, flipY false orientation, fog, Surface modes, i
         assert.equal(sumNamedBytes(head, 'freezeModelPreviewCamera'), 0, 'tick allocates no frozen camera');
         assert.equal(sumNamedBytes(head, 'hypot', false, 'readModelFrameCamera'), 0, 'no hypot on camera');
       },
+      delegates: [],
     });
   });

@@ -15,6 +15,10 @@ export const MODEL_RENDERER_TEXT = Object.freeze({
     `Actor ${actor}: surface set ${set} names renderers the file does not have: ${ids.join(', ')}.`,
   unassociated: (actor: string, path: string, name: string) =>
     `Actor ${actor}: ${path} draws ${name || '(unnamed)'}, which the loader gave no glTF primitive.`,
+  instancedWithoutMesh: (node: number) =>
+    `glTF node ${node} loaded an instanced mesh, but the file states no mesh for that node.`,
+  instancedOutsideGroup: (node: number, mesh: number) =>
+    `glTF node ${node} loaded an instanced mesh of several primitives outside the group of its mesh ${mesh}.`,
 });
 export type ModelRenderer = THREE.Mesh | THREE.Line | THREE.Points;
 /** Whether a node draws: a mesh, a line or points. */
@@ -47,16 +51,22 @@ function loadedNode(asset: ModelLoadedFile, object: THREE.Object3D): ModelLoaded
   return undefined;
 }
 // three's EXT_mesh_gpu_instancing (GLTFLoader.js `GLTFMeshGpuInstancing`) runs only on a node that states a mesh, and
-// loads each of that mesh's primitives as an InstancedMesh, in primitive order: the node itself when the mesh has one
-// primitive, else the children of the node's group. It associates none of them with a mesh or primitive, so an
-// instanced mesh draws the primitive at its place among the node's children (the first when it is the node itself).
+// loads each of that mesh's primitives as an InstancedMesh, in primitive order, in place of the mesh's own: the mesh
+// itself when it has one primitive, else the children of the mesh's group, which the loader associates with the mesh
+// and makes the node, or a child of the node when the node also holds a camera or a light. It associates none of the
+// instanced meshes with a mesh or primitive, so an instanced mesh draws the primitive at its place in its mesh's group.
 function instancedPrimitive(asset: ModelLoadedFile, renderer: THREE.InstancedMesh,
   node: ModelLoadedNode): ModelRendererPrimitive {
   const mesh: unknown = asset.parser.json.nodes[node.index].mesh;
-  if (typeof mesh !== 'number') {
-    throw new Error(`glTF node ${node.index} loaded an instanced mesh, but the file states no mesh for that node.`);
+  if (typeof mesh !== 'number') throw new ModelStageRefusal(MODEL_RENDERER_TEXT.instancedWithoutMesh(node.index));
+  const primitives: unknown[] = asset.parser.json.meshes[mesh].primitives;
+  if (primitives.length === 1) return {node: node.index, mesh, primitive: 0};
+  const group = renderer.parent;
+  const primitive = group && asset.parser.associations.get(group)?.meshes === mesh ?
+    group.children.indexOf(renderer) : -1;
+  if (primitive < 0 || primitive >= primitives.length) {
+    throw new ModelStageRefusal(MODEL_RENDERER_TEXT.instancedOutsideGroup(node.index, mesh));
   }
-  const primitive = renderer === node.object ? 0 : node.object.children.indexOf(renderer);
   return {node: node.index, mesh, primitive};
 }
 /** The primitive a renderer draws, read from the loader's associations, or none when the loader gave it none. Every

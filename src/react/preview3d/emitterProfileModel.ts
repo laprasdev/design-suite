@@ -2,10 +2,10 @@ import {modelEntries, modelFlag, modelNumber, modelOption, modelRecord} from './
 import {modelStatedRecord} from './statedValueModel.ts';
 import {ModelStageRefusal} from './refusal.ts';
 import {MODEL_ASSET_REFERENCE_FIELDS, MODEL_ATTRACTION, MODEL_CURVE_MODE, MODEL_EMITTER_BUDGET, MODEL_EMITTER_FORM,
-  MODEL_EMITTER_ORIGIN, MODEL_UNITY_BUILTIN_MESH,
+  MODEL_EMITTER_ORIGIN, MODEL_UNITY_BUILTIN_MESH, modelEmitterCapRefusal, modelEmitterOverCap,
   MODEL_EMITTER_REFUSAL as refusal, MODEL_GRADIENT_MODE, MODEL_RENDER_MODE, MODEL_SHADOW_CASTING, MODEL_SHAPE_TYPE,
   MODEL_SIMULATION_SPACE,
-  type ModelEmitterColors, type ModelEmitterMesh, type ModelEmitterParticle, type ModelEmitterProfile,
+  type ModelEmitterMesh, type ModelEmitterParticle, type ModelEmitterProfile,
   type ModelEmitterProfiles, type ModelEmitterRange,
   type ModelEmitterRecord, type ModelEmitterRecords,
   type ModelEmitterRgba, type ModelEmitterValue} from './emitterModel.ts';
@@ -18,11 +18,15 @@ import {MODEL_PARTICLE_FIELDS as FIELDS} from './particleSubmoduleFields.ts';
 // ISM's `CompositeMode`: how nested submodules compose, not how particles blend) or the editor keeps (prefab source)
 // are the record's and not drawn. A constant mode reads no curve, as in Unity, so a record's curves beside one are
 // unread, and so are a mesh beside a billboard and the shape's texture settings beside no texture. The material is the
-// owner's to decide; the stage draws a named placeholder (`MODEL_EMITTER_PLACEHOLDER`).
+// owner's to decide; the stage draws a named placeholder (`MODEL_EMITTER_PLACEHOLDER`, emitterSystems.ts).
 export const MODEL_EMITTER_DRAWN = Object.freeze({
   curve: [MODEL_CURVE_MODE.constant, MODEL_CURVE_MODE.twoConstants],
   rate: [MODEL_CURVE_MODE.constant],
-  gradient: [MODEL_GRADIENT_MODE.color, MODEL_GRADIENT_MODE.twoColors],
+  // An over-lifetime module draws its constant alone: it multiplies the start value by one number, exactly as a
+  // constant start value does. A random factor between two (TwoConstants, TwoColors) is a per-particle draw that
+  // quarks' over-life behaviours do not type; no pack record states one.
+  overLifetime: [MODEL_CURVE_MODE.constant],
+  gradient: [MODEL_GRADIENT_MODE.color],
   space: [MODEL_SIMULATION_SPACE.local],
   render: [MODEL_RENDER_MODE.billboard, MODEL_RENDER_MODE.mesh],
   shape: [MODEL_SHAPE_TYPE.sphere],
@@ -39,9 +43,7 @@ export const MODEL_EMITTER_UNDRAWN_MODULES = Object.freeze({velocitySettings: FI
   noiseSettings: FIELDS.noise, colorBySpeed: FIELDS.color, rotationOverLifetime: FIELDS.axisCurve,
   rotationBySpeed: FIELDS.axisCurve, textureSheetAnimation: FIELDS.textureSheet});
 const START_ROTATION = FIELDS.vector3.map(axis => `startRotation${axis.toUpperCase()}`);
-const ONE: ModelEmitterRange = Object.freeze({min: 1, max: 1});
 const WHITE: ModelEmitterRgba = Object.freeze([1, 1, 1, 1]);
-const UNTINTED: ModelEmitterColors = Object.freeze({min: WHITE, max: WHITE});
 
 function drawn<V extends ModelEmitterValue>(value: V, options: readonly ModelEmitterValue[], where: string): V {
   if (!options.includes(value)) throw new ModelStageRefusal(refusal.undrawn(where, value, options));
@@ -83,12 +85,10 @@ function color(value: unknown, where: string): ModelEmitterRgba {
   const rgba: ModelEmitterRgba = [at(r), at(g), at(b), at(a)];
   return Object.freeze(rgba);
 }
-function gradient(value: unknown, where: string): ModelEmitterColors {
+function gradient(value: unknown, where: string): ModelEmitterRgba {
   const record = modelRecord(value, FIELDS.minMaxGradient, where);
-  const mode = drawnOption(record.m_Mode, MODEL_GRADIENT_MODE, DRAWN.gradient, `${where}.m_Mode`);
-  const max = color(record.m_ColorMax, `${where}.m_ColorMax`);
-  const min = mode === MODEL_GRADIENT_MODE.color ? max : color(record.m_ColorMin, `${where}.m_ColorMin`);
-  return Object.freeze({min, max});
+  drawnOption(record.m_Mode, MODEL_GRADIENT_MODE, DRAWN.gradient, `${where}.m_Mode`);
+  return color(record.m_ColorMax, `${where}.m_ColorMax`);
 }
 // A module with its `enabled` switch: off, it changes nothing, as in Unity.
 function module<T>(value: unknown, fields: readonly string[], where: string,
@@ -161,7 +161,7 @@ export function modelEmitterProfile(value: unknown, where: string): ModelEmitter
     const undrawn = modelRecord(record[name], fields, `${where}.${name}`);
     drawnFlag(undrawn.enabled, DRAWN_VALUE.off, `${where}.${name}.enabled`);
   }
-  return Object.freeze({
+  const profile: ModelEmitterProfile = Object.freeze({
     particle: particle(record, where),
     origin: modelOption(record.emitterOrigin, MODEL_EMITTER_ORIGIN, `${where}.emitterOrigin`),
     ...main(record.mainSettings, `${where}.mainSettings`),
@@ -169,11 +169,13 @@ export function modelEmitterProfile(value: unknown, where: string): ModelEmitter
     radius: radius(record.shapeSettings, `${where}.shapeSettings`),
     sizeScale: module(record.sizeOverLifetime, FIELDS.axisCurve, `${where}.sizeOverLifetime`, size => {
       drawnFlag(size.separateAxes, DRAWN_VALUE.off, `${where}.sizeOverLifetime.separateAxes`);
-      return curve(size.x, `${where}.sizeOverLifetime.x`);
-    }, ONE),
+      return curve(size.x, `${where}.sizeOverLifetime.x`, DRAWN.overLifetime).max;
+    }, 1),
     tint: module(record.colorOverLifetime, FIELDS.color, `${where}.colorOverLifetime`,
-      tint => gradient(tint.color, `${where}.colorOverLifetime.color`), UNTINTED),
+      tint => gradient(tint.color, `${where}.colorOverLifetime.color`), WHITE),
   });
+  if (modelEmitterOverCap(profile, profile.rate)) throw modelEmitterCapRefusal(where, profile, profile.rate);
+  return profile;
 }
 const byId = <T>(value: unknown, where: string, read: (record: unknown, where: string) => T) =>
   Object.freeze(Object.fromEntries(modelEntries(value, where, 'emitter profiles by id')

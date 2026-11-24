@@ -4,7 +4,7 @@ import {MODEL_STAGE_CURVE, type ModelStageCurve, type ModelStageToneCurve} from 
 import {ModelStageRefusal} from './refusal.ts';
 
 // A look's tone curve run backwards: the colour a look states so that its curve draws a colour it must show, as the
-// built-in times state their backdrop (builtInTimes.ts). Each curve is three r180's own, drawn on the GPU by its
+// built-in times state their backdrop (builtInTimes.ts). Each curve is three r182's own, drawn on the GPU by its
 // <tonemapping_fragment> (ShaderChunk/tonemapping_pars_fragment.glsl.js); its constants are restated here, the numbers
 // three's GLSL holds, because its inverse is solved on the CPU, under the look's exposure, which three multiplies
 // every colour by before its curve (draw.ts sets it as the renderer's toneMappingExposure).

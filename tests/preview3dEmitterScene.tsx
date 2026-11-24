@@ -5,7 +5,7 @@ import {createModelFrameInbox, MODEL_STAGE_CLOCK, MODEL_STAGE_FRAMING, modelStag
 import {MODEL_EMITTER_CHANGE} from '../src/react/preview3d/emitterFrameModel.ts';
 import {createModelStage} from '../src/react/preview3d/stage.ts';
 import {THEME, declaration, describing, standingAt} from './preview3dActorFixture.ts';
-import {EMITTER_HOST_ID, EMITTER_SCENE_PROFILES, EMITTER_SCENE_ROUTED, EMITTER_SCENE_RUN,
+import {EMITTER_HOST_ID, EMITTER_SCENE_LIGHTING, EMITTER_SCENE_PROFILES, EMITTER_SCENE_ROUTED, EMITTER_SCENE_RUN,
   type EmitterDraws, type EmitterSceneDriver} from './preview3dEmitterSceneCases.ts';
 import {makePanelGlbBytes, PANEL_GLB} from './preview3dPanelGlb.ts';
 import {renderScene} from './renderScene.tsx';
@@ -68,7 +68,7 @@ async function bootEmitterScene(): Promise<EmitterSceneDriver> {
     placement: standingAt([0, 0, 0])}), emitters: EMITTER_SCENE_PROFILES};
   const description = modelStageDescription(describing({actors: {focus: PANEL_GLB.id, actors: [actor]},
     framing: {kind: MODEL_STAGE_FRAMING.pose, position: [0, 1.2, 4], target: [0, 1, 0], fieldOfView: 45},
-    orbit: false}));
+    orbit: false, lighting: EMITTER_SCENE_LIGHTING}));
   const inbox = createModelFrameInbox();
   inbox.describe(description, []);
   const controller = await new Promise<ModelStageController>((ready, reject) => createModelStage(host, description,

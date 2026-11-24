@@ -35,6 +35,20 @@ describe('a file whose meshes are instanced (EXT_mesh_gpu_instancing)', () => {
     assert.doesNotThrow(() => modelSurfaceSetCovers('a', 'own', whole(renderers.keys()), renderers));
   });
 
+  it('refuses by name an instanced mesh whose node states no mesh, or which stands outside its mesh\'s group',
+    async () => {
+      const unstated = await load();
+      delete unstated.parser.json.nodes[1].mesh;
+      refused(() => modelFileRenderers(unstated, 'a', 'a.gltf'),
+        /glTF node 1 loaded an instanced mesh, but the file states no mesh for that node\./);
+      const moved = await load(), [, , , , first] = INSTANCED_FILE.renderers;
+      const renderer = modelFileRenderers(moved, 'a', 'a.gltf').get(first.id);
+      assert.ok(renderer?.parent?.parent, first.id);
+      renderer.parent.parent.add(renderer);
+      refused(() => modelFileRenderers(moved, 'a', 'a.gltf'),
+        /glTF node 3 loaded an instanced mesh of several primitives outside the group of its mesh 0\./);
+    });
+
   it('binds an actor drawn from a set naming exactly its instanced renderers', async () => {
     const actor = createModelActor(modelFileDrawn(await load(), {actor: 'a', path: 'a.gltf'}, undefined),
       declaration('a', 'otter', {surfaces: {from: 'set', set: 'own'}}), actorContext().context);

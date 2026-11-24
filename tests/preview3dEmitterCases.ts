@@ -16,23 +16,27 @@ const zero = () => curve(0, 0, MODEL_CURVE_MODE.constant);
 const rgba = (r: number, g: number, b: number, a: number) => ({r, g, b, a});
 const vector = (x: number, y: number, z: number) => ({x, y, z});
 const speedRange = () => ({x: 0, y: 1});
-export const gradient = (mode: number = MODEL_GRADIENT_MODE.twoColors) => ({m_Mode: mode, m_GradientMin: {},
+export const gradient = (mode: number = MODEL_GRADIENT_MODE.color) => ({m_Mode: mode, m_GradientMin: {},
   m_GradientMax: {}, m_ColorMin: rgba(1, 0.55, 0.2, 1), m_ColorMax: rgba(1, 0.85, 0.4, 1)});
 const PHASES = {maintain: {threshold: 0, active: true}, entrance: {threshold: 0, active: true}};
 const unset = (raw: object) => ({phases: PHASES, modeAuthored: true, mode: 0, _raw: raw});
 const asset = (type: number) => ({fileID: '1', guid: '00000000000000000000000000000001', type});
 const axisCurve = (enabled: boolean) =>
-  ({enabled, separateAxes: false, x: curve(0.5, 1), y: zero(), z: zero(), speedRange: speedRange()});
+  ({enabled, separateAxes: false, x: curve(0, 0.75, MODEL_CURVE_MODE.constant), y: zero(), z: zero(),
+    speedRange: speedRange()});
+// The test profile's longest lifetime: it emits as fast as its cap holds, its cap over this.
+const LONGEST_LIFE = 1.6;
 export const emitterProfile = (maxParticles = 256, size = 0.08) => ({
   submodules: [], enabled: true, nestedValidation: unset({submodules: []}), material: asset(2),
   renderMode: MODEL_RENDER_MODE.billboard, mesh: null, shadowCasting: 0,
   emitterOrigin: MODEL_EMITTER_ORIGIN.character, attraction: MODEL_ATTRACTION.natural, attractionSpeed: 12,
   attractionRamp: {_raw: 3}, blendMode: 0,
-  mainSettings: {duration: 2, looping: true, startLifetime: curve(0.8, 1.6), startSpeed: curve(0.4, 1.2),
+  mainSettings: {duration: 2, looping: true, startLifetime: curve(0.8, LONGEST_LIFE), startSpeed: curve(0.4, 1.2),
     startSize: curve(size / 2, size), startColor: rgba(1, 1, 1, 1), startRotation3D: false, startRotationX: zero(),
     startRotationY: zero(), startRotationZ: zero(), maxParticles, simulationSpace: MODEL_SIMULATION_SPACE.local,
     simulationSpeed: 1, gravitySource: 0, gravityModifier: zero()},
-  emissionSettings: {rateOverTime: curve(0, 160, MODEL_CURVE_MODE.constant), rateOverDistance: zero(),
+  emissionSettings: {rateOverTime: curve(0, maxParticles / LONGEST_LIFE, MODEL_CURVE_MODE.constant),
+    rateOverDistance: zero(),
     hasBurst: false, burstTime: 0, burstCount: 30, burstCycleCount: 1, burstRepeatInterval: 0.01, burstProbability: 1},
   emitOnContact: false, emissionProbability: unset({submodules: [], elements: [], layerMode: 1}),
   shapeSettings: {enabled: true, shapeType: MODEL_SHAPE_TYPE.sphere, scale: vector(1, 1, 1), radius: 0.15,

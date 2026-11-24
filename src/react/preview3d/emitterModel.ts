@@ -52,6 +52,9 @@ export const MODEL_EMITTER_REFUSAL = Object.freeze({
     `Frame entity ${entity}: emitter ${profile}'s routed ${field} must be ${is}.`,
   routedOff: (entity: string, profile: string, field: string, change: string) =>
     `Frame entity ${entity}: emitter ${profile} states a routed ${field} on a ${change}; only a start routes one.`,
+  overCap: (where: string, rate: number, lifetime: number, cap: number) =>
+    `${where}: ${rate} particles a second living up to ${lifetime} s would pass its cap of ${cap} at once; ` +
+    'three.quarks caps no system, so the stage refuses a rate its cap cannot hold.',
   budget: (what: string, value: number, most: number) =>
     `The stage's live ${what} would be ${value}, over its budget of ${most}.`,
 });
@@ -60,7 +63,6 @@ const refusal = MODEL_EMITTER_REFUSAL;
 /** A per-particle value drawn uniformly between `min` and `max`; equal in a constant mode. */
 export interface ModelEmitterRange {readonly min: number; readonly max: number}
 export type ModelEmitterRgba = readonly [number, number, number, number];
-export interface ModelEmitterColors {readonly min: ModelEmitterRgba; readonly max: ModelEmitterRgba}
 /** How a profile draws a particle: a point, or an instance of the built-in mesh it names (its row); one draw call
  * either way. */
 export type ModelEmitterParticle = {readonly form: typeof MODEL_EMITTER_FORM.points} |
@@ -81,9 +83,9 @@ export interface ModelEmitterProfile {
   /** The sphere particles start in, in metres, moving outward from its centre. */
   readonly radius: number;
   /** What size over lifetime multiplies the size by; one when the module is off. */
-  readonly sizeScale: ModelEmitterRange;
+  readonly sizeScale: number;
   /** What colour over lifetime multiplies the start colour by; white when the module is off. */
-  readonly tint: ModelEmitterColors;
+  readonly tint: ModelEmitterRgba;
 }
 export type ModelEmitterProfiles = Readonly<Record<string, ModelEmitterProfile>>;
 /** A pack's `ParticleSubmodule` record, checked whole and kept as stated: the description's form, which reads back as
@@ -97,6 +99,13 @@ export function modelDeclaredEmitter<T>(declared: Readonly<Record<string, T>>, e
   if (!modelStates(declared, profile)) throw new ModelStageRefusal(refusal.undeclared(entity, profile));
   return declared[profile];
 }
+/** Whether a profile run at `rate` could pass its cap: at most its rate times its longest lifetime are alive at once.
+ * A check that reads only numbers, so a start makes its refusal's text only when it refuses. */
+export const modelEmitterOverCap = ({lifetime, maxParticles}: ModelEmitterProfile, rate: number) =>
+  rate * lifetime.max > maxParticles;
+/** The refusal of a profile run at `rate` past its cap (`modelEmitterOverCap`), named by `where`. */
+export const modelEmitterCapRefusal = (where: string, {lifetime, maxParticles}: ModelEmitterProfile, rate: number) =>
+  new ModelStageRefusal(refusal.overCap(where, rate, lifetime.max, maxParticles));
 /**
  * The stage's particle budget on what runs at once, each part of a load with its slot in the load's `Float64Array`
  * and its most: live emitters, and their coverage, the sum of each live profile's cap times its largest particle's
@@ -113,7 +122,7 @@ const LOAD_PARTS = Object.freeze(Object.entries(MODEL_EMITTER_BUDGET.load).map((
 /** A load to add into: zeroed, one slot per part. */
 export const createModelEmitterLoad = () => new Float64Array(LOAD_PARTS.length);
 export const modelEmitterCoverage = (profile: ModelEmitterProfile) =>
-  profile.maxParticles * (profile.size.max * profile.sizeScale.max) ** 2;
+  profile.maxParticles * (profile.size.max * profile.sizeScale) ** 2;
 /** Refuses a load over the budget, naming what passes it. */
 export function checkModelEmitterBudget(load: Float64Array) {
   for (let index = 0; index < LOAD_PARTS.length; index++) {

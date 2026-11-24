@@ -15,7 +15,7 @@ export const MODEL_DRAW_TEXT = Object.freeze({
   unloaded: 'The glow was prepared before its passes were loaded.',
   passes: (where: string, why: string) => `${where}: the bloom passes could not be loaded: ${why}`,
 });
-// What three r180 keeps for a material it compiled (WebGLRenderer.getProgram) and on that program after its first use
+// What three r182 keeps for a material it compiled (WebGLRenderer.getProgram) and on that program after its first use
 // (WebGLProgram.js onFirstUse); its typings declare neither.
 interface Compiled {
   readonly currentProgram: THREE.WebGLProgram & {readonly diagnostics?: {readonly runnable: boolean;

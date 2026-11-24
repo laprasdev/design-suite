@@ -51,7 +51,7 @@ export function applyModelFrame(actors: readonly ModelActor[], value: ModelValid
     if (changing) checkModelEmitterBudget(emitterLoad);
     for (let index = 0; index < actors.length; index++) {
       const entity = entities[index];
-      if (entity) commits[count++] = actors[index].prepare(entity, value.simulationTimeSeconds);
+      if (entity) commits[count++] = actors[index].prepare(entity);
     }
     applyModelStageCommits(commits, count);
   } finally {
