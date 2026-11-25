@@ -23,6 +23,7 @@ function fixture(loadPasses = loadModelGlowPasses, halfFloat = true) {
     extensions: {has: (name: string) => halfFloat && name === 'EXT_color_buffer_half_float'},
     state: {buffers: {stencil: {setTest: () => undefined}}},
     getDrawingBufferSize: (size: THREE.Vector2) => size.copy(canvas),
+    getPixelRatio: () => 1, setSize: (width: number, height: number) => canvas.set(width, height),
     getClearColor: (color: THREE.Color) => color, getClearAlpha: () => 1, setClearColor: () => undefined,
     clear: () => undefined, getRenderTarget: () => target,
     setRenderTarget: (value: THREE.WebGLRenderTarget | null) => {target = value;},
@@ -153,11 +154,11 @@ describe('the frame\'s draw', () => {
     const high = drawn.find(pass => 'luminosityThreshold' in uniforms(pass));
     assert.equal(high && uniforms(high).luminosityThreshold.value, 2);
     assert.ok(target?.depthTexture);
-    canvas.set(640, 400);
-    draw.resize();
+    draw.resize(640, 400);
+    assert.throws(() => draw.resize(4096, 4096), ModelStageRefusal);
     const bright = high?.into;
     // Its depth texture follows when three next sets it up (WebGLTextures.js 1659): shown by a capture, not here.
-    assert.deepEqual([target.width, target.height, bright?.width, bright?.height], [640, 400, 320, 200]);
+    assert.deepEqual([canvas.x, target.width, target.height, bright?.width, bright?.height], [640, 640, 400, 320, 200]);
     const targets = new Set(drawn.flatMap(({into}) => into ? [into] : []));
     const materials = new Set(drawn.flatMap(({material}) => material ? [material] : []));
     assert.equal(targets.size, 12, 'the scene\'s target, the bright pass and five blur levels each way');

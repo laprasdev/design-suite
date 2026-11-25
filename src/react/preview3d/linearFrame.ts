@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import {FullScreenQuad} from 'three/addons/postprocessing/Pass.js';
+import {ModelStageRefusal} from './refusal.ts';
 
 // The frame in linear light: the scene's multisampled half-float target, which every surface is drawn and blended into
 // as a URP camera's colour target is (blending in linear light, before any curve), and the one output pass that writes
@@ -20,10 +21,30 @@ fragmentShader: 'uniform sampler2D modelSceneColor;\nuniform sampler2D modelScen
   '  #include <colorspace_fragment>\n}'});
 // The samples of the frame's target: the canvas's own antialiasing, kept for the one draw of the scene.
 const SAMPLES = 4;
+// The bytes the frame holds for each drawing-buffer pixel, by part: half-float RGBA colour (8 bytes) and 24-bit depth
+// (stored in 4), each multisampled at SAMPLES and resolved once. 60 in all, as measured on the stage (perf-budgets'
+// measured.md).
+const PIXEL_BYTES = Object.freeze({multisampledColor: SAMPLES * 8, multisampledDepth: SAMPLES * 4, resolvedColor: 8,
+  resolvedDepth: 4});
+const BYTES_PER_PIXEL = Object.values(PIXEL_BYTES).reduce((sum, bytes) => sum + bytes, 0);
+/** The most GPU memory the frame may hold, in bytes: a drawing buffer that would need more is refused by name. A
+ * placeholder until the owner sets it: it holds a 3840 by 2160 drawing buffer (a 4K screen, or 1920 by 1080 at the
+ * stage's pixel-ratio limit of 2), 497,664,000 bytes. */
+export const MODEL_LINEAR_FRAME_BUDGET = Object.freeze({bytes: 512 * 2 ** 20});
+export const MODEL_LINEAR_FRAME_TEXT = Object.freeze({
+  budget: (width: number, height: number, bytes: number, most: number) => `The stage's frame at ${width} by ` +
+    `${height} drawing-buffer pixels would hold ${bytes} bytes, ${bytes - most} over its budget of ${most}.`,
+});
+/** Refuses a drawing buffer whose frame would pass the budget, naming its size, its bytes and how far over. */
+export function checkModelLinearFrameBudget(width: number, height: number) {
+  const bytes = width * height * BYTES_PER_PIXEL, most = MODEL_LINEAR_FRAME_BUDGET.bytes;
+  if (bytes > most) throw new ModelStageRefusal(MODEL_LINEAR_FRAME_TEXT.budget(width, height, bytes, most));
+}
 
-/** The frame's target and output pass at a drawing-buffer size: its glow is written by `bloom`, its size by
- * `resize`. */
+/** The frame's target and output pass at a drawing-buffer size, within the budget: its glow is written by `bloom`,
+ * its size by `resize`. */
 export function createModelLinearFrame(size: THREE.Vector2) {
+  checkModelLinearFrameBudget(size.x, size.y);
   const depth = new THREE.DepthTexture(size.x, size.y);
   const target = new THREE.WebGLRenderTarget(size.x, size.y, {type: THREE.HalfFloatType, samples: SAMPLES,
     depthTexture: depth});
@@ -45,8 +66,8 @@ export function createModelLinearFrame(size: THREE.Vector2) {
     },
     /** The output pass, onto the bound canvas. */
     output: (renderer: THREE.WebGLRenderer) => output.render(renderer),
-    /** The canvas changed size (three sizes the target's depth texture to it when it next sets it up, WebGLTextures.js
-     * 1659). */
+    /** The canvas changed size, checked first by `checkModelLinearFrameBudget` (three sizes the target's depth texture
+     * to it when it next sets it up, WebGLTextures.js 1659). */
     resize: (width: number, height: number) => target.setSize(width, height),
     dispose() {
       depth.dispose();

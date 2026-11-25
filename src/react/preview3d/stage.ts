@@ -26,7 +26,8 @@ export const MODEL_STAGE_TEXT = Object.freeze({
 
 // The stage holds what one description declares and draws one engine frame over it. Creation applies the first
 // description through the same function every later one uses. A failure nothing could refuse ahead (a frame that
-// throws, or the first description failing) reaches `onError`; the stage then draws nothing more.
+// throws, a resize the frame's budget refuses, or the first description failing) reaches `onError`; the stage then
+// draws nothing more.
 export function createModelStage(
   host: HTMLElement, description: ModelStageDescription, theme: ModelStageTheme,
   onReady: (controller: ModelStageController) => void, onError: (error: Error) => void,
@@ -36,11 +37,12 @@ export function createModelStage(
   // A kind this stage cannot draw is refused before anything is built, so it leaves no canvas behind.
   for (const kind of policy.kinds.values()) modelSurfaceDrawable(kind);
   const modes = createModelSurfaceModes();
-  const stage = createModelScene(host, theme, policy, modes);
+  let disposed = false;
+  const fail = (error: unknown) => {if (!disposed) onError(asError(error));};
+  const stage = createModelScene(host, theme, policy, modes, fail);
   const descriptions = createModelStageDescriptions({policy, theme, stage, modes, load: loadModelStageAsset,
     read: readModelFile, decode: decodeModelImage});
   const {actors} = descriptions;
-  let disposed = false;
   // The stage's one presentation time. Under the external clock only setFrame moves it; under the local clock the
   // elapsed time does, unless reduced motion or a hidden page holds it. Every clip on the local clock moves with it.
   // The times live in one typed array made here, so writing them every frame boxes no number.
@@ -128,7 +130,6 @@ export function createModelStage(
     if (stage.controls.enabled) stage.controls.update();
     stage.draw();
   };
-  const fail = (error: unknown) => {if (!disposed) onError(asError(error));};
   const loop = createModelFrameLoop(animate, fail, MODEL_PAGE_FRAMES);
   const dispose = () => {
     if (disposed) return;

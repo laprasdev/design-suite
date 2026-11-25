@@ -45,9 +45,10 @@ function drawnOrReleased<T>(renderer: THREE.WebGLRenderer, create: () => T): T {
   }
 }
 /** The stage's three.js side: its renderer and canvas, scene, camera and controls, lighting, fog and draw. `modes` is
- * what the Surface mode in force asks of the frame, which the draw reads each frame (draw.ts). */
+ * what the Surface mode in force asks of the frame, which the draw reads each frame (draw.ts); `onError` hears a
+ * failure outside any call, a resize the frame's budget refuses. */
 export function createModelScene(host: HTMLElement, theme: ModelStageTheme, policy: ModelStagePolicy,
-  modes: ModelDrawModes) {
+  modes: ModelDrawModes, onError: (error: unknown) => void) {
   // The theme is read before anything is built, so a theme the stage refuses leaves no canvas or context behind.
   const builtIn = modelStageBuiltInTimes(theme.colors);
   const renderer = new THREE.WebGLRenderer({antialias: true, preserveDrawingBuffer: true});
@@ -74,15 +75,26 @@ export function createModelScene(host: HTMLElement, theme: ModelStageTheme, poli
   const resize = () => {
     const {clientWidth: width, clientHeight: height} = host;
     if (!width || !height) return;
-    renderer.setSize(width, height, false);
-    frame.resize();
+    frame.resize(width, height);
     camera.aspect = width / height;
     camera.updateProjectionMatrix();
     framing.requestFit();
   };
-  const observer = new ResizeObserver(resize);
+  // A size the frame's budget refuses after creation reaches `onError`, as a frame that throws does; at creation the
+  // refusal goes on, with what was built released.
+  const observer = new ResizeObserver(() => {
+    try {resize();} catch (error) {onError(error);}
+  });
+  const dispose = () => {
+    observer.disconnect();
+    controls.dispose();
+    disposeModelObject(scene);
+    frame.dispose();
+    renderer.dispose();
+    renderer.domElement.remove();
+  };
   observer.observe(host);
-  resize();
+  try {resize();} catch (error) {dispose(); throw error;}
   return {
     renderer, scene, camera, controls, lighting, fog, shared,
     // The framing the stage drives; the far plane is the look's, set through the lighting alone.
@@ -93,13 +105,6 @@ export function createModelScene(host: HTMLElement, theme: ModelStageTheme, poli
     /** The frame's one draw, straight or through the look's glow; and the triangles its scene pass drew. */
     draw: frame.draw,
     triangles: () => frame.triangles,
-    dispose() {
-      observer.disconnect();
-      controls.dispose();
-      disposeModelObject(scene);
-      frame.dispose();
-      renderer.dispose();
-      renderer.domElement.remove();
-    },
+    dispose,
   };
 }

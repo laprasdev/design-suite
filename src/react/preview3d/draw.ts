@@ -4,7 +4,7 @@ import type {ModelStageCommit} from './commit.ts';
 import {ModelStageRefusal} from './refusal.ts';
 import {MODEL_STAGE_LAYERS} from './layers.ts';
 import {createModelGlow, type ModelGlow, type ModelGlowPasses} from './glow.ts';
-import {createModelLinearFrame} from './linearFrame.ts';
+import {checkModelLinearFrameBudget, createModelLinearFrame} from './linearFrame.ts';
 
 const CURVES: Readonly<Record<ModelStageCurve, THREE.ToneMapping>> = Object.freeze({
   [MODEL_STAGE_CURVE.acesFilmic]: THREE.ACESFilmicToneMapping,
@@ -105,8 +105,13 @@ export function createModelDraw(renderer: THREE.WebGLRenderer, scene: THREE.Scen
       if (!loaded) throw new Error(MODEL_DRAW_TEXT.unloaded);
       return () => {apply(look); bloom(value, loaded);};
     },
-    /** The canvas changed size: the frame's target and the glow's passes follow its drawing buffer. */
-    resize() {
+    /** The canvas is to be this many CSS pixels: refused whole, before the canvas changes, when its drawing buffer
+     * (three's: the size times the pixel ratio, rounded down) would pass the frame's budget; otherwise the canvas, the
+     * frame's target and the glow's passes follow it. */
+    resize(width: number, height: number) {
+      const ratio = renderer.getPixelRatio();
+      checkModelLinearFrameBudget(Math.floor(width * ratio), Math.floor(height * ratio));
+      renderer.setSize(width, height, false);
       renderer.getDrawingBufferSize(size);
       frame.resize(size.x, size.y);
       glow?.resize(size.x, size.y);
