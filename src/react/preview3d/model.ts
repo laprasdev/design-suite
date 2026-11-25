@@ -28,9 +28,11 @@ export {modelColorOfHex} from './colorModel.ts';
 export type {ModelColor} from './colorModel.ts';
 // A surface kind's declaration, records and sets, and what a frame's renderers take: checked here with no renderer,
 // by a host, a scene package or a kind's author.
-export {MODEL_SURFACE_PARAMETER, MODEL_COLOR_SPACE, MODEL_SURFACE_LIGHT, MODEL_SURFACE_COVERAGE, MODEL_SURFACE_SIDE,
+export {MODEL_SURFACE_PARAMETER, MODEL_COLOR_SPACE, MODEL_SURFACE_LIGHT, MODEL_SURFACE_SIDE,
   MODEL_VECTOR_SIZE, MODEL_FILE_SURFACE, MODEL_SURFACE_KIND_REFUSAL, modelSurfaceKind, modelSurfaceKinds}
   from './surfaceKindModel.ts';
+export {MODEL_SURFACE_BLEND, MODEL_SURFACE_COVERAGE, MODEL_SURFACE_COVERAGE_REFUSAL} from './surfaceCoverageModel.ts';
+export type {ModelSurfaceBlend, ModelSurfaceCoverage} from './surfaceCoverageModel.ts';
 export type {ModelColorSpace, ModelSurfaceKind, ModelSurfaceParameter} from './surfaceKindModel.ts';
 export {isModelImageSource, MODEL_IMAGE_SOURCES, MODEL_SURFACE_TEXTURE_REFUSAL, MODEL_TEXTURE_CONSTANT,
   MODEL_TEXTURE_FORMATS, MODEL_TEXTURE_WRAP, modelSurfaceTexture} from './surfaceTextureModel.ts';

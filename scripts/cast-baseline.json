@@ -74,7 +74,7 @@
     "tests/preview3dAssetRead.test.ts": {"casts":3,"nonNullAssertions":0},
     "tests/preview3dBackdrop.test.ts": {"casts":1,"nonNullAssertions":0},
     "tests/preview3dDescription.test.ts": {"casts":1,"nonNullAssertions":0},
-    "tests/preview3dDraw.test.ts": {"casts":6,"nonNullAssertions":3},
+    "tests/preview3dDraw.test.ts": {"casts":3,"nonNullAssertions":0},
     "tests/preview3dEnvironment.test.ts": {"casts":7,"nonNullAssertions":0},
     "tests/preview3dFog.test.ts": {"casts":4,"nonNullAssertions":0},
     "tests/preview3dFrameLoop.test.ts": {"casts":0,"nonNullAssertions":2},

@@ -4,14 +4,15 @@ import type {ModelStageCommit} from './commit.ts';
 import {ModelStageRefusal} from './refusal.ts';
 import {MODEL_STAGE_LAYERS} from './layers.ts';
 import {createModelGlow, type ModelGlow, type ModelGlowPasses} from './glow.ts';
+import {createModelLinearFrame} from './linearFrame.ts';
 
 const CURVES: Readonly<Record<ModelStageCurve, THREE.ToneMapping>> = Object.freeze({
   [MODEL_STAGE_CURVE.acesFilmic]: THREE.ACESFilmicToneMapping,
 });
-// What three must offer for glow: a colour buffer of half floats, for the linear source and the bloom's own targets.
+// What three must offer the frame: a colour buffer of half floats, for the linear frame and the bloom's own targets.
 const HALF_FLOAT = Object.freeze(['EXT_color_buffer_float', 'EXT_color_buffer_half_float']);
 export const MODEL_DRAW_TEXT = Object.freeze({
-  halfFloat: (where: string) => `${where}: glow needs half-float render targets; this browser's WebGL has none.`,
+  halfFloat: 'The stage draws its frame in linear light into a half-float target; this browser\'s WebGL has none.',
   unloaded: 'The glow was prepared before its passes were loaded.',
   passes: (where: string, why: string) => `${where}: the bloom passes could not be loaded: ${why}`,
 });
@@ -22,28 +23,35 @@ interface Compiled {
     readonly programLog: string; readonly vertexShader: {readonly log: string};
     readonly fragmentShader: {readonly log: string}}};
 }
+/** What the Surface mode in force asks of the frame (materials.ts). */
+export interface ModelDrawModes {
+  /** A mode other than Lit shows a term of each surface, as stated: the frame is drawn without the look's glow. */
+  readonly inspecting: boolean;
+  /** The mode shows its term through the look's tone curve: every mode but Color, which shows the base colour. */
+  readonly curved: boolean;
+}
 /** What the frame's draw is given beside three's renderer, scene and camera. */
 export interface ModelDrawContext {
-  /** Fetches the glow's passes (`loadModelGlowPasses`); asked once, again only after a fetch that failed. */
+  /** Fetches the glow's pass (`loadModelGlowPasses`); asked once, again only after a fetch that failed. */
   readonly loadPasses: () => Promise<ModelGlowPasses>;
-  /** Whether a Surface mode other than Lit is in force: the frame then shows a term of each surface, as stated, so it
-   * is drawn straight to the canvas without the look's glow (materials.ts). */
-  readonly inspecting: () => boolean;
+  readonly modes: ModelDrawModes;
 }
 
 /**
- * The frame's one draw. Without glow (or while a Surface mode inspects) it is the scene, aids included, through the
- * camera to the canvas under the look's tone curve or none, exactly as three draws it. With glow the scene's look is
- * drawn once, in linear light, into a multisampled half-float target, resolved once; three's bloom pass reads it and
- * composites its bloom into its own target; one output pass adds the bloom to the scene and writes the canvas through
- * the look's tone curve and the display encoding, and the target's depth; the stage's aids are drawn last, untoned,
- * behind the scene where it is in front of them. Nothing draws into the target after its one resolve (so the headset
- * browser, which discards a multisampled target's colour after a resolve, draws it whole). No material changes program
- * between frames.
+ * The frame's one draw. The scene's look is drawn once, in linear light, into a multisampled half-float target,
+ * resolved once, so every blended surface mixes with what is behind it in linear light, as URP's does. With glow (and
+ * no Surface mode inspecting) three's bloom pass reads it and composites its bloom into its own target. One output pass
+ * writes the canvas, with the bloom added where it is drawn, through the look's tone curve (unless the mode shows its
+ * term untoned) and the display encoding, and the target's depth; the stage's aids are drawn last, untoned, behind the
+ * scene where it is in front of them. Nothing draws into the target after its one resolve (so the headset browser,
+ * which discards a multisampled target's colour after a resolve, draws it whole). No material changes program between
+ * frames.
  */
 export function createModelDraw(renderer: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.Camera,
   context: ModelDrawContext) {
+  if (!HALF_FLOAT.some(name => renderer.extensions.has(name))) throw new ModelStageRefusal(MODEL_DRAW_TEXT.halfFloat);
   const size = new THREE.Vector2();
+  const frame = createModelLinearFrame(renderer.getDrawingBufferSize(size));
   let passes: ModelGlowPasses | undefined, loading: Promise<void> | undefined;
   let glow: ModelGlow | undefined, curve = THREE.NoToneMapping as THREE.ToneMapping;
   let triangles = 0;
@@ -57,28 +65,24 @@ export function createModelDraw(renderer: THREE.WebGLRenderer, scene: THREE.Scen
     renderer.render(scene, camera);
     triangles += renderer.info.render.triangles;
   };
-  // The canvas is drawn under the look's curve (set as the frame starts): the direct draw's materials, or the output
-  // pass under glow; three applies no curve inside a target, and the aids after the output pass are drawn uncurved.
-  const glowing = (value: ModelGlow) => {
-    pass(MODEL_STAGE_LAYERS.scene, value.target);
-    value.bloom(renderer);
+  // three applies no curve inside a target: the output pass is drawn under the look's curve (or none, as the mode
+  // asks), and the aids after it uncurved.
+  const output = (bloom: ModelGlow | undefined) => {
+    bloom?.bloom(renderer, frame.target);
+    frame.bloom(bloom ? bloom.texture : null);
     renderer.setRenderTarget(null);
-    value.output(renderer);
+    renderer.toneMapping = context.modes.curved ? curve : THREE.NoToneMapping;
+    frame.output(renderer);
     renderer.toneMapping = THREE.NoToneMapping;
-    const clears = renderer.autoClear;
-    renderer.autoClear = false;
-    pass(MODEL_STAGE_LAYERS.aids, null);
-    renderer.autoClear = clears;
   };
   const bloom = (value: ModelStageGlow, loaded: ModelGlowPasses) => {
     glow ??= createModelGlow(loaded, renderer.getDrawingBufferSize(size));
     glow.set(value);
   };
-  // The curve and exposure the canvas is drawn under: the direct draw's, or the output pass's under glow (the curve
-  // set as it draws). Under no curve three reads no exposure (its tonemapping chunk is compiled only under a curve).
+  // The curve and exposure the output pass draws under. Under no curve three reads no exposure (its tonemapping chunk
+  // is compiled only under a curve).
   const apply = ({toneCurve}: ModelStageOutput) => {
     curve = toneCurve === null ? THREE.NoToneMapping : CURVES[toneCurve.curve];
-    renderer.toneMapping = curve;
     if (toneCurve !== null) renderer.toneMappingExposure = toneCurve.exposure;
   };
   return {
@@ -93,22 +97,19 @@ export function createModelDraw(renderer: THREE.WebGLRenderer, scene: THREE.Scen
       });
       return [loading];
     },
-    /** A look's tone curve and glow, checked; `where` names the glow in a refusal. */
-    prepare(output: ModelStageOutput, where: string): ModelStageCommit {
-      const value = output.glow;
-      if (value === null) return () => {apply(output); release();};
-      if (!HALF_FLOAT.some(name => renderer.extensions.has(name))) {
-        throw new ModelStageRefusal(MODEL_DRAW_TEXT.halfFloat(where));
-      }
+    /** A look's tone curve and glow, checked. */
+    prepare(look: ModelStageOutput): ModelStageCommit {
+      const value = look.glow;
+      if (value === null) return () => {apply(look); release();};
       const loaded = passes;
       if (!loaded) throw new Error(MODEL_DRAW_TEXT.unloaded);
-      return () => {apply(output); bloom(value, loaded);};
+      return () => {apply(look); bloom(value, loaded);};
     },
-    /** The canvas changed size: the glow's target and passes follow its drawing buffer. */
+    /** The canvas changed size: the frame's target and the glow's passes follow its drawing buffer. */
     resize() {
-      if (!glow) return;
       renderer.getDrawingBufferSize(size);
-      glow.resize(size.x, size.y);
+      frame.resize(size.x, size.y);
+      glow?.resize(size.x, size.y);
     },
     /**
      * Compiles what drawing an object needs, as the canvas pass draws it, so that it happens inside the staged build:
@@ -120,8 +121,8 @@ export function createModelDraw(renderer: THREE.WebGLRenderer, scene: THREE.Scen
       // A link failure is read from the program's own diagnostics below; three's console report is not needed.
       renderer.debug.onShaderError = () => undefined;
       let failure: string | undefined;
-      // The variant the scene pass draws: into the glow's target while the look in force glows and nothing inspects.
-      renderer.setRenderTarget(glow && !context.inspecting() ? glow.target : null);
+      // The variant the scene pass draws: into the frame's target.
+      renderer.setRenderTarget(frame.target);
       try {
         for (const material of renderer.compile(object, camera, scene)) {
           const program = (renderer.properties.get(material) as Compiled).currentProgram;
@@ -140,14 +141,19 @@ export function createModelDraw(renderer: THREE.WebGLRenderer, scene: THREE.Scen
     },
     draw() {
       triangles = 0;
-      renderer.toneMapping = curve;
-      if (glow && !context.inspecting()) glowing(glow);
-      else pass(MODEL_STAGE_LAYERS.both, null);
+      pass(MODEL_STAGE_LAYERS.scene, frame.target);
+      output(context.modes.inspecting ? undefined : glow);
+      const clears = renderer.autoClear;
+      renderer.autoClear = false;
+      pass(MODEL_STAGE_LAYERS.aids, null);
+      renderer.autoClear = clears;
     },
-    /** The triangles the last frame drew of the scene and the aids, as the direct draw counts them; the glow's own
-     * passes are not counted. */
+    /** The triangles the last frame drew of the scene and the aids; the output pass and the glow's are not counted. */
     get triangles() {return triangles;},
-    dispose: release,
+    dispose() {
+      release();
+      frame.dispose();
+    },
   };
 }
 export type ModelDraw = ReturnType<typeof createModelDraw>;

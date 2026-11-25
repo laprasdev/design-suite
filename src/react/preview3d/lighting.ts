@@ -56,7 +56,7 @@ export function createModelLighting(builtIn: readonly ModelStageTime[], layers: 
   const glowOf = (time: ModelStageTime) => `Time ${time.id}: look.glow`;
   const prepare = (time: ModelStageTime): ModelStageCommit => {
     const {look} = time;
-    const output = layers.output.prepare(look, glowOf(time));
+    const output = layers.output.prepare(look);
     return () => {
       current = time;
       apply(look);

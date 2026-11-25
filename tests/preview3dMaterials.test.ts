@@ -60,17 +60,18 @@ describe('the Surface modes', () => {
 
   it('shows Color untoned and Emission as it is, both without fog, through three\'s own output', () => {
     const {modes, material} = fixture();
+    assert.deepEqual([modes.inspecting, modes.curved], [false, true]);
     modes.set('color');
     const color = compiled(material, program('standard'));
     assert.ok(color.fragmentShader.includes('outgoingLight = diffuseColor.rgb;\n#include <opaque_fragment>'));
-    assert.ok(!color.fragmentShader.includes('#include <tonemapping_fragment>'));
-    // The curve is left out of the program, never switched off in three's parameters, which it compares per frame.
-    assert.deepEqual([color.fog, color.toneMapping, color.normalMap], [false, THREE.ACESFilmicToneMapping, true]);
+    // The frame's output pass leaves the curve out under Color (draw.ts); the program is as three gives it.
+    assert.deepEqual([modes.inspecting, modes.curved], [true, false]);
+    assert.deepEqual([color.fog, color.normalMap], [false, true]);
     modes.set('emission');
     const emission = compiled(material, program('standard'));
     assert.ok(emission.fragmentShader.includes('outgoingLight = totalEmissiveRadiance;\n#include <opaque_fragment>'));
     assert.ok(emission.fragmentShader.includes('#include <tonemapping_fragment>'));
-    assert.deepEqual([emission.fog, emission.emissiveMap], [false, true]);
+    assert.deepEqual([emission.fog, emission.emissiveMap, modes.curved], [false, true, true]);
   });
 
   it('covers the programs three compiles as STANDARD; a line, points or an unlit mesh is drawn as stated in every mode',

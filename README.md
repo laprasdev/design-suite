@@ -388,7 +388,7 @@ export const TOON_SURFACE: ModelSurfaceKind = {
   inert: {_Rim: 0},                   // a declared float drawn only at this value; another is refused by name
   attributes: ['uv', 'normal'],       // three's 'uv', 'color', 'normal', 'position'; a file's own is {name, size}
   light: 'unlit',                     // 'standard' (three's lit model) or 'unlit' (the kind lights itself)
-  coverage: 'opaque',                 // 'blended', 'cutout', {cutout: '<declared float>'} or {cutout: 0.5}
+  coverage: 'opaque',                 // 'cutout', {cutout: '_Cutoff' or 0.5}, {blend: 'alpha'}, both together
   side: 'double', fog: true,
   displacement: null,                 // or {reach: '<declared float>'}: the kind moves vertices
   webProgram: {path: '<url of the .glsl>', sha256: '<64 lowercase hex>',
@@ -440,11 +440,14 @@ void kindSurface( inout vec4 diffuse, inout vec3 emissive ) { ... }
   no light of three's reaches it, while fog, the tone curve and output still apply. It lights itself from the look's
   light by the shared names below: a toon ramp reads `dot( kindNormal, stageKeyDirection )` through its steps.
 - `emissive` may exceed 1: what is above the look's glow threshold glows.
-- Coverage uses alpha: `blended` blends it and writes no depth, `opaque` ignores it, plain `cutout` writes it as
-  coverage as it is. A threshold (`{cutout: '_Cutoff'}` or a number) cuts the surface there: the stage sharpens the
-  alpha once, `kindCoverage(alpha, threshold)`, as URP's AlphaClip under alpha to coverage (SharpenAlphaStrict, a
-  one-pixel ramp across the threshold; at 0 or below, the surface whole). Write the alpha the source computes and do
-  not sharpen it yourself.
+- Coverage uses alpha: `opaque` ignores it, plain `cutout` writes it as coverage as it is. A threshold
+  (`{cutout: '_Cutoff'}` or a number) cuts the surface there: the stage sharpens the alpha once,
+  `kindCoverage(alpha, threshold)`, as URP's AlphaClip under alpha to coverage (SharpenAlphaStrict, a one-pixel ramp
+  across the threshold; at 0 or below, the surface whole). A blend (`{blend: 'alpha'}` or `'premultiply'`, URP's
+  `_Blend` names) sorts the surface, blends it by that blend's factors and writes no depth: `alpha` weights the
+  colour by its alpha, `premultiply` takes the colour as written. A threshold beside a blend discards what lies below
+  it, as URP's AlphaClip does with no alpha to mask, and blends the rest. Write the alpha the source computes and do
+  not sharpen or premultiply it yourself.
 - Do not write `gl_FragColor`, declare uniforms of your own, or clone or replace three's chunks.
 - The Surface modes act on the same material: Clay replaces colour and emission after `kindSurface`, Color shows
   `diffuse` untoned, Emission shows `emissive`. An unlit kind is drawn as it is in every mode, and its mesh makes the
@@ -553,7 +556,7 @@ recovers without reloading, and a loading model receives only the latest valid f
 
 The Surface choice is diagnostic: Lit keeps the loaded materials, Clay removes surface detail to show shape, Color
 shows the unlit base color and Emission the authored emissive channel; a model with none reports "No emission". A
-mode other than Lit shows its term as stated: no fog, and no glow (the frame is drawn straight to the canvas). It
+mode other than Lit shows its term as stated: no fog, and no glow; Color is also shown without the look's tone curve. It
 covers a mesh's standard or physical material and a kind built on the standard program; a model's lines and points
 are drawn as they are in every mode. A model whose meshes draw another material (an unlit one) stays Lit with
 `surfaceModesAvailable` false.

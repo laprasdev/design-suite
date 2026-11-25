@@ -12,9 +12,8 @@ import {modelSurfaceObjectToWorld} from './surfaceReads.ts';
 //   layer    = height.strength * (1 - smoothstep(height.base, height.top, y)) * smoothstep(0, near.distance, depth)
 //   amount   = distance + layer * (1 - distance), the same as 1 - (1 - distance) * (1 - layer)
 //   result   = mix(surface, colour, amount)
-// The fog is mixed in linear light, on the direct draw and under glow alike: just before the look's tone curve and the
-// display encoding (three's <tonemapping_fragment> and <colorspace_fragment>), which then apply to the fogged colour
-// as to any other, once. Both colours are held linear, decoded from the look's sRGB once when the look is written;
+// The fog is mixed in linear light, into the frame's linear target (draw.ts): before the look's tone curve and the
+// display encoding, which the frame's output pass applies to the fogged colour as to any other, once. Both colours are held linear, decoded from the look's sRGB once when the look is written;
 // three's own fog (one colour, mixed after the encoding) is taken out. Every line the change adds sits inside USE_FOG,
 // so with no fog in the look a program compiles to three's own.
 const CHUNK = Object.freeze({parsVertex: 'fog_pars_vertex', vertex: 'fog_vertex', parsFragment: 'fog_pars_fragment',

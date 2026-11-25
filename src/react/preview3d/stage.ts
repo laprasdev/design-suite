@@ -36,7 +36,7 @@ export function createModelStage(
   // A kind this stage cannot draw is refused before anything is built, so it leaves no canvas behind.
   for (const kind of policy.kinds.values()) modelSurfaceDrawable(kind);
   const modes = createModelSurfaceModes();
-  const stage = createModelScene(host, theme, policy, () => modes.inspecting);
+  const stage = createModelScene(host, theme, policy, modes);
   const descriptions = createModelStageDescriptions({policy, theme, stage, modes, load: loadModelStageAsset,
     read: readModelFile, decode: decodeModelImage});
   const {actors} = descriptions;
