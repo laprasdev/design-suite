@@ -4,6 +4,7 @@ import {modelFileDrawn} from '../src/react/preview3d/drawn.ts';
 import {MODEL_NO_EMITTERS} from '../src/react/preview3d/emitterModel.ts';
 import * as THREE from 'three';
 import {createModelFog} from '../src/react/preview3d/fog.ts';
+import {createModelParticleRenderer} from '../src/react/preview3d/particleRenderer.ts';
 import {createModelSurfaceModes, modelStageChanges} from '../src/react/preview3d/materials.ts';
 import type {GLTF} from 'three/addons/loaders/GLTFLoader.js';
 import {createModelActor, type ModelActor, type ModelActorContext} from '../src/react/preview3d/actor.ts';
@@ -55,11 +56,12 @@ export const THEME: ModelStageTheme = Object.freeze({colors: Object.freeze({stag
 
 export function actorContext(clock: ModelStageClock = 'external') {
   const scene = new THREE.Scene(), modes = createModelSurfaceModes(), shared = createModelStageSharedValues();
+  const fog = createModelFog(scene);
   const context: ModelActorContext = {
     policy: modelStagePolicy({reviewKey: 'review', clock, floor: false, grid: false, kinds: []}), scene,
-    theme: THEME, shared,
+    theme: THEME, particles: createModelParticleRenderer(fog.change),
     lighting: {attach: () => () => undefined},
-    changes: modelStageChanges(createModelFog(scene).change, modes), surfaceModes: modes,
+    changes: modelStageChanges(fog.change, modes), surfaceModes: modes,
     surfaces: {materials: createModelSurfaceMaterials({kinds: new Map(), read: () => Promise.reject(new Error('none')),
       textures: {acquire: () => new THREE.Texture(), release: () => undefined},
       shared, changes: () => []}), kinds: new Map(), compile: () => undefined},

@@ -1,8 +1,9 @@
-import {MODEL_ATTRACTION, MODEL_CURVE_MODE, MODEL_EMITTER_REFUSAL as refusal, MODEL_GRADIENT_MODE, MODEL_RENDER_MODE,
-  MODEL_SHADOW_CASTING, MODEL_SHAPE_TYPE, MODEL_SIMULATION_SPACE, type ModelEmitterValue}
+import {MODEL_ARC_MODE, MODEL_ATTRACTION, MODEL_CURVE_MODE, MODEL_EMITTER_REFUSAL as refusal, MODEL_GRADIENT_MODE,
+  MODEL_RENDER_MODE, MODEL_SHADOW_CASTING, MODEL_SHAPE_TYPE, MODEL_SIMULATION_SPACE, type ModelEmitterValue}
   from '../src/react/preview3d/emitterModel.ts';
-import {MODEL_EMITTER_DRAWN as DRAWN, MODEL_EMITTER_DRAWN_VALUE as VALUE, MODEL_EMITTER_UNDRAWN_MODULES}
-  from '../src/react/preview3d/emitterProfileModel.ts';
+import {MODEL_EMITTER_UNDRAWN_MODULES} from '../src/react/preview3d/emitterProfileModel.ts';
+import {MODEL_EMITTER_DRAWN as DRAWN, MODEL_EMITTER_DRAWN_VALUE as VALUE}
+  from '../src/react/preview3d/emitterValueModel.ts';
 import {isRecord} from '../src/valueChecks.ts';
 import {curve, emitterProfile, gradient} from './preview3dEmitterCases.ts';
 
@@ -34,18 +35,17 @@ const {constant, curve: oneCurve, twoCurves, twoConstants} = MODEL_CURVE_MODE;
 export const EMITTER_REFUSAL_CASES: readonly EmitterRefusalCase[] = Object.freeze([
   ...[oneCurve, twoCurves].map(mode => curveCase(main('startSpeed'), curve(0, 1, mode), 'm_Mode', mode, DRAWN.curve)),
   curveCase(emission('rateOverTime'), curve(0, 9, twoConstants), 'm_Mode', twoConstants, DRAWN.rate),
-  ...[MODEL_GRADIENT_MODE.gradient, MODEL_GRADIENT_MODE.twoGradients, MODEL_GRADIENT_MODE.randomColor].map(mode =>
+  ...[MODEL_GRADIENT_MODE.gradient, MODEL_GRADIENT_MODE.twoColors, MODEL_GRADIENT_MODE.twoGradients,
+    MODEL_GRADIENT_MODE.randomColor].map(mode =>
     ({path: ['colorOverLifetime', 'color'], value: gradient(mode),
       refusal: refusal.undrawn(where(['colorOverLifetime', 'color', 'm_Mode']), mode, DRAWN.gradient)})),
-  setting(main('looping'), !VALUE.on, [VALUE.on]),
   setting(main('startRotation3D'), !VALUE.off, [VALUE.off]),
   heldAtZero(main('startRotationX'), -5, 0, twoConstants),
   heldAtZero(main('startRotationY'), 0, 2, constant),
   heldAtZero(main('startRotationZ'), 0, 1, twoConstants),
-  setting(main('simulationSpace'), MODEL_SIMULATION_SPACE.world, DRAWN.space),
+  setting(main('simulationSpace'), MODEL_SIMULATION_SPACE.custom, DRAWN.space),
   setting(main('simulationSpeed'), 2, [VALUE.unscaled]),
   heldAtZero(main('gravityModifier'), 0, 1, constant),
-  setting(emission('hasBurst'), !VALUE.off, [VALUE.off]),
   heldAtZero(emission('rateOverDistance'), 0, 55, constant),
   {path: emission('rateOverTime'), value: curve(0, 0, constant),
     refusal: refusal.emitsNothing(where(['emissionSettings']))},
@@ -54,10 +54,10 @@ export const EMITTER_REFUSAL_CASES: readonly EmitterRefusalCase[] = Object.freez
   setting(['renderMode'], MODEL_RENDER_MODE.stretch, DRAWN.render),
   setting(['shadowCasting'], MODEL_SHADOW_CASTING.on, DRAWN.shadow),
   setting(['sizeOverLifetime', 'separateAxes'], !VALUE.off, [VALUE.off]),
-  setting(shape('shapeType'), MODEL_SHAPE_TYPE.cone, DRAWN.shape),
-  setting(shape('radiusThickness'), 0.5, [VALUE.wholeVolume]),
-  setting(shape('arc'), 180, [VALUE.wholeTurn]),
-  setting(shape('position', 'y'), 1, [VALUE.centred[1]]),
+  setting(shape('shapeType'), MODEL_SHAPE_TYPE.box, DRAWN.shape),
+  setting(shape('arcMode'), MODEL_ARC_MODE.loop, DRAWN.arcMode),
+  {path: ['emissionSettings'], value: {...emitterProfile().emissionSettings, hasBurst: true, burstCycleCount: 0},
+    refusal: refusal.endlessBurst(where(emission('burstCycleCount')))},
   setting(shape('scale', 'x'), 2, [VALUE.unstretched[0]]),
   setting(shape('alignToDirection'), !VALUE.off, [VALUE.off]),
   {path: shape('texture'), value: {fileID: '10300', guid: '0000000000000000f000000000000000', type: 0},

@@ -123,8 +123,8 @@ export function createModelStage(
       actor.playback.update(times[STAGE_TIME.presentation] - previous);
       actor.placement.updateMatrixWorld(true);
       actor.rig.update();
-      actor.emitters.follow();
     }
+    stage.particles.update(times[STAGE_TIME.presentation] - previous);
     // Before the first description is shown there is nothing to frame; a held pose frames no actor.
     if (descriptions.framed.length) stage.fit(measure);
     if (stage.controls.enabled) stage.controls.update();

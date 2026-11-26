@@ -40,11 +40,11 @@ export interface ModelLookLayers {
 }
 // The stage's backdrop, floor, two lights, unlit aids, fog, far plane, tone curve, exposure and glow, as the look of
 // one time at a time. A look is written into the same objects every time: a changed colour, strength, distance or
-// exposure allocates nothing and compiles nothing. What does compile, once each, read from three r180's program key
+// exposure allocates nothing and compiles nothing. What does compile, once each, read from three r182's program key
 // (WebGLPrograms.js 420, 463): fog arriving or leaving recompiles every program that takes it; a tone curve arriving,
 // leaving or changing recompiles every program the canvas pass draws; and glow arriving compiles, on its first frame, a
 // second variant of every program the scene draws, for the linear, curve-less target its source is drawn into
-// (WebGLPrograms.js 165-171, 202). Those variants stay in each material's programs after glow leaves, so a later return
+// (WebGLPrograms.js 166-172, 202). Those variants stay in each material's programs after glow leaves, so a later return
 // compiles nothing.
 export function createModelLighting(builtIn: readonly ModelStageTime[], layers: ModelLookLayers) {
   const ambient = new THREE.HemisphereLight();

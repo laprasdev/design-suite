@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import {describe, it} from 'node:test';
 import * as THREE from 'three';
+import {BatchedRenderer} from 'three.quarks';
 import {createModelStageDescriptions} from '../src/react/preview3d/stageDescriptions.ts';
 import {createModelSurfaceModes} from '../src/react/preview3d/materials.ts';
 import {createModelFog} from '../src/react/preview3d/fog.ts';
@@ -25,7 +26,8 @@ function stageWith(lightingLoad: () => readonly Promise<void>[] = () => [], refu
   const descriptions = createModelStageDescriptions({
     policy: modelStagePolicy({reviewKey: 'review', clock: 'local', floor: false, grid: false, kinds: [PULSE as never]}),
     theme: THEME,
-    stage: {scene, fog: createModelFog(scene), shared: createModelStageSharedValues(), compile: () => undefined,
+    stage: {scene, fog: createModelFog(scene), shared: createModelStageSharedValues(), particles: new BatchedRenderer(),
+      compile: () => undefined,
       lighting: {load: lightingLoad, attach: () => () => undefined, prepare: value => {
         if (refused(value.time)) throw new ModelStageRefusal(`Time ${value.time}: refused`);
         return () => undefined;

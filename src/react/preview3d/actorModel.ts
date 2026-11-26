@@ -8,8 +8,8 @@ import {MODEL_ACTOR_SURFACES, modelActorSurfaces, type ModelActorSurfaces, type 
   modelSurfaceRecord} from './surfaceModel.ts';
 import {modelStageTerrain, type ModelStageTerrain} from './terrainModel.ts';
 import {isRecord} from '../../valueChecks.ts';
-import {MODEL_NO_EMITTERS, type ModelEmitterRecords} from './emitterModel.ts';
-import {modelEmitterRecords} from './emitterProfileModel.ts';
+import {MODEL_NO_EMITTERS, type ModelEmitterRecords, type ModelEmitterSkip} from './emitterModel.ts';
+import {modelEmitterRecords} from './emitterRecordModel.ts';
 
 // Actor ids are the host's. A frame's entities are keyed by actor id and the host owns the mapping from an engine's
 // entity ids to them. Two actors may share one asset, so an actor's id is never taken from its asset.
@@ -81,6 +81,8 @@ export interface ModelStageActorSnapshot {
   readonly pose: ModelPresentationPose;
   readonly animation: string;
   readonly samples: readonly ModelAnimationSample[];
+  /** Each emitter profile the actor declares and the stage skips: it holds a value the stage does not draw yet. */
+  readonly skipped: readonly ModelEmitterSkip[];
 }
 const ACTOR_SET_FIELDS = Object.freeze(['focus', 'actors']);
 const ACTOR_FIELDS: ModelStatingFields = Object.freeze({stated: ['id', 'asset', 'placement', 'animation', 'surfaces'],
@@ -143,7 +145,7 @@ function actor(value: unknown, index: number): ModelStageActor {
   }
   return Object.freeze({id, asset: declared, placement: modelPresentationPose(record.placement,
     `Actor ${id} placement`), animation: animation(record.animation, `Actor ${id}.animation`), surfaces,
-    emitters: modelStates(record, 'emitters') ? modelEmitterRecords(record.emitters, `Actor ${id}.emitters`) :
+    emitters: modelStates(record, 'emitters') ? modelEmitterRecords(id, record.emitters) :
       MODEL_NO_EMITTERS});
 }
 

@@ -3,7 +3,7 @@ import {MODEL_ACTOR_REFUSAL} from './actorModel.ts';
 import {MODEL_STAGE_COMMIT_TEXT, MODEL_STAGE_UNCHANGED, applyModelStageCommits, type ModelStageCommit}
   from './commit.ts';
 import {MODEL_NO_EMITTER_CHANGES} from './emitterFrameModel.ts';
-import {checkModelEmitterBudget, createModelEmitterLoad} from './emitterModel.ts';
+import {checkModelEmitterBudget, createModelEmitterLoad} from './emitterBudgetModel.ts';
 import {isModelValidatedFrame, type ModelValidatedFrame} from './frameModel.ts';
 import type {ModelPreviewEntity} from './presentation.ts';
 import {ModelStageRefusal} from './refusal.ts';
@@ -51,7 +51,7 @@ export function applyModelFrame(actors: readonly ModelActor[], value: ModelValid
     if (changing) checkModelEmitterBudget(emitterLoad);
     for (let index = 0; index < actors.length; index++) {
       const entity = entities[index];
-      if (entity) commits[count++] = actors[index].prepare(entity, value.simulationTimeSeconds);
+      if (entity) commits[count++] = actors[index].prepare(entity);
     }
     applyModelStageCommits(commits, count);
   } finally {

@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
-import {createHash} from 'node:crypto';
 import {mkdirSync} from 'node:fs';
 import {join} from 'node:path';
 import {test} from 'node:test';
 import {MODEL_STAGE, MODEL_STAGE_SURFACE_MODE} from '../src/react/preview3d/model.ts';
+import {sha256} from './sha256.ts';
 import {checkAllocationCeiling, sumNamedBytes} from './allocationProfile.ts';
 import {openScene, SCENE_GL} from './browserScene.ts';
 import type {TerrainViewport} from './preview3dTerrainCases.ts';
@@ -14,7 +14,7 @@ import {statedBytes} from './preview3dToneCurveOracle.ts';
 
 const CAPTURES = join(SUITE_ROOT, '.local', 'captures', 'preview3dFrameCamera');
 mkdirSync(CAPTURES, {recursive: true});
-const programSha256 = createHash('sha256').update(PAINTED_PROGRAM).digest('hex');
+const programSha256 = sha256(PAINTED_PROGRAM);
 const BYTE_TOLERANCE = 2;
 const FRAME_CAMERA_OWNER = 'src/react/preview3d/frameModel.ts';
 
@@ -98,5 +98,6 @@ test('verifies sRGB colour space, flipY false orientation, fog, Surface modes, i
         assert.equal(sumNamedBytes(head, 'freezeModelPreviewCamera'), 0, 'tick allocates no frozen camera');
         assert.equal(sumNamedBytes(head, 'hypot', false, 'readModelFrameCamera'), 0, 'no hypot on camera');
       },
+      delegates: [],
     });
   });

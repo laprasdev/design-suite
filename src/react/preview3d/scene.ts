@@ -7,6 +7,7 @@ import {disposeModelObject} from './asset.ts';
 import {createModelLighting} from './lighting.ts';
 import {modelStageBuiltInTimes} from './builtInTimes.ts';
 import {createModelFog} from './fog.ts';
+import {createModelParticleRenderer} from './particleRenderer.ts';
 import {createModelDraw, type ModelDrawModes} from './draw.ts';
 import {loadModelGlowPasses} from './glow.ts';
 import {createModelStageSharedValues} from './sharedValues.ts';
@@ -71,7 +72,10 @@ export function createModelScene(host: HTMLElement, theme: ModelStageTheme, poli
   const aids = createModelStageAids(theme, policy, lighting);
   markModelStageAids(aids);
   markModelStageLights(lighting.lights);
-  scene.add(lighting.backdrop, ...lighting.lights, ...aids);
+  // The one stepper and drawer of every emitter's particles (emitters.ts), advanced by the presentation time, its
+  // programs taking the stage's fog.
+  const particles = createModelParticleRenderer(fog.change);
+  scene.add(lighting.backdrop, ...lighting.lights, ...aids, particles);
   const resize = () => {
     const {clientWidth: width, clientHeight: height} = host;
     if (!width || !height) return;
@@ -96,7 +100,7 @@ export function createModelScene(host: HTMLElement, theme: ModelStageTheme, poli
   observer.observe(host);
   try {resize();} catch (error) {dispose(); throw error;}
   return {
-    renderer, scene, camera, controls, lighting, fog, shared,
+    renderer, scene, camera, controls, lighting, fog, shared, particles,
     // The framing the stage drives; the far plane is the look's, set through the lighting alone.
     requestFit: framing.requestFit, poseCoordinates: framing.poseCoordinates, frame: framing.frame, fit: framing.fit,
     cameraSnapshot: framing.cameraSnapshot,
