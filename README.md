@@ -463,8 +463,12 @@ void kindSurface( inout vec4 diffuse, inout vec3 emissive ) { ... }
 vec3 kindDisplacement( vec3 world ) { ... }
 ```
 
-- It may read its argument, the parameter accessors, `stageDecorativeSeconds` and the other shared values, and a file's
-  own attribute. Decorative time holds under reduced motion and on a hidden page, so a swaying kind holds still with it.
+- It may read its argument, the parameter accessors, `stageDecorativeSeconds` and the other shared values, a file's
+  own attribute, and, in the vertex stage only (inside `#ifdef KIND_VERTEX_STAGE`), `kindObjectToWorld`: the object's
+  world transform (model, instance and batch matrices), declared once in the stage and set once as the vertex begins,
+  the one value the displacement, a world position and the fog read. A point the file states in the object's space,
+  such as a blade's root, reaches world space as `( kindObjectToWorld * vec4( point, 1.0 ) ).xyz`. Decorative time
+  holds under reduced motion and on a hidden page, so a swaying kind holds still with it.
 - A wind graph that adds noise of the world position (with wind direction times speed times time) to the world
   position and then transforms World to Object maps exactly: the world position is the argument, time is
   `stageDecorativeSeconds`, and the stage performs the World to Object step. A graph that adds one noise value to all

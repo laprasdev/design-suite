@@ -2,9 +2,11 @@ import assert from 'node:assert/strict';
 import {describe, it} from 'node:test';
 import * as THREE from 'three';
 import {createModelFog} from '../src/react/preview3d/fog.ts';
+import {modelSurfaceObjectToWorld} from '../src/react/preview3d/surfaceReads.ts';
 import {MODEL_STAGE_ABOVE, MODEL_STAGE_LOOK_REFUSAL, modelStageLook, type ModelStageFog}
   from '../src/react/preview3d/lookModel.ts';
-import {extendModelMaterial, extendModelMaterials, modelMaterialChanges, type ModelShader, type ModelShaderChange}
+import {extendModelMaterial, extendModelMaterials, modelMaterialChanges, modelShaderReplace, type ModelShader,
+  type ModelShaderChange}
   from '../src/react/preview3d/shading.ts';
 import {makeActor, refused, stageLook} from './preview3dActorFixture.ts';
 import {compiled, program} from './preview3dCompiledProgram.ts';
@@ -76,12 +78,14 @@ describe('the stage\'s fog', () => {
     assert.equal((shader.uniforms.modelStageFogHeight.value as THREE.Vector3).z, 0);
   });
 
-  it('adds only lines inside USE_FOG, so with no fog every program is three\'s own', () => {
+  it('adds only lines inside USE_FOG and the object\'s world transform, so with no fog every program draws as three\'s',
+  () => {
     for (const name of ['physical', 'standard', 'basic', 'lambert', 'points'] as const) {
       const shader = program(name), fog = createModelFog(new THREE.Scene());
       compile(fog.change, shader);
       assert.notEqual(shader.fragmentShader, THREE.ShaderLib[name].fragmentShader, name);
-      assert.equal(withoutFog(shader.vertexShader), withoutFog(THREE.ShaderLib[name].vertexShader), name);
+      const own = modelSurfaceObjectToWorld(THREE.ShaderLib[name].vertexShader, modelShaderReplace(name));
+      assert.equal(withoutFog(shader.vertexShader), withoutFog(own), name);
       const code = (source: string) => withoutFog(source).replace('#include <fog_fragment>', '').replace(/\s+/g, ' ');
       assert.equal(code(shader.fragmentShader), code(THREE.ShaderLib[name].fragmentShader), name);
     }

@@ -35,13 +35,13 @@ export const MODEL_EMITTER_FORMS = Object.freeze({
   [MODEL_EMITTER_FORM.points]: Object.freeze({
     material: () => new THREE.PointsMaterial({size: 1, sizeAttenuation: true}),
     object: (geometry: THREE.BufferGeometry, material: THREE.Material) => new THREE.Points(geometry, material),
-    place: 'vec3 transformed = emitterCentre;',
+    place: 'transformed = emitterCentre;',
     project: `gl_PointSize = vEmitterSize * projectionMatrix[ 1 ][ 1 ] * scale / - mvPosition.z;\n${CULL_DEAD}`,
   }),
   [MODEL_EMITTER_FORM.mesh]: Object.freeze({
     material: () => new THREE.MeshBasicMaterial(),
     object: (geometry: THREE.BufferGeometry, material: THREE.Material) => new THREE.Mesh(geometry, material),
-    place: 'vec3 transformed = emitterCentre + position * vEmitterSize;',
+    place: 'transformed = emitterCentre + position * vEmitterSize;',
     project: CULL_DEAD,
   }),
 } satisfies Record<ModelEmitterForm, unknown>);

@@ -23,10 +23,12 @@ const {occlusion, roughness, metalness, coverage: coverageOf, objectToWorld} = M
  * the vertex's world position and returns how far it moves, in world space (metres); the stage takes that offset to
  * the object's space with the inverse of the object's world transform (its model, instance and batch matrices), as a
  * shader graph's world-to-object transform does, so everything three computes from the position follows: the
- * projection, the fog's depth and height, a world position. Normals are not moved.
+ * projection, the fog's depth and height, a world position. Normals are not moved. That transform is the vertex
+ * stage's one `kindObjectToWorld` (surfaceReads.ts), declared ahead of the kind's program, so a kind takes a point its
+ * own attribute states in the object's space (a blade's root, an instance's origin) to world too.
  */
-const DISPLACE = modelSurfaceObjectToWorld(`vec3 kindWorld = ( ${objectToWorld} * vec4( transformed, 1.0 ) ).xyz;
-  transformed += inverse( mat3( ${objectToWorld} ) ) * kindDisplacement( kindWorld );`);
+const DISPLACE = `vec3 kindWorld = ( ${objectToWorld} * vec4( transformed, 1.0 ) ).xyz;
+transformed += inverse( mat3( ${objectToWorld} ) ) * kindDisplacement( kindWorld );`;
 // The kind's surface called, between what the stage writes for it just before and takes from it just after; and what
 // the stage applies of it once the light is computed.
 interface Around {readonly before: string; readonly after: string; readonly lit: string}
@@ -148,7 +150,8 @@ export function createModelSurfaceProgram(kind: ModelSurfaceKind, program: strin
       `${modelShaderChunk(CHUNK.vertexDeclarations)}\n${handed}`);
     const begun = replace(declared, CHUNK.begin, `${modelShaderChunk(CHUNK.begin)}\n${reads.begun.join('\n')}`);
     const projected = [...(moves ? [DISPLACE] : []), modelShaderChunk(CHUNK.project), ...reads.projected];
-    return reads.projected.length || moves ? replace(begun, CHUNK.project, projected.join('\n')) : begun;
+    const placed = reads.projected.length || moves ? replace(begun, CHUNK.project, projected.join('\n')) : begun;
+    return moves || reads.objectToWorld ? modelSurfaceObjectToWorld(placed, replace) : placed;
   };
   const vertexShader = reads.vertexDeclarations.length || reads.varyings.length || moves ?
     vertex(base.shader.vertexShader) : base.shader.vertexShader;
