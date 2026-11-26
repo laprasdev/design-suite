@@ -7,6 +7,7 @@ import {
   type ModelColor, type ModelFileActor, type ModelStageDescription, type ModelStageFog,
   type ModelStageSurfaceMode, type ModelStageTime, type ModelVector,
 } from '../src/react/preview3d/model.ts';
+import type {RgbBytes} from './framePixels.ts';
 import {ACES_CURVE, declaration, describing, stageLook, standingAt} from './preview3dActorFixture.ts';
 
 export const FOG_SCENE_ENTRY = 'tests/preview3dFogScene.tsx';
@@ -63,7 +64,6 @@ export const LAYERED_TIME: ModelStageTime = Object.freeze({
 export const FOG_SCENE_TIMES: readonly ModelStageTime[] = Object.freeze([HAZE_TIME, LAYERED_TIME, CLEAR_TIME]);
 export const CLEAR_ONLY_TIMES: readonly ModelStageTime[] = Object.freeze([CLEAR_TIME]);
 
-export type RgbBytes = readonly [number, number, number];
 export interface PatchSample {
   readonly nearRgb: RgbBytes;
   readonly farRgb: RgbBytes;

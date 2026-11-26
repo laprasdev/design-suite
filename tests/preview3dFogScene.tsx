@@ -10,8 +10,9 @@ import {createModelStage} from '../src/react/preview3d/stage.ts';
 import {THEME} from './preview3dActorFixture.ts';
 import {
   CLEAR_ONLY_TIMES, FAR_CENTER, FOG_HOSTS_ID, FOG_SCENE_TIMES, FOG_TIME_ID, FOG_VIEWPORT,
-  fogStageDescription, framingCamera, NEAR_CENTER, PATCH_BASE_COLOR, PATCH_EMISSIVE, type RgbBytes,
+  fogStageDescription, framingCamera, NEAR_CENTER, PATCH_BASE_COLOR, PATCH_EMISSIVE,
 } from './preview3dFogCases.ts';
+import {readFramePixels, readPixelColor, type RgbBytes} from './framePixels.ts';
 import {renderScene} from './renderScene.tsx';
 
 const waitTwoFrames = () => new Promise<void>(next => {
@@ -57,18 +58,7 @@ function readProjectedPixel(
   gl: WebGLRenderingContext | WebGL2RenderingContext, center: ModelVector,
 ): RgbBytes {
   const ndc = new THREE.Vector3(...center).project(framingCamera(gl.drawingBufferWidth, gl.drawingBufferHeight));
-  const x = Math.floor((ndc.x * 0.5 + 0.5) * gl.drawingBufferWidth);
-  const y = Math.floor((ndc.y * 0.5 + 0.5) * gl.drawingBufferHeight);
-  const rgba = new Uint8Array(4);
-  gl.readPixels(x, y, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, rgba);
-  return [rgba[0], rgba[1], rgba[2]];
-}
-
-function readWholeCanvas(host: HTMLElement): Uint8Array {
-  const gl = glContext(host);
-  const pixels = new Uint8Array(gl.drawingBufferWidth * gl.drawingBufferHeight * 4);
-  gl.readPixels(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
-  return pixels;
+  return readPixelColor(gl, [ndc.x * 0.5 + 0.5, ndc.y * 0.5 + 0.5]);
 }
 
 async function bootFogScene(assetUrl: string): Promise<void> {
@@ -96,13 +86,13 @@ async function bootFogScene(assetUrl: string): Promise<void> {
         fogStageDescription(assetUrl, FOG_TIME_ID.clear, MODEL_STAGE_SURFACE_MODE.lit, FOG_SCENE_TIMES),
       );
       await waitTwoFrames();
-      const afterFog = readWholeCanvas(primary.host);
+      const afterFog = readFramePixels(glContext(primary.host));
       const fresh = await mountStage(
         container, fogStageDescription(assetUrl, FOG_TIME_ID.clear, MODEL_STAGE_SURFACE_MODE.lit, CLEAR_ONLY_TIMES),
       );
       try {
         await waitTwoFrames();
-        const neverFogged = readWholeCanvas(fresh.host);
+        const neverFogged = readFramePixels(glContext(fresh.host));
         let differingBytes = 0;
         let firstDiff: string | null = null;
         for (let index = 0; index < afterFog.length; index++) {

@@ -4,9 +4,11 @@ import {ModelStageRefusal} from './refusal.ts';
 
 // A surface record's texture value: a file by path and SHA-256 with its sampling, a static host-supplied browser image
 // with its sampling (uploaded once per instance; pass a distinct instance to replace pixels), or a 1x1 constant for an
-// empty slot. Orientation is glTF's (`flipY` false) across file and image alike.
+// empty slot, one of `MODEL_TEXTURE_CONSTANT` (its texel and space are textures.ts's). Orientation is glTF's
+// (`flipY` false) across file and image alike.
 export const MODEL_TEXTURE_WRAP = Object.freeze({repeat: 'repeat', clamp: 'clamp', mirror: 'mirror'} as const);
-export const MODEL_TEXTURE_CONSTANT = Object.freeze({white: 'white', black: 'black'} as const);
+export const MODEL_TEXTURE_CONSTANT = Object.freeze({white: 'white', black: 'black',
+  flatNormal: 'flatNormal'} as const);
 /** The image formats the stage decodes (the browser's own decoder, as three's glTF loader uses it), by a path's end. */
 export const MODEL_TEXTURE_FORMATS = Object.freeze(['png', 'jpg', 'jpeg', 'webp'] as const);
 /** The static browser image constructors the stage uploads once per instance. Streaming video sources are excluded. */

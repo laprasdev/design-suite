@@ -78,10 +78,15 @@ describe('the stage\'s textures', () => {
       scale: [2, 3], offset: [0.25, 0.5]}, 'linear');
     assert.deepEqual([stated.wrapS, stated.wrapT, stated.repeat.toArray(), stated.offset.toArray()],
       [THREE.MirroredRepeatWrapping, THREE.RepeatWrapping, [2, 3], [0.25, 0.5]]);
-    // An empty slot's constant: one texel, in the parameter's space.
+    // An empty slot's constant: one texel, in its own space whatever its parameter's, one texture for either.
     const black = textures.acquire({constant: 'black'}, 'srgb') as THREE.DataTexture;
     assert.deepEqual([[...black.image.data as Uint8Array], black.image.width, black.colorSpace],
       [[0, 0, 0, 255], 1, THREE.SRGBColorSpace]);
+    assert.equal(textures.acquire({constant: 'black'}, 'linear'), black);
+    const flatNormal = textures.acquire({constant: 'flatNormal'}, 'srgb');
+    assert.ok(flatNormal instanceof THREE.DataTexture);
+    assert.deepEqual([[...flatNormal.image.data], flatNormal.colorSpace],
+      [[128, 128, 255, 255], THREE.NoColorSpace], 'a flat normal is linear data on an sRGB slot too');
     let disposed = 0;
     first.addEventListener('dispose', () => disposed++);
     textures.release(first);

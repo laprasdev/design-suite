@@ -3,6 +3,7 @@
 // pixel to one world point.
 import * as THREE from 'three';
 import {MODEL_SURFACE_GLSL} from '../src/react/preview3d/surfaceGlsl.ts';
+import type {FramePixels} from './pixelReadScene.tsx';
 
 export const WORLD_SCENE_ENTRY = 'tests/preview3dWorldPositionScene.tsx';
 export const WORLD_VIEWPORT = Object.freeze({width: 64, height: 64});
@@ -45,12 +46,8 @@ export function expectedBytes(x: number, y: number): readonly number[] {
   return [...world, depth].map(coordinate => Math.round(coordinate / extent * 255));
 }
 
-export interface WorldSample {
-  /** The whole frame's RGBA bytes, bottom row first. */
-  readonly pixels: number[];
-}
 declare global {
   interface Window {
-    drawWorldPlacement(placement: WorldPlacement): WorldSample;
+    drawWorldPlacement(placement: WorldPlacement): FramePixels;
   }
 }

@@ -3,6 +3,7 @@ import {createModelFrameInbox, MODEL_ACTOR_SURFACES, MODEL_STAGE_CLOCK, MODEL_ST
   type ModelStageController, type ModelStageDescription, type ModelStageSurfaceMode}
   from '../src/react/preview3d/model.ts';
 import {createModelStage} from '../src/react/preview3d/stage.ts';
+import {readPixelColor} from './framePixels.ts';
 import {THEME, declaration, describing, stageLook, standingAt} from './preview3dActorFixture.ts';
 import {ALT_CANVAS_SRGB, BOTTOM_CANVAS_SRGB, CAMERA_FOG, CAMERA_HOST_ID, CAMERA_ROUTES, FRAME_CAMERA_POSE,
   PAINTED_KIND_ID, TOP_CANVAS_SRGB, type FrameCameraSceneDriver} from './preview3dFrameCameraCases.ts';
@@ -27,13 +28,10 @@ function paintStripedCanvas(top: ModelColor, bottom: ModelColor): HTMLCanvasElem
   return canvas;
 }
 
-function readPixelAt(canvas: HTMLCanvasElement, fx: number, fy: number): readonly [number, number, number] {
+function readPixelAt(canvas: HTMLCanvasElement, fx: number, fy: number) {
   const gl = canvas.getContext('webgl2');
   if (!gl) throw new Error('Expected WebGL2 canvas.');
-  const x = Math.floor(canvas.width * fx), y = Math.floor(canvas.height * fy);
-  const pixel = new Uint8Array(4);
-  gl.readPixels(x, y, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixel);
-  return [pixel[0], pixel[1], pixel[2]];
+  return readPixelColor(gl, [fx, fy]);
 }
 
 async function bootFrameCameraScene(programSha256: string): Promise<void> {

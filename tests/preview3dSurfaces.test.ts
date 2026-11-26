@@ -89,7 +89,7 @@ describe('surface kinds, records and sets', () => {
     refused(() => sets({...RECORD, values: {...RECORD.values, _Mask: {texture: {...MASK, wrap: ['repeat', 'tile']}}}}),
       /_Mask.texture.wrap\[1\] is one of repeat, clamp, mirror/);
     refused(() => sets({...RECORD, values: {...RECORD.values, _Mask: {texture: {constant: 'grey'}}}}),
-      /_Mask.texture.constant is one of white, black/);
+      /_Mask.texture.constant is one of white, black, flatNormal/);
     refused(() => sets({kind: 'file', values: {}}), new RegExp(`${where} does not state values`));
     assert.deepEqual(sets({kind: 'file'}).tinted[RENDERER], MODEL_FILE_ENTRY);
     assert.deepEqual(sets(RECORD).tinted[RENDERER], RECORD);
