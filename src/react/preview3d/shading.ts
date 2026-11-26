@@ -19,6 +19,8 @@ export interface ModelShaderChange {
 export const MODEL_SHADING_TEXT = Object.freeze({
   anchor: (change: string, anchor: string) => `The ${change} change needs ${anchor} in the material's shader.`,
   foreign: (name: string) => `The material ${name || '(unnamed)'} compiles a program the stage did not make.`,
+  component: (vector: string, slot: number) =>
+    `${vector} has no slot ${slot}: a GLSL vector holds slots 0 to ${MODEL_SHADER_COMPONENTS.length - 1}.`,
 });
 // The changes the stage made to each material it extended, so a copy of one can be given the same.
 const extended = new WeakMap<THREE.Material, readonly ModelShaderChange[]>();
@@ -26,6 +28,15 @@ const NONE: readonly ModelShaderChange[] = Object.freeze([]);
 
 /** three's include line for one of its chunks: the only form a change places itself by. */
 export const modelShaderChunk = (name: string) => `#include <${name}>`;
+/** GLSL's names for a vector's components, in slot order. */
+export const MODEL_SHADER_COMPONENTS = 'xyzw';
+/** Slot `slot` of the GLSL vector `vector`, as `emitterTimes.y`: the one way a change reads a value it packs in a
+ * vector by its slot constant, so the slot is written once. */
+export function modelShaderComponent(vector: string, slot: number) {
+  const component = MODEL_SHADER_COMPONENTS[slot];
+  if (component === undefined) throw new RangeError(MODEL_SHADING_TEXT.component(vector, slot));
+  return `${vector}.${component}`;
+}
 /** The declarations of a change's uniforms, by name and GLSL type: the one way a change declares what it reads. */
 export const modelShaderUniforms = (uniforms: Readonly<Record<string, string>>) =>
   Object.entries(uniforms).map(([name, type]) => `uniform ${type} ${name};`).join('\n');

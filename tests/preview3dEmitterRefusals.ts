@@ -1,8 +1,9 @@
 import {MODEL_ATTRACTION, MODEL_CURVE_MODE, MODEL_EMITTER_REFUSAL as refusal, MODEL_GRADIENT_MODE, MODEL_RENDER_MODE,
   MODEL_SHADOW_CASTING, MODEL_SHAPE_TYPE, MODEL_SIMULATION_SPACE, type ModelEmitterValue}
   from '../src/react/preview3d/emitterModel.ts';
-import {MODEL_EMITTER_DRAWN as DRAWN, MODEL_EMITTER_DRAWN_VALUE as VALUE, MODEL_EMITTER_UNDRAWN_MODULES}
-  from '../src/react/preview3d/emitterProfileModel.ts';
+import {MODEL_EMITTER_UNDRAWN_MODULES} from '../src/react/preview3d/emitterProfileModel.ts';
+import {MODEL_EMITTER_DRAWN as DRAWN, MODEL_EMITTER_DRAWN_VALUE as VALUE}
+  from '../src/react/preview3d/emitterValueModel.ts';
 import {isRecord} from '../src/valueChecks.ts';
 import {curve, emitterProfile, gradient} from './preview3dEmitterCases.ts';
 
@@ -23,12 +24,14 @@ const setting = (path: readonly string[], value: ModelEmitterValue,
 const curveCase = (path: readonly string[], value: ReturnType<typeof curve>, field: keyof ReturnType<typeof curve>,
   refused: ModelEmitterValue, drawn: readonly ModelEmitterValue[]): EmitterRefusalCase =>
   ({path, value, refusal: refusal.undrawn(where([...path, field]), refused, drawn)});
-const heldAtZero = (path: readonly string[], min: number, max: number, mode: number) => curveCase(path,
-  curve(min, max, mode), min === VALUE.heldAtZero ? 'm_ConstantMax' : 'm_ConstantMin',
-  min === VALUE.heldAtZero ? max : min, [VALUE.heldAtZero]);
+const heldAt = (held: number) => (path: readonly string[], min: number, max: number, mode: number) =>
+  curveCase(path, curve(min, max, mode), min === held ? 'm_ConstantMax' : 'm_ConstantMin', min === held ? max : min,
+    [held]);
+const heldAtZero = heldAt(VALUE.heldAtZero), heldUnscaled = heldAt(VALUE.unscaled);
 const main = (field: string) => ['mainSettings', field];
 const emission = (field: string) => ['emissionSettings', field];
 const shape = (...field: string[]) => ['shapeSettings', ...field];
+const velocity = (field: string) => ['velocitySettings', field];
 const {constant, curve: oneCurve, twoCurves, twoConstants} = MODEL_CURVE_MODE;
 
 export const EMITTER_REFUSAL_CASES: readonly EmitterRefusalCase[] = Object.freeze([
@@ -37,7 +40,6 @@ export const EMITTER_REFUSAL_CASES: readonly EmitterRefusalCase[] = Object.freez
   ...[MODEL_GRADIENT_MODE.gradient, MODEL_GRADIENT_MODE.twoGradients, MODEL_GRADIENT_MODE.randomColor].map(mode =>
     ({path: ['colorOverLifetime', 'color'], value: gradient(mode),
       refusal: refusal.undrawn(where(['colorOverLifetime', 'color', 'm_Mode']), mode, DRAWN.gradient)})),
-  setting(main('looping'), !VALUE.on, [VALUE.on]),
   setting(main('startRotation3D'), !VALUE.off, [VALUE.off]),
   heldAtZero(main('startRotationX'), -5, 0, twoConstants),
   heldAtZero(main('startRotationY'), 0, 2, constant),
@@ -62,6 +64,11 @@ export const EMITTER_REFUSAL_CASES: readonly EmitterRefusalCase[] = Object.freez
   setting(shape('alignToDirection'), !VALUE.off, [VALUE.off]),
   {path: shape('texture'), value: {fileID: '10300', guid: '0000000000000000f000000000000000', type: 0},
     refusal: refusal.undrawnAsset(where(shape('texture')))},
+  ...[oneCurve, twoCurves].map(mode =>
+    curveCase(velocity('linearY'), curve(0, 1, mode), 'm_Mode', mode, DRAWN.curve)),
+  setting(velocity('space'), MODEL_SIMULATION_SPACE.world, DRAWN.velocitySpace),
+  heldUnscaled(velocity('speedModifier'), 1, 0.2, constant),
+  ...['orbitalX', 'orbitalOffsetY', 'radial'].map(field => heldAtZero(velocity(field), 0, 2, constant)),
   ...Object.keys(MODEL_EMITTER_UNDRAWN_MODULES).map(module => setting([module, 'enabled'], !VALUE.off, [VALUE.off])),
 ]);
 

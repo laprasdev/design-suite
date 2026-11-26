@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import {describe, it} from 'node:test';
 import * as THREE from 'three';
-import {extendModelMaterial, extendModelMaterials, modelMaterialChanges, modelMaterialOwned, modelShaderUniforms,
-  type ModelShader} from '../src/react/preview3d/shading.ts';
+import {extendModelMaterial, extendModelMaterials, MODEL_SHADING_TEXT, modelMaterialChanges, modelMaterialOwned,
+  modelShaderComponent, modelShaderUniforms, type ModelShader} from '../src/react/preview3d/shading.ts';
 import {compiled} from './preview3dCompiledProgram.ts';
 
 const shader = (fragmentShader: string): ModelShader => ({fragmentShader, vertexShader: '', uniforms: {}, fog: true});
@@ -48,5 +48,11 @@ describe('the stage\'s changes to a material\'s program', () => {
     assert.throws(() => compiled(replacing('model-stage-fog', 'fog_fragment'), shader('source')),
       /The model-stage-fog change needs #include <fog_fragment> in the material's shader/);
     assert.equal(modelShaderUniforms({far: 'vec3', on: 'bool'}), 'uniform vec3 far;\nuniform bool on;');
+  });
+
+  it('reads a packed value by its slot, and refuses a slot past a vector\'s last', () => {
+    assert.deepEqual([0, 1, 2, 3].map(slot => modelShaderComponent('packed', slot)),
+      ['packed.x', 'packed.y', 'packed.z', 'packed.w']);
+    assert.throws(() => modelShaderComponent('packed', 4), {message: MODEL_SHADING_TEXT.component('packed', 4)});
   });
 });

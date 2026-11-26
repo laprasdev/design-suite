@@ -8,15 +8,17 @@ import {isModelValidatedFrame, type ModelValidatedFrame} from './frameModel.ts';
 import type {ModelPreviewEntity} from './presentation.ts';
 import {ModelStageRefusal} from './refusal.ts';
 
-// What applying a frame writes into, made once by its stage: the emitter load, the entity the frame names for each
-// actor (by the actor's index; none where it names none) and the prepared actors' commits.
+// What applying a frame writes into, made once by its stage: the frame's time (the one way it reaches the actors and
+// their emitters) and the emitter load, each held in a typed array, the entity the frame names for each actor (by the
+// actor's index; none where it names none) and the prepared actors' commits.
 export interface ModelFrameSlots {
+  readonly frameTime: Float64Array;
   readonly emitterLoad: Float64Array;
   readonly entities: (ModelPreviewEntity | undefined)[];
   readonly commits: ModelStageCommit[];
 }
 export const createModelFrameSlots = (): ModelFrameSlots =>
-  Object.freeze({emitterLoad: createModelEmitterLoad(), entities: [], commits: []});
+  Object.freeze({frameTime: new Float64Array(1), emitterLoad: createModelEmitterLoad(), entities: [], commits: []});
 
 // Prepare every named actor from a validated frame before any commits: a refusal leaves every actor and the camera as
 // they were. An actor the frame does not name keeps what it shows. The emitter budget holds for every emitter the stage
@@ -37,21 +39,23 @@ function changesEmitters(entities: readonly ModelPreviewEntity[]) {
 export function applyModelFrame(actors: readonly ModelActor[], value: ModelValidatedFrame,
   applyCamera: (coordinates: Float64Array) => void, slots: ModelFrameSlots) {
   if (!isModelValidatedFrame(value)) throw new ModelStageRefusal(MODEL_ACTOR_REFUSAL.unvalidated);
-  const {emitterLoad, entities, commits} = slots, changing = changesEmitters(value.entities);
+  const {frameTime, emitterLoad, entities, commits} = slots, changing = changesEmitters(value.entities);
   let named = 0, count = 0;
   emitterLoad.fill(0);
+  frameTime[0] = value.simulationTimeSeconds;
   // The slots keep no actor or entity once the frame applies or refuses.
   try {
     for (let index = 0; index < actors.length; index++) {
       const actor = actors[index], entity = entities[index] = frameEntity(value.entities, actor.id);
       if (entity) named++;
-      if (changing) actor.emitters.addLoad(entity ? entity.emitters : MODEL_NO_EMITTER_CHANGES, emitterLoad);
+      if (changing) actor.emitters.addLoad(entity ? entity.emitters : MODEL_NO_EMITTER_CHANGES,
+        frameTime, emitterLoad);
     }
     if (named !== value.entities.length) throw new ModelStageRefusal(MODEL_ACTOR_REFUSAL.scope);
     if (changing) checkModelEmitterBudget(emitterLoad);
     for (let index = 0; index < actors.length; index++) {
       const entity = entities[index];
-      if (entity) commits[count++] = actors[index].prepare(entity, value.simulationTimeSeconds);
+      if (entity) commits[count++] = actors[index].prepare(entity, frameTime);
     }
     applyModelStageCommits(commits, count);
   } finally {

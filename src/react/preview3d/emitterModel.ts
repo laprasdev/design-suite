@@ -1,3 +1,4 @@
+import type {ModelVector} from './placementModel.ts';
 import {modelStates} from './recordModel.ts';
 import {ModelStageRefusal} from './refusal.ts';
 import type {ModelStatedValue} from './statedValueModel.ts';
@@ -57,10 +58,9 @@ export const MODEL_EMITTER_REFUSAL = Object.freeze({
 });
 const refusal = MODEL_EMITTER_REFUSAL;
 
-/** A per-particle value drawn uniformly between `min` and `max`; equal in a constant mode. */
-export interface ModelEmitterRange {readonly min: number; readonly max: number}
+/** A per-particle value drawn between `min` and `max` (each component by itself); equal in a constant mode. */
+export interface ModelEmitterBetween<T> {readonly min: T; readonly max: T}
 export type ModelEmitterRgba = readonly [number, number, number, number];
-export interface ModelEmitterColors {readonly min: ModelEmitterRgba; readonly max: ModelEmitterRgba}
 /** How a profile draws a particle: a point, or an instance of the built-in mesh it names (its row); one draw call
  * either way. */
 export type ModelEmitterParticle = {readonly form: typeof MODEL_EMITTER_FORM.points} |
@@ -69,11 +69,18 @@ export interface ModelEmitterProfile {
   readonly particle: ModelEmitterParticle;
   /** Whether particles follow the actor (`character`) or stay where they were started (`environment`). */
   readonly origin: typeof MODEL_EMITTER_ORIGIN[keyof typeof MODEL_EMITTER_ORIGIN];
-  readonly lifetime: ModelEmitterRange;
-  readonly speed: ModelEmitterRange;
+  readonly lifetime: ModelEmitterBetween<number>;
+  readonly speed: ModelEmitterBetween<number>;
   /** A particle's diameter in metres at its start. */
-  readonly size: ModelEmitterRange;
+  readonly size: ModelEmitterBetween<number>;
   readonly color: ModelEmitterRgba;
+  /** Unity's main module `looping`: whether a start emits until the engine stops it, or for `duration` only. */
+  readonly looping: boolean;
+  /** Seconds a start emits for when the profile does not loop (Unity's main module `duration`). */
+  readonly duration: number;
+  /** Velocity over lifetime's linear velocity in metres a second, in the emitter's space; zero when the module is
+   * off. */
+  readonly velocity: ModelEmitterBetween<ModelVector>;
   /** The profile's own cap: no more particles than this are alive at once. */
   readonly maxParticles: number;
   /** Particles a second. */
@@ -81,9 +88,9 @@ export interface ModelEmitterProfile {
   /** The sphere particles start in, in metres, moving outward from its centre. */
   readonly radius: number;
   /** What size over lifetime multiplies the size by; one when the module is off. */
-  readonly sizeScale: ModelEmitterRange;
+  readonly sizeScale: ModelEmitterBetween<number>;
   /** What colour over lifetime multiplies the start colour by; white when the module is off. */
-  readonly tint: ModelEmitterColors;
+  readonly tint: ModelEmitterBetween<ModelEmitterRgba>;
 }
 export type ModelEmitterProfiles = Readonly<Record<string, ModelEmitterProfile>>;
 /** A pack's `ParticleSubmodule` record, checked whole and kept as stated: the description's form, which reads back as

@@ -39,7 +39,9 @@ export const emitterProfile = (maxParticles = 256, size = 0.08) => ({
     radiusThickness: 1, arc: 360, arcMode: 0, angle: 25, position: vector(0, 0, 0), rotation: vector(0, 0, 0),
     alignToDirection: false, texture: null, textureClipThreshold: 0, textureColorAffectsParticles: true,
     textureAlphaAffectsParticles: true},
-  velocitySettings: {enabled: false, linearX: zero(), linearY: zero(), linearZ: zero(), speedModifier: zero(),
+  // On and at rest, so each of its values is read.
+  velocitySettings: {enabled: true, linearX: zero(), linearY: zero(), linearZ: zero(),
+    speedModifier: curve(1, 1, MODEL_CURVE_MODE.constant),
     orbitalX: zero(), orbitalY: zero(), orbitalZ: zero(), orbitalOffsetX: zero(), orbitalOffsetY: zero(),
     orbitalOffsetZ: zero(), radial: zero(), space: 0},
   sizeOverLifetime: axisCurve(true),

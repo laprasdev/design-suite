@@ -1,3 +1,4 @@
+import {MODEL_SHADER_COMPONENTS} from './shading.ts';
 import {MODEL_SURFACE_PARAMETER, type ModelSurfaceKind, type ModelSurfaceParameter} from './surfaceKindModel.ts';
 
 // The names a kind's web program and the stage share (kind-contract.md lists every one as reserved), and the accessors
@@ -26,7 +27,7 @@ export function modelSurfaceSlots(kind: ModelSurfaceKind): ReadonlyMap<string, M
     Object.freeze({index, name, parameter})]));
 }
 
-const VECTOR = Object.freeze({2: ['vec2', 'xy'], 3: ['vec3', 'xyz'], 4: ['vec4', 'xyzw']});
+const VECTOR = Object.freeze({2: 'vec2', 3: 'vec3', 4: 'vec4'});
 /** The GLSL a kind reads one parameter by. */
 export function modelSurfaceAccessor({index, name, parameter}: ModelSurfaceSlot) {
   const {accessor: of, values, texture, tiling, sample} = MODEL_SURFACE_GLSL, slot = `${values}[ ${index} ]`;
@@ -37,8 +38,8 @@ export function modelSurfaceAccessor({index, name, parameter}: ModelSurfaceSlot)
   }
   if (parameter.type === MODEL_SURFACE_PARAMETER.color) return `vec4 ${of}${name}() { return ${slot}; }`;
   if (parameter.type === MODEL_SURFACE_PARAMETER.vector) {
-    const [type, part] = VECTOR[parameter.size];
-    return `${type} ${of}${name}() { return ${slot}.${part}; }`;
+    const part = MODEL_SHADER_COMPONENTS.slice(0, parameter.size);
+    return `${VECTOR[parameter.size]} ${of}${name}() { return ${slot}.${part}; }`;
   }
   if (parameter.type === MODEL_SURFACE_PARAMETER.keyword) return `bool ${of}${name}() { return ${slot}.x > 0.5; }`;
   return `float ${of}${name}() { return ${slot}.x; }`;

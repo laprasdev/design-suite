@@ -18,7 +18,6 @@ import {ModelStageRefusal} from './refusal.ts';
 import {extendModelMaterials} from './shading.ts';
 import {createModelEmitters} from './emitters.ts';
 import {modelEmitterProfiles} from './emitterProfileModel.ts';
-import {MODEL_NO_EMITTER_CHANGES} from './emitterFrameModel.ts';
 import {MODEL_NO_EMITTERS} from './emitterModel.ts';
 import type {ModelStageProgramValues} from './sharedValues.ts';
 
@@ -102,7 +101,7 @@ export function createModelActor(drawn: ModelDrawn, declaration: ModelStageActor
     // A frame's prepared parts, written by each prepare into what the one commit made here reads, so a frame tick
     // makes no step of its own. Every prepare writes all four before its commit runs.
     const framed = {hidden: (): ReadonlySet<THREE.Object3D> => engineHidden, layers: MODEL_STAGE_UNCHANGED,
-      pose: declaration.placement, emitters: emitters.prepare(MODEL_NO_EMITTER_CHANGES, 0)};
+      pose: declaration.placement, emitters: MODEL_STAGE_UNCHANGED};
     const commitFrame: ModelStageCommit = () => {
       engineHidden = framed.hidden();
       framed.layers();
@@ -128,7 +127,8 @@ export function createModelActor(drawn: ModelDrawn, declaration: ModelStageActor
       /** What the actor draws in its display: the model, its rig, or both. */
       bounds: () => rig.display === MODEL_STAGE_DISPLAY.model ? modelObjectBounds(placement) : rig.bounds(),
       // Everything that can refuse runs here; the returned commit only applies.
-      prepare(entity: ModelPreviewEntity, time: number): ModelStageCommit {
+      /** Prepares `entity` at the time `frameTime` holds (the frame's slots, `ModelFrameSlots`). */
+      prepare(entity: ModelPreviewEntity, frameTime: Float64Array): ModelStageCommit {
         if (context.surfaceModes.inspecting) throw new ModelStageRefusal(MODEL_ACTOR_TEXT.unlit);
         // The engine's values and visibility reach the renderers through the runtime profile when the asset states
         // one (the description refuses one beside a set; the route leaves in step 5e), else through the surfaces.
@@ -136,7 +136,7 @@ export function createModelActor(drawn: ModelDrawn, declaration: ModelStageActor
           surfaces.prepareValues(entity.materials);
         framed.layers = playback.prepareLayers(entity.animationLayers);
         framed.pose = entity.pose;
-        framed.emitters = emitters.prepare(entity.emitters, time);
+        framed.emitters = emitters.prepare(entity.emitters, frameTime);
         return commitFrame;
       },
       snapshot(): ModelStageActorSnapshot {

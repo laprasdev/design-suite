@@ -5,8 +5,8 @@ import {createModelFrameInbox, MODEL_STAGE_CLOCK, MODEL_STAGE_FRAMING, modelStag
 import {MODEL_EMITTER_CHANGE} from '../src/react/preview3d/emitterFrameModel.ts';
 import {createModelStage} from '../src/react/preview3d/stage.ts';
 import {THEME, declaration, describing, standingAt} from './preview3dActorFixture.ts';
-import {EMITTER_HOST_ID, EMITTER_SCENE_PROFILES, EMITTER_SCENE_ROUTED, EMITTER_SCENE_RUN,
-  type EmitterDraws, type EmitterSceneDriver} from './preview3dEmitterSceneCases.ts';
+import {EMITTER_HOST_ID, EMITTER_SCENE_PROFILES, EMITTER_SCENE_ROUTED, EMITTER_SCENE_RUN, emitterSceneProfiles,
+  type EmitterDraws, type EmitterSceneDriver, type EmitterSceneModules} from './preview3dEmitterSceneCases.ts';
 import {makePanelGlbBytes, PANEL_GLB} from './preview3dPanelGlb.ts';
 import {renderScene} from './renderScene.tsx';
 
@@ -57,15 +57,15 @@ function changedPixels(before: Uint8Array, after: Uint8Array, width: number) {
       }
     }
   }
-  return {changed, extent: right < left ? 0 : (right - left + 1) * (top - bottom + 1)};
+  return {changed, extent: right < left ? 0 : (right - left + 1) * (top - bottom + 1), top};
 }
 
-async function bootEmitterScene(): Promise<EmitterSceneDriver> {
+async function bootEmitterScene(modules: EmitterSceneModules): Promise<EmitterSceneDriver> {
   document.body.style.margin = '0';
   const host = document.getElementById(EMITTER_HOST_ID);
   if (!host) throw new Error(`Missing #${EMITTER_HOST_ID} element.`);
   const actor = {...declaration(PANEL_GLB.id, PANEL_GLB.id, {asset: {id: PANEL_GLB.id, path: PANEL_GLB.route},
-    placement: standingAt([0, 0, 0])}), emitters: EMITTER_SCENE_PROFILES};
+    placement: standingAt([0, 0, 0])}), emitters: emitterSceneProfiles(modules)};
   const description = modelStageDescription(describing({actors: {focus: PANEL_GLB.id, actors: [actor]},
     framing: {kind: MODEL_STAGE_FRAMING.pose, position: [0, 1.2, 4], target: [0, 1, 0], fieldOfView: 45},
     orbit: false}));
@@ -113,19 +113,25 @@ async function bootEmitterScene(): Promise<EmitterSceneDriver> {
       }
     },
     async run(routed) {
-      const {step, frames, travel} = EMITTER_SCENE_RUN;
-      // The panel where the run ends, before any particle: what the emitters change is the only difference.
-      position[0] = travel;
+      const {step, frames, living, travel} = EMITTER_SCENE_RUN;
+      // The panel where it is at the living frame and where the run ends, before any particle: what the emitters
+      // change is the only difference.
+      const panelAt = (frame: number) => {position[0] = travel * frame / frames;};
+      panelAt(living);
+      const beforeLiving = await drawn(0, []);
+      panelAt(frames);
       const before = await drawn(0, []);
-      position[0] = 0;
+      panelAt(0);
       let after = await drawn(step, Object.keys(EMITTER_SCENE_PROFILES).map(profile =>
         ({profile, change: MODEL_EMITTER_CHANGE.started, ...routed})));
+      let livingChanged = 0;
       for (let frame = 2; frame <= frames; frame++) {
-        position[0] = travel * frame / frames;
+        panelAt(frame);
         after = await drawn(frame * step, []);
+        if (frame === living) livingChanged = changedPixels(beforeLiving.read, after.read, canvas.width).changed;
       }
-      return {...changedPixels(before.read, after.read, canvas.width), pixels: canvas.width * canvas.height,
-        draws: {before: before.draws, after: after.draws}};
+      return {...changedPixels(before.read, after.read, canvas.width), living: livingChanged,
+        pixels: canvas.width * canvas.height, draws: {before: before.draws, after: after.draws}};
     },
   };
 }
