@@ -8,8 +8,10 @@ import {modelEmitterLiveBurstParticles} from '../src/react/preview3d/emitterBudg
 import {modelEmitterProfile} from '../src/react/preview3d/emitterProfileModel.ts';
 import {MODEL_EMITTER_CHANGE} from '../src/react/preview3d/emitterFrameModel.ts';
 import {applyFrame, frame, refused} from './preview3dActorFixture.ts';
-import {changing, withEmitters} from './preview3dEmitterActors.ts';
-import {curve, EMITTER_ID, emitterChange, emitterProfile} from './preview3dEmitterCases.ts';
+import {changing} from './preview3dEmitterActors.ts';
+import {curve, emitterChange, emitterProfile, gradient} from './preview3dEmitterCases.ts';
+import {CYCLES, emittedAfterStart, NO_RATE, STEP, stated, system, TURNED_AXES, UNITY_TURN}
+  from './preview3dEmitterStated.ts';
 import {EMITTER_WHERE as WHERE} from './preview3dEmitterRefusals.ts';
 
 // Each of Unity's modules the stage draws through three.quarks, from the record's serialized field to the quarks
@@ -17,31 +19,15 @@ import {EMITTER_WHERE as WHERE} from './preview3dEmitterRefusals.ts';
 const {degToRad} = THREE.MathUtils;
 const BURST = Object.freeze({hasBurst: true, burstTime: 0.25, burstCount: 90, burstCycleCount: 2,
   burstRepeatInterval: 0.5, burstProbability: 0.75});
-// Three cycles of 5, a fifth of a second apart from 0.05 s, each sure to fire, and the live particles as each step of
-// the batched renderer by quarks' longest (0.1 s) ends: at 0.1 s the first cycle has fired, at 0.3 s the second.
-const CYCLES = Object.freeze({hasBurst: true, burstTime: 0.05, burstCount: 5, burstCycleCount: 3,
-  burstRepeatInterval: 0.2, burstProbability: 1});
-const STEP = 0.1, LIVE_AFTER_STEPS = Object.freeze([5, 5, 10, 10, 15, 15, 15]);
+const LIVE_AFTER_STEPS = Object.freeze([5, 5, 10, 10, 15, 15, 15]);
 const OFFSET = Object.freeze({x: 0, y: 0.5, z: -0.25});
 // An actor's pose turned a quarter about Y, doubled and moved: an emitter left where it started takes only its
 // position, as ISM's C# places one.
 const QUARTER = Math.SQRT1_2;
 const TURNED = Object.freeze({position: [1, 2, 3], rotationQuaternion: [0, QUARTER, 0, QUARTER], scale: [2, 2, 2]});
-// Unity's Quaternion.Euler(-90, 90, 0) turns +Z to +Y and +X to -Z (about Z, then X, then Y).
-const UNITY_TURN = Object.freeze({x: -90, y: 90, z: 0});
-const TURNED_AXES = Object.freeze([[[0, 0, 1], [0, 1, 0]], [[1, 0, 0], [0, 0, -1]]] as const);
-// Unity's rate over time held at nothing: a constant 0.
-const NO_RATE = curve(0, 0, MODEL_CURVE_MODE.constant);
 const SHAPES = Object.freeze([[MODEL_SHAPE_TYPE.sphere, SphereEmitter],
   [MODEL_SHAPE_TYPE.hemisphere, HemisphereEmitter],
   [MODEL_SHAPE_TYPE.cone, ConeEmitter], [MODEL_SHAPE_TYPE.circle, CircleEmitter]] as const);
-function stated(main: object, emission: object, shape: object, origin: number = MODEL_EMITTER_ORIGIN.character) {
-  const profile = emitterProfile();
-  return {...profile, emitterOrigin: origin, mainSettings: {...profile.mainSettings, ...main},
-    emissionSettings: {...profile.emissionSettings, ...emission},
-    shapeSettings: {...profile.shapeSettings, ...shape}};
-}
-const system = (record: object) => withEmitters('a', {[EMITTER_ID]: record});
 
 describe('the Unity modules three.quarks draws', () => {
   it('runs main.looping, main.duration and main.simulationSpace World as quarks\' own', () => {
@@ -86,6 +72,14 @@ describe('the Unity modules three.quarks draws', () => {
       MODEL_EMITTER_REFUSAL.emitsNothing(where));
   });
 
+  it('starts particles at main.startSpeed, a negative one moving them toward the shape\'s centre as in Unity', () => {
+    // From the sphere's surface (radiusThickness 0), so one step's travel inward does not pass its centre.
+    const inward = curve(-1, -1, MODEL_CURVE_MODE.constant);
+    const {emitted} = emittedAfterStart(stated({startSpeed: inward}, {...CYCLES, rateOverTime: NO_RATE},
+      {radius: 0.4, radiusThickness: 0}));
+    assert.ok(emitted.every(({position, velocity}) => position.dot(velocity) < 0), 'a particle moves outward');
+  });
+
   it('emits from each shape.shapeType as its quarks shape, with radius, radiusThickness, arc and angle', () => {
     for (const [shapeType, Shape] of SHAPES) {
       const {systems: [{emitterShape}]} = system(stated({}, {},
@@ -112,5 +106,16 @@ describe('the Unity modules three.quarks draws', () => {
     assert.deepEqual(stays.emitter.position.toArray(), [1 + OFFSET.x, 2 + OFFSET.y, 3 + OFFSET.z],
       'the start\'s position, offset in the world\'s axes');
     assert.deepEqual(axes(stays.emitter), turnedAxes, 'turned by its shape alone, not its actor');
+  });
+
+
+  it('multiplies the start colour by a constant colorBySpeed, as by colorOverLifetime', () => {
+    const record = emitterProfile();
+    const {tint} = modelEmitterProfile({...record, colorOverLifetime: {...record.colorOverLifetime, enabled: false},
+      colorBySpeed: {...record.colorBySpeed, enabled: true}}, WHERE);
+    const {m_ColorMax: {r, g, b, a}} = gradient();
+    assert.deepEqual(tint, [r, g, b, a]);
+    const both = modelEmitterProfile({...record, colorBySpeed: {...record.colorBySpeed, enabled: true}}, WHERE);
+    assert.deepEqual(both.tint, [r * r, g * g, b * b, a * a]);
   });
 });

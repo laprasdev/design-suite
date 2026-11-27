@@ -6,6 +6,7 @@ import {MODEL_EMITTER_FORM, MODEL_SHAPE_TYPE, type ModelEmitterDrawnShape, type 
   type ModelEmitterParticle, type ModelEmitterProfile, type ModelEmitterRange, type ModelEmitterShape}
   from './emitterModel.ts';
 import {modelEmitterBurstCycles} from './emitterBudgetModel.ts';
+import {VelocityOverLifetime} from './emitterVelocity.ts';
 
 // The one mapping from a profile the stage draws onto three.quarks, its particle simulator and drawer (the particle
 // contract's section 5): each profile is one quarks system, which the stage's one batched renderer steps and draws
@@ -83,6 +84,11 @@ export function createModelEmitterSystem(profile: ModelEmitterProfile) {
     startSize: generator(scaled(profile.size, profile.sizeScale)),
     startColor, emissionOverTime: rate, shape,
     renderMode: MODEL_EMITTER_RENDER[profile.particle.form].mode, instancingGeometry: geometry, material});
+  if (profile.velocity) {
+    const {linear: [x, y, z], speedModifier, worldSpace} = profile.velocity;
+    system.addBehavior(new VelocityOverLifetime([generator(x), generator(y), generator(z)], generator(speedModifier),
+      system.emitter, {stated: worldSpace, system: profile.worldSpace}));
+  }
   system.pause();
   const tinted = new Vector4();
   return {system,

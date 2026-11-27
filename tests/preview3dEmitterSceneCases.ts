@@ -16,11 +16,12 @@ export const EMITTER_SCENE_PROFILES = Object.freeze({follows: emitterProfile(),
     mesh: {guid: MODEL_UNITY_BUILTIN_MESH.guid, fileID: SPHERE.fileID}},
   skipped: {...emitterProfile(), renderMode: MODEL_RENDER_MODE.mesh,
     mesh: {guid: MODEL_UNITY_BUILTIN_MESH.guid, fileID: `${SPHERE.fileID}0`}}});
-// The scene's one time: glow on what passes a high threshold, so the frame does not haze, and black fog past the
-// panel, so the captures show the particles' halo and their fade with depth; black, since added light fogged toward
-// any other colour would add that colour.
+// The scene's one time: no glow, since the changed-pixel box measures where particles reach, and a dense run's glow
+// spreads past them and sets the box (the phone view's `own` and `wide` boxes were then equal); and black fog past
+// the panel, so the captures show their fade with depth; black, since added light fogged toward any other colour
+// would add that colour.
 export const EMITTER_SCENE_LIGHTING = Object.freeze({time: 'dusk', times: [{id: 'dusk', label: 'Dusk',
-  look: stageLook({glow: {threshold: 1, strength: 0.5, radius: 0},
+  look: stageLook({glow: null,
     fog: {near: {distance: 3, color: [0, 0, 0]}, far: {distance: 10, color: [0, 0, 0]}, height: null}})}]});
 // Seconds between the frames that run the emitters, and how many: long enough for the oldest particles to die.
 export const EMITTER_SCENE_RUN = Object.freeze({step: 1 / 30, frames: 60, travel: 0.6});

@@ -9,8 +9,8 @@ import {MODEL_EMITTER_BUDGET, modelEmitterCapRefusal, modelEmitterLiveBurstParti
 import {MODEL_EMITTER_DRAWN as DRAWN, MODEL_EMITTER_DRAWN_VALUE as DRAWN_VALUE, modelEmitterColor as color,
   modelEmitterCurve as curve, modelEmitterDrawnFlag as drawnFlag, modelEmitterDrawnNumber as drawnNumber,
   modelEmitterDrawnOption as drawnOption, modelEmitterDrawnVector as drawnVector, modelEmitterGradient as gradient,
-  modelEmitterHeldAtZero as heldAtZero, modelEmitterModule as module, modelEmitterUnbounded as unbounded,
-  modelEmitterVector as vector} from './emitterValueModel.ts';
+  modelEmitterHeldAtZero as heldAtZero, modelEmitterModule as module, modelEmitterSigned as signed,
+  modelEmitterUnbounded as unbounded, modelEmitterVector as vector} from './emitterValueModel.ts';
 import {MODEL_PARTICLE_FIELDS as FIELDS} from './particleSubmoduleFields.ts';
 
 // Reads the pack's whole `ParticleSubmodule` record as ISM's C# serializes it, checked with no renderer. Each struct
@@ -23,9 +23,12 @@ import {MODEL_PARTICLE_FIELDS as FIELDS} from './particleSubmoduleFields.ts';
 // material is the owner's to decide; the stage draws a named placeholder (`MODEL_EMITTER_PLACEHOLDER`,
 // emitterSystems.ts).
 // The modules the stage does not draw yet, each refused when enabled.
-export const MODEL_EMITTER_UNDRAWN_MODULES = Object.freeze({velocitySettings: FIELDS.velocity,
-  noiseSettings: FIELDS.noise, colorBySpeed: FIELDS.color, rotationOverLifetime: FIELDS.axisCurve,
-  rotationBySpeed: FIELDS.axisCurve, textureSheetAnimation: FIELDS.textureSheet});
+// Noise: quarks' `Noise` moves a particle by a 2D simplex noise read along its age alone, where Unity's samples a
+// noise field at the particle's position; rotation: a mesh's axis against Unity's is unverified, and a billboard's
+// direction untested; the texture sheet: the placeholder disc has no frames.
+export const MODEL_EMITTER_UNDRAWN_MODULES = Object.freeze({noiseSettings: FIELDS.noise,
+  rotationOverLifetime: FIELDS.axisCurve, rotationBySpeed: FIELDS.axisCurve,
+  textureSheetAnimation: FIELDS.textureSheet});
 const START_ROTATION = FIELDS.vector3.map(axis => `startRotation${axis.toUpperCase()}`);
 const WHITE: ModelEmitterRgba = Object.freeze([1, 1, 1, 1]);
 
@@ -41,7 +44,9 @@ function main(value: unknown, where: string) {
     duration: modelNumber(record.duration, `${where}.duration`, Number.MIN_VALUE, Number.POSITIVE_INFINITY),
     worldSpace: space === MODEL_SIMULATION_SPACE.world,
     lifetime: curve(record.startLifetime, `${where}.startLifetime`),
-    speed: curve(record.startSpeed, `${where}.startSpeed`), size: curve(record.startSize, `${where}.startSize`),
+    // Unity's start speed is signed: a negative one moves a particle against its shape's direction.
+    speed: curve(record.startSpeed, `${where}.startSpeed`, DRAWN.curve, signed),
+    size: curve(record.startSize, `${where}.startSize`),
     color: color(record.startColor, `${where}.startColor`),
     maxParticles: modelNumber(record.maxParticles, `${where}.maxParticles`, 1, MODEL_EMITTER_BUDGET.particles)};
 }
@@ -87,6 +92,26 @@ const shape = (value: unknown, where: string) => module(value, FIELDS.shape, whe
     position: vector(record.position, `${where}.position`), rotation: vector(record.rotation, `${where}.rotation`)});
 }, NO_SHAPE);
 
+// Unity's `velocityOverLifetime`: `x`, `y` and `z` (the record's `linearX`, `linearY`, `linearZ`) in `space`, and
+// `speedModifier`; its orbital and radial velocity, which quarks has no behaviour for, held at zero.
+const HELD_VELOCITY = ['orbitalX', 'orbitalY', 'orbitalZ', 'orbitalOffsetX', 'orbitalOffsetY', 'orbitalOffsetZ',
+  'radial'] as const;
+const LINEAR = FIELDS.vector3.map(axis => `linear${axis.toUpperCase()}`);
+const velocity = (value: unknown, where: string) => module(value, FIELDS.velocity, where, record => {
+  for (const field of HELD_VELOCITY) heldAtZero(record[field], `${where}.${field}`);
+  const [x, y, z] = LINEAR.map(field => curve(record[field], `${where}.${field}`, DRAWN.curve, signed));
+  const space = drawnOption(record.space, MODEL_SIMULATION_SPACE, DRAWN.space, `${where}.space`);
+  return Object.freeze({linear: Object.freeze([x, y, z] as const), worldSpace: space === MODEL_SIMULATION_SPACE.world,
+    speedModifier: curve(record.speedModifier, `${where}.speedModifier`, DRAWN.curve, signed)});
+}, null);
+// A constant colour by speed is the same colour at every speed, so it multiplies as colour over lifetime does.
+const tinted = ([r, g, b, a]: ModelEmitterRgba, [byR, byG, byB, byA]: ModelEmitterRgba): ModelEmitterRgba =>
+  Object.freeze([r * byR, g * byG, b * byB, a * byA]);
+const COLOR_MODULES = ['colorOverLifetime', 'colorBySpeed'] as const;
+const tint = (record: Record<string, unknown>, where: string) => COLOR_MODULES.map(name =>
+  module(record[name], FIELDS.color, `${where}.${name}`, color => gradient(color.color, `${where}.${name}.color`),
+    WHITE)).reduce(tinted);
+
 // The built-in mesh a mesh profile names; any other asset is refused by its reference.
 function builtinMesh(value: unknown, where: string): ModelEmitterMesh {
   const {guid, fileID} = modelRecord(value, MODEL_ASSET_REFERENCE_FIELDS, where);
@@ -131,8 +156,8 @@ export function modelEmitterProfile(value: unknown, where: string): ModelEmitter
       drawnFlag(size.separateAxes, DRAWN_VALUE.off, `${where}.sizeOverLifetime.separateAxes`);
       return curve(size.x, `${where}.sizeOverLifetime.x`, DRAWN.overLifetime).max;
     }, 1),
-    tint: module(record.colorOverLifetime, FIELDS.color, `${where}.colorOverLifetime`,
-      tint => gradient(tint.color, `${where}.colorOverLifetime.color`), WHITE),
+    tint: tint(record, where),
+    velocity: velocity(record.velocitySettings, `${where}.velocitySettings`),
   });
   if (modelEmitterOverCap(profile, profile.rate)) throw modelEmitterCapRefusal(where, profile, profile.rate);
   return profile;

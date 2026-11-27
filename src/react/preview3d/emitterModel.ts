@@ -106,8 +106,17 @@ export interface ModelEmitterProfile {
   readonly shape: ModelEmitterShape;
   /** What size over lifetime multiplies the size by; one when the module is off. */
   readonly sizeScale: number;
-  /** What colour over lifetime multiplies the start colour by; white when the module is off. */
+  /** What colour over lifetime and colour by speed multiply the start colour by; white when both are off. */
   readonly tint: ModelEmitterRgba;
+  /** Unity's velocity over lifetime; none when the module is off. */
+  readonly velocity: ModelEmitterVelocity | null;
+}
+/** Unity's velocity over lifetime: each particle's own `linear` velocity in metres a second by axis, stated in world
+ * space or the emitter's (`worldSpace`), and what the particle's whole speed is multiplied by (`speedModifier`). */
+export interface ModelEmitterVelocity {
+  readonly linear: readonly [ModelEmitterRange, ModelEmitterRange, ModelEmitterRange];
+  readonly speedModifier: ModelEmitterRange;
+  readonly worldSpace: boolean;
 }
 /** One of Unity's emission bursts: `count` particles at `time` seconds into each run, `cycles` times `interval`
  * apart, each with `probability`. */
@@ -120,8 +129,8 @@ export interface ModelEmitterBurst {
 }
 /** Unity's shape module: a shape of `type` and `radius` metres, emitting from its outer `thickness` share of it
  * (Unity's `radiusThickness`), over `arc` degrees, offset by `position` metres and turned by `rotation` degrees
- * (`MODEL_UNITY_EULER_ORDER`); a cone spreads by `angle` degrees: Unity's units, which the drawing converts. Off, Unity emits from the emitter's centre: a sphere
- * of no radius. */
+ * (`MODEL_UNITY_EULER_ORDER`); a cone spreads by `angle` degrees: Unity's units, which the drawing converts. Off,
+ * Unity emits from the emitter's centre: a sphere of no radius. */
 export interface ModelEmitterShape {
   readonly type: ModelEmitterDrawnShape;
   readonly radius: number;
