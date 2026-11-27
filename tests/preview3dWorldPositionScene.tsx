@@ -42,7 +42,7 @@ function placed(placement: WorldPlacement): THREE.Object3D {
 window.drawWorldPlacement = placement => {
   const scene = new THREE.Scene(), object = placed(placement);
   scene.add(object);
-  const frame = view.readFrame(scene, camera);
+  const frame = view.readFrame(() => view.renderer.render(scene, camera));
   object.traverse(part => {
     if (part instanceof THREE.Mesh || part instanceof THREE.BatchedMesh) part.geometry.dispose();
   });

@@ -8,10 +8,10 @@ import {loadModelGlowPasses} from '../src/react/preview3d/glow.ts';
 import type {ModelStageGlow, ModelStageToneCurve} from '../src/react/preview3d/lookModel.ts';
 import {MODEL_STAGE_LAYERS} from '../src/react/preview3d/layers.ts';
 
-// A renderer that records what each render call drew, where, whether it cleared first and under which tone mapping;
+// A renderer that records what each render call drew, where, under which layers and tone mapping;
 // the glow's passes are three's own, run against it.
 interface Drawn {readonly what: 'scene' | 'pass'; readonly into: THREE.WebGLRenderTarget | null;
-  readonly clears: boolean; readonly toneMapping: THREE.ToneMapping; readonly layers: number;
+  readonly toneMapping: THREE.ToneMapping; readonly layers: number;
   readonly material?: THREE.Material}
 function fixture(loadPasses = loadModelGlowPasses, halfFloat = true) {
   const drawn: Drawn[] = [];
@@ -29,7 +29,7 @@ function fixture(loadPasses = loadModelGlowPasses, halfFloat = true) {
     setRenderTarget: (value: THREE.WebGLRenderTarget | null) => {target = value;},
     render: (object: THREE.Object3D, seen: THREE.Camera) => {
       const pass = object instanceof THREE.Mesh;
-      drawn.push({what: pass ? 'pass' : 'scene', into: target, clears: renderer.autoClear,
+      drawn.push({what: pass ? 'pass' : 'scene', into: target,
         toneMapping: renderer.toneMapping, layers: seen.layers.mask, ...(pass && {material: object.material})});
       renderer.info.render.triangles = pass ? 1 : 42;
     },
@@ -49,11 +49,13 @@ const GLOW = {threshold: 1.5, strength: 0.8, radius: 0.4};
 // A pass's uniforms: a shader pass's own, none for the bloom pass's copy of its input (a basic material).
 const uniforms = (pass: Drawn): Record<string, THREE.IUniform> =>
   pass.material instanceof THREE.ShaderMaterial ? pass.material.uniforms : {};
-// The frame's last two draws: its one output pass onto the canvas, then the aids onto it, uncleared and uncurved.
+// The frame's first draw, its one pass of the scene and the aids into its target, and its last, the one output pass
+// onto the canvas.
 const ending = (drawn: readonly Drawn[]) => {
-  const [output, aids] = drawn.slice(-2);
-  assert.deepEqual([output.what, output.into, aids.what, aids.into, aids.clears, aids.layers, aids.toneMapping],
-    ['pass', null, 'scene', null, false, MODEL_STAGE_LAYERS.aids, THREE.NoToneMapping]);
+  const [linear] = drawn, output = drawn[drawn.length - 1];
+  assert.deepEqual([linear.what, linear.layers, output.what, output.into], ['scene', MODEL_STAGE_LAYERS.both, 'pass',
+    null]);
+  assert.equal(drawn.filter(pass => pass.what === 'scene').length, 1, 'the scene and the aids in one pass');
   return output;
 };
 const shader = ({material}: Drawn) => {
@@ -63,33 +65,32 @@ const shader = ({material}: Drawn) => {
 const glows = (output: Drawn) => Object.hasOwn(shader(output).defines, 'MODEL_GLOW');
 
 describe('the frame\'s draw', () => {
-  it('draws the scene once into a multisampled half-float target, then the output pass under the look\'s curve',
+  it('draws the scene and the aids once into a multisampled half-float target, then the output pass under the curve',
     async () => {
       const {draw, drawn, set} = fixture();
       await set(ACES_CURVE, null);
       draw.draw();
       const [linear] = drawn, target = linear.into;
-      assert.deepEqual([linear.what, linear.layers, target?.samples, target?.texture.type],
-        ['scene', MODEL_STAGE_LAYERS.scene, 4, THREE.HalfFloatType]);
-      assert.equal(drawn.length, 3, 'the scene, the output pass and the aids: no glow pass');
       const output = ending(drawn);
+      assert.deepEqual([target?.samples, target?.texture.type], [4, THREE.HalfFloatType]);
+      assert.equal(drawn.length, 2, 'the one pass and the output pass: no glow pass');
       // The output pass is the canvas's one curve: three gives a material drawn into a target none.
       assert.deepEqual([output.toneMapping, shader(output).toneMapped, uniforms(output).modelSceneColor.value,
         glows(output)], [THREE.ACESFilmicToneMapping, true, target?.texture, false]);
       assert.match(shader(output).fragmentShader, /#include <tonemapping_fragment>\s+#include <colorspace_fragment>/);
-      assert.deepEqual([draw.triangles, draw.load(null, WHERE)], [84, []]);
+      assert.deepEqual([draw.triangles, draw.load(null, WHERE)], [42, []]);
     });
 
-  it('with glow, draws the scene once into a multisampled half-float target, the bloom added at the output, then aids',
+  it('with glow, draws the scene and the aids once into a multisampled half-float target, the bloom added at output',
     async () => {
       const {draw, drawn, set} = fixture();
       await set(ACES_CURVE, GLOW);
       draw.draw();
       const [linear, ...rest] = drawn, output = ending(drawn);
       const target = linear.into;
-      assert.ok(target?.depthTexture);
-      assert.deepEqual([linear.what, linear.layers, target.width, target.height, target.samples, target.texture.type,
-        target.depthTexture.image.width], ['scene', MODEL_STAGE_LAYERS.scene, 320, 200, 4, THREE.HalfFloatType, 320]);
+      assert.ok(target);
+      assert.deepEqual([target.width, target.height, target.samples, target.texture.type],
+        [320, 200, 4, THREE.HalfFloatType]);
       assert.deepEqual(rest.filter(pass => pass.into === target), [], 'nothing drawn into the target after it');
       const high = rest.find(pass => 'luminosityThreshold' in uniforms(pass));
       assert.equal(high && uniforms(high).tDiffuse.value, target.texture, 'the bloom reads the resolved scene');
@@ -102,16 +103,13 @@ describe('the frame\'s draw', () => {
       // The pass's own last blend draws nothing: the output pass adds the composite, its colour as it is.
       assert.deepEqual(rest.filter(pass => pass.material?.visible === false).map(pass => pass.material?.blending),
         [THREE.AdditiveBlending]);
-      // One output pass writes the canvas, colour and depth, from the target and the composite; the aids are drawn
-      // last onto it.
-      assert.deepEqual([output.into, uniforms(output).modelSceneColor.value, uniforms(output).modelSceneDepth.value,
-        uniforms(output).modelGlow.value, output.material?.depthFunc], [null, target.texture, target.depthTexture,
-        composite.into.texture, THREE.AlwaysDepth]);
+      // One output pass, last, writes the canvas from the target and the composite.
+      assert.deepEqual([uniforms(output).modelSceneColor.value, uniforms(output).modelGlow.value],
+        [target.texture, composite.into.texture]);
       assert.ok(glows(output));
       assert.match(shader(output).fragmentShader,
         /modelSceneColor, vUv \);\n#ifdef MODEL_GLOW\n {2}gl_FragColor\.rgb \+= texture2D\( modelGlow, vUv/);
-      assert.equal(drawn.filter(pass => pass.what === 'scene').length, 2, 'the scene once, the aids once');
-      assert.equal(draw.triangles, 84, 'the scene and the aids');
+      assert.equal(draw.triangles, 42, 'the one pass of the scene and the aids');
     });
 
   it('leaves the glow out while a Surface mode inspects, and the curve out where the mode shows its term untoned',
@@ -125,7 +123,7 @@ describe('the frame\'s draw', () => {
       await set(ACES_CURVE, GLOW);
       view.inspecting = true;
       const inspected = next();
-      assert.deepEqual([drawn[0].into?.samples, drawn.length], [4, 3], 'into the linear target, no glow pass');
+      assert.deepEqual([drawn[0].into?.samples, drawn.length], [4, 2], 'into the linear target, no glow pass');
       assert.deepEqual([glows(inspected), inspected.toneMapping], [false, THREE.ACESFilmicToneMapping]);
       view.curved = false;
       assert.equal(next().toneMapping, THREE.NoToneMapping);
@@ -153,24 +151,23 @@ describe('the frame\'s draw', () => {
     assert.equal(drawn[0].into, target, 'a changed value makes no new target');
     const high = drawn.find(pass => 'luminosityThreshold' in uniforms(pass));
     assert.equal(high && uniforms(high).luminosityThreshold.value, 2);
-    assert.ok(target?.depthTexture);
+    assert.ok(target);
     draw.resize(640, 400);
     assert.throws(() => draw.resize(4096, 4096), ModelStageRefusal);
     const bright = high?.into;
-    // Its depth texture follows when three next sets it up (WebGLTextures.js 1659): shown by a capture, not here.
     assert.deepEqual([canvas.x, target.width, target.height, bright?.width, bright?.height], [640, 640, 400, 320, 200]);
     const targets = new Set(drawn.flatMap(({into}) => into ? [into] : []));
     const materials = new Set(drawn.flatMap(({material}) => material ? [material] : []));
     assert.equal(targets.size, 12, 'the scene\'s target, the bright pass and five blur levels each way');
-    const disposed = new Set<unknown>(), owned = [...targets, ...materials, target.depthTexture];
+    const disposed = new Set<unknown>(), owned = [...targets, ...materials];
     for (const each of owned) each.addEventListener('dispose', () => disposed.add(each));
     await set(null, null);
     const output = ending(drawn).material;
-    assert.deepEqual(owned.filter(each => !disposed.has(each)), [target, output, target.depthTexture],
+    assert.deepEqual(owned.filter(each => !disposed.has(each)), [target, output],
       'the glow freed with its look; the frame kept');
     drawn.length = 0;
     draw.draw();
-    assert.deepEqual([drawn.length, glows(ending(drawn))], [3, false]);
+    assert.deepEqual([drawn.length, glows(ending(drawn))], [2, false]);
     draw.dispose();
     assert.deepEqual(owned.filter(each => !disposed.has(each)), []);
   });

@@ -34,5 +34,5 @@ window.drawFlatNormal = async decode => {
   const record = records.get(decode);
   if (!record) throw new Error(`No record decodes ${decode}.`);
   square.material = materials.material(record).material;
-  return view.readFrame(scene, camera);
+  return view.readFrame(() => view.renderer.render(scene, camera));
 };

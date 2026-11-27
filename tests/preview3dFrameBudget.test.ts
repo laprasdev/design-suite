@@ -3,20 +3,12 @@
 // leaves the frame at the size it had.
 import assert from 'node:assert/strict';
 import {it} from 'node:test';
-import * as THREE from 'three';
-import {createModelLinearFrame, MODEL_LINEAR_FRAME_TEXT} from '../src/react/preview3d/linearFrame.ts';
-import {MODEL_STAGE} from '../src/react/preview3d/model.ts';
+import {createModelLinearFrame} from '../src/react/preview3d/linearFrame.ts';
 import {ModelStageRefusal} from '../src/react/preview3d/refusal.ts';
+import {budgetRefusal, HELD, OVER} from './preview3dFrameBudgetCases.ts';
 
-// The bytes per drawing-buffer pixel from the formats' sizes, written here, not read from the frame (perf-budgets'
-// measured.md, Stage, "The stage's linear frame", beside the GPU process's readings).
-const PIXEL_BYTES = 60;
-// A 1080p screen at the stage's pixel-ratio limit, which the placeholder holds, and a 5K drawing buffer, which it
-// refuses.
-const HELD = new THREE.Vector2(1920, 1080).multiplyScalar(MODEL_STAGE.pixelRatioLimit);
-const OVER = new THREE.Vector2(5120, 2880);
-const refused = ({x, y}: THREE.Vector2) => (error: unknown) => error instanceof ModelStageRefusal && error.message ===
-  MODEL_LINEAR_FRAME_TEXT.budget(x, y, x * y * PIXEL_BYTES, MODEL_STAGE.frameBytesLimit);
+const refused = (size: typeof OVER) => (error: unknown) => error instanceof ModelStageRefusal &&
+  error.message === budgetRefusal(size);
 
 it('makes a frame within the budget and refuses one past it, by name', () => {
   createModelLinearFrame(HELD).dispose();

@@ -33,14 +33,13 @@ export interface ModelDrawContext {
 }
 
 /**
- * The frame's one draw. The scene's look is drawn once, in linear light, into a multisampled half-float target,
- * resolved once, so every blended surface mixes with what is behind it in linear light, as URP's does. With glow (and
- * no Surface mode inspecting) three's bloom pass reads it and composites its bloom into its own target. One output pass
- * writes the canvas, with the bloom added where it is drawn, through the look's tone curve (unless the mode shows its
- * term untoned) and the display encoding, and the target's depth; the stage's aids are drawn last, untoned, behind the
- * scene where it is in front of them. Nothing draws into the target after its one resolve (so the headset browser,
- * which discards a multisampled target's colour after a resolve, draws it whole). No material changes program between
- * frames.
+ * The frame's one draw. The scene's look and the stage's aids are drawn in one pass, in linear light, into a
+ * multisampled half-float target, resolved once, so every blended surface mixes with what is behind it, aids included,
+ * in linear light, as URP's does. With glow (and no Surface mode inspecting) three's bloom pass reads it and composites
+ * its bloom into its own target. One output pass writes the canvas, with the bloom added where it is drawn, through the
+ * look's tone curve (unless the mode shows its term untoned) and the display encoding. Nothing draws into the target
+ * after its one resolve (so the headset browser, which discards a multisampled target's colour after a resolve, draws
+ * it whole). No material changes program between frames.
  */
 export function createModelDraw(renderer: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.Camera,
   context: ModelDrawContext) {
@@ -54,14 +53,7 @@ export function createModelDraw(renderer: THREE.WebGLRenderer, scene: THREE.Scen
     glow?.dispose();
     glow = undefined;
   };
-  const pass = (mask: number, into: THREE.WebGLRenderTarget | null) => {
-    camera.layers.mask = mask;
-    renderer.setRenderTarget(into);
-    renderer.render(scene, camera);
-    triangles += renderer.info.render.triangles;
-  };
-  // three applies no curve inside a target: the output pass is drawn under the look's curve (or none, as the mode
-  // asks), and the aids after it uncurved.
+  // three applies no curve inside a target: the output pass is drawn under the look's curve, or none, as the mode asks.
   const output = (drawn: ModelGlow | undefined) => {
     drawn?.render(renderer, frame.target);
     frame.setGlow(drawn ? drawn.texture : null);
@@ -139,15 +131,14 @@ export function createModelDraw(renderer: THREE.WebGLRenderer, scene: THREE.Scen
       if (failure !== undefined) throw new Error(failure);
     },
     draw() {
-      triangles = 0;
-      pass(MODEL_STAGE_LAYERS.scene, frame.target);
+      camera.layers.mask = MODEL_STAGE_LAYERS.both;
+      renderer.setRenderTarget(frame.target);
+      renderer.render(scene, camera);
+      triangles = renderer.info.render.triangles;
       output(context.modes.inspecting ? undefined : glow);
-      const clears = renderer.autoClear;
-      renderer.autoClear = false;
-      pass(MODEL_STAGE_LAYERS.aids, null);
-      renderer.autoClear = clears;
     },
-    /** The triangles the last frame drew of the scene and the aids; the output pass and the glow's are not counted. */
+    /** The triangles the last frame's one pass drew of the scene and the aids; the output pass and the glow's are not
+     * counted. */
     get triangles() {return triangles;},
     dispose() {
       release();

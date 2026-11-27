@@ -49,8 +49,9 @@ describe('the stage\'s frame loop', () => {
     loop.start();
     page.run(16);
     loop.fail(refused);
-    assert.deepEqual(failed, [refused]);
-    assert.deepEqual(page.cancelled, [2], 'the frame asked for before the failure is cancelled');
+    loop.fail(new Error('a second refused resize'));
+    assert.deepEqual(failed, [refused], 'the stage that failed is reported once');
+    assert.equal(page.cancelled[0], 2, 'the frame asked for before the failure is cancelled');
     page.run(33);
     assert.equal(page.queued.length, 0, 'no frame is asked for after the failure');
   });
