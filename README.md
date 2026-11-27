@@ -287,7 +287,7 @@ exactly its fields: one it omits or one it does not have is refused by its path 
   `values` give every parameter of its kind one of `{color: [r, g, b, a]}`, `{vector: [...]}`, `{float}`,
   `{keyword}` or `{texture}`, a texture being `{path, sha256, wrap: [u, v], scale: [u, v], offset: [u, v]}` (a PNG,
   JPEG or WebP), `{image, wrap: [u, v], scale: [u, v], offset: [u, v]}` (a static browser image source) or
-  `{constant: 'white' | 'black'}`: the types `ModelSurfaceValue` and `ModelSurfaceTexture`.
+  `{constant}`, one of `MODEL_TEXTURE_CONSTANT`: the types `ModelSurfaceValue` and `ModelSurfaceTexture`.
 - `environment`: `{reflectZ, plane, boxes}` scenery, or `null`: `plane` is `{position, size, color}` and a `grid`
   `{spacing, color}` when stated, or `null`; each box is `{id, position, size, color}` and a `rotationQuaternion`
   when stated. It is the scene's, fogged, bloomed and curved with the actors.
@@ -388,7 +388,7 @@ export const TOON_SURFACE: ModelSurfaceKind = {
   inert: {_Rim: 0},                   // a declared float drawn only at this value; another is refused by name
   attributes: ['uv', 'normal'],       // three's 'uv', 'color', 'normal', 'position'; a file's own is {name, size}
   light: 'unlit',                     // 'standard' (three's lit model) or 'unlit' (the kind lights itself)
-  coverage: 'opaque',                 // 'blended', 'cutout', {cutout: '<declared float>'} or {cutout: 0.5}
+  coverage: 'opaque',                 // 'cutout', {cutout: '_Cutoff' or 0.5}, {blend: 'alpha'}, both together
   side: 'double', fog: true,
   displacement: null,                 // or {reach: '<declared float>'}: the kind moves vertices
   webProgram: {path: '<url of the .glsl>', sha256: '<64 lowercase hex>',
@@ -409,8 +409,8 @@ export const TOON_SURFACE: ModelSurfaceKind = {
   format is refused where the record is read), `{image, wrap: [u, v], scale, offset}` (a static in-memory image source:
   `ImageBitmap`, `HTMLImageElement`, `HTMLCanvasElement`, `OffscreenCanvas` or `ImageData`, uploaded once per instance —
   pass a distinct instance to replace pixels; streaming video sources and any other value are refused where the record is
-  read), or `{constant: 'white' | 'black'}` for an empty slot. Orientation is glTF's (`flipY` false). A kind never reads
-  an image embedded in the model file.
+  read), or `{constant}` for an empty slot: one of `MODEL_TEXTURE_CONSTANT`, read in its own space whatever
+  the parameter's. Orientation is glTF's (`flipY` false). A kind never reads an image embedded in the model file.
 - **Shared GLSL.** `webProgram.includes` lists GLSL files the kind's repository owns, each by path and SHA-256. They are
   read with the program, once, and placed ahead of it in the order listed, so one formula is written once. A file
   listed twice is refused; one whose bytes are not its digest refuses the description, naming the file.
@@ -440,11 +440,14 @@ void kindSurface( inout vec4 diffuse, inout vec3 emissive ) { ... }
   no light of three's reaches it, while fog, the tone curve and output still apply. It lights itself from the look's
   light by the shared names below: a toon ramp reads `dot( kindNormal, stageKeyDirection )` through its steps.
 - `emissive` may exceed 1: what is above the look's glow threshold glows.
-- Coverage uses alpha: `blended` blends it and writes no depth, `opaque` ignores it, plain `cutout` writes it as
-  coverage as it is. A threshold (`{cutout: '_Cutoff'}` or a number) cuts the surface there: the stage sharpens the
-  alpha once, `kindCoverage(alpha, threshold)`, as URP's AlphaClip under alpha to coverage (SharpenAlphaStrict, a
-  one-pixel ramp across the threshold; at 0 or below, the surface whole). Write the alpha the source computes and do
-  not sharpen it yourself.
+- Coverage uses alpha: `opaque` ignores it, plain `cutout` writes it as coverage as it is. A threshold
+  (`{cutout: '_Cutoff'}` or a number) cuts the surface there: the stage sharpens the alpha once,
+  `kindCoverage(alpha, threshold)`, as URP's AlphaClip under alpha to coverage (SharpenAlphaStrict, a one-pixel ramp
+  across the threshold; at 0 or below, the surface whole). A blend (`{blend: 'alpha'}` or `'premultiply'`, URP's
+  `_Blend` names) sorts the surface, blends it by that blend's factors and writes no depth: `alpha` weights the
+  colour by its alpha, `premultiply` takes the colour as written. A threshold beside a blend discards what lies below
+  it, as URP's AlphaClip does with no alpha to mask, and blends the rest. Write the alpha the source computes and do
+  not sharpen or premultiply it yourself.
 - Do not write `gl_FragColor`, declare uniforms of your own, or clone or replace three's chunks.
 - The Surface modes act on the same material: Clay replaces colour and emission after `kindSurface`, Color shows
   `diffuse` untoned, Emission shows `emissive`. An unlit kind is drawn as it is in every mode, and its mesh makes the
@@ -553,7 +556,7 @@ recovers without reloading, and a loading model receives only the latest valid f
 
 The Surface choice is diagnostic: Lit keeps the loaded materials, Clay removes surface detail to show shape, Color
 shows the unlit base color and Emission the authored emissive channel; a model with none reports "No emission". A
-mode other than Lit shows its term as stated: no fog, and no glow (the frame is drawn straight to the canvas). It
+mode other than Lit shows its term as stated: no fog, and no glow; Color is also shown without the look's tone curve. It
 covers a mesh's standard or physical material and a kind built on the standard program; a model's lines and points
 are drawn as they are in every mode. A model whose meshes draw another material (an unlit one) stays Lit with
 `surfaceModesAvailable` false.

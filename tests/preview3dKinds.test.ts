@@ -45,9 +45,21 @@ describe('a surface kind\'s web program', () => {
     const cutout = made({coverage: 'cutout', side: 'double', attributes: ['color']});
     assert.deepEqual([cutout.alphaToCoverage, cutout.transparent, cutout.depthWrite, cutout.side, cutout.vertexColors,
       cutout.defines], [true, false, true, THREE.DoubleSide, true, {STANDARD: ''}]);
-    const blended = made({coverage: 'blended', side: 'back', fog: false});
+    const blended = made({coverage: {blend: 'alpha'}, side: 'back', fog: false});
     assert.deepEqual([blended.alphaToCoverage, blended.transparent, blended.depthWrite, blended.side, blended.fog],
       [false, true, false, THREE.BackSide, false]);
+  });
+
+  it('blends by its blend\'s factors, as URP\'s _Blend names them, and never multiplies the colour itself', () => {
+    const factors = (blend: string) => {
+      const material = createModelSurfaceProgram(modelSurfaceKind({...PULSE, coverage: {blend}}, 'K'), '', '')
+        .make({});
+      return [material.blending, material.blendSrc, material.blendDst, material.blendSrcAlpha,
+        material.blendDstAlpha, material.premultipliedAlpha];
+    };
+    const over = [THREE.OneMinusSrcAlphaFactor, THREE.OneFactor, THREE.OneMinusSrcAlphaFactor, false];
+    assert.deepEqual(factors('alpha'), [THREE.CustomBlending, THREE.SrcAlphaFactor, ...over]);
+    assert.deepEqual(factors('premultiply'), [THREE.CustomBlending, THREE.OneFactor, ...over]);
   });
 
   it('refuses, by name, an attribute the web stage cannot hand a kind, and a parameter GLSL cannot name', () => {

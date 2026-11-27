@@ -3,10 +3,9 @@ import {writeModelColor} from './color.ts';
 import type {ModelColor} from './colorModel.ts';
 import {modelShaderChunk, modelShaderUniforms} from './shading.ts';
 
-// The colour behind everything the stage draws, drawn as part of the scene, so that it passes through the look's tone
-// curve and the display encoding as every colour the look gives does, through three's own <tonemapping_fragment> and
-// <colorspace_fragment>: straight to the canvas without glow, and into the glow's linear target with it, which the
-// output pass then curves. So fog that reaches its far colour meets a backdrop drawn by the same rule, on both paths.
+// The colour behind everything the stage draws, drawn as part of the scene into the frame's linear target, so that it
+// passes through the look's tone curve and the display encoding, which the frame's output pass applies, as every
+// colour the look gives does. So fog that reaches its far colour meets a backdrop drawn by the same rule.
 // One triangle covering the view at the far plane, drawn first of everything and testing no depth, so that everything
 // drawn after covers it: as three draws its own background plane (WebGLBackground.js, ShaderLib background).
 const UNIFORM = 'modelStageBackdrop';

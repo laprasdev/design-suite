@@ -26,8 +26,17 @@ const WRAPS: Readonly<Record<string, THREE.Wrapping>> = Object.freeze({
 // A texture's space is how three reads its texels: sRGB colour is decoded, linear data is read as stored.
 const SPACES: Readonly<Record<ModelColorSpace, string>> = Object.freeze({[MODEL_COLOR_SPACE.srgb]: THREE.SRGBColorSpace,
   [MODEL_COLOR_SPACE.linear]: THREE.NoColorSpace});
-const TEXELS = Object.freeze({[MODEL_TEXTURE_CONSTANT.white]: [255, 255, 255, 255],
-  [MODEL_TEXTURE_CONSTANT.black]: [0, 0, 0, 255]});
+// An empty slot's constant is one texel in its own space, as Unity's built-in textures are: white and black are
+// colour, the same bytes in either space; a flat normal is Unity 6's "bump", RGBA (0.5, 0.5, 1, 1), linear data in
+// any slot. Each half is its nearest byte, and it decodes flat under every Unity decoder that reads rgb or rg:
+// `UnpackNormalRGB` (+Z) and `UnpackNormalMapRGorAG` (a * r = 0.5, then ag).
+const CONSTANTS = Object.freeze({
+  [MODEL_TEXTURE_CONSTANT.white]: {texel: [255, 255, 255, 255], space: MODEL_COLOR_SPACE.srgb},
+  [MODEL_TEXTURE_CONSTANT.black]: {texel: [0, 0, 0, 255], space: MODEL_COLOR_SPACE.srgb},
+  [MODEL_TEXTURE_CONSTANT.flatNormal]: {texel: [128, 128, 255, 255], space: MODEL_COLOR_SPACE.linear}});
+// The space a value is read in: a constant's own, any other value's parameter's.
+const spaceOf = (value: ModelSurfaceTexture, parameter: ModelColorSpace) =>
+  'constant' in value ? CONSTANTS[value.constant].space : parameter;
 
 export const MODEL_TEXTURE_TEXT = Object.freeze({
   unheld: (name: string) => `The texture ${name} was released, but the registry does not hold it: released more ` +
@@ -66,7 +75,7 @@ export function createModelTextures(read: ModelFileReader, decode: ModelImageDec
   };
   const make = (value: ModelSurfaceTexture, space: ModelColorSpace) => {
     if ('constant' in value) {
-      const texture = new THREE.DataTexture(new Uint8Array(TEXELS[value.constant]), 1, 1);
+      const texture = new THREE.DataTexture(new Uint8Array(CONSTANTS[value.constant].texel), 1, 1);
       texture.name = `constant ${value.constant}`;
       texture.colorSpace = SPACES[space];
       texture.needsUpdate = true;
@@ -85,9 +94,10 @@ export function createModelTextures(read: ModelFileReader, decode: ModelImageDec
   return {
     /** A staged load of these files: each one not yet held is read and decoded once while in flight. */
     load: sources.load,
-    /** A texture of a record's value in its parameter's space, shared by every user of the same; counted. */
-    acquire(value: ModelSurfaceTexture, space: ModelColorSpace): THREE.Texture {
-      const key = modelRecordIdentity([value, space]), held = textures.get(key);
+    /** A texture of a record's value in its parameter's space, or a constant's own, shared by every user of the same;
+     * counted. */
+    acquire(value: ModelSurfaceTexture, parameter: ModelColorSpace): THREE.Texture {
+      const space = spaceOf(value, parameter), key = modelRecordIdentity([value, space]), held = textures.get(key);
       if (held) {
         held.users++;
         return held.texture;

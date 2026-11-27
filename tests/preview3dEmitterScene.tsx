@@ -8,19 +8,17 @@ import {THEME, declaration, describing, standingAt} from './preview3dActorFixtur
 import {EMITTER_HOST_ID, EMITTER_SCENE_PROFILES, EMITTER_SCENE_ROUTED, EMITTER_SCENE_RUN,
   type EmitterDraws, type EmitterSceneDriver} from './preview3dEmitterSceneCases.ts';
 import {makePanelGlbBytes, PANEL_GLB} from './preview3dPanelGlb.ts';
+import {FRAME_PIXEL, readFramePixels} from './framePixels.ts';
 import {renderScene} from './renderScene.tsx';
 
 const nextFrame = () => new Promise<number>(resolve => requestAnimationFrame(resolve));
-const CHANNELS = 4;
 // A pixel counts as changed when a channel moves more than this, past dithering.
 const CHANGED_BYTES = 2;
 
 function pixels(canvas: HTMLCanvasElement) {
   const gl = canvas.getContext('webgl2');
   if (!gl) throw new Error('Expected the stage\'s WebGL2 canvas.');
-  const read = new Uint8Array(canvas.width * canvas.height * CHANNELS);
-  gl.readPixels(0, 0, canvas.width, canvas.height, gl.RGBA, gl.UNSIGNED_BYTE, read);
-  return read;
+  return readFramePixels(gl);
 }
 // The draw calls of each frame, counted by wrapping the stage's context: instanced draws by their instance count, and
 // points draws.
@@ -44,10 +42,10 @@ function countDraws(gl: WebGL2RenderingContext) {
 // How many pixels changed, and the area of the box around them.
 function changedPixels(before: Uint8Array, after: Uint8Array, width: number) {
   let changed = 0, left = width, right = -1, bottom = Number.POSITIVE_INFINITY, top = -1;
-  for (let pixel = 0; pixel < before.length; pixel += CHANNELS) {
-    for (let channel = 0; channel < CHANNELS - 1; channel++) {
+  for (let pixel = 0; pixel < before.length; pixel += FRAME_PIXEL.stride) {
+    for (let channel = 0; channel < FRAME_PIXEL.colorChannels; channel++) {
       if (Math.abs(before[pixel + channel] - after[pixel + channel]) > CHANGED_BYTES) {
-        const column = (pixel / CHANNELS) % width, row = Math.floor(pixel / CHANNELS / width);
+        const column = (pixel / FRAME_PIXEL.stride) % width, row = Math.floor(pixel / FRAME_PIXEL.stride / width);
         changed++;
         left = Math.min(left, column);
         right = Math.max(right, column);

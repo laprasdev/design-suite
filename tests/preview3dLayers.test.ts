@@ -35,8 +35,7 @@ describe('the frame\'s layers', () => {
     environment.dispose();
   });
 
-  it('compiles a program as the scene pass draws it: into the glow\'s target while it glows, unless a mode inspects',
-    async () => {
+  it('compiles every program as the scene pass draws it: into the frame\'s linear target, glow or not', async () => {
     const into: (THREE.WebGLRenderTarget | null)[] = [];
     let target: THREE.WebGLRenderTarget | null = null;
     const size = new THREE.Vector2(320, 200);
@@ -44,18 +43,16 @@ describe('the frame\'s layers', () => {
       extensions: {has: () => true}, getDrawingBufferSize: (value: THREE.Vector2) => value.copy(size),
       setRenderTarget: (value: THREE.WebGLRenderTarget | null) => {target = value;},
       compile: () => {into.push(target); return new Set();}};
-    const view = {inspecting: false};
+    const modes = {inspecting: false, curved: true};
     const draw = createModelDraw(renderer as never, new THREE.Scene(), new THREE.Camera(),
-      {loadPasses: loadModelGlowPasses, inspecting: () => view.inspecting});
+      {loadPasses: loadModelGlowPasses, modes});
     draw.compile(new THREE.Mesh());
     await Promise.all(draw.load({threshold: 1, strength: 1, radius: 0}, 'Time t: look.glow'));
-    draw.prepare({toneCurve: null, glow: {threshold: 1, strength: 1, radius: 0}}, 'Time t: look.glow')();
+    draw.prepare({toneCurve: null, glow: {threshold: 1, strength: 1, radius: 0}})();
+    modes.inspecting = true;
     draw.compile(new THREE.Mesh());
-    assert.equal(into[0], null);
-    assert.ok(into[1] instanceof THREE.WebGLRenderTarget && into[1].samples === 4);
+    assert.ok(into[0] instanceof THREE.WebGLRenderTarget && into[0].samples === 4);
+    assert.deepEqual(into, [into[0], into[0]], 'one target, whatever the look or mode');
     assert.equal(target, null, 'the canvas is bound again after');
-    view.inspecting = true;
-    draw.compile(new THREE.Mesh());
-    assert.equal(into[2], null, 'a mode drawn straight to the canvas compiles for the canvas');
   });
 });

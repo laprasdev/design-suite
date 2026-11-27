@@ -8,10 +8,11 @@ import {
   MODEL_STAGE_SURFACE_MODE, type ModelColor, type ModelStageFog, type ModelStageSurfaceMode, type ModelVector,
 } from '../src/react/preview3d/model.ts';
 import {openScene, SCENE_GL} from './browserScene.ts';
+import type {RgbBytes} from './framePixels.ts';
 import {ACES_CURVE} from './preview3dActorFixture.ts';
 import {
   FAR_CENTER, FOG_HOSTS_ID, FOG_LAYER_SPEC, FOG_PATCH_URL, FOG_SCENE_ENTRY, FOG_SPEC, FOG_TIME_ID,
-  FOG_VIEWPORT, framingCamera, NEAR_CENTER, PATCH_BASE_COLOR, PATCH_EMISSIVE, type FogTimeId, type RgbBytes,
+  FOG_VIEWPORT, framingCamera, NEAR_CENTER, PATCH_BASE_COLOR, PATCH_EMISSIVE, type FogTimeId,
 } from './preview3dFogCases.ts';
 import {shownBytes, statedBytes} from './preview3dToneCurveOracle.ts';
 

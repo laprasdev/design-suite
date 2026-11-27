@@ -1,7 +1,8 @@
-import {isNonEmptyString, isRecord} from '../../valueChecks.ts';
+import {isNonEmptyString} from '../../valueChecks.ts';
 import {modelDigest, modelEntries, modelFlag, modelName, modelNumber, modelOption,
   modelRecord, modelRecordStating, modelShape, modelStates} from './recordModel.ts';
 import {ModelStageRefusal} from './refusal.ts';
+import {modelSurfaceCoverage, type ModelSurfaceCoverage} from './surfaceCoverageModel.ts';
 
 // A surface kind's declaration: what any host needs to know to check a record against the kind, with no renderer. It
 // is an exported constant of the kind's own repository. Only `webProgram` is one host's: the web stage's GLSL for this
@@ -10,28 +11,25 @@ export const MODEL_SURFACE_PARAMETER = Object.freeze(
   {color: 'color', vector: 'vector', float: 'float', keyword: 'keyword', texture: 'texture'} as const);
 export const MODEL_COLOR_SPACE = Object.freeze({srgb: 'srgb', linear: 'linear'} as const);
 export const MODEL_SURFACE_LIGHT = Object.freeze({standard: 'standard', unlit: 'unlit'} as const);
-export const MODEL_SURFACE_COVERAGE = Object.freeze({opaque: 'opaque', cutout: 'cutout', blended: 'blended'} as const);
 export const MODEL_SURFACE_SIDE = Object.freeze({front: 'front', back: 'back', double: 'double'} as const);
 export const MODEL_VECTOR_SIZE = Object.freeze({two: 2, three: 3, four: 4} as const);
 /** How many numbers a vertex attribute of the file's own holds per vertex. */
 export const MODEL_ATTRIBUTE_SIZE = Object.freeze({one: 1, two: 2, three: 3, four: 4} as const);
 /** The reserved kind id of a file's own material, which the stage draws as the file states it. */
 export const MODEL_FILE_SURFACE = 'file';
-type Of<T> = T[keyof T];
-export type ModelColorSpace = Of<typeof MODEL_COLOR_SPACE>;
+export type ModelColorSpace = typeof MODEL_COLOR_SPACE[keyof typeof MODEL_COLOR_SPACE];
 /**
  * A vertex attribute a kind reads: one of three's own by its name ('uv', 'color'), or one of the file's own (a glTF
  * custom attribute, `_DEPTH`, which three names `_depth`) by its name and the numbers it holds per vertex.
  */
-export type ModelSurfaceAttribute = string | {readonly name: string; readonly size: Of<typeof MODEL_ATTRIBUTE_SIZE>};
-/** A cut-out at a threshold: a declared float's name, or a number from 0 to 1. Below it the surface is cut away; the
- * stage sharpens the kind's alpha across it, once, for alpha to coverage (surfaceProgram.ts). */
-export interface ModelSurfaceCutout {readonly cutout: string | number}
+export type ModelSurfaceAttribute = string |
+  {readonly name: string; readonly size: typeof MODEL_ATTRIBUTE_SIZE[keyof typeof MODEL_ATTRIBUTE_SIZE]};
 /** A file a web program is made of, by path and SHA-256. */
 export interface ModelSurfaceProgramFile {readonly path: string; readonly sha256: string}
 export type ModelSurfaceParameter =
   | {readonly type: typeof MODEL_SURFACE_PARAMETER.color; readonly space: ModelColorSpace; readonly hdr: boolean}
-  | {readonly type: typeof MODEL_SURFACE_PARAMETER.vector; readonly size: Of<typeof MODEL_VECTOR_SIZE>}
+  | {readonly type: typeof MODEL_SURFACE_PARAMETER.vector;
+    readonly size: typeof MODEL_VECTOR_SIZE[keyof typeof MODEL_VECTOR_SIZE]}
   | {readonly type: typeof MODEL_SURFACE_PARAMETER.float}
   | {readonly type: typeof MODEL_SURFACE_PARAMETER.keyword}
   | {readonly type: typeof MODEL_SURFACE_PARAMETER.texture; readonly space: ModelColorSpace};
@@ -43,10 +41,10 @@ export interface ModelSurfaceKind {
   readonly inert: Readonly<Record<string, number>>;
   /** The vertex attributes the kind reads, as three names a glTF's: three's own by name, the file's own with a size. */
   readonly attributes: readonly ModelSurfaceAttribute[];
-  readonly light: Of<typeof MODEL_SURFACE_LIGHT>;
-  /** Opaque, blended, or cut out: `cutout` writes the kind's alpha as coverage as it is; a threshold sharpens it. */
-  readonly coverage: Of<typeof MODEL_SURFACE_COVERAGE> | ModelSurfaceCutout;
-  readonly side: Of<typeof MODEL_SURFACE_SIDE>;
+  readonly light: typeof MODEL_SURFACE_LIGHT[keyof typeof MODEL_SURFACE_LIGHT];
+  /** Opaque or cut out, or a record: a threshold, a blend, or both (surfaceCoverageModel.ts). */
+  readonly coverage: ModelSurfaceCoverage;
+  readonly side: typeof MODEL_SURFACE_SIDE[keyof typeof MODEL_SURFACE_SIDE];
   /** Whether the stage's fog reaches the kind. */
   readonly fog: boolean;
   /** The kind moves vertices, at most `reach` metres (a declared float); or null, it moves none. */
@@ -58,7 +56,7 @@ export interface ModelSurfaceKind {
 }
 export const MODEL_SURFACE_KIND_FIELDS = Object.freeze({kind: ['id', 'parameters', 'inert', 'attributes', 'light',
   'coverage', 'side', 'fog', 'displacement', 'webProgram'], webProgram: ['path', 'sha256'], include: ['path', 'sha256'],
-displacement: ['reach'], cutout: ['cutout'],
+displacement: ['reach'],
 attribute: ['name', 'size'],
 parameter: Object.freeze({
   color: {stated: ['type', 'space', 'hdr'], whenStated: []},
@@ -75,8 +73,6 @@ export const MODEL_SURFACE_KIND_REFUSAL = Object.freeze({
   twice: (where: string, name: string) => `${where} lists ${name} twice.`,
   list: (where: string) => `${where} is a list.`,
   kinds: 'The stage\'s surface kinds is a list of kinds; state [] for none.',
-  coverage: (where: string) => `${where} is one of ${Object.values(MODEL_SURFACE_COVERAGE).join(', ')}, or ` +
-    '{cutout: a declared float or a number from 0 to 1}.',
   glsl: (where: string, name: string) => `${where} names ${name}, which is not a GLSL name: a letter or underscore, ` +
     'then letters, digits and underscores, never two underscores in a row.',
 });
@@ -135,10 +131,6 @@ function includes(value: unknown, where: string): readonly ModelSurfaceProgramFi
   }));
 }
 
-/** The coverage a kind's render state is drawn with: a cut-out at a threshold is a cut-out. */
-export const modelSurfaceCoverage = (kind: Pick<ModelSurfaceKind, 'coverage'>) =>
-  typeof kind.coverage === 'string' ? kind.coverage : MODEL_SURFACE_COVERAGE.cutout;
-
 /** One kind's declaration, checked whole; `where` names it in every refusal. */
 export function modelSurfaceKind(value: unknown, where: string): ModelSurfaceKind {
   const kind = modelRecord(value, fields.kind, where);
@@ -161,22 +153,11 @@ export function modelSurfaceKind(value: unknown, where: string): ModelSurfaceKin
     [float(name, `${where}.inert`), modelNumber(number, `${where}.inert.${name}`, -Infinity, Infinity)])));
   const displacement = kind.displacement === null ? null : Object.freeze({reach: float(modelRecord(kind.displacement,
     fields.displacement, `${where}.displacement`).reach, `${where}.displacement.reach`)});
-  const coverage = (value: unknown, at: string): ModelSurfaceKind['coverage'] => {
-    if (!isRecord(value)) {
-      if (Object.values<unknown>(MODEL_SURFACE_COVERAGE).includes(value)) {
-        return modelOption(value, MODEL_SURFACE_COVERAGE, at);
-      }
-      throw new ModelStageRefusal(refusal.coverage(at));
-    }
-    const {cutout} = modelRecord(value, fields.cutout, at);
-    return Object.freeze({cutout: typeof cutout === 'number' ? modelNumber(cutout, `${at}.cutout`, 0, 1) :
-      float(cutout, `${at}.cutout`)});
-  };
   const program = modelRecordStating(kind.webProgram, {stated: fields.webProgram, whenStated: ['includes']},
     `${where}.webProgram`);
   return Object.freeze({id, parameters, inert, attributes: attributes(kind.attributes, `${where}.attributes`),
     light: modelOption(kind.light, MODEL_SURFACE_LIGHT, `${where}.light`),
-    coverage: coverage(kind.coverage, `${where}.coverage`),
+    coverage: modelSurfaceCoverage(kind.coverage, `${where}.coverage`, float),
     side: modelOption(kind.side, MODEL_SURFACE_SIDE, `${where}.side`), fog: modelFlag(kind.fog, `${where}.fog`),
     displacement, webProgram: Object.freeze({...programFile(program, `${where}.webProgram`), includes:
       modelStates(program, 'includes') ? includes(program.includes, `${where}.webProgram.includes`) : NO_INCLUDES})});

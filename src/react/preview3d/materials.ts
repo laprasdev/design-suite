@@ -7,8 +7,8 @@ import {modelMaterialOwned, modelShaderChunk, modelShaderUniforms, type ModelSha
 // The Surface modes, as one change to the program of every model surface the stage draws: the same material in every
 // mode, never a copy, so whatever draws a renderer (the file's material, a kind's) shows the same modes. The mode is
 // part of the program's key, so each mode compiles once per material and a mode change recompiles nothing it compiled
-// before. Lit changes nothing. The other three inspect one term of the surface, as stated: no fog, no glow (the frame
-// is drawn straight to the canvas while one is in force, draw.ts), Clay its shape in a neutral colour and finish (no
+// before. Lit changes nothing. The other three inspect one term of the surface, as stated: no fog, no glow (draw.ts
+// leaves the glow out while one is in force), Clay its shape in a neutral colour and finish (no
 // texture but the base colour's alpha, no emission, none of the physical extras), Color its base colour untoned,
 // Emission its emission.
 //
@@ -19,7 +19,7 @@ import {modelMaterialOwned, modelShaderChunk, modelShaderUniforms, type ModelSha
 // an unlit mesh does, and refuses them (stageParts.ts).
 const CHUNK = Object.freeze({colorDeclarations: 'color_pars_fragment',
   roughness: 'roughnessmap_fragment', metalness: 'metalnessmap_fragment', emission: 'emissivemap_fragment',
-  physical: 'lights_physical_fragment', output: 'opaque_fragment', toneMapping: 'tonemapping_fragment'});
+  physical: 'lights_physical_fragment', output: 'opaque_fragment'});
 const CLAY_UNIFORM = 'modelSurfaceClay';
 // What Clay leaves out, as the program's own switches: every map but the base colour's (its alpha keeps cut-outs), the
 // environment, and the physical extras. three compares none of these per frame, so they hold for the mode's program.
@@ -79,13 +79,14 @@ export function createModelSurfaceModes() {
         shader.fragmentShader = shown(replace, shader.fragmentShader, 'totalEmissiveRadiance');
         return;
       }
-      // Color shows the base colour as stated: the frame's tone curve is left out of this mode's program.
-      shader.fragmentShader = replace(shown(replace, shader.fragmentShader, 'diffuseColor.rgb'), CHUNK.toneMapping, '');
+      shader.fragmentShader = shown(replace, shader.fragmentShader, 'diffuseColor.rgb');
     },
   };
   return {change, covers: modelSurfaceModesCover, get mode() {return mode;},
     /** Whether a mode other than Lit is in force: the frame then shows a term of each surface, not the look. */
     get inspecting() {return mode !== MODE.lit;},
+    /** Whether the frame shows the mode's term through the look's tone curve: Color shows the base colour as stated. */
+    get curved() {return mode !== MODE.color;},
     set(value: ModelStageSurfaceMode) {mode = value;}};
 }
 export type ModelSurfaceModes = ReturnType<typeof createModelSurfaceModes>;

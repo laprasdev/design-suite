@@ -1,5 +1,5 @@
 // Mounted in Chromium by preview3dWorldPosition.browser.test.ts: draws the square through the stage's kind program, one
-// placement at a time, with an orthographic camera down -Z, and reads the frame's bytes back.
+// placement at a time, with an orthographic camera down -Z, and reads the frame's bytes back (pixelReadScene.tsx).
 import * as THREE from 'three';
 import {modelSurfaceKind} from '../src/react/preview3d/surfaceKindModel.ts';
 import {createModelSurfaceProgram} from '../src/react/preview3d/surfaceProgram.ts';
@@ -8,14 +8,9 @@ import {
   placementTransform, squareCorners, WORLD_KIND, WORLD_PLACEMENT, WORLD_PROGRAM, WORLD_VIEW, WORLD_VIEWPORT,
   type WorldPlacement,
 } from './preview3dWorldPositionCases.ts';
-import {renderScene} from './renderScene.tsx';
+import {mountPixelReadScene} from './pixelReadScene.tsx';
 
-const {width, height} = WORLD_VIEWPORT, {extent, eye} = WORLD_VIEW;
-const renderer = new THREE.WebGLRenderer({antialias: false});
-renderer.setPixelRatio(1);
-renderer.setSize(width, height);
-renderer.outputColorSpace = THREE.LinearSRGBColorSpace;
-renderer.setClearColor(0x000000, 1);
+const {extent, eye} = WORLD_VIEW, view = mountPixelReadScene(WORLD_VIEWPORT);
 const camera = new THREE.OrthographicCamera(0, extent, extent, 0, 0.1, eye * 2);
 camera.position.set(0, 0, eye);
 camera.updateMatrixWorld();
@@ -47,12 +42,9 @@ function placed(placement: WorldPlacement): THREE.Object3D {
 window.drawWorldPlacement = placement => {
   const scene = new THREE.Scene(), object = placed(placement);
   scene.add(object);
-  renderer.render(scene, camera);
-  const gl = renderer.getContext(), pixels = new Uint8Array(width * height * 4);
-  gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
+  const frame = view.readFrame(() => view.renderer.render(scene, camera));
   object.traverse(part => {
     if (part instanceof THREE.Mesh || part instanceof THREE.BatchedMesh) part.geometry.dispose();
   });
-  return {pixels: Array.from(pixels)};
+  return frame;
 };
-renderScene(<div ref={parent => { parent?.append(renderer.domElement); }}/>);

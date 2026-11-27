@@ -4,12 +4,13 @@
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import {openScene, SCENE_GL} from './browserScene.ts';
+import {FRAME_PIXEL} from './framePixels.ts';
 import {expectedBytes, WORLD_PLACEMENT, WORLD_SCENE_ENTRY, WORLD_VIEWPORT, type WorldPlacement}
   from './preview3dWorldPositionCases.ts';
 
 // One 8-bit rounding step across float32 interpolation.
 const BYTE_TOLERANCE = 1;
-const CHANNELS = 3, STRIDE = 4;
+const {stride: STRIDE, colorChannels: CHANNELS} = FRAME_PIXEL;
 const {width} = WORLD_VIEWPORT, centre = width / 2;
 
 const page = await openScene(WORLD_SCENE_ENTRY, WORLD_VIEWPORT, SCENE_GL.software);

@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import {createModelSurfaceProgram} from '../src/react/preview3d/surfaceProgram.ts';
 import {MODEL_SURFACE_KIND_REFUSAL, modelSurfaceKind, modelSurfaceKinds}
   from '../src/react/preview3d/surfaceKindModel.ts';
+import {MODEL_SURFACE_COVERAGE_REFUSAL} from '../src/react/preview3d/surfaceCoverageModel.ts';
 import {createModelSurfaceMaterials} from '../src/react/preview3d/surfaceMaterials.ts';
 import {createModelStageSharedValues} from '../src/react/preview3d/sharedValues.ts';
 import {refused} from './preview3dActorFixture.ts';
@@ -75,8 +76,18 @@ describe('what a kind may write beyond its colour', () => {
     refused(() => kind({coverage: {cutout: '_Color'}}),
       MODEL_SURFACE_KIND_REFUSAL.float('K.coverage.cutout', '_Color'));
     refused(() => kind({coverage: {cutout: 1.5}}), /K.coverage.cutout must be a finite number from 0 to 1/);
-    refused(() => kind({coverage: 'clip'}), MODEL_SURFACE_KIND_REFUSAL.coverage('K.coverage'));
+    refused(() => kind({coverage: 'clip'}), MODEL_SURFACE_COVERAGE_REFUSAL.coverage('K.coverage'));
     refused(() => kind({coverage: {cutout: 0.5, soft: 1}}), /K.coverage does not state soft/);
+  });
+
+  it('clips a blended surface at its threshold, as URP does without alpha to mask; the rest blends as written', () => {
+    const clipped = built({parameters: CUTOFF, coverage: {cutout: '_Cutoff', blend: 'premultiply'}});
+    const discard = 'if ( diffuseColor.a < surfaceParameter_Cutoff() ) discard;';
+    assert.ok(at(clipped.fragmentShader, CALL) < at(clipped.fragmentShader, discard));
+    assert.ok(!clipped.fragmentShader.includes('kindCoverage'), 'no coverage is sharpened');
+    const material = clipped.make({});
+    assert.deepEqual([material.alphaToCoverage, material.transparent, material.depthWrite], [false, true, false]);
+    assert.ok(!built({coverage: {blend: 'alpha'}}).fragmentShader.includes('discard'), 'a blend alone clips nothing');
   });
 
   it('includes the shared GLSL its repository owns, by path and SHA-256, ahead of its own program in order',

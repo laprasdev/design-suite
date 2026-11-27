@@ -7,7 +7,7 @@ import {disposeModelObject} from './asset.ts';
 import {createModelLighting} from './lighting.ts';
 import {modelStageBuiltInTimes} from './builtInTimes.ts';
 import {createModelFog} from './fog.ts';
-import {createModelDraw} from './draw.ts';
+import {createModelDraw, type ModelDrawContext} from './draw.ts';
 import {loadModelGlowPasses} from './glow.ts';
 import {createModelStageSharedValues} from './sharedValues.ts';
 import {markModelStageAids, markModelStageLights} from './layers.ts';
@@ -35,26 +35,37 @@ export function createModelStageAids(theme: ModelStageTheme, policy: ModelStageP
   return aids;
 }
 
-/** The stage's three.js side: its renderer and canvas, scene, camera and controls, lighting, fog and draw. `inspecting`
- * says whether a Surface mode other than Lit is in force, which the draw reads each frame (draw.ts). */
+// A browser the frame cannot be drawn in is refused before the canvas joins the page, and its context is let go.
+function drawnOrReleased<T>(renderer: THREE.WebGLRenderer, create: () => T): T {
+  try {
+    return create();
+  } catch (error) {
+    renderer.dispose();
+    throw error;
+  }
+}
+/** The stage's three.js side: its renderer and canvas, scene, camera and controls, lighting, fog and draw, sized to its
+ * host at creation and at each `resize`. `modes` is what the Surface mode in force asks of the frame, which the draw
+ * reads each frame (draw.ts). */
 export function createModelScene(host: HTMLElement, theme: ModelStageTheme, policy: ModelStagePolicy,
-  inspecting: () => boolean) {
+  modes: ModelDrawContext['modes']) {
   // The theme is read before anything is built, so a theme the stage refuses leaves no canvas or context behind.
   const builtIn = modelStageBuiltInTimes(theme.colors);
   const renderer = new THREE.WebGLRenderer({antialias: true, preserveDrawingBuffer: true});
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, settings.pixelRatioLimit));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
-  host.append(renderer.domElement);
   const scene = new THREE.Scene();
   // The far plane is the look's, set as the lighting applies its first time.
   const camera = new THREE.PerspectiveCamera(settings.fieldOfView, 1, settings.nearPlane);
+  const frame = drawnOrReleased(renderer, () => createModelDraw(renderer, scene, camera,
+    {loadPasses: loadModelGlowPasses, modes}));
+  host.append(renderer.domElement);
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.minDistance = settings.cameraMinimum;
   controls.maxDistance = settings.cameraMaximum;
   controls.maxPolarAngle = Math.PI / 2;
   const framing = createModelFraming(camera, controls);
   const fog = createModelFog(scene);
-  const frame = createModelDraw(renderer, scene, camera, {loadPasses: loadModelGlowPasses, inspecting});
   const shared = createModelStageSharedValues();
   const lighting = createModelLighting(builtIn, {fog, framing, output: frame, shared});
   const aids = createModelStageAids(theme, policy, lighting);
@@ -64,15 +75,20 @@ export function createModelScene(host: HTMLElement, theme: ModelStageTheme, poli
   const resize = () => {
     const {clientWidth: width, clientHeight: height} = host;
     if (!width || !height) return;
-    renderer.setSize(width, height, false);
-    frame.resize();
+    frame.resize(width, height);
     camera.aspect = width / height;
     camera.updateProjectionMatrix();
     framing.requestFit();
   };
-  const observer = new ResizeObserver(resize);
-  observer.observe(host);
-  resize();
+  const dispose = () => {
+    controls.dispose();
+    disposeModelObject(scene);
+    frame.dispose();
+    renderer.dispose();
+    renderer.domElement.remove();
+  };
+  // A size the frame's budget refuses at creation goes on, with what was built released.
+  try {resize();} catch (error) {dispose(); throw error;}
   return {
     renderer, scene, camera, controls, lighting, fog, shared,
     // The framing the stage drives; the far plane is the look's, set through the lighting alone.
@@ -83,13 +99,9 @@ export function createModelScene(host: HTMLElement, theme: ModelStageTheme, poli
     /** The frame's one draw, straight or through the look's glow; and the triangles its scene pass drew. */
     draw: frame.draw,
     triangles: () => frame.triangles,
-    dispose() {
-      observer.disconnect();
-      controls.dispose();
-      disposeModelObject(scene);
-      frame.dispose();
-      renderer.dispose();
-      renderer.domElement.remove();
-    },
+    /** Sizes the canvas, the frame and the camera to the host as it is now; a size past the frame's budget is refused
+     * by name, and the canvas keeps the size it had. */
+    resize,
+    dispose,
   };
 }

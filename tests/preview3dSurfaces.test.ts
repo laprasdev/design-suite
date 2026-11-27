@@ -60,7 +60,10 @@ describe('surface kinds, records and sets', () => {
       kind({webProgram: {path: '/p.glsl', sha256}}, /K.webProgram.sha256 must be a SHA-256: 64 lowercase hex digits/);
     }
     kind({webProgram: {path: '', sha256: 'a'.repeat(64)}}, /K.webProgram.path must be a non-empty string/);
-    kind({coverage: 'fuzzy'}, /K.coverage is one of opaque, cutout, blended/);
+    kind({coverage: 'fuzzy'}, /K.coverage is one of opaque, cutout, or a record stating a cutout/);
+    kind({coverage: 'blended'}, /K.coverage is one of opaque, cutout, or a record/);
+    kind({coverage: {}}, /K.coverage is one of opaque, cutout, or a record/);
+    kind({coverage: {blend: 'additive'}}, /K.coverage.blend is one of alpha, premultiply/);
     kind({parameters: {_V: {type: 'vector', size: 5}}}, /K.parameters._V.size is one of 2, 3, 4/);
     kind({parameters: {_C: {type: 'color', space: 'srgb'}}}, /K.parameters._C omits hdr/);
     kind({parameters: {_C: {type: 'hue'}}}, /K.parameters._C.type is one of color, vector/);
@@ -86,7 +89,7 @@ describe('surface kinds, records and sets', () => {
     refused(() => sets({...RECORD, values: {...RECORD.values, _Mask: {texture: {...MASK, wrap: ['repeat', 'tile']}}}}),
       /_Mask.texture.wrap\[1\] is one of repeat, clamp, mirror/);
     refused(() => sets({...RECORD, values: {...RECORD.values, _Mask: {texture: {constant: 'grey'}}}}),
-      /_Mask.texture.constant is one of white, black/);
+      /_Mask.texture.constant is one of white, black, flatNormal/);
     refused(() => sets({kind: 'file', values: {}}), new RegExp(`${where} does not state values`));
     assert.deepEqual(sets({kind: 'file'}).tinted[RENDERER], MODEL_FILE_ENTRY);
     assert.deepEqual(sets(RECORD).tinted[RENDERER], RECORD);

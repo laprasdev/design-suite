@@ -43,12 +43,16 @@ export function kindFile() {
   return {asset: {scene, animations: [], parser: {associations}} as never, body, eyes, line};
 }
 
+/** What a kind material takes from the stage over a scene: its shared values, and its fog and Surface mode changes. */
+export function kindStage(scene: THREE.Scene) {
+  const shared = createModelStageSharedValues(), fog = createModelFog(scene), modes = createModelSurfaceModes();
+  return {shared, fog, modes, changes: modelStageChanges(fog.change, modes)};
+}
 /** The stage's kind materials over a texture registry that records what it was asked, with the program loaded. */
 export async function kindMaterials() {
   const acquired: unknown[] = [], released: THREE.Texture[] = [];
-  const shared = createModelStageSharedValues(), fog = createModelFog(new THREE.Scene());
-  const modes = createModelSurfaceModes();
-  const materials = createModelSurfaceMaterials({kinds: kinds(), shared, changes: modelStageChanges(fog.change, modes),
+  const {shared, fog, modes, changes} = kindStage(new THREE.Scene());
+  const materials = createModelSurfaceMaterials({kinds: kinds(), shared, changes,
     read: async () => new TextEncoder().encode(PULSE_PROGRAM).buffer,
     textures: {acquire: value => {acquired.push(value); return new THREE.Texture();},
       release: texture => {released.push(texture);}}});
