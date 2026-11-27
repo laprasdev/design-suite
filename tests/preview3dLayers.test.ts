@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import {describe, it} from 'node:test';
 import * as THREE from 'three';
+import {createModelStageSharedValues} from '../src/react/preview3d/sharedValues.ts';
 import {MODEL_STAGE_LAYER, MODEL_STAGE_LAYERS, markModelStageAids, markModelStageLights}
   from '../src/react/preview3d/layers.ts';
 import {createModelDraw} from '../src/react/preview3d/draw.ts';
@@ -44,8 +45,8 @@ describe('the frame\'s layers', () => {
       setRenderTarget: (value: THREE.WebGLRenderTarget | null) => {target = value;},
       compile: () => {into.push(target); return new Set();}};
     const modes = {inspecting: false, curved: true};
-    const draw = createModelDraw(renderer as never, new THREE.Scene(), new THREE.Camera(),
-      {loadPasses: loadModelGlowPasses, modes});
+    const draw = createModelDraw(renderer as never, new THREE.Scene(), new THREE.PerspectiveCamera(),
+      {loadPasses: loadModelGlowPasses, modes, shared: createModelStageSharedValues()});
     draw.compile(new THREE.Mesh());
     await Promise.all(draw.load({threshold: 1, strength: 1, radius: 0}, 'Time t: look.glow'));
     draw.prepare({toneCurve: null, glow: {threshold: 1, strength: 1, radius: 0}})();

@@ -7,6 +7,7 @@ import {MODEL_SURFACE_PARAMETER, type ModelSurfaceKind} from './surfaceKindModel
 import type {ModelSurfaceRecord, ModelSurfaceValue} from './surfaceModel.ts';
 import type {ModelTextures} from './textures.ts';
 import type {ModelStageProgramValues} from './sharedValues.ts';
+import type {ModelSceneReaders} from './linearFrame.ts';
 import {extendModelMaterial} from './shading.ts';
 import type {ModelStageChanges} from './materials.ts';
 import {writeModelSurfaceColor} from './color.ts';
@@ -31,6 +32,8 @@ export interface ModelSurfaceMaterialsContext {
   readonly read: ModelFileReader;
   readonly textures: Pick<ModelTextures, 'acquire' | 'release'>;
   readonly shared: ModelStageProgramValues;
+  /** What a material of a kind that reads the frame holds from its build until it is freed. */
+  readonly sceneReaders: ModelSceneReaders;
   /** The stage's changes a model material takes: its fog, and its Surface mode where the mode covers the program. */
   readonly changes: ModelStageChanges;
 }
@@ -84,8 +87,17 @@ export function createModelSurfaceMaterials(context: ModelSurfaceMaterialsContex
     composed.set(kind.id, fresh);
     return fresh;
   };
+  // Holds every read, or none: one the budget refuses releases those held before it.
+  const holdAll = (reads: ModelSurfaceKind['sceneReads']) => reads.forEach((read, index) => {
+    try {context.sceneReaders.hold(read);} catch (error) {
+      for (const held of reads.slice(0, index)) context.sceneReaders.release(held);
+      throw error;
+    }
+  });
   const build = (key: string, record: ModelSurfaceRecord): Built => {
     const kind = kindOf(record), slots = modelSurfaceSlots(kind), composedProgram = program(kind);
+    // First, so a read the frame's budget refuses leaves nothing built or acquired.
+    holdAll(kind.sceneReads);
     const declared = new Float32Array(SLOT * slots.size), textures: THREE.Texture[] = [];
     const uniforms: Record<string, THREE.IUniform> = {...composedProgram.baseUniforms(), ...context.shared.uniforms,
       [MODEL_SURFACE_GLSL.values]: {value: declared}};
@@ -111,6 +123,7 @@ export function createModelSurfaceMaterials(context: ModelSurfaceMaterialsContex
       built.delete(entry.key);
       counted.delete(entry.surface);
       entry.surface.material.dispose();
+      for (const read of entry.surface.kind.sceneReads) context.sceneReaders.release(read);
       for (const texture of entry.textures) context.textures.release(texture);
     }
   };

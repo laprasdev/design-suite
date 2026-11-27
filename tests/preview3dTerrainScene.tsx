@@ -58,7 +58,8 @@ async function bootTerrainScene(programSha256: string, floor: boolean): Promise<
   if (!host) throw new Error(`Missing #${TERRAIN_HOST_ID} element.`);
   const kind = modelSurfaceKind({id: GROUND_KIND_ID, parameters: {_Color: {type: 'color', space: 'srgb', hdr: false}},
     inert: {},
-    attributes: ['uv'], light: 'standard', coverage: 'opaque', side: 'front', fog: true, displacement: null,
+    sceneReads: [], attributes: ['uv'],
+    light: 'standard', coverage: 'opaque', side: 'front', fog: true, displacement: null,
     webProgram: {path: TERRAIN_ROUTES.program, sha256: programSha256}}, GROUND_KIND_ID);
   const controller = await new Promise<ModelStageController>((ready, reject) => createModelStage(host, describe(null),
     THEME, ready, reject, {reviewKey: 'terrainReview', clock: MODEL_STAGE_CLOCK.local, floor, grid: false,

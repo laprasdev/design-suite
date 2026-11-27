@@ -6,6 +6,8 @@ import {MODEL_STAGE_LAYERS} from './layers.ts';
 import {createModelGlow, type ModelGlow, type ModelGlowPasses} from './glow.ts';
 import {createModelLinearFrame} from './linearFrame.ts';
 import type {ModelSurfaceModes} from './materials.ts';
+import {createModelSceneDepthPass} from './sceneDepth.ts';
+import type {ModelStageSharedValues} from './sharedValues.ts';
 
 const CURVES: Readonly<Record<ModelStageCurve, THREE.ToneMapping>> = Object.freeze({
   [MODEL_STAGE_CURVE.acesFilmic]: THREE.ACESFilmicToneMapping,
@@ -30,6 +32,8 @@ export interface ModelDrawContext {
   readonly loadPasses: () => Promise<ModelGlowPasses>;
   /** What the Surface mode in force asks of the frame: no glow while it inspects, no curve unless it is curved. */
   readonly modes: Pick<ModelSurfaceModes, 'inspecting' | 'curved'>;
+  /** The stage's shared values: the scene depth's uniforms, which the depth pass writes. */
+  readonly shared: Pick<ModelStageSharedValues, 'sceneDepth'>;
 }
 
 /**
@@ -41,11 +45,12 @@ export interface ModelDrawContext {
  * after its one resolve (so the headset browser, which discards a multisampled target's colour after a resolve, draws
  * it whole). No material changes program between frames.
  */
-export function createModelDraw(renderer: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.Camera,
-  context: ModelDrawContext) {
+export function createModelDraw(renderer: THREE.WebGLRenderer, scene: THREE.Scene,
+  camera: THREE.PerspectiveCamera | THREE.OrthographicCamera, context: ModelDrawContext) {
   if (!HALF_FLOAT.some(name => renderer.extensions.has(name))) throw new ModelStageRefusal(MODEL_DRAW_TEXT.halfFloat);
   const size = new THREE.Vector2();
   const frame = createModelLinearFrame(renderer.getDrawingBufferSize(size));
+  const drawDepth = createModelSceneDepthPass(renderer, scene, camera, context.shared.sceneDepth);
   let passes: ModelGlowPasses | undefined, loading: Promise<void> | undefined;
   let glow: ModelGlow | undefined, curve = THREE.NoToneMapping as THREE.ToneMapping;
   let triangles = 0;
@@ -69,6 +74,8 @@ export function createModelDraw(renderer: THREE.WebGLRenderer, scene: THREE.Scen
     if (toneCurve !== null) renderer.toneMappingExposure = toneCurve.exposure;
   };
   return {
+    /** What the kind materials that read the frame hold (linearFrame.ts). */
+    sceneReaders: frame.sceneReaders,
     /** What drawing this glow needs loaded first: the glow's passes, fetched once, when a look first brings glow;
      * `where` names the glow in a refusal. */
     load(value: ModelStageGlow | null, where: string): readonly Promise<void>[] {
@@ -132,6 +139,7 @@ export function createModelDraw(renderer: THREE.WebGLRenderer, scene: THREE.Scen
     },
     draw() {
       camera.layers.mask = MODEL_STAGE_LAYERS.both;
+      if (frame.depth) drawDepth(frame.depth);
       renderer.setRenderTarget(frame.target);
       renderer.render(scene, camera);
       triangles = renderer.info.render.triangles;
