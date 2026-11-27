@@ -67,7 +67,7 @@ function emitterChange(form: ModelEmitterForm, uniforms: Record<string, THREE.IU
     const declared = (source: string, varying: string) => replace(source, 'common',
       `#include <common>\n${shared.declarations}\n${varying}`);
     shader.vertexShader = replace(replace(declared(shader.vertexShader, DECLARATIONS), 'begin_vertex',
-      `${SIMULATE}\n${place}`), 'fog_vertex', `#include <fog_vertex>\n${project}`);
+      `#include <begin_vertex>\n${SIMULATE}\n${place}`), 'fog_vertex', `#include <fog_vertex>\n${project}`);
     shader.fragmentShader = replace(declared(shader.fragmentShader, 'varying vec4 vEmitterColor;'),
       'color_fragment', `#include <color_fragment>\ndiffuseColor *= vEmitterColor;\n${
         MODEL_EMITTER_PLACEHOLDER.shade[form]}`);
