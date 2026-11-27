@@ -35,8 +35,8 @@ function registry() {
 const settled = (load: {readonly pending: readonly Promise<void>[]}) => Promise.all(load.pending);
 
 // A kind with one texture, for the staged load.
-const MASK_KIND = {id: 'test-mask', parameters: {_Mask: {type: 'texture', space: 'linear'}}, inert: {}, attributes: [],
-  light: 'standard', coverage: 'opaque', side: 'front', fog: true, displacement: null,
+const MASK_KIND = {id: 'test-mask', parameters: {_Mask: {type: 'texture', space: 'linear'}}, inert: {},
+  sceneReads: [], attributes: [], light: 'standard', coverage: 'opaque', side: 'front', fog: true, displacement: null,
   webProgram: {path: '/mask.glsl', sha256: 'c'.repeat(64)}};
 
 describe('the stage\'s textures', () => {

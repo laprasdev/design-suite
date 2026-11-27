@@ -7,6 +7,7 @@ import {ACES_CURVE} from './preview3dActorFixture.ts';
 import {loadModelGlowPasses} from '../src/react/preview3d/glow.ts';
 import type {ModelStageGlow, ModelStageToneCurve} from '../src/react/preview3d/lookModel.ts';
 import {MODEL_STAGE_LAYERS} from '../src/react/preview3d/layers.ts';
+import {createModelStageSharedValues} from '../src/react/preview3d/sharedValues.ts';
 
 // A renderer that records what each render call drew, where, under which layers and tone mapping;
 // the glow's passes are three's own, run against it.
@@ -35,8 +36,8 @@ function fixture(loadPasses = loadModelGlowPasses, halfFloat = true) {
     },
   };
   const view = {inspecting: false, curved: true};
-  const draw = createModelDraw(renderer as unknown as THREE.WebGLRenderer, scene, new THREE.Camera(),
-    {loadPasses, modes: view});
+  const draw = createModelDraw(renderer as unknown as THREE.WebGLRenderer, scene, new THREE.PerspectiveCamera(),
+    {loadPasses, modes: view, shared: createModelStageSharedValues()});
   // A look's curve and glow as the lighting part applies them: what they need loaded, then checked, then applied.
   const set = async (toneCurve: ModelStageToneCurve | null, glow: ModelStageGlow | null) => {
     await Promise.all(draw.load(glow, WHERE));

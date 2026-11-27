@@ -5,13 +5,14 @@ import {modelSurfaceKinds} from '../src/react/preview3d/surfaceKindModel.ts';
 import {modelSurfaceSets} from '../src/react/preview3d/surfaceModel.ts';
 import {createModelSurfaceMaterials} from '../src/react/preview3d/surfaceMaterials.ts';
 import {createModelStageSharedValues} from '../src/react/preview3d/sharedValues.ts';
+import {createModelLinearFrame} from '../src/react/preview3d/linearFrame.ts';
 import {createModelFog} from '../src/react/preview3d/fog.ts';
 import {createModelSurfaceModes, modelStageChanges} from '../src/react/preview3d/materials.ts';
 
 export const PULSE = Object.freeze({id: 'test-pulse', parameters: {_Color: {type: 'color', space: 'srgb', hdr: false},
   _Glow: {type: 'color', space: 'linear', hdr: true}, _Pulse: {type: 'float'}, _Rim: {type: 'float'},
   _Offset: {type: 'vector', size: 2}, _On: {type: 'keyword'}, _Mask: {type: 'texture', space: 'linear'}},
-inert: {_Rim: 0}, attributes: ['uv'], light: 'standard', coverage: 'opaque', side: 'front', fog: true,
+inert: {_Rim: 0}, sceneReads: [], attributes: ['uv'], light: 'standard', coverage: 'opaque', side: 'front', fog: true,
 displacement: null, webProgram: {path: '/pulse.glsl', sha256: 'a'.repeat(64)}});
 export const PULSE_PROGRAM = `void kindSurface( inout vec4 diffuse, inout vec3 emissive ) {
   diffuse.rgb = surfaceParameter_Color().rgb;
@@ -43,16 +44,19 @@ export function kindFile() {
   return {asset: {scene, animations: [], parser: {associations}} as never, body, eyes, line};
 }
 
-/** What a kind material takes from the stage over a scene: its shared values, and its fog and Surface mode changes. */
+/** What a kind material that reads the frame holds: a frame's own, at one drawing-buffer pixel. */
+export const frameReaders = () => createModelLinearFrame(new THREE.Vector2(1, 1)).sceneReaders;
+/** What a kind material takes from the stage over a scene: its shared values, what it holds of the frame, and its fog
+ * and Surface mode changes. */
 export function kindStage(scene: THREE.Scene) {
   const shared = createModelStageSharedValues(), fog = createModelFog(scene), modes = createModelSurfaceModes();
-  return {shared, fog, modes, changes: modelStageChanges(fog.change, modes)};
+  return {shared, sceneReaders: frameReaders(), fog, modes, changes: modelStageChanges(fog.change, modes)};
 }
 /** The stage's kind materials over a texture registry that records what it was asked, with the program loaded. */
 export async function kindMaterials() {
   const acquired: unknown[] = [], released: THREE.Texture[] = [];
-  const {shared, fog, modes, changes} = kindStage(new THREE.Scene());
-  const materials = createModelSurfaceMaterials({kinds: kinds(), shared, changes,
+  const {shared, sceneReaders, fog, modes, changes} = kindStage(new THREE.Scene());
+  const materials = createModelSurfaceMaterials({kinds: kinds(), shared, sceneReaders, changes,
     read: async () => new TextEncoder().encode(PULSE_PROGRAM).buffer,
     textures: {acquire: value => {acquired.push(value); return new THREE.Texture();},
       release: texture => {released.push(texture);}}});

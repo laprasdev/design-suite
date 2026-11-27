@@ -2,17 +2,11 @@
 // layer, nearer the camera a sheet the stage's kind materials draw blended, and reads the frame's bytes back
 // (pixelReadScene.tsx). The look has no curve and no glow, and the canvas is linear, so each byte is the frame's own.
 import * as THREE from 'three';
-import {createModelDraw} from '../src/react/preview3d/draw.ts';
-import {loadModelGlowPasses} from '../src/react/preview3d/glow.ts';
 import {markModelStageAids} from '../src/react/preview3d/layers.ts';
-import {modelSurfaceKinds} from '../src/react/preview3d/surfaceKindModel.ts';
-import {modelSurfaceRecord} from '../src/react/preview3d/surfaceModel.ts';
-import {createModelSurfaceMaterials} from '../src/react/preview3d/surfaceMaterials.ts';
-import {createModelTextures, decodeModelImage} from '../src/react/preview3d/textures.ts';
 import {BLEND_ORDER_PROGRAM, BLEND_ORDER_VIEWPORT, BLENDED_SHEET_KIND, blendedSheetRecord, FLOOR_COLOR}
   from './preview3dBlendOrderCases.ts';
 import {mountPixelReadScene} from './pixelReadScene.tsx';
-import {kindStage} from './preview3dKindFixture.ts';
+import {createKindDrawScene} from './preview3dKindDrawScene.ts';
 
 const view = mountPixelReadScene(BLEND_ORDER_VIEWPORT);
 const scene = new THREE.Scene(), camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 10);
@@ -25,19 +19,10 @@ markModelStageAids([floor]);
 const sheet = new THREE.Mesh(new THREE.PlaneGeometry(1, 2));
 sheet.position.x = -0.5;
 scene.add(floor, sheet);
-const program = new TextEncoder().encode(BLEND_ORDER_PROGRAM).buffer;
-const read = async () => program;
-const {shared, changes} = kindStage(scene);
-const materials = createModelSurfaceMaterials({kinds: modelSurfaceKinds([BLENDED_SHEET_KIND]), shared, changes, read,
-  textures: createModelTextures(read, decodeModelImage)});
-const record = modelSurfaceRecord(blendedSheetRecord(), 'sheet');
-const loaded = Promise.all(materials.load([record]).pending);
-const draw = createModelDraw(view.renderer, scene, camera, {loadPasses: loadModelGlowPasses,
-  modes: {inspecting: false, curved: false}});
-draw.prepare({toneCurve: null, glow: null})();
+const {draw, material} = createKindDrawScene(view.renderer, scene, camera,
+  {kind: BLENDED_SHEET_KIND, program: BLEND_ORDER_PROGRAM, record: blendedSheetRecord()});
 
 window.drawBlendOrder = async () => {
-  await loaded;
-  sheet.material = materials.material(record).material;
+  sheet.material = await material();
   return view.readFrame(draw.draw);
 };

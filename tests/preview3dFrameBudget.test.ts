@@ -8,7 +8,7 @@ import {ModelStageRefusal} from '../src/react/preview3d/refusal.ts';
 import {budgetRefusal, HELD, OVER} from './preview3dFrameBudgetCases.ts';
 
 const refused = (size: typeof OVER) => (error: unknown) => error instanceof ModelStageRefusal &&
-  error.message === budgetRefusal(size);
+  error.message === budgetRefusal(size, 'frame');
 
 it('makes a frame within the budget and refuses one past it, by name', () => {
   createModelLinearFrame(HELD).dispose();

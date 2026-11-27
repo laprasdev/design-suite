@@ -44,7 +44,8 @@ void kindSurface( inout vec4 diffuse, inout vec3 emissive ) {
 }`;
 export const FLAT_NORMAL_KIND = Object.freeze({id: 'test-flat-normal',
   parameters: {_Decode: {type: 'float'}, _BumpMap: {type: 'texture', space: 'linear'}}, inert: {},
-  attributes: ['uv', 'normal'], light: 'standard', coverage: 'opaque', side: 'front', fog: false, displacement: null,
+  sceneReads: [], attributes: ['uv', 'normal'],
+  light: 'standard', coverage: 'opaque', side: 'front', fog: false, displacement: null,
   webProgram: {path: '/flat-normal.glsl', sha256: 'e'.repeat(64)}});
 /** The record a decoder draws: the kind's empty normal slot holds the flat-normal constant. */
 export const flatNormalRecord = (decode: NormalDecode) => ({kind: FLAT_NORMAL_KIND.id, values: {
