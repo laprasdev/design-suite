@@ -4,8 +4,8 @@ import type {ModelStatedValue} from './statedValueModel.ts';
 
 // A particle emitter's profile, as the web stage draws it, and the enums of the pack's `ParticleSubmodule` record by
 // Unity's own values (`ParticleSystemCurveMode`, `ParticleSystemGradientMode`, `ParticleSystemSimulationSpace`,
-// `ParticleSystemRenderMode`, `ParticleSystemShapeType`, `ShadowCastingMode`) and the package's
-// (`ParticleEmitterOrigin`, `ParticleAttraction`). emitterProfileModel.ts reads the record.
+// `ParticleSystemRenderMode`, `ParticleSystemShapeType`, `ShadowCastingMode`, `ParticleSystemGravitySource`) and the
+// package's (`ParticleEmitterOrigin`, `ParticleAttraction`). emitterProfileModel.ts reads the record.
 export const MODEL_CURVE_MODE = Object.freeze({constant: 0, curve: 1, twoCurves: 2, twoConstants: 3} as const);
 export const MODEL_GRADIENT_MODE = Object.freeze(
   {color: 0, gradient: 1, twoColors: 2, twoGradients: 3, randomColor: 4} as const);
@@ -14,6 +14,7 @@ export const MODEL_ATTRACTION = Object.freeze({natural: 0, attractToCharacter: 1
 export const MODEL_SIMULATION_SPACE = Object.freeze({local: 0, world: 1, custom: 2} as const);
 export const MODEL_RENDER_MODE = Object.freeze({billboard: 0, stretch: 1, horizontalBillboard: 2,
   verticalBillboard: 3, mesh: 4, none: 5} as const);
+export const MODEL_GRAVITY_SOURCE = Object.freeze({physics3D: 0, physics2D: 1} as const);
 export const MODEL_SHADOW_CASTING = Object.freeze({off: 0, on: 1, twoSided: 2, shadowsOnly: 3} as const);
 export const MODEL_SHAPE_TYPE = Object.freeze({sphere: 0, sphereShell: 1, hemisphere: 2, hemisphereShell: 3, cone: 4,
   box: 5, mesh: 6, coneShell: 7, coneVolume: 8, coneVolumeShell: 9, circle: 10, circleEdge: 11, singleSidedEdge: 12,
@@ -60,6 +61,8 @@ export const MODEL_EMITTER_REFUSAL = Object.freeze({
     `Frame entity ${entity}: emitter ${profile} bursts, which this stage does not draw yet (Burst draws).`,
   stubbed: (entity: string, field: string) =>
     `Frame entity ${entity}: an emitter's ${field} is not drawn by this stage yet.`,
+  noGravity: (entity: string, profile: string) =>
+    `Frame entity ${entity}: emitter ${profile} falls by the scene's gravity, which no frame has stated yet.`,
   routedValue: (entity: string, profile: string, field: string, is: string) =>
     `Frame entity ${entity}: emitter ${profile}'s routed ${field} must be ${is}.`,
   routedOff: (entity: string, profile: string, field: string, change: string) =>
@@ -96,6 +99,8 @@ export interface ModelEmitterProfile {
   readonly duration: number;
   /** Whether its particles stay where they were emitted as the emitter moves (Unity's `main.simulationSpace` World). */
   readonly worldSpace: boolean;
+  /** What the scene's gravity is multiplied by for each particle (Unity's `main.gravityModifier`); 0 for none. */
+  readonly gravityModifier: number;
   /** Particles a second. */
   readonly rate: number;
   /** Unity's emission burst, none when `emission.hasBurst` is off. */

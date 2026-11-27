@@ -11,6 +11,7 @@ import {createModelParticleRenderer} from './particleRenderer.ts';
 import {createModelDraw, type ModelDrawModes} from './draw.ts';
 import {loadModelGlowPasses} from './glow.ts';
 import {createModelStageSharedValues} from './sharedValues.ts';
+import {createModelSceneGravity} from './sceneGravity.ts';
 import {markModelStageAids, markModelStageLights} from './layers.ts';
 
 type AidLighting = Pick<ReturnType<typeof createModelLighting>, 'floor' | 'attach'>;
@@ -76,6 +77,8 @@ export function createModelScene(host: HTMLElement, theme: ModelStageTheme, poli
   // programs taking the stage's fog.
   const particles = createModelParticleRenderer(fog.change);
   scene.add(lighting.backdrop, ...lighting.lights, ...aids, particles);
+  // The scene's gravity as the engine's frames state it, which the emitters fall by.
+  const gravity = createModelSceneGravity();
   const resize = () => {
     const {clientWidth: width, clientHeight: height} = host;
     if (!width || !height) return;
@@ -100,7 +103,7 @@ export function createModelScene(host: HTMLElement, theme: ModelStageTheme, poli
   observer.observe(host);
   try {resize();} catch (error) {dispose(); throw error;}
   return {
-    renderer, scene, camera, controls, lighting, fog, shared, particles,
+    renderer, scene, camera, controls, lighting, fog, shared, particles, gravity,
     // The framing the stage drives; the far plane is the look's, set through the lighting alone.
     requestFit: framing.requestFit, poseCoordinates: framing.poseCoordinates, frame: framing.frame, fit: framing.fit,
     cameraSnapshot: framing.cameraSnapshot,

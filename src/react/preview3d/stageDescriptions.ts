@@ -23,6 +23,7 @@ export interface ModelStageScenePart extends Pick<ModelStageSurface, 'scene' | '
   readonly lighting: ModelStageSurface['lighting'] & ModelActorContext['lighting'];
   readonly shared: ModelStageSharedValues;
   readonly particles: ModelActorContext['particles'];
+  readonly gravity: ModelActorContext['gravity'];
   /** Compiles what drawing an object needs, inside the staged build (draw.ts). */
   readonly compile: (object: THREE.Object3D) => void;
   requestFit(): void;
@@ -51,7 +52,7 @@ export function createModelStageDescriptions(context: ModelStageDescriptionsCont
   const materials = createModelSurfaceMaterials({kinds: policy.kinds, read: context.read, textures,
     shared: stage.shared, changes});
   const actorContext: ModelActorContext = {policy, theme: context.theme, scene: stage.scene, lighting: stage.lighting,
-    changes, particles: stage.particles, surfaceModes: modes,
+    changes, particles: stage.particles, gravity: stage.gravity, surfaceModes: modes,
     surfaces: {materials, kinds: policy.kinds, compile: stage.compile}};
   // Loading picks by source: a file is read through the one loader, a terrain is built from its record.
   const draw = (declaration: ModelStageActor, signal: AbortSignal): Promise<ModelDrawn> =>

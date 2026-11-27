@@ -1,16 +1,19 @@
 import {modelFlag, modelNumber, modelOption, modelRecord} from './recordModel.ts';
 import {ModelStageRefusal, ModelStageUndrawn} from './refusal.ts';
 import {MODEL_ARC_MODE, MODEL_ASSET_REFERENCE_FIELDS, MODEL_ATTRACTION, MODEL_EMITTER_FORM, MODEL_EMITTER_ORIGIN,
-  MODEL_UNITY_BUILTIN_MESH, MODEL_EMITTER_REFUSAL as refusal, MODEL_RENDER_MODE, MODEL_SHADOW_CASTING,
-  MODEL_SHAPE_TYPE, MODEL_SIMULATION_SPACE, type ModelEmitterBurst, type ModelEmitterMesh, type ModelEmitterParticle,
-  type ModelEmitterProfile, type ModelEmitterRgba, type ModelEmitterShape} from './emitterModel.ts';
+  MODEL_GRAVITY_SOURCE, MODEL_UNITY_BUILTIN_MESH, MODEL_EMITTER_REFUSAL as refusal, MODEL_RENDER_MODE,
+  MODEL_SHADOW_CASTING, MODEL_SHAPE_TYPE, MODEL_SIMULATION_SPACE, type ModelEmitterBurst, type ModelEmitterMesh,
+  type ModelEmitterParticle, type ModelEmitterProfile, type ModelEmitterRgba, type ModelEmitterShape}
+  from './emitterModel.ts';
 import {MODEL_EMITTER_BUDGET, modelEmitterCapRefusal, modelEmitterLiveBurstParticles, modelEmitterOverCap}
   from './emitterBudgetModel.ts';
 import {MODEL_EMITTER_DRAWN as DRAWN, MODEL_EMITTER_DRAWN_VALUE as DRAWN_VALUE, modelEmitterColor as color,
-  modelEmitterCurve as curve, modelEmitterDrawnFlag as drawnFlag, modelEmitterDrawnNumber as drawnNumber,
-  modelEmitterDrawnOption as drawnOption, modelEmitterDrawnVector as drawnVector, modelEmitterGradient as gradient,
-  modelEmitterHeldAtZero as heldAtZero, modelEmitterModule as module, modelEmitterSigned as signed,
-  modelEmitterUnbounded as unbounded, modelEmitterVector as vector} from './emitterValueModel.ts';
+  modelEmitterCurve as curve, modelEmitterDrawn as drawn, modelEmitterDrawnFlag as drawnFlag,
+  modelEmitterDrawnNumber as drawnNumber, modelEmitterDrawnOption as drawnOption,
+  modelEmitterDrawnVector as drawnVector, modelEmitterGradient as gradient, modelEmitterHeldAtZero as heldAtZero,
+  modelEmitterModule as module, modelEmitterSigned as signed, modelEmitterUnbounded as unbounded,
+  modelEmitterVector as vector}
+  from './emitterValueModel.ts';
 import {MODEL_PARTICLE_FIELDS as FIELDS} from './particleSubmoduleFields.ts';
 
 // Reads the pack's whole `ParticleSubmodule` record as ISM's C# serializes it, checked with no renderer. Each struct
@@ -32,14 +35,18 @@ export const MODEL_EMITTER_UNDRAWN_MODULES = Object.freeze({noiseSettings: FIELD
 const START_ROTATION = FIELDS.vector3.map(axis => `startRotation${axis.toUpperCase()}`);
 const WHITE: ModelEmitterRgba = Object.freeze([1, 1, 1, 1]);
 
-// Unity's `main` module: `looping` and `duration`, `simulationSpace`, and the start values.
+// Unity's `main` module: `looping` and `duration`, `simulationSpace`, the start values, and the gravity modifier of
+// the scene's 3D gravity.
 function main(value: unknown, where: string) {
   const record = modelRecord(value, FIELDS.main, where);
   drawnFlag(record.startRotation3D, DRAWN_VALUE.off, `${where}.startRotation3D`);
   for (const axis of START_ROTATION) heldAtZero(record[axis], `${where}.${axis}`);
   const space = drawnOption(record.simulationSpace, MODEL_SIMULATION_SPACE, DRAWN.space, `${where}.simulationSpace`);
   drawnNumber(record.simulationSpeed, DRAWN_VALUE.unscaled, `${where}.simulationSpeed`);
-  heldAtZero(record.gravityModifier, `${where}.gravityModifier`);
+  const gravityModifier = curve(record.gravityModifier, `${where}.gravityModifier`, DRAWN.gravity, signed).max;
+  // A modifier of 0 falls by no gravity, so its source decides nothing drawn.
+  const source = modelOption(record.gravitySource, MODEL_GRAVITY_SOURCE, `${where}.gravitySource`);
+  if (gravityModifier !== 0) drawn(source, DRAWN.gravitySource, `${where}.gravitySource`);
   return {looping: modelFlag(record.looping, `${where}.looping`),
     duration: modelNumber(record.duration, `${where}.duration`, Number.MIN_VALUE, Number.POSITIVE_INFINITY),
     worldSpace: space === MODEL_SIMULATION_SPACE.world,
@@ -47,6 +54,7 @@ function main(value: unknown, where: string) {
     // Unity's start speed is signed: a negative one moves a particle against its shape's direction.
     speed: curve(record.startSpeed, `${where}.startSpeed`, DRAWN.curve, signed),
     size: curve(record.startSize, `${where}.startSize`),
+    gravityModifier,
     color: color(record.startColor, `${where}.startColor`),
     maxParticles: modelNumber(record.maxParticles, `${where}.maxParticles`, 1, MODEL_EMITTER_BUDGET.particles)};
 }
@@ -71,6 +79,9 @@ function emission(value: unknown, where: string) {
   if (rate === 0 && bursts.every(({count}) => count === 0)) throw new ModelStageRefusal(refusal.emitsNothing(where));
   return {rate, bursts: Object.freeze(bursts)};
 }
+// An asset the record names, in the one form the pack states one (`MODEL_ASSET_REFERENCE_FIELDS`); Unity's own
+// serialized form, which adds `type`, is the pack writer's to convert, so the stage refuses it whole.
+const assetReference = (value: unknown, where: string) => modelRecord(value, MODEL_ASSET_REFERENCE_FIELDS, where);
 const ORIGIN = Object.freeze([0, 0, 0] as const);
 const WHOLE_TURN = 360;
 const NO_SHAPE: ModelEmitterShape = Object.freeze({type: MODEL_SHAPE_TYPE.sphere, radius: 0, thickness: 1,
@@ -83,6 +94,7 @@ const shape = (value: unknown, where: string) => module(value, FIELDS.shape, whe
   drawnVector(record.scale, DRAWN_VALUE.unstretched, `${where}.scale`);
   drawnFlag(record.alignToDirection, DRAWN_VALUE.off, `${where}.alignToDirection`);
   if (record.texture !== null) {
+    assetReference(record.texture, `${where}.texture`);
     throw new ModelStageUndrawn(`${where}.texture`, refusal.undrawnAsset(`${where}.texture`));
   }
   return Object.freeze({type, radius: unbounded(record.radius, `${where}.radius`),
@@ -114,7 +126,7 @@ const tint = (record: Record<string, unknown>, where: string) => COLOR_MODULES.m
 
 // The built-in mesh a mesh profile names; any other asset is refused by its reference.
 function builtinMesh(value: unknown, where: string): ModelEmitterMesh {
-  const {guid, fileID} = modelRecord(value, MODEL_ASSET_REFERENCE_FIELDS, where);
+  const {guid, fileID} = assetReference(value, where);
   const {meshes} = MODEL_UNITY_BUILTIN_MESH;
   const named = guid === MODEL_UNITY_BUILTIN_MESH.guid ? meshes.find(builtin => builtin.fileID === fileID) : undefined;
   if (!named) {

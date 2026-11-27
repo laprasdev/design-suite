@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import {describe, it} from 'node:test';
-import {MODEL_EMITTER_REFUSAL, MODEL_RENDER_MODE} from '../src/react/preview3d/emitterModel.ts';
+import {MODEL_EMITTER_REFUSAL, MODEL_RENDER_MODE, MODEL_UNITY_BUILTIN_MESH}
+  from '../src/react/preview3d/emitterModel.ts';
 import {MODEL_EMITTER_UNDRAWN_MODULES} from '../src/react/preview3d/emitterProfileModel.ts';
 import {modelEmitterDrawing, modelEmitterRecords} from '../src/react/preview3d/emitterRecordModel.ts';
 import {modelStageDescription} from '../src/react/preview3d/descriptionModel.ts';
@@ -78,6 +79,18 @@ describe('an emitter record that is invalid', () => {
     assert.ok(emitsNothing, 'The refusal cases hold a profile that emits nothing.');
     refused(() => described({[EMITTER_ID]: emitterProfileWith(emitsNothing)}),
       emitsNothing.refusal.replace(EMITTER_WHERE, `Actor ${ACTOR}.emitters.${EMITTER_ID}`));
+  });
+  it('refuses Unity\'s own serialized asset reference, which adds type, whole: the pack states the one form', () => {
+    const {guid, meshes: [{fileID}]} = MODEL_UNITY_BUILTIN_MESH, unity = {fileID, guid, type: 0};
+    const profile = emitterProfile();
+    for (const [record, where] of [
+      [{...profile, renderMode: MODEL_RENDER_MODE.mesh, mesh: unity}, 'mesh'],
+      [{...profile, shapeSettings: {...profile.shapeSettings, texture: unity}}, 'shapeSettings.texture']] as const) {
+      refused(() => described({[EMITTER_ID]: record}), new RegExp(`^Actor ${ACTOR}\\.emitters\\.${EMITTER_ID}\\.${
+        where.replace('.', '\\.')} .*\\btype\\b`));
+    }
+    assert.equal(Object.keys(modelEmitterDrawing(modelEmitterRecords(ACTOR, {[EMITTER_ID]: {...profile,
+      renderMode: MODEL_RENDER_MODE.mesh, mesh: {fileID, guid}}})).drawn).length, 1, 'the one form draws');
   });
   it('lets any failure other than a refusal escape', () => {
     const failing = Object.defineProperty(emitterProfile(), 'mainSettings', {enumerable: true,

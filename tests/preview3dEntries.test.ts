@@ -28,7 +28,8 @@ describe('optional 3D package boundary', () => {
       const checks = ['modelStageDescription', 'modelStageActorSets', 'modelSurfaceKind', 'modelSurfaceKinds',
         'modelActorSurfaces', 'modelSurfaceSets', 'modelSurfaceRecordsFit', 'modelSurfaceSetWhere',
         'modelSurfaceFiles', 'modelSurfaceTakes', 'isModelImageSource', 'MODEL_IMAGE_SOURCES',
-        'modelFrameScope', 'modelPreviewFrame', 'validateModelFrame', 'createModelFrameInbox', 'modelPreviewCamera',
+        'modelFrameScope', 'modelPreviewFrame', 'validateModelFrame', 'createModelFrameBuffers',
+        'createModelFrameInbox', 'modelPreviewCamera',
         'modelEnvironment', 'modelStagePolicy', 'MODEL_RECORD_REFUSAL', 'MODEL_PREVIEW_CAMERA_REFUSAL',
         'MODEL_SURFACE_TEXTURE_REFUSAL', 'MODEL_SURFACE_KIND_REFUSAL', 'MODEL_SURFACE_REFUSAL',
         'MODEL_SURFACE_OUTPUT_REFUSAL'] as const;

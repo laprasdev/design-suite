@@ -7,6 +7,7 @@ import {checkModelEmitterBudget, createModelEmitterLoad} from './emitterBudgetMo
 import {isModelValidatedFrame, type ModelValidatedFrame} from './frameModel.ts';
 import type {ModelPreviewEntity} from './presentation.ts';
 import {ModelStageRefusal} from './refusal.ts';
+import {applyModelSceneGravity, modelGravityInForce, type ModelSceneGravity} from './sceneGravity.ts';
 
 // What applying a frame writes into, made once by its stage: the emitter load, the entity the frame names for each
 // actor (by the actor's index; none where it names none) and the prepared actors' commits.
@@ -35,9 +36,10 @@ function changesEmitters(entities: readonly ModelPreviewEntity[]) {
   return false;
 }
 export function applyModelFrame(actors: readonly ModelActor[], value: ModelValidatedFrame,
-  applyCamera: (coordinates: Float64Array) => void, slots: ModelFrameSlots) {
+  applyCamera: (coordinates: Float64Array) => void, slots: ModelFrameSlots, gravity: ModelSceneGravity) {
   if (!isModelValidatedFrame(value)) throw new ModelStageRefusal(MODEL_ACTOR_REFUSAL.unvalidated);
   const {emitterLoad, entities, commits} = slots, changing = changesEmitters(value.entities);
+  const falls = modelGravityInForce(gravity, value.gravity);
   let named = 0, count = 0;
   emitterLoad.fill(0);
   // The slots keep no actor or entity once the frame applies or refuses.
@@ -51,9 +53,10 @@ export function applyModelFrame(actors: readonly ModelActor[], value: ModelValid
     if (changing) checkModelEmitterBudget(emitterLoad);
     for (let index = 0; index < actors.length; index++) {
       const entity = entities[index];
-      if (entity) commits[count++] = actors[index].prepare(entity);
+      if (entity) commits[count++] = actors[index].prepare(entity, falls);
     }
     applyModelStageCommits(commits, count);
+    applyModelSceneGravity(gravity, value.gravity);
   } finally {
     entities.fill(undefined, 0, actors.length);
     commits.fill(MODEL_STAGE_UNCHANGED, 0, count);

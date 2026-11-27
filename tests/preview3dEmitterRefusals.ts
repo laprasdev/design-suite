@@ -1,5 +1,6 @@
 import {MODEL_ARC_MODE, MODEL_ATTRACTION, MODEL_CURVE_MODE, MODEL_EMITTER_REFUSAL as refusal, MODEL_GRADIENT_MODE,
-  MODEL_RENDER_MODE, MODEL_SHADOW_CASTING, MODEL_SHAPE_TYPE, MODEL_SIMULATION_SPACE, type ModelEmitterValue}
+  MODEL_GRAVITY_SOURCE, MODEL_RENDER_MODE, MODEL_SHADOW_CASTING, MODEL_SHAPE_TYPE, MODEL_SIMULATION_SPACE,
+  type ModelEmitterValue}
   from '../src/react/preview3d/emitterModel.ts';
 import {MODEL_EMITTER_UNDRAWN_MODULES} from '../src/react/preview3d/emitterProfileModel.ts';
 import {MODEL_EMITTER_DRAWN as DRAWN, MODEL_EMITTER_DRAWN_VALUE as VALUE}
@@ -45,7 +46,10 @@ export const EMITTER_REFUSAL_CASES: readonly EmitterRefusalCase[] = Object.freez
   heldAtZero(main('startRotationZ'), 0, 1, twoConstants),
   setting(main('simulationSpace'), MODEL_SIMULATION_SPACE.custom, DRAWN.space),
   setting(main('simulationSpeed'), 2, [VALUE.unscaled]),
-  heldAtZero(main('gravityModifier'), 0, 1, constant),
+  curveCase(main('gravityModifier'), curve(0, 1, twoConstants), 'm_Mode', twoConstants, DRAWN.gravity),
+  {path: ['mainSettings'], value: {...emitterProfile().mainSettings, gravitySource: MODEL_GRAVITY_SOURCE.physics2D,
+    gravityModifier: curve(1, 1, constant)},
+  refusal: refusal.undrawn(where(main('gravitySource')), MODEL_GRAVITY_SOURCE.physics2D, DRAWN.gravitySource)},
   heldAtZero(emission('rateOverDistance'), 0, 55, constant),
   {path: emission('rateOverTime'), value: curve(0, 0, constant),
     refusal: refusal.emitsNothing(where(['emissionSettings']))},
@@ -60,7 +64,7 @@ export const EMITTER_REFUSAL_CASES: readonly EmitterRefusalCase[] = Object.freez
     refusal: refusal.endlessBurst(where(emission('burstCycleCount')))},
   setting(shape('scale', 'x'), 2, [VALUE.unstretched[0]]),
   setting(shape('alignToDirection'), !VALUE.off, [VALUE.off]),
-  {path: shape('texture'), value: {fileID: '10300', guid: '0000000000000000f000000000000000', type: 0},
+  {path: shape('texture'), value: {guid: '0000000000000000f000000000000000', fileID: '10300'},
     refusal: refusal.undrawnAsset(where(shape('texture')))},
   ...Object.keys(MODEL_EMITTER_UNDRAWN_MODULES).map(module => setting([module, 'enabled'], !VALUE.off, [VALUE.off])),
 ]);

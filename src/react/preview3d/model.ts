@@ -45,8 +45,8 @@ export type {ModelActorSurfaces, ModelSurfaceEntry, ModelSurfaceRecord, ModelSur
   ModelSurfaceSource, ModelSurfaceWhere, ModelSurfaceValue} from './surfaceModel.ts';
 export {MODEL_RENDERER_SLOT, MODEL_SURFACE_OUTPUT_REFUSAL, modelSurfaceTakes} from './surfaceOutputModel.ts';
 export type {ModelSurfaceTakes} from './surfaceOutputModel.ts';
-export {modelFrameScope, modelPreviewFrame, validateModelFrame} from './frameModel.ts';
-export type {ModelFrameScope, ModelPreviewFrame, ModelValidatedFrame} from './frameModel.ts';
+export {createModelFrameBuffers, modelFrameScope, modelPreviewFrame, validateModelFrame} from './frameModel.ts';
+export type {ModelFrameBuffers, ModelFrameScope, ModelPreviewFrame, ModelValidatedFrame} from './frameModel.ts';
 export {createModelFrameInbox, MODEL_FRAME_INBOX_TEXT, type ModelFrameStatus} from './frameInbox.ts';
 export {CAMERA_COORDS, MODEL_PREVIEW_CAMERA_REFUSAL, MODEL_PREVIEW_CAPABILITIES, modelPreviewCamera, modelPreviewEntity}
   from './presentation.ts';

@@ -24,7 +24,8 @@ export const EMITTER_SCENE_LIGHTING = Object.freeze({time: 'dusk', times: [{id: 
   look: stageLook({glow: null,
     fog: {near: {distance: 3, color: [0, 0, 0]}, far: {distance: 10, color: [0, 0, 0]}, height: null}})}]});
 // Seconds between the frames that run the emitters, and how many: long enough for the oldest particles to die.
-export const EMITTER_SCENE_RUN = Object.freeze({step: 1 / 30, frames: 60, travel: 0.6});
+// quarks draws from `Math.random` (emitterSystems.ts), so a run seeds it: each run draws the same particles.
+export const EMITTER_SCENE_RUN = Object.freeze({step: 1 / 30, frames: 60, travel: 0.6, seed: 1});
 /** The routed values the scene's runs start every emitter with: none (each profile's own), and each value moved far
  * enough from the profile's to change the picture by itself. */
 export const EMITTER_SCENE_ROUTED = Object.freeze({own: Object.freeze({}),

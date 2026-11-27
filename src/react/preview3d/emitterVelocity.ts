@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import type {Behavior, Particle, ValueGenerator} from 'three.quarks';
+import {ModelEmitterSpaceTurn, type ModelEmitterSpaces} from './emitterSpace.ts';
 
 /** Unity's velocity over lifetime as a three.quarks behaviour, which quarks has none of: each particle moves by its
  * own linear velocity besides the velocity it was started with, and Unity's speed modifier scales both, as quarks'
@@ -9,7 +10,6 @@ import type {Behavior, Particle, ValueGenerator} from 'three.quarks';
 export class VelocityOverLifetime implements Behavior {
   readonly type = 'VelocityOverLifetime';
   private readonly linear = new THREE.Vector3();
-  private readonly turn = new THREE.Quaternion();
   /**
    * @param axes  the linear velocity's x, y and z in metres a second, each drawn once a particle.
    * @param speedModifier  what the particle's whole speed is multiplied by, drawn once a particle.
@@ -18,18 +18,14 @@ export class VelocityOverLifetime implements Behavior {
    * whether the `system` simulates in it (`main.simulationSpace`).
    */
   constructor(axes: readonly [ValueGenerator, ValueGenerator, ValueGenerator], speedModifier: ValueGenerator,
-    emitter: THREE.Object3D, worldSpace: {readonly stated: boolean; readonly system: boolean}) {
+    emitter: THREE.Object3D, worldSpace: ModelEmitterSpaces) {
     this.axes = axes;
     this.speedModifier = speedModifier;
-    this.emitter = emitter;
-    this.worldSpace = worldSpace;
-    this.turned = worldSpace.stated !== worldSpace.system;
+    this.turn = new ModelEmitterSpaceTurn(emitter, worldSpace);
   }
   private readonly axes: readonly [ValueGenerator, ValueGenerator, ValueGenerator];
   private readonly speedModifier: ValueGenerator;
-  private readonly emitter: THREE.Object3D;
-  private readonly worldSpace: {readonly stated: boolean; readonly system: boolean};
-  private readonly turned: boolean;
+  private readonly turn: ModelEmitterSpaceTurn;
 
   initialize(particle: Particle) {
     for (const axis of this.axes) axis.startGen(particle.memory);
@@ -38,15 +34,12 @@ export class VelocityOverLifetime implements Behavior {
   }
 
   frameUpdate() {
-    if (!this.turned) return;
-    this.emitter.getWorldQuaternion(this.turn);
-    if (this.worldSpace.stated) this.turn.invert();
+    this.turn.refresh();
   }
 
   update(particle: Particle, delta: number) {
     const [x, y, z] = this.axes, {memory} = particle;
-    this.linear.set(x.genValue(memory), y.genValue(memory), z.genValue(memory));
-    if (this.turned) this.linear.applyQuaternion(this.turn);
+    this.turn.apply(this.linear.set(x.genValue(memory), y.genValue(memory), z.genValue(memory)));
     // The particle's position is quarks' own vector type, which takes no three.js vector.
     const step = delta * particle.speedModifier, {position} = particle;
     position.set(position.x + this.linear.x * step, position.y + this.linear.y * step,
@@ -59,8 +52,8 @@ export class VelocityOverLifetime implements Behavior {
 
   clone() {
     const [x, y, z] = this.axes;
-    return new VelocityOverLifetime([x.clone(), y.clone(), z.clone()], this.speedModifier.clone(), this.emitter,
-      this.worldSpace);
+    return new VelocityOverLifetime([x.clone(), y.clone(), z.clone()], this.speedModifier.clone(), this.turn.emitter,
+      this.turn.spaces);
   }
 
   reset() {}

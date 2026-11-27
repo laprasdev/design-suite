@@ -10,6 +10,7 @@ import {EMITTER_HOST_ID, EMITTER_SCENE_LIGHTING, EMITTER_SCENE_PROFILES, EMITTER
 import {makePanelGlbBytes, PANEL_GLB} from './preview3dPanelGlb.ts';
 import {FRAME_PIXEL, readFramePixels} from './framePixels.ts';
 import {renderScene} from './renderScene.tsx';
+import {seededRandom} from '../src/seededRandom.ts';
 
 const nextFrame = () => new Promise<number>(resolve => requestAnimationFrame(resolve));
 // A pixel counts as changed when a channel moves more than this, past dithering.
@@ -111,7 +112,8 @@ async function bootEmitterScene(): Promise<EmitterSceneDriver> {
       }
     },
     async run(routed) {
-      const {step, frames, travel} = EMITTER_SCENE_RUN;
+      const {step, frames, travel, seed} = EMITTER_SCENE_RUN;
+      Math.random = seededRandom(seed);
       // The panel where the run ends, before any particle: what the emitters change is the only difference.
       position[0] = travel;
       const before = await drawn(0, []);
