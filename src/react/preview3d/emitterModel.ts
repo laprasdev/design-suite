@@ -62,11 +62,14 @@ export const MODEL_EMITTER_REFUSAL = Object.freeze({
   stubbed: (entity: string, field: string) =>
     `Frame entity ${entity}: an emitter's ${field} is not drawn by this stage yet.`,
   noGravity: (entity: string, profile: string) =>
-    `Frame entity ${entity}: emitter ${profile} falls by the scene's gravity, which no frame has stated yet.`,
-  routedValue: (entity: string, profile: string, field: string, is: string) =>
-    `Frame entity ${entity}: emitter ${profile}'s routed ${field} must be ${is}.`,
-  routedOff: (entity: string, profile: string, field: string, change: string) =>
-    `Frame entity ${entity}: emitter ${profile} states a routed ${field} on a ${change}; only a start routes one.`,
+    `Frame entity ${entity}: emitter ${profile} starts, but its start states no gravity its particles fall by.`,
+  fallsByNone: (entity: string, profile: string) =>
+    `Frame entity ${entity}: emitter ${profile}'s gravity modifier is 0, but its start states a gravity ` +
+    'other than none.',
+  startValue: (entity: string, profile: string, field: string, is: string) =>
+    `Frame entity ${entity}: emitter ${profile}'s start states a ${field}, which must be ${is}.`,
+  startOff: (entity: string, profile: string, field: string, change: string) =>
+    `Frame entity ${entity}: emitter ${profile} states a ${field} on a ${change}; only a start states one.`,
   overCap: (where: string, rate: number, lifetime: number, burst: number, cap: number) =>
     `${where}: ${rate} particles a second living up to ${lifetime} s and ${burst} from bursts would pass its cap ` +
     `of ${cap} at once; ` +
@@ -99,8 +102,10 @@ export interface ModelEmitterProfile {
   readonly duration: number;
   /** Whether its particles stay where they were emitted as the emitter moves (Unity's `main.simulationSpace` World). */
   readonly worldSpace: boolean;
-  /** What the scene's gravity is multiplied by for each particle (Unity's `main.gravityModifier`); 0 for none. */
-  readonly gravityModifier: number;
+  /** Whether Unity's `main.gravityModifier` is not 0: only then does the system carry a gravity force, whose
+   * per-particle step is a measured cost (perf-budgets), and only then may its starts state a gravity other than
+   * none. */
+  readonly falls: boolean;
   /** Particles a second. */
   readonly rate: number;
   /** Unity's emission burst, none when `emission.hasBurst` is off. */

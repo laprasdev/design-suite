@@ -35,8 +35,9 @@ export const MODEL_EMITTER_UNDRAWN_MODULES = Object.freeze({noiseSettings: FIELD
 const START_ROTATION = FIELDS.vector3.map(axis => `startRotation${axis.toUpperCase()}`);
 const WHITE: ModelEmitterRgba = Object.freeze([1, 1, 1, 1]);
 
-// Unity's `main` module: `looping` and `duration`, `simulationSpace`, the start values, and the gravity modifier of
-// the scene's 3D gravity.
+// Unity's `main` module: `looping` and `duration`, `simulationSpace` and the start values. Its gravity modifier and
+// source are checked to be ones the engine works one acceleration out of, which each start states
+// (emitterFrameModel.ts).
 function main(value: unknown, where: string) {
   const record = modelRecord(value, FIELDS.main, where);
   drawnFlag(record.startRotation3D, DRAWN_VALUE.off, `${where}.startRotation3D`);
@@ -44,17 +45,17 @@ function main(value: unknown, where: string) {
   const space = drawnOption(record.simulationSpace, MODEL_SIMULATION_SPACE, DRAWN.space, `${where}.simulationSpace`);
   drawnNumber(record.simulationSpeed, DRAWN_VALUE.unscaled, `${where}.simulationSpeed`);
   const gravityModifier = curve(record.gravityModifier, `${where}.gravityModifier`, DRAWN.gravity, signed).max;
-  // A modifier of 0 falls by no gravity, so its source decides nothing drawn.
-  const source = modelOption(record.gravitySource, MODEL_GRAVITY_SOURCE, `${where}.gravitySource`);
-  if (gravityModifier !== 0) drawn(source, DRAWN.gravitySource, `${where}.gravitySource`);
+  // The engine states gravity on a start only for the 3D source, a modifier of 0 included.
+  drawn(modelOption(record.gravitySource, MODEL_GRAVITY_SOURCE, `${where}.gravitySource`), DRAWN.gravitySource,
+    `${where}.gravitySource`);
   return {looping: modelFlag(record.looping, `${where}.looping`),
     duration: modelNumber(record.duration, `${where}.duration`, Number.MIN_VALUE, Number.POSITIVE_INFINITY),
     worldSpace: space === MODEL_SIMULATION_SPACE.world,
+    falls: gravityModifier !== 0,
     lifetime: curve(record.startLifetime, `${where}.startLifetime`),
     // Unity's start speed is signed: a negative one moves a particle against its shape's direction.
     speed: curve(record.startSpeed, `${where}.startSpeed`, DRAWN.curve, signed),
     size: curve(record.startSize, `${where}.startSize`),
-    gravityModifier,
     color: color(record.startColor, `${where}.startColor`),
     maxParticles: modelNumber(record.maxParticles, `${where}.maxParticles`, 1, MODEL_EMITTER_BUDGET.particles)};
 }

@@ -7,6 +7,7 @@ import {createModelStage} from '../src/react/preview3d/stage.ts';
 import {THEME, declaration, describing, standingAt} from './preview3dActorFixture.ts';
 import {EMITTER_HOST_ID, EMITTER_SCENE_LIGHTING, EMITTER_SCENE_PROFILES, EMITTER_SCENE_ROUTED, EMITTER_SCENE_RUN,
   type EmitterDraws, type EmitterSceneDriver} from './preview3dEmitterSceneCases.ts';
+import {emitterChange} from './preview3dEmitterCases.ts';
 import {makePanelGlbBytes, PANEL_GLB} from './preview3dPanelGlb.ts';
 import {FRAME_PIXEL, readFramePixels} from './framePixels.ts';
 import {renderScene} from './renderScene.tsx';
@@ -95,7 +96,7 @@ async function bootEmitterScene(): Promise<EmitterSceneDriver> {
   // state that declares them does.
   const {dark, sparse, wide} = EMITTER_SCENE_ROUTED, everyRouted = {...dark, ...sparse, ...wide};
   const changes = (change: string, routed: object) => Object.keys(EMITTER_SCENE_PROFILES)
-    .map(profile => ({profile, change, ...routed}));
+    .map(profile => ({...emitterChange(change, profile), ...routed}));
   const turns = [changes(MODEL_EMITTER_CHANGE.started, everyRouted), changes(MODEL_EMITTER_CHANGE.stopped, {})];
   const still: readonly unknown[] = [];
   const tickEntity = {entityId: PANEL_GLB.id, modelId: PANEL_GLB.id, pose: {position, rotationQuaternion: [0, 0, 0, 1],
@@ -119,7 +120,7 @@ async function bootEmitterScene(): Promise<EmitterSceneDriver> {
       const before = await drawn(0, []);
       position[0] = 0;
       let after = await drawn(step, Object.keys(EMITTER_SCENE_PROFILES).map(profile =>
-        ({profile, change: MODEL_EMITTER_CHANGE.started, ...routed})));
+        ({...emitterChange(MODEL_EMITTER_CHANGE.started, profile), ...routed})));
       for (let frame = 2; frame <= frames; frame++) {
         position[0] = travel * frame / frames;
         after = await drawn(frame * step, []);

@@ -3,7 +3,7 @@ import {describe, it} from 'node:test';
 import {ConstantColor, ConstantValue, SphereEmitter, Vector4} from 'three.quarks';
 import {MODEL_EMITTER_REFUSAL} from '../src/react/preview3d/emitterModel.ts';
 import {modelEmitterProfile} from '../src/react/preview3d/emitterProfileModel.ts';
-import {MODEL_EMITTER_CHANGE, MODEL_EMITTER_ROUTED, modelEmitterChanges}
+import {MODEL_EMITTER_CHANGE, MODEL_EMITTER_START, modelEmitterChanges}
   from '../src/react/preview3d/emitterFrameModel.ts';
 import {applyFrame, frame, refused} from './preview3dActorFixture.ts';
 import {changing, starting, withEmitters} from './preview3dEmitterActors.ts';
@@ -18,10 +18,10 @@ describe('an emitter start\'s routed values', () => {
       ['tint', 1]] as const;
     for (const [field, value] of cases) {
       refused(() => modelEmitterChanges([{...started, [field]: value}], 'a'),
-        MODEL_EMITTER_REFUSAL.routedValue('a', EMITTER_ID, field, MODEL_EMITTER_ROUTED[field].is));
+        MODEL_EMITTER_REFUSAL.startValue('a', EMITTER_ID, field, MODEL_EMITTER_START[field].is));
     }
     refused(() => modelEmitterChanges([{...emitterChange(MODEL_EMITTER_CHANGE.stopped), rate: 3}], 'a'),
-      MODEL_EMITTER_REFUSAL.routedOff('a', EMITTER_ID, 'rate', MODEL_EMITTER_CHANGE.stopped));
+      MODEL_EMITTER_REFUSAL.startOff('a', EMITTER_ID, 'rate', MODEL_EMITTER_CHANGE.stopped));
   });
   it('emits at a start\'s routed rate and radius, and at the profile\'s own when a later start leaves them out', () => {
     const {actor, systems: [system]} = withEmitters('a', {[EMITTER_ID]: emitterProfile()});

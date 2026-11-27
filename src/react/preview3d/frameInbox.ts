@@ -1,6 +1,6 @@
-import {createModelFrameBuffers, modelFrameScope, validateModelFrame, type ModelFrameScope,
-  type ModelValidatedFrame} from './frameModel.ts';
+import {modelFrameScope, validateModelFrame, type ModelFrameScope, type ModelValidatedFrame} from './frameModel.ts';
 import type {ModelStageDescription} from './descriptionModel.ts';
+import {CAMERA_COORDS} from './presentation.ts';
 import {modelSurfaceKinds, type ModelSurfaceKind} from './surfaceKindModel.ts';
 import {ModelStageRefusal} from './refusal.ts';
 
@@ -19,7 +19,7 @@ export function createModelFrameInbox() {
   let status: ModelFrameStatus = 'waiting';
   // What failed while the status is 'error', for the host to read by its kind; cleared by the next accepted one.
   let failure: unknown;
-  const buffers = createModelFrameBuffers();
+  const cameraCoordinates = new Float64Array(CAMERA_COORDS.length);
   const refuse = (error: unknown) => {
     pending = null; status = 'error'; failure = error;
     return status;
@@ -48,13 +48,12 @@ export function createModelFrameInbox() {
       }
     },
     // Validated once against the scope described: an entity must name a declared actor, match its model, and state
-    // only values its renderers take; camera coordinates and gravity sit in the inbox's buffers without allocating a
-    // frozen record.
+    // only values its renderers take; camera coordinates sit in the inbox's buffer without allocating a frozen record.
     receive(value: unknown): ModelFrameStatus {
       if (value === null) {pending = null; status = 'waiting'; failure = undefined; return status;}
       if (!checked) throw new Error(MODEL_FRAME_INBOX_TEXT.undescribed);
       if ('refusal' in checked) return refuse(checked.refusal);
-      try {pending = validateModelFrame(value, checked.scope, buffers);}
+      try {pending = validateModelFrame(value, checked.scope, cameraCoordinates);}
       catch (error) {return refuse(error);}
       return applyPending();
     },

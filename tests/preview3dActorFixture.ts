@@ -11,11 +11,10 @@ import {createModelActor, type ModelActor, type ModelActorContext} from '../src/
 import {applyModelFrame, createModelFrameSlots} from '../src/react/preview3d/actorFrame.ts';
 import {createModelFraming} from '../src/react/preview3d/camera.ts';
 import type {ModelLookLayers} from '../src/react/preview3d/lighting.ts';
-import {createModelFrameBuffers, modelFrameScope, validateModelFrame, type ModelValidatedFrame}
-  from '../src/react/preview3d/frameModel.ts';
+import {CAMERA_COORDS} from '../src/react/preview3d/presentation.ts';
+import {modelFrameScope, validateModelFrame, type ModelValidatedFrame} from '../src/react/preview3d/frameModel.ts';
 import {createModelSurfaceMaterials} from '../src/react/preview3d/surfaceMaterials.ts';
 import {createModelStageSharedValues} from '../src/react/preview3d/sharedValues.ts';
-import {createModelSceneGravity} from '../src/react/preview3d/sceneGravity.ts';
 import {frameReaders} from './preview3dKindFixture.ts';
 import {MODEL_ACTOR_ANIMATION, MODEL_ANIMATION_LAYER, MODEL_STAGE, MODEL_STAGE_CURVE, MODEL_STAGE_DISPLAY,
   MODEL_STAGE_FRAMING, MODEL_STAGE_ORIGIN, MODEL_STAGE_SIZE, MODEL_STAGE_SURFACE_MODE, MODEL_STAGE_THEME_LIGHTING,
@@ -25,8 +24,6 @@ import {MODEL_ACTOR_ANIMATION, MODEL_ANIMATION_LAYER, MODEL_STAGE, MODEL_STAGE_C
 
 /** What the fixture's emitters would run, zeroed by each frame applied (`applyModelFrame`). */
 export const FRAME_SLOTS = createModelFrameSlots();
-/** The scene's gravity the fixture's stage holds: every actor context's, and what every applied frame writes. */
-export const SCENE_GRAVITY = createModelSceneGravity();
 export const BONE = 'tip';
 export const BIND: readonly [number, number, number] = [2, 3, 4];
 export const clipValue = (index: number, time: number) => (index + 1) * 10 + time;
@@ -63,7 +60,7 @@ export function actorContext(clock: ModelStageClock = 'external') {
   const fog = createModelFog(scene);
   const context: ModelActorContext = {
     policy: modelStagePolicy({reviewKey: 'review', clock, floor: false, grid: false, kinds: []}), scene,
-    theme: THEME, particles: createModelParticleRenderer(fog.change), gravity: SCENE_GRAVITY,
+    theme: THEME, particles: createModelParticleRenderer(fog.change),
     lighting: {attach: () => () => undefined},
     changes: modelStageChanges(fog.change, modes), surfaceModes: modes,
     surfaces: {materials: createModelSurfaceMaterials({kinds: new Map(), read: () => Promise.reject(new Error('none')),
@@ -139,16 +136,16 @@ export const describing = (changes: Record<string, unknown> = {}) => ({
 // Actors drawn with their files' own materials, as a frame is checked against them: no renderer takes a value.
 export const fileScene = (actors: readonly ModelStageActor[]) =>
   ({actors: {focus: actors[0].id, actors}, surfaceSets: {}});
-/** A validated frame applied as the stage applies it, into the fixture's slots and scene gravity. */
+/** A validated frame applied as the stage applies it, into the fixture's slots. */
 export const applyValidated = (actors: readonly ModelActor[], value: ModelValidatedFrame,
   applyCamera: (coordinates: Float64Array) => void) =>
-  applyModelFrame(actors, value, applyCamera, FRAME_SLOTS, SCENE_GRAVITY);
+  applyModelFrame(actors, value, applyCamera, FRAME_SLOTS);
 /** A frame applied as the stage applies it, to actors drawn with their files' own materials. */
 export const applyFrame = (actors: readonly ModelActor[], value: unknown,
   applyCamera: (coordinates: Float64Array) => void = () => {throw new Error('Unexpected frame camera.');}) => {
   const checked = validateModelFrame(
     value, modelFrameScope(fileScene(actors.map(actor => actor.declaration)), new Map()),
-    createModelFrameBuffers(),
+    new Float64Array(CAMERA_COORDS.length),
   );
   return applyValidated(actors, checked, applyCamera);
 };
@@ -169,5 +166,6 @@ export function makeFraming(aspect = 1, enabled = true) {
   const camera = new THREE.PerspectiveCamera(MODEL_STAGE.fieldOfView, aspect, MODEL_STAGE.nearPlane);
   const controls = {target: new THREE.Vector3(), enabled, maxDistance: MODEL_STAGE.cameraMaximum, update: () => true};
   const framing = stageFraming(camera, controls);
-  return {camera, controls, framing, buffers: createModelFrameBuffers(), applyCamera: framing.poseCoordinates};
+  const coordinates = new Float64Array(CAMERA_COORDS.length);
+  return {camera, controls, framing, coordinates, applyCamera: framing.poseCoordinates};
 }

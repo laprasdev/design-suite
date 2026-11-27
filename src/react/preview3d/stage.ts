@@ -80,8 +80,7 @@ export function createModelStage(
     setDescription,
     setFrame(value) {
       if (!external) throw new ModelStageRefusal(MODEL_STAGE_TEXT.external);
-      times[STAGE_TIME.appliedFrame] = applyModelFrame(actors.actors, value, stage.poseCoordinates, frameSlots,
-        stage.gravity);
+      times[STAGE_TIME.appliedFrame] = applyModelFrame(actors.actors, value, stage.poseCoordinates, frameSlots);
     },
     resetCamera: () => descriptions.parts.resetCamera(current().applied),
     snapshot() {

@@ -6,6 +6,8 @@ import type {ModelStageDescription} from './descriptionModel.ts';
 import type {ModelRotation, ModelVector} from './placementModel.ts';
 import {MODEL_STAGE_DISPLAY, type ModelStageDisplay} from './displayModel.ts';
 import {MODEL_STAGE_FIELD_OF_VIEW, MODEL_STAGE_NEAR_PLANE} from './presentation.ts';
+// The Emitter frame record's fields, which ISM's synth-web checks against the engine's `EmitterChange`.
+export {MODEL_EMITTER_CHANGE_FIELDS} from './emitterFrameModel.ts';
 export {MODEL_RUNTIME_MATERIAL, modelRuntimeMaterialProfile} from './runtimeMaterialModel.ts';
 export type {ModelRuntimeMaterialProfile, ModelMaterialOutput, ModelRendererBinding} from './runtimeMaterialModel.ts';
 export {MODEL_ENVIRONMENT_GRID, MODEL_ENVIRONMENT_REFUSAL, modelEnvironment} from './environmentModel.ts';
@@ -45,8 +47,8 @@ export type {ModelActorSurfaces, ModelSurfaceEntry, ModelSurfaceRecord, ModelSur
   ModelSurfaceSource, ModelSurfaceWhere, ModelSurfaceValue} from './surfaceModel.ts';
 export {MODEL_RENDERER_SLOT, MODEL_SURFACE_OUTPUT_REFUSAL, modelSurfaceTakes} from './surfaceOutputModel.ts';
 export type {ModelSurfaceTakes} from './surfaceOutputModel.ts';
-export {createModelFrameBuffers, modelFrameScope, modelPreviewFrame, validateModelFrame} from './frameModel.ts';
-export type {ModelFrameBuffers, ModelFrameScope, ModelPreviewFrame, ModelValidatedFrame} from './frameModel.ts';
+export {modelFrameScope, modelPreviewFrame, validateModelFrame} from './frameModel.ts';
+export type {ModelFrameScope, ModelPreviewFrame, ModelValidatedFrame} from './frameModel.ts';
 export {createModelFrameInbox, MODEL_FRAME_INBOX_TEXT, type ModelFrameStatus} from './frameInbox.ts';
 export {CAMERA_COORDS, MODEL_PREVIEW_CAMERA_REFUSAL, MODEL_PREVIEW_CAPABILITIES, modelPreviewCamera, modelPreviewEntity}
   from './presentation.ts';

@@ -2,13 +2,13 @@ import * as THREE from 'three';
 import {type BurstParameters, CircleEmitter, ConeEmitter, ConstantColor, ConstantValue, type EmitterShape,
   HemisphereEmitter, IntervalValue, ParticleSystem, RenderMode, SphereEmitter, Vector4} from 'three.quarks';
 import type {ModelEmitterRouted} from './emitterFrameModel.ts';
+import type {ModelVector} from './placementModel.ts';
 import {MODEL_EMITTER_FORM, MODEL_SHAPE_TYPE, type ModelEmitterDrawnShape, type ModelEmitterForm,
   type ModelEmitterParticle, type ModelEmitterProfile, type ModelEmitterRange, type ModelEmitterShape}
   from './emitterModel.ts';
 import {modelEmitterBurstCycles} from './emitterBudgetModel.ts';
 import {VelocityOverLifetime} from './emitterVelocity.ts';
-import {ModelSceneGravityForce} from './emitterGravity.ts';
-import type {ModelSceneGravity} from './sceneGravity.ts';
+import {ModelEmitterGravityForce} from './emitterGravity.ts';
 
 // The one mapping from a profile the stage draws onto three.quarks, its particle simulator and drawer (the particle
 // contract's section 5): each profile is one quarks system, which the stage's one batched renderer steps and draws
@@ -73,9 +73,9 @@ const generator = ({min, max}: ModelEmitterRange) => min === max ? new ConstantV
 // whole life, so it folds into the start value exactly, as Unity's size and colour over lifetime multiply it.
 const scaled = ({min, max}: ModelEmitterRange, scale: number) => ({min: min * scale, max: max * scale});
 
-/** A profile as a three.quarks system, paused until the engine starts it, and how a start's routed values reach it;
- * it falls by the scene's `gravity` times its modifier. */
-export function createModelEmitterSystem(profile: ModelEmitterProfile, gravity: ModelSceneGravity) {
+/** A profile as a three.quarks system, paused until the engine starts it, and how a start's routed values and the
+ * gravity it falls by reach it. */
+export function createModelEmitterSystem(profile: ModelEmitterProfile) {
   const material = placeholderMaterial(profile.particle), geometry = instancedGeometry(profile.particle);
   const own = new Vector4(...profile.color).multiply(new Vector4(...profile.tint));
   const startColor = new ConstantColor(own.clone()), rate = new ConstantValue(profile.rate);
@@ -92,16 +92,16 @@ export function createModelEmitterSystem(profile: ModelEmitterProfile, gravity: 
     system.addBehavior(new VelocityOverLifetime([generator(x), generator(y), generator(z)], generator(speedModifier),
       system.emitter, {stated: worldSpace, system: profile.worldSpace}));
   }
-  if (profile.gravityModifier !== 0) {
-    system.addBehavior(new ModelSceneGravityForce(gravity, new ConstantValue(profile.gravityModifier), system.emitter,
-      profile.worldSpace));
-  }
+  // Only a profile that falls carries the force; one that does not states none on each start (emitters.ts `prepare`).
+  const gravity = profile.falls ? new ModelEmitterGravityForce(system.emitter, profile.worldSpace) : null;
+  if (gravity !== null) system.addBehavior(gravity);
   system.pause();
   const tinted = new Vector4();
   return {system,
     /** Begins afresh from nothing with the profile's own values, with what the start routes in their place
      * (emitterFrameModel.ts states the rule). Writes into the generators made here. */
-    start({rate: routedRate, tint, radius}: ModelEmitterRouted) {
+    start({rate: routedRate, tint, radius}: ModelEmitterRouted, falls: ModelVector) {
+      gravity?.fallBy(falls);
       rate.value = routedRate ?? profile.rate;
       shape.radius = radius ?? profile.shape.radius;
       if (tint === undefined) tinted.setScalar(1);

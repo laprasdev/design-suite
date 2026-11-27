@@ -15,10 +15,10 @@ export const MODEL_EMITTER_DRAWN = Object.freeze({
   // constant start value does. A random factor between two (TwoConstants, TwoColors) is a per-particle draw that
   // quarks' over-life behaviours do not type; no pack record states one.
   overLifetime: [MODEL_CURVE_MODE.constant],
-  // Unity's gravity modifier draws its constant alone: quarks' `ApplyForce` draws its magnitude once a frame for every
-  // particle, where Unity's TwoConstants draws one for each particle.
+  // Unity's gravity modifier draws its constant alone: the engine publishes one acceleration a start for it, where
+  // Unity's TwoConstants draws a modifier for each particle.
   gravity: [MODEL_CURVE_MODE.constant],
-  // Unity's `main.gravitySource` 3D Physics: the scene's own gravity, which the frame states.
+  // Unity's `main.gravitySource` 3D Physics: the machine's scene gravity, which the engine multiplies on each start.
   gravitySource: [MODEL_GRAVITY_SOURCE.physics3D],
   gradient: [MODEL_GRADIENT_MODE.color],
   // Unity's `main.simulationSpace`: Local and World are quarks' `worldSpace` false and true; Custom names a transform

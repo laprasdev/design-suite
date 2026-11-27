@@ -80,9 +80,9 @@ describe('atomic per-frame camera application and inbox delivery', () => {
   it('commits actors and camera atomically, orients lookAt, resets unstated fov, and refuses whole', () => {
     const {actor} = makeActor('a', [{name: 'idle', duration: 2}]);
     const scope = modelFrameScope(fileScene([actor.declaration]), new Map());
-    const {camera, controls, buffers, applyCamera} = makeFraming();
+    const {camera, controls, coordinates, applyCamera} = makeFraming();
     const run = (raw: unknown, sink = applyCamera) =>
-      applyValidated([actor], validateModelFrame(raw, scope, buffers), sink);
+      applyValidated([actor], validateModelFrame(raw, scope, coordinates), sink);
     const applied = () => ({pos: actor.snapshot().pose.position, cam: camera.position.toArray(), fov: camera.fov});
     run({
       ...frame(0.5, entity('a', [layer(sample('idle', 0.5))], [3, 0, 0])),
@@ -97,7 +97,7 @@ describe('atomic per-frame camera application and inbox delivery', () => {
     ]), MODEL_ACTOR_REFUSAL.unvalidated);
     const otherScope = modelFrameScope(fileScene([actor.declaration, declaration('b', 'otter')]), new Map());
     const unshown = validateModelFrame({...frame(0.9, entity('a', [], [99, 0, 0]), entity('b', [], [1, 0, 0])),
-      camera: {position: [9, 9, 9], target: [0, 0, 0], fieldOfView: 65}}, otherScope, buffers);
+      camera: {position: [9, 9, 9], target: [0, 0, 0], fieldOfView: 65}}, otherScope, coordinates);
     refused(() => applyValidated([actor], unshown, applyCamera), MODEL_ACTOR_REFUSAL.scope);
     assert.deepEqual(applied(), {pos: [3, 0, 0], cam: [1, 2, 9], fov: 50});
     // Invalid camera refuses before actor changes.

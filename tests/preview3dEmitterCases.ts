@@ -1,5 +1,6 @@
 import {MODEL_ATTRACTION, MODEL_CURVE_MODE, MODEL_EMITTER_ORIGIN, MODEL_GRADIENT_MODE, MODEL_RENDER_MODE,
   MODEL_SHAPE_TYPE, MODEL_SIMULATION_SPACE} from '../src/react/preview3d/emitterModel.ts';
+import {MODEL_EMITTER_CHANGE} from '../src/react/preview3d/emitterFrameModel.ts';
 
 // A profile in the pack's whole `ParticleSubmodule` form, every struct with every serialized field and each value in
 // the form a pack's export writes it: an `AnimationCurve` and a `Gradient` as `{}`, `Frames` as `{_raw}`, an
@@ -57,4 +58,9 @@ export const emitterProfile = (maxParticles = 256, size = 0.08) => ({
     framesPerSecond: 30, speedRange: speedRange(), frameOverTime: zero(), startFrame: zero(), cycleCount: 1},
   prefabSource: null, syncMode: 0,
 });
-export const emitterChange = (change: string, profile = EMITTER_ID) => ({profile, change});
+/** The gravity the engine states on each start of the test profile, whose modifier is 0 (StateParticleEmitters.cpp
+ * `ApplyGravity`). */
+export const NO_FALL = Object.freeze([0, 0, 0] as const);
+/** The engine's record of a change of a test profile: a start states its gravity. */
+export const emitterChange = (change: string, profile = EMITTER_ID) =>
+  change === MODEL_EMITTER_CHANGE.started ? {profile, change, gravity: NO_FALL} : {profile, change};

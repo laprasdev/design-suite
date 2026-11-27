@@ -5,8 +5,7 @@ import {CAMERA_COORDS, freezeModelPreviewCamera, MODEL_PREVIEW_CAMERA_FIELDS, MO
   modelPreviewCameraWhere, modelPreviewEntity, readModelPreviewCamera,
   type ModelPreviewCamera, type ModelPreviewEntity} from './presentation.ts';
 import {isFiniteNumber, isNonEmptyString as named, isRecord as object} from '../../valueChecks.ts';
-import {modelRecordStating, modelStates, readModelNumbers} from './recordModel.ts';
-import {MODEL_VECTOR_AXES, type ModelVector} from './placementModel.ts';
+import {modelRecordStating, modelStates} from './recordModel.ts';
 import {ModelStageRefusal} from './refusal.ts';
 import type {ModelSurfaceSet} from './surfaceModel.ts';
 import {modelSurfaceTakes, type ModelSurfaceTakes} from './surfaceOutputModel.ts';
@@ -21,7 +20,6 @@ export interface ModelPreviewFrame {
   readonly simulationTimeSeconds: number;
   readonly entities: readonly ModelPreviewEntity[];
   readonly camera?: ModelPreviewCamera;
-  readonly gravity?: ModelVector;
 }
 /** A validated frame produced only by `validateModelFrame`, ready to apply without re-reading or freezing a camera. */
 export interface ModelValidatedFrame {
@@ -29,18 +27,7 @@ export interface ModelValidatedFrame {
   readonly simulationTimeSeconds: number;
   readonly entities: readonly ModelPreviewEntity[];
   readonly cameraCoordinates: Float64Array | null;
-  /** The scene's gravity the frame states, in its holder's buffer (sceneGravity.ts keeps it once applied), or none. */
-  readonly gravity: Float64Array | null;
 }
-/** What validating a frame writes into, owned by whoever holds the validated frame until it applies (the inbox): the
- * camera's coordinates (`CAMERA_COORDS`) and the scene's gravity, copied so that a sender writing into its own arrays
- * after validation changes nothing held. */
-export interface ModelFrameBuffers {
-  readonly camera: Float64Array;
-  readonly gravity: Float64Array;
-}
-export const createModelFrameBuffers = (): ModelFrameBuffers => Object.freeze({
-  camera: new Float64Array(CAMERA_COORDS.length), gravity: new Float64Array(MODEL_VECTOR_AXES)});
 /** What a frame is checked against: the declared actors and, by actor id, what each one's renderers take. */
 export interface ModelFrameScope {
   readonly actors: readonly ModelStageActor[];
@@ -61,7 +48,7 @@ kinds: ReadonlyMap<string, ModelSurfaceKind>): ModelFrameScope {
 }
 
 const FRAME_CAMERA_WHERE = modelPreviewCameraWhere('Frame camera');
-const frameScratch = createModelFrameBuffers();
+const frameCameraScratch = new Float64Array(CAMERA_COORDS.length);
 
 /** Validates an optional frame camera into `into` (`CAMERA_COORDS`), returning whether `camera` was stated. */
 export function readModelFrameCamera(record: Record<string, unknown>, into: Float64Array): boolean {
@@ -72,18 +59,9 @@ export function readModelFrameCamera(record: Record<string, unknown>, into: Floa
   return true;
 }
 
-const FRAME_GRAVITY_WHERE = 'Frame gravity';
-// The scene's gravity, a scene fact the frame states as it states the scene's camera: metres a second squared in world
-// space, validated into `into`, returning whether `gravity` was stated.
-function readModelFrameGravity(record: Record<string, unknown>, into: Float64Array): boolean {
-  if (!modelStates(record, 'gravity')) return false;
-  readModelNumbers(record.gravity, MODEL_VECTOR_AXES, into, 0, FRAME_GRAVITY_WHERE);
-  return true;
-}
-
-/** The one validator of an engine frame against `scope`, writing its optional camera and gravity into `into`. */
+/** The one validator of an engine frame against `scope`, writing optional camera coordinates into `cameraInto`. */
 export function validateModelFrame(value: unknown, scope: ModelFrameScope,
-  into: ModelFrameBuffers): ModelValidatedFrame {
+  cameraInto: Float64Array): ModelValidatedFrame {
   const time = object(value) ? value.simulationTimeSeconds : undefined;
   const rawEntities = object(value) ? value.entities : undefined;
   if (!object(value) || !isFiniteNumber(time) || time < 0 ||
@@ -105,13 +83,12 @@ export function validateModelFrame(value: unknown, scope: ModelFrameScope,
     seen.add(id);
     return modelPreviewEntity(entity, actor.asset.id, scope.takes.get(id));
   });
-  const hasCamera = readModelFrameCamera(value, into.camera), hasGravity = readModelFrameGravity(value, into.gravity);
+  const hasCamera = readModelFrameCamera(value, cameraInto);
   const checked: ModelValidatedFrame = {
     [VALIDATED_FRAME]: true,
     simulationTimeSeconds: time,
     entities: Object.freeze(entities),
-    cameraCoordinates: hasCamera ? into.camera : null,
-    gravity: hasGravity ? into.gravity : null,
+    cameraCoordinates: hasCamera ? cameraInto : null,
   };
   return Object.freeze(checked);
 }
@@ -124,9 +101,7 @@ export function validateModelFrame(value: unknown, scope: ModelFrameScope,
  * checked whole: an entity by `modelPreviewEntity`, its pose and camera by the record owner.
  */
 export function modelPreviewFrame(value: unknown, scope: ModelFrameScope): ModelPreviewFrame {
-  const {simulationTimeSeconds, entities, cameraCoordinates, gravity} =
-    validateModelFrame(value, scope, frameScratch);
+  const {simulationTimeSeconds, entities, cameraCoordinates} = validateModelFrame(value, scope, frameCameraScratch);
   return Object.freeze({simulationTimeSeconds, entities,
-    ...cameraCoordinates === null ? {} : {camera: freezeModelPreviewCamera(cameraCoordinates)},
-    ...gravity === null ? {} : {gravity: Object.freeze([gravity[0], gravity[1], gravity[2]] as const)}});
+    ...cameraCoordinates === null ? {} : {camera: freezeModelPreviewCamera(cameraCoordinates)}});
 }
