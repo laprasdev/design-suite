@@ -57,8 +57,9 @@ export function createModelScene(host: HTMLElement, theme: ModelStageTheme, poli
   const scene = new THREE.Scene();
   // The far plane is the look's, set as the lighting applies its first time.
   const camera = new THREE.PerspectiveCamera(settings.fieldOfView, 1, settings.nearPlane);
+  const shared = createModelStageSharedValues();
   const frame = drawnOrReleased(renderer, () => createModelDraw(renderer, scene, camera,
-    {loadPasses: loadModelGlowPasses, modes}));
+    {loadPasses: loadModelGlowPasses, modes, shared}));
   host.append(renderer.domElement);
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.minDistance = settings.cameraMinimum;
@@ -66,7 +67,6 @@ export function createModelScene(host: HTMLElement, theme: ModelStageTheme, poli
   controls.maxPolarAngle = Math.PI / 2;
   const framing = createModelFraming(camera, controls);
   const fog = createModelFog(scene);
-  const shared = createModelStageSharedValues();
   const lighting = createModelLighting(builtIn, {fog, framing, output: frame, shared});
   const aids = createModelStageAids(theme, policy, lighting);
   markModelStageAids(aids);
@@ -90,7 +90,7 @@ export function createModelScene(host: HTMLElement, theme: ModelStageTheme, poli
   // A size the frame's budget refuses at creation goes on, with what was built released.
   try {resize();} catch (error) {dispose(); throw error;}
   return {
-    renderer, scene, camera, controls, lighting, fog, shared,
+    renderer, scene, camera, controls, lighting, fog, shared, sceneReaders: frame.sceneReaders,
     // The framing the stage drives; the far plane is the look's, set through the lighting alone.
     requestFit: framing.requestFit, poseCoordinates: framing.poseCoordinates, frame: framing.frame, fit: framing.fit,
     cameraSnapshot: framing.cameraSnapshot,

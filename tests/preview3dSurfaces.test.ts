@@ -21,7 +21,7 @@ import {kindFile, kindMaterials, kinds as kindKinds, RENDERERS as KIND_RENDERERS
 // The kind the seam is proven with: tests only, never shipped.
 const PULSE = {id: 'test-pulse', parameters: {_Color: {type: 'color', space: 'srgb', hdr: false},
   _Pulse: {type: 'float'}, _Rim: {type: 'float'}, _Offset: {type: 'vector', size: 2},
-  _Mask: {type: 'texture', space: 'linear'}}, inert: {_Rim: 0}, attributes: ['uv'], light: 'standard',
+  _Mask: {type: 'texture', space: 'linear'}}, inert: {_Rim: 0}, sceneReads: [], attributes: ['uv'], light: 'standard',
 coverage: 'opaque', side: 'front', fog: true, displacement: null, webProgram: {path: '/pulse.glsl',
   sha256: 'a'.repeat(64)}};
 const MASK = {path: '/mask.png', sha256: 'b'.repeat(64), wrap: ['repeat', 'clamp'], scale: [1, 1], offset: [0, 0]};

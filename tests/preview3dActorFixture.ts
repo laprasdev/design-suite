@@ -14,6 +14,7 @@ import {CAMERA_COORDS} from '../src/react/preview3d/presentation.ts';
 import {modelFrameScope, validateModelFrame} from '../src/react/preview3d/frameModel.ts';
 import {createModelSurfaceMaterials} from '../src/react/preview3d/surfaceMaterials.ts';
 import {createModelStageSharedValues} from '../src/react/preview3d/sharedValues.ts';
+import {frameReaders} from './preview3dKindFixture.ts';
 import {MODEL_ACTOR_ANIMATION, MODEL_ANIMATION_LAYER, MODEL_STAGE, MODEL_STAGE_CURVE, MODEL_STAGE_DISPLAY,
   MODEL_STAGE_FRAMING, MODEL_STAGE_ORIGIN, MODEL_STAGE_SIZE, MODEL_STAGE_SURFACE_MODE, MODEL_STAGE_THEME_LIGHTING,
   ModelStageRefusal, modelStagePolicy, type ModelFileActor, type ModelStageActor, type ModelStageClock,
@@ -62,7 +63,7 @@ export function actorContext(clock: ModelStageClock = 'external') {
     changes: modelStageChanges(createModelFog(scene).change, modes), surfaceModes: modes,
     surfaces: {materials: createModelSurfaceMaterials({kinds: new Map(), read: () => Promise.reject(new Error('none')),
       textures: {acquire: () => new THREE.Texture(), release: () => undefined},
-      shared, changes: () => []}), kinds: new Map(), compile: () => undefined},
+      shared, sceneReaders: frameReaders(), changes: () => []}), kinds: new Map(), compile: () => undefined},
   };
   return {context, scene};
 }
