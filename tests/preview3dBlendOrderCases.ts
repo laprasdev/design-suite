@@ -12,7 +12,8 @@ export const BLEND_ORDER_PROGRAM = `void kindSurface( inout vec4 diffuse, inout 
   diffuse = surfaceParameter_Color();
 }`;
 export const BLENDED_SHEET_KIND = Object.freeze({id: 'test-blended-sheet',
-  parameters: {_Color: {type: 'color', space: 'linear', hdr: false}}, inert: {}, attributes: ['uv'], light: 'unlit',
+  parameters: {_Color: {type: 'color', space: 'linear', hdr: false}}, inert: {},
+  sceneReads: [], attributes: ['uv'], light: 'unlit',
   coverage: {blend: 'alpha'}, side: 'front', fog: false, displacement: null,
   webProgram: {path: '/blended-sheet.glsl', sha256: 'f'.repeat(64)}});
 export const blendedSheetRecord = () => ({kind: BLENDED_SHEET_KIND.id,

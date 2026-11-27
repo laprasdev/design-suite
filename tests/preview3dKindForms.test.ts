@@ -11,7 +11,7 @@ import {modelSurfaceKinds} from '../src/react/preview3d/surfaceKindModel.ts';
 import {modelSurfaceRecordsFit, modelSurfaceSets, modelSurfaceSetWhere} from '../src/react/preview3d/surfaceModel.ts';
 import {padModelBoundsByReach} from '../src/react/preview3d/reachBounds.ts';
 import {refused} from './preview3dActorFixture.ts';
-import {kindFile, PULSE, RENDERERS} from './preview3dKindFixture.ts';
+import {frameReaders, kindFile, PULSE, RENDERERS} from './preview3dKindFixture.ts';
 import {modelFileDrawn} from '../src/react/preview3d/drawn.ts';
 
 // What a kind may be beyond a lit surface over uv and colour: unlit, moving its vertices, reading the file's own
@@ -80,7 +80,7 @@ describe('a kind\'s forms beyond a lit surface', () => {
     const {asset, body} = kindFile(), drawn = modelFileDrawn(asset, {actor: 'a', path: 'a.glb'}, undefined);
     const surfaces = createModelActorSurfaces(drawn, 'a',
       {materials: createModelSurfaceMaterials({kinds: modelSurfaceKinds([DEPTH]), changes: () => [],
-        shared: createModelStageSharedValues(), read: async () => new ArrayBuffer(0),
+        shared: createModelStageSharedValues(), sceneReaders: frameReaders(), read: async () => new ArrayBuffer(0),
         textures: {acquire: () => new THREE.Texture(), release: () => undefined}}), kinds: modelSurfaceKinds([DEPTH]),
       compile: () => undefined});
     const sets = modelSurfaceSets({s: {[RENDERERS.body]: {kind: 'test-form', values: {_Color: {color: [1, 1, 1, 1]},
@@ -94,7 +94,8 @@ describe('a kind\'s forms beyond a lit surface', () => {
   it('culls a renderer a kind moves by its bounds grown by the reach it shows, and gives three its own back',
     async () => {
       const {asset, body} = kindFile(), kinds = modelSurfaceKinds([SWAY]);
-      const materials = createModelSurfaceMaterials({kinds, shared: createModelStageSharedValues(), changes: () => [],
+      const materials = createModelSurfaceMaterials({kinds, shared: createModelStageSharedValues(),
+        sceneReaders: frameReaders(), changes: () => [],
         read: async () => new TextEncoder().encode(SWAY_PROGRAM).buffer, textures: {acquire: () => new THREE.Texture(),
           release: () => undefined}});
       const sets = (reach: number) => modelSurfaceSets({s: {[RENDERERS.body]: {kind: 'test-form', values: {_Color:

@@ -9,7 +9,7 @@ import {STAGE_FAILURE_PATCH_URL, STAGE_FAILURE_SCENE_ENTRY, STAGE_FAILURE_VIEWPO
   from './preview3dStageFailureCases.ts';
 
 // The refusal as `onError` hears it across the page: the error's name, then its message.
-const REFUSAL = `${new ModelStageRefusal('').name}: ${budgetRefusal(OVER)}`;
+const REFUSAL = `${new ModelStageRefusal('').name}: ${budgetRefusal(OVER, 'frame')}`;
 const {width, height} = STAGE_FAILURE_VIEWPORT;
 
 const page = await openScene(STAGE_FAILURE_SCENE_ENTRY, STAGE_FAILURE_VIEWPORT, SCENE_GL.software);

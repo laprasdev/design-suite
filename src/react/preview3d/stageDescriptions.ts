@@ -16,12 +16,14 @@ import {createModelTextures, type ModelImageDecoder} from './textures.ts';
 import type {ModelFileReader} from './files.ts';
 import {createModelSurfaceMaterials} from './surfaceMaterials.ts';
 import type {ModelStageSharedValues} from './sharedValues.ts';
+import type {ModelSceneReaders} from './linearFrame.ts';
 import {prepareWhole} from './commit.ts';
 
 /** What the descriptions are applied to: the stage's scene side (scene.ts), as far as a description reaches it. */
 export interface ModelStageScenePart extends Pick<ModelStageSurface, 'scene' | 'fog' | 'frame'> {
   readonly lighting: ModelStageSurface['lighting'] & ModelActorContext['lighting'];
   readonly shared: ModelStageSharedValues;
+  readonly sceneReaders: ModelSceneReaders;
   /** Compiles what drawing an object needs, inside the staged build (draw.ts). */
   readonly compile: (object: THREE.Object3D) => void;
   requestFit(): void;
@@ -48,7 +50,7 @@ export function createModelStageDescriptions(context: ModelStageDescriptionsCont
   const textures = createModelTextures(context.read, context.decode);
   const changes = modelStageChanges(stage.fog.change, modes);
   const materials = createModelSurfaceMaterials({kinds: policy.kinds, read: context.read, textures,
-    shared: stage.shared, changes});
+    shared: stage.shared, sceneReaders: stage.sceneReaders, changes});
   const actorContext: ModelActorContext = {policy, theme: context.theme, scene: stage.scene, lighting: stage.lighting,
     changes, shared: stage.shared, surfaceModes: modes,
     surfaces: {materials, kinds: policy.kinds, compile: stage.compile}};

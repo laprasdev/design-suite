@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import {writeModelColor} from './color.ts';
 import type {ModelStageLook} from './lookModel.ts';
 import {modelShaderUniforms} from './shading.ts';
+import {createModelSceneDepthUniforms} from './sceneDepth.ts';
 
 // What the stage shares with every kind's program, under names only the stage writes. Each uniform is one object,
 // placed into every kind material by reference (never cloned), so one write reaches every program. The stage's numbers
@@ -43,8 +44,11 @@ export function createModelStageSharedValues() {
   const uniforms = Object.freeze({[U.numbers]: {value: numbers}, [U.shadow]: {value: new THREE.Color()},
     [U.keyDirection]: {value: new THREE.Vector3()}, [U.keyColor]: {value: new THREE.Color()},
     [U.ambientSky]: {value: new THREE.Color()}, [U.ambientGround]: {value: new THREE.Color()}});
+  const sceneDepth = createModelSceneDepthUniforms();
   return {
-    uniforms,
+    uniforms: Object.freeze({...uniforms, ...sceneDepth}),
+    /** The scene depth's uniforms, which the frame's depth pass writes (sceneDepth.ts). */
+    sceneDepth,
     /** Their GLSL declarations, as a kind's program reads them. */
     declarations: [modelShaderUniforms({[U.numbers]: 'vec3', [U.shadow]: 'vec3', [U.keyDirection]: 'vec3',
       [U.keyColor]: 'vec3', [U.ambientSky]: 'vec3', [U.ambientGround]: 'vec3'}),
