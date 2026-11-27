@@ -60,7 +60,7 @@ const shader = ({material}: Drawn) => {
   assert.ok(material instanceof THREE.ShaderMaterial);
   return material;
 };
-const blooms = (output: Drawn) => Object.hasOwn(shader(output).defines, 'MODEL_BLOOM');
+const glows = (output: Drawn) => Object.hasOwn(shader(output).defines, 'MODEL_GLOW');
 
 describe('the frame\'s draw', () => {
   it('draws the scene once into a multisampled half-float target, then the output pass under the look\'s curve',
@@ -75,7 +75,7 @@ describe('the frame\'s draw', () => {
       const output = ending(drawn);
       // The output pass is the canvas's one curve: three gives a material drawn into a target none.
       assert.deepEqual([output.toneMapping, shader(output).toneMapped, uniforms(output).modelSceneColor.value,
-        blooms(output)], [THREE.ACESFilmicToneMapping, true, target?.texture, false]);
+        glows(output)], [THREE.ACESFilmicToneMapping, true, target?.texture, false]);
       assert.match(shader(output).fragmentShader, /#include <tonemapping_fragment>\s+#include <colorspace_fragment>/);
       assert.deepEqual([draw.triangles, draw.load(null, WHERE)], [84, []]);
     });
@@ -105,11 +105,11 @@ describe('the frame\'s draw', () => {
       // One output pass writes the canvas, colour and depth, from the target and the composite; the aids are drawn
       // last onto it.
       assert.deepEqual([output.into, uniforms(output).modelSceneColor.value, uniforms(output).modelSceneDepth.value,
-        uniforms(output).modelBloom.value, output.material?.depthFunc], [null, target.texture, target.depthTexture,
+        uniforms(output).modelGlow.value, output.material?.depthFunc], [null, target.texture, target.depthTexture,
         composite.into.texture, THREE.AlwaysDepth]);
-      assert.ok(blooms(output));
+      assert.ok(glows(output));
       assert.match(shader(output).fragmentShader,
-        /modelSceneColor, vUv \);\n#ifdef MODEL_BLOOM\n {2}gl_FragColor\.rgb \+= texture2D\( modelBloom, vUv/);
+        /modelSceneColor, vUv \);\n#ifdef MODEL_GLOW\n {2}gl_FragColor\.rgb \+= texture2D\( modelGlow, vUv/);
       assert.equal(drawn.filter(pass => pass.what === 'scene').length, 2, 'the scene once, the aids once');
       assert.equal(draw.triangles, 84, 'the scene and the aids');
     });
@@ -126,11 +126,11 @@ describe('the frame\'s draw', () => {
       view.inspecting = true;
       const inspected = next();
       assert.deepEqual([drawn[0].into?.samples, drawn.length], [4, 3], 'into the linear target, no glow pass');
-      assert.deepEqual([blooms(inspected), inspected.toneMapping], [false, THREE.ACESFilmicToneMapping]);
+      assert.deepEqual([glows(inspected), inspected.toneMapping], [false, THREE.ACESFilmicToneMapping]);
       view.curved = false;
       assert.equal(next().toneMapping, THREE.NoToneMapping);
       Object.assign(view, {inspecting: false, curved: true});
-      assert.ok(blooms(next()), 'Lit again: the glow again');
+      assert.ok(glows(next()), 'Lit again: the glow again');
     });
 
   it('draws the canvas under each look\'s exposure, with or without glow', async () => {
@@ -170,7 +170,7 @@ describe('the frame\'s draw', () => {
       'the glow freed with its look; the frame kept');
     drawn.length = 0;
     draw.draw();
-    assert.deepEqual([drawn.length, blooms(ending(drawn))], [3, false]);
+    assert.deepEqual([drawn.length, glows(ending(drawn))], [3, false]);
     draw.dispose();
     assert.deepEqual(owned.filter(each => !disposed.has(each)), []);
   });

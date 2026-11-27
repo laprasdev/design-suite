@@ -11,14 +11,13 @@ export const MODEL_SURFACE_COVERAGE = Object.freeze({opaque: 'opaque', cutout: '
  * writes it, its alpha already in it (One, OneMinusSrcAlpha). The alpha itself blends One, OneMinusSrcAlpha in both.
  */
 export const MODEL_SURFACE_BLEND = Object.freeze({alpha: 'alpha', premultiply: 'premultiply'} as const);
-type Of<T> = T[keyof T];
-export type ModelSurfaceBlend = Of<typeof MODEL_SURFACE_BLEND>;
+export type ModelSurfaceBlend = typeof MODEL_SURFACE_BLEND[keyof typeof MODEL_SURFACE_BLEND];
 /** A cut-out at a threshold: a declared float's name, or a number from 0 to 1. Below it the surface is cut away. */
 export interface ModelSurfaceCutout {readonly cutout: string | number}
 /** A blended surface: sorted, blended by its blend, and writing no depth. */
 export interface ModelSurfaceBlended {readonly blend: ModelSurfaceBlend}
-export type ModelSurfaceCoverage = Of<typeof MODEL_SURFACE_COVERAGE> | ModelSurfaceCutout | ModelSurfaceBlended |
-  (ModelSurfaceCutout & ModelSurfaceBlended);
+export type ModelSurfaceCoverage = typeof MODEL_SURFACE_COVERAGE[keyof typeof MODEL_SURFACE_COVERAGE] |
+  ModelSurfaceCutout | ModelSurfaceBlended | (ModelSurfaceCutout & ModelSurfaceBlended);
 const FIELDS = Object.freeze({stated: [], whenStated: ['cutout', 'blend']});
 export const MODEL_SURFACE_COVERAGE_REFUSAL = Object.freeze({
   coverage: (where: string) => `${where} is one of ${Object.values(MODEL_SURFACE_COVERAGE).join(', ')}, or a ` +

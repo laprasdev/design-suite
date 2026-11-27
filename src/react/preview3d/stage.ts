@@ -26,8 +26,8 @@ export const MODEL_STAGE_TEXT = Object.freeze({
 
 // The stage holds what one description declares and draws one engine frame over it. Creation applies the first
 // description through the same function every later one uses. A failure nothing could refuse ahead (a frame that
-// throws, a resize the frame's budget refuses, or the first description failing) reaches `onError`; the stage then
-// draws nothing more.
+// throws, a resize the frame's budget refuses, or the first description failing) takes the loop's one failure route
+// (frameLoop.ts): the loop stops, so the stage draws nothing more, and `onError` hears it.
 export function createModelStage(
   host: HTMLElement, description: ModelStageDescription, theme: ModelStageTheme,
   onReady: (controller: ModelStageController) => void, onError: (error: Error) => void,
@@ -38,7 +38,9 @@ export function createModelStage(
   for (const kind of policy.kinds.values()) modelSurfaceDrawable(kind);
   const modes = createModelSurfaceModes();
   let disposed = false;
-  const fail = (error: unknown) => {if (!disposed) onError(asError(error));};
+  // The loop is made below, once what it steps is; nothing fails before this function returns (the scene's resize
+  // observer and the first description report later), so the route reads it then.
+  const fail = (error: unknown) => loop.fail(error);
   const stage = createModelScene(host, theme, policy, modes, fail);
   const descriptions = createModelStageDescriptions({policy, theme, stage, modes, load: loadModelStageAsset,
     read: readModelFile, decode: decodeModelImage});
@@ -130,7 +132,7 @@ export function createModelStage(
     if (stage.controls.enabled) stage.controls.update();
     stage.draw();
   };
-  const loop = createModelFrameLoop(animate, fail, MODEL_PAGE_FRAMES);
+  const loop = createModelFrameLoop(animate, error => {if (!disposed) onError(asError(error));}, MODEL_PAGE_FRAMES);
   const dispose = () => {
     if (disposed) return;
     disposed = true;

@@ -7,7 +7,7 @@ import {disposeModelObject} from './asset.ts';
 import {createModelLighting} from './lighting.ts';
 import {modelStageBuiltInTimes} from './builtInTimes.ts';
 import {createModelFog} from './fog.ts';
-import {createModelDraw, type ModelDrawModes} from './draw.ts';
+import {createModelDraw, type ModelDrawContext} from './draw.ts';
 import {loadModelGlowPasses} from './glow.ts';
 import {createModelStageSharedValues} from './sharedValues.ts';
 import {markModelStageAids, markModelStageLights} from './layers.ts';
@@ -48,7 +48,7 @@ function drawnOrReleased<T>(renderer: THREE.WebGLRenderer, create: () => T): T {
  * what the Surface mode in force asks of the frame, which the draw reads each frame (draw.ts); `onError` hears a
  * failure outside any call, a resize the frame's budget refuses. */
 export function createModelScene(host: HTMLElement, theme: ModelStageTheme, policy: ModelStagePolicy,
-  modes: ModelDrawModes, onError: (error: unknown) => void) {
+  modes: ModelDrawContext['modes'], onError: (error: unknown) => void) {
   // The theme is read before anything is built, so a theme the stage refuses leaves no canvas or context behind.
   const builtIn = modelStageBuiltInTimes(theme.colors);
   const renderer = new THREE.WebGLRenderer({antialias: true, preserveDrawingBuffer: true});
@@ -80,8 +80,8 @@ export function createModelScene(host: HTMLElement, theme: ModelStageTheme, poli
     camera.updateProjectionMatrix();
     framing.requestFit();
   };
-  // A size the frame's budget refuses after creation reaches `onError`, as a frame that throws does; at creation the
-  // refusal goes on, with what was built released.
+  // A size the frame's budget refuses after creation goes to `onError`, the stage's one failure route, as a frame that
+  // throws does; at creation the refusal goes on, with what was built released.
   const observer = new ResizeObserver(() => {
     try {resize();} catch (error) {onError(error);}
   });

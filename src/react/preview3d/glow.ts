@@ -37,7 +37,7 @@ export function createModelGlow({Bloom}: ModelGlowPasses, size: THREE.Vector2) {
     /** The composite of the bloom's levels, which the frame's output adds. */
     texture: bloom.renderTargetsHorizontal[0].texture,
     /** The bloom, from the frame's resolved colour into its own targets; nothing is drawn into the frame's target. */
-    bloom: (renderer: THREE.WebGLRenderer, frame: THREE.WebGLRenderTarget) =>
+    render: (renderer: THREE.WebGLRenderer, frame: THREE.WebGLRenderTarget) =>
       bloom.render(renderer, frame, frame, 0, false),
     set(value: ModelStageGlow) {
       bloom.threshold = value.threshold;

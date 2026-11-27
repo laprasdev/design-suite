@@ -43,6 +43,18 @@ describe('the stage\'s frame loop', () => {
     assert.equal(steps, 2);
   });
 
+  it('stops at a failure from outside a frame, such as a refused resize, and reports it once', () => {
+    const page = frames(), failed: unknown[] = [], refused = new Error('the frame\'s budget');
+    const loop = createModelFrameLoop(() => undefined, error => failed.push(error), page.scheduler);
+    loop.start();
+    page.run(16);
+    loop.fail(refused);
+    assert.deepEqual(failed, [refused]);
+    assert.deepEqual(page.cancelled, [2], 'the frame asked for before the failure is cancelled');
+    page.run(33);
+    assert.equal(page.queued.length, 0, 'no frame is asked for after the failure');
+  });
+
   it('asks for no frame after it is stopped, even from a step already running', () => {
     const page = frames();
     let loop: ReturnType<typeof createModelFrameLoop> | undefined;

@@ -17,18 +17,19 @@ export const MODEL_VECTOR_SIZE = Object.freeze({two: 2, three: 3, four: 4} as co
 export const MODEL_ATTRIBUTE_SIZE = Object.freeze({one: 1, two: 2, three: 3, four: 4} as const);
 /** The reserved kind id of a file's own material, which the stage draws as the file states it. */
 export const MODEL_FILE_SURFACE = 'file';
-type Of<T> = T[keyof T];
-export type ModelColorSpace = Of<typeof MODEL_COLOR_SPACE>;
+export type ModelColorSpace = typeof MODEL_COLOR_SPACE[keyof typeof MODEL_COLOR_SPACE];
 /**
  * A vertex attribute a kind reads: one of three's own by its name ('uv', 'color'), or one of the file's own (a glTF
  * custom attribute, `_DEPTH`, which three names `_depth`) by its name and the numbers it holds per vertex.
  */
-export type ModelSurfaceAttribute = string | {readonly name: string; readonly size: Of<typeof MODEL_ATTRIBUTE_SIZE>};
+export type ModelSurfaceAttribute = string |
+  {readonly name: string; readonly size: typeof MODEL_ATTRIBUTE_SIZE[keyof typeof MODEL_ATTRIBUTE_SIZE]};
 /** A file a web program is made of, by path and SHA-256. */
 export interface ModelSurfaceProgramFile {readonly path: string; readonly sha256: string}
 export type ModelSurfaceParameter =
   | {readonly type: typeof MODEL_SURFACE_PARAMETER.color; readonly space: ModelColorSpace; readonly hdr: boolean}
-  | {readonly type: typeof MODEL_SURFACE_PARAMETER.vector; readonly size: Of<typeof MODEL_VECTOR_SIZE>}
+  | {readonly type: typeof MODEL_SURFACE_PARAMETER.vector;
+    readonly size: typeof MODEL_VECTOR_SIZE[keyof typeof MODEL_VECTOR_SIZE]}
   | {readonly type: typeof MODEL_SURFACE_PARAMETER.float}
   | {readonly type: typeof MODEL_SURFACE_PARAMETER.keyword}
   | {readonly type: typeof MODEL_SURFACE_PARAMETER.texture; readonly space: ModelColorSpace};
@@ -40,10 +41,10 @@ export interface ModelSurfaceKind {
   readonly inert: Readonly<Record<string, number>>;
   /** The vertex attributes the kind reads, as three names a glTF's: three's own by name, the file's own with a size. */
   readonly attributes: readonly ModelSurfaceAttribute[];
-  readonly light: Of<typeof MODEL_SURFACE_LIGHT>;
+  readonly light: typeof MODEL_SURFACE_LIGHT[keyof typeof MODEL_SURFACE_LIGHT];
   /** Opaque or cut out, or a record: a threshold, a blend, or both (surfaceCoverageModel.ts). */
   readonly coverage: ModelSurfaceCoverage;
-  readonly side: Of<typeof MODEL_SURFACE_SIDE>;
+  readonly side: typeof MODEL_SURFACE_SIDE[keyof typeof MODEL_SURFACE_SIDE];
   /** Whether the stage's fog reaches the kind. */
   readonly fog: boolean;
   /** The kind moves vertices, at most `reach` metres (a declared float); or null, it moves none. */
