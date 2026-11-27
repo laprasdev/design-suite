@@ -5,8 +5,10 @@ import {extendModelMaterial, modelShaderChunk, type ModelShaderChange} from './s
 
 // The stage's one stepper and drawer of particles: three.quarks' batched renderer, each batch's program taking the
 // stage's fog through the stage's one owner of program changes (shading.ts). quarks' particle programs carry none of
-// three's fog chunks, so the first change places them at chunks quarks' programs do carry, with the position the fog's
-// height reads (`transformed`, in the batch's space); the stage's fog change then applies to them as to any material.
+// three's fog chunks, so the first change places them at chunks quarks' programs do carry, after three's
+// <begin_vertex>, which declares the position the fog's height reads (`transformed`, set to the particle's in the
+// batch's space) and is where the stage sets the object's world transform (surfaceReads.ts); the stage's fog change
+// then applies to them as to any material.
 export const MODEL_PARTICLE_FOG_ANCHORS = 'model-particle-fog-anchors';
 export const MODEL_PARTICLE_TEXT = Object.freeze({
   program: (mode: RenderMode) => `three.quarks batches of render mode ${mode} are not drawn by the stage; it draws ` +
@@ -24,7 +26,8 @@ function fogAnchors(mode: RenderMode, uniforms: Record<string, THREE.IUniform>):
     Object.assign(shader.uniforms, uniforms);
     shader.vertexShader = replace(replace(shader.vertexShader, CHUNK.parsVertex,
       after(CHUNK.parsVertex, modelShaderChunk('fog_pars_vertex'))), CHUNK.vertex,
-    after(CHUNK.vertex, `vec3 transformed = ${transformed};\n${modelShaderChunk('fog_vertex')}`));
+    after(CHUNK.vertex, `${modelShaderChunk('begin_vertex')}\ntransformed = ${transformed};\n${
+      modelShaderChunk('fog_vertex')}`));
     shader.fragmentShader = replace(replace(shader.fragmentShader, CHUNK.parsFragment,
       after(CHUNK.parsFragment, modelShaderChunk('fog_pars_fragment'))), CHUNK.toneMapping,
     `${modelShaderChunk('fog_fragment')}\n${modelShaderChunk(CHUNK.toneMapping)}`);
