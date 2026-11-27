@@ -23,8 +23,8 @@ fragmentShader: 'uniform sampler2D modelSceneColor;\nuniform sampler2D modelScen
 // The samples of the frame's target: the canvas's own antialiasing, kept for the one draw of the scene.
 const SAMPLES = 4;
 // The bytes the frame holds for each drawing-buffer pixel, by part: half-float RGBA colour (8 bytes) and 24-bit depth
-// (stored in 4), each multisampled at SAMPLES and resolved once: 60 in all, from the formats' sizes, not read from a
-// GPU profiler (perf-budgets' measured.md, Stage, "The stage's linear frame", 2026-11-26).
+// (stored in 4), each multisampled at SAMPLES and resolved once: 60 in all, from the formats' sizes. Chrome's GPU
+// process read 54 and 62 on ANGLE Metal (perf-budgets' measured.md, Stage, "The stage's linear frame", 2026-11-26).
 const PIXEL_BYTES = Object.freeze({multisampledColor: SAMPLES * 8, multisampledDepth: SAMPLES * 4, resolvedColor: 8,
   resolvedDepth: 4});
 const BYTES_PER_PIXEL = Object.values(PIXEL_BYTES).reduce((sum, bytes) => sum + bytes, 0);

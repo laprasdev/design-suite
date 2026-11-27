@@ -8,8 +8,8 @@ import {createModelLinearFrame, MODEL_LINEAR_FRAME_TEXT} from '../src/react/prev
 import {MODEL_STAGE} from '../src/react/preview3d/model.ts';
 import {ModelStageRefusal} from '../src/react/preview3d/refusal.ts';
 
-// The bytes per drawing-buffer pixel from the formats' sizes (perf-budgets' measured.md, Stage, "The stage's linear
-// frame"), written here, not read from the frame.
+// The bytes per drawing-buffer pixel from the formats' sizes, written here, not read from the frame (perf-budgets'
+// measured.md, Stage, "The stage's linear frame", beside the GPU process's readings).
 const PIXEL_BYTES = 60;
 // A 1080p screen at the stage's pixel-ratio limit, which the placeholder holds, and a 5K drawing buffer, which it
 // refuses.
