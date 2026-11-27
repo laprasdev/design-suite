@@ -17,7 +17,7 @@ export const MODEL_STAGE_SHARED = Object.freeze({
    * game decides reaches a kind as an engine value. */
   seconds: 'stageDecorativeSeconds',
   /** The stage's presentation time, in seconds: the applied engine frame's under the external clock, the local
-   * clock's otherwise. What the engine started (an emitter) ages on it. */
+   * clock's otherwise. */
   presentation: 'stagePresentationSeconds',
   /** Where the time in force sits between day (0) and night (1): the look's `night`. */
   night: 'stageNight',

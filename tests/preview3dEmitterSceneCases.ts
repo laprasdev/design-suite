@@ -1,19 +1,31 @@
 import {MODEL_EMITTER_ORIGIN, MODEL_RENDER_MODE, MODEL_UNITY_BUILTIN_MESH}
   from '../src/react/preview3d/emitterModel.ts';
 import type {ModelEmitterRouted} from '../src/react/preview3d/emitterFrameModel.ts';
+import {stageLook} from './preview3dActorFixture.ts';
 import {emitterProfile} from './preview3dEmitterCases.ts';
 
-// The emitter browser scene: one panel actor with three profiles, a point profile following it and one left where it
-// started, and a mesh profile of Unity's built-in sphere following it.
+// The emitter browser scene: one panel actor with four profiles, a point profile following it and one left where it
+// started, a mesh profile of Unity's built-in sphere following it, and one naming a mesh the stage does not draw yet,
+// which it skips: its frames' starts and stops run the skipped route.
 const [SPHERE] = MODEL_UNITY_BUILTIN_MESH.meshes;
 export const EMITTER_SCENE_ENTRY = 'tests/preview3dEmitterScene.tsx';
 export const EMITTER_HOST_ID = 'emitter-host';
 export const EMITTER_SCENE_PROFILES = Object.freeze({follows: emitterProfile(),
   stays: {...emitterProfile(), emitterOrigin: MODEL_EMITTER_ORIGIN.environment},
   spheres: {...emitterProfile(), renderMode: MODEL_RENDER_MODE.mesh,
-    mesh: {guid: MODEL_UNITY_BUILTIN_MESH.guid, fileID: SPHERE.fileID}}});
+    mesh: {guid: MODEL_UNITY_BUILTIN_MESH.guid, fileID: SPHERE.fileID}},
+  skipped: {...emitterProfile(), renderMode: MODEL_RENDER_MODE.mesh,
+    mesh: {guid: MODEL_UNITY_BUILTIN_MESH.guid, fileID: `${SPHERE.fileID}0`}}});
+// The scene's one time: no glow, since the changed-pixel box measures where particles reach, and a dense run's glow
+// spreads past them and sets the box (the phone view's `own` and `wide` boxes were then equal); and black fog past
+// the panel, so the captures show their fade with depth; black, since added light fogged toward any other colour
+// would add that colour.
+export const EMITTER_SCENE_LIGHTING = Object.freeze({time: 'dusk', times: [{id: 'dusk', label: 'Dusk',
+  look: stageLook({glow: null,
+    fog: {near: {distance: 3, color: [0, 0, 0]}, far: {distance: 10, color: [0, 0, 0]}, height: null}})}]});
 // Seconds between the frames that run the emitters, and how many: long enough for the oldest particles to die.
-export const EMITTER_SCENE_RUN = Object.freeze({step: 1 / 30, frames: 60, travel: 0.6});
+// quarks draws from `Math.random` (emitterSystems.ts), so a run seeds it: each run draws the same particles.
+export const EMITTER_SCENE_RUN = Object.freeze({step: 1 / 30, frames: 60, travel: 0.6, seed: 1});
 /** The routed values the scene's runs start every emitter with: none (each profile's own), and each value moved far
  * enough from the profile's to change the picture by itself. */
 export const EMITTER_SCENE_ROUTED = Object.freeze({own: Object.freeze({}),

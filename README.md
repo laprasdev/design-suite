@@ -240,7 +240,7 @@ without a title keeps its children as they are.
 ## 3D preview
 
 The browser renderer for the existing `RenderTextureView` kind lives in `/preview3d`. Install the optional
-`three@0.180.0` peer and load the entry only when a 3D view opens; the package root and `/react` do not import it.
+`three@0.182.0` peer and load the entry only when a 3D view opens; the package root and `/react` do not import it.
 `/preview3d/model` holds the data (types, constants, validators) for eager imports, `/preview3d/react` the
 `ModelPreview` view, and `/preview3d/styles.css` its styles.
 

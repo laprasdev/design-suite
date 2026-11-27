@@ -3,6 +3,16 @@
 export class ModelStageRefusal extends Error {
   override name = 'ModelStageRefusal';
 }
+/** A refusal of a value at `where` that the stage does not draw yet, as against one that is invalid: what holds the
+ * value may be skipped and the rest drawn. */
+export class ModelStageUndrawn extends ModelStageRefusal {
+  override name = 'ModelStageUndrawn';
+  readonly where: string;
+  constructor(where: string, message: string) {
+    super(message);
+    this.where = where;
+  }
+}
 export const MODEL_STAGE_FAILURE = Object.freeze({refused: 'refused', unusable: 'unusable'} as const);
 export type ModelStageFailureKind = typeof MODEL_STAGE_FAILURE[keyof typeof MODEL_STAGE_FAILURE];
 export interface ModelStageFailure {

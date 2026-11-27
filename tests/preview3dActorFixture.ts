@@ -4,6 +4,7 @@ import {modelFileDrawn} from '../src/react/preview3d/drawn.ts';
 import {MODEL_NO_EMITTERS} from '../src/react/preview3d/emitterModel.ts';
 import * as THREE from 'three';
 import {createModelFog} from '../src/react/preview3d/fog.ts';
+import {createModelParticleRenderer} from '../src/react/preview3d/particleRenderer.ts';
 import {createModelSurfaceModes, modelStageChanges} from '../src/react/preview3d/materials.ts';
 import type {GLTF} from 'three/addons/loaders/GLTFLoader.js';
 import {createModelActor, type ModelActor, type ModelActorContext} from '../src/react/preview3d/actor.ts';
@@ -11,7 +12,7 @@ import {applyModelFrame, createModelFrameSlots} from '../src/react/preview3d/act
 import {createModelFraming} from '../src/react/preview3d/camera.ts';
 import type {ModelLookLayers} from '../src/react/preview3d/lighting.ts';
 import {CAMERA_COORDS} from '../src/react/preview3d/presentation.ts';
-import {modelFrameScope, validateModelFrame} from '../src/react/preview3d/frameModel.ts';
+import {modelFrameScope, validateModelFrame, type ModelValidatedFrame} from '../src/react/preview3d/frameModel.ts';
 import {createModelSurfaceMaterials} from '../src/react/preview3d/surfaceMaterials.ts';
 import {createModelStageSharedValues} from '../src/react/preview3d/sharedValues.ts';
 import {frameReaders} from './preview3dKindFixture.ts';
@@ -56,11 +57,12 @@ export const THEME: ModelStageTheme = Object.freeze({colors: Object.freeze({stag
 
 export function actorContext(clock: ModelStageClock = 'external') {
   const scene = new THREE.Scene(), modes = createModelSurfaceModes(), shared = createModelStageSharedValues();
+  const fog = createModelFog(scene);
   const context: ModelActorContext = {
     policy: modelStagePolicy({reviewKey: 'review', clock, floor: false, grid: false, kinds: []}), scene,
-    theme: THEME, shared,
+    theme: THEME, particles: createModelParticleRenderer(fog.change),
     lighting: {attach: () => () => undefined},
-    changes: modelStageChanges(createModelFog(scene).change, modes), surfaceModes: modes,
+    changes: modelStageChanges(fog.change, modes), surfaceModes: modes,
     surfaces: {materials: createModelSurfaceMaterials({kinds: new Map(), read: () => Promise.reject(new Error('none')),
       textures: {acquire: () => new THREE.Texture(), release: () => undefined},
       shared, sceneReaders: frameReaders(), changes: () => []}), kinds: new Map(), compile: () => undefined},
@@ -134,6 +136,10 @@ export const describing = (changes: Record<string, unknown> = {}) => ({
 // Actors drawn with their files' own materials, as a frame is checked against them: no renderer takes a value.
 export const fileScene = (actors: readonly ModelStageActor[]) =>
   ({actors: {focus: actors[0].id, actors}, surfaceSets: {}});
+/** A validated frame applied as the stage applies it, into the fixture's slots. */
+export const applyValidated = (actors: readonly ModelActor[], value: ModelValidatedFrame,
+  applyCamera: (coordinates: Float64Array) => void) =>
+  applyModelFrame(actors, value, applyCamera, FRAME_SLOTS);
 /** A frame applied as the stage applies it, to actors drawn with their files' own materials. */
 export const applyFrame = (actors: readonly ModelActor[], value: unknown,
   applyCamera: (coordinates: Float64Array) => void = () => {throw new Error('Unexpected frame camera.');}) => {
@@ -141,7 +147,7 @@ export const applyFrame = (actors: readonly ModelActor[], value: unknown,
     value, modelFrameScope(fileScene(actors.map(actor => actor.declaration)), new Map()),
     new Float64Array(CAMERA_COORDS.length),
   );
-  return applyModelFrame(actors, checked, applyCamera, FRAME_SLOTS);
+  return applyValidated(actors, checked, applyCamera);
 };
 /** A staged load that waits on nothing. */
 export const NO_LOAD = Object.freeze({pending: [], release: () => undefined});

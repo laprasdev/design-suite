@@ -9,7 +9,7 @@ import {modelPreviewCamera} from '../src/react/preview3d/presentation.ts';
 import {createModelDescriptionRequests} from '../src/react/preview3d/previewDescription.ts';
 import {applyModelFrame} from '../src/react/preview3d/actorFrame.ts';
 import {createModelFrameInbox} from '../src/react/preview3d/frameInbox.ts';
-import {declaration, describing, FRAME_SLOTS, entity, fileScene, frame, layer, makeActor, makeFraming, refused,
+import {applyValidated, declaration, describing, entity, fileScene, frame, layer, makeActor, makeFraming, refused,
   sample} from './preview3dActorFixture.ts';
 
 describe('preview camera and framing fieldOfView validation', () => {
@@ -82,7 +82,7 @@ describe('atomic per-frame camera application and inbox delivery', () => {
     const scope = modelFrameScope(fileScene([actor.declaration]), new Map());
     const {camera, controls, coordinates, applyCamera} = makeFraming();
     const run = (raw: unknown, sink = applyCamera) =>
-      applyModelFrame([actor], validateModelFrame(raw, scope, coordinates), sink, FRAME_SLOTS);
+      applyValidated([actor], validateModelFrame(raw, scope, coordinates), sink);
     const applied = () => ({pos: actor.snapshot().pose.position, cam: camera.position.toArray(), fov: camera.fov});
     run({
       ...frame(0.5, entity('a', [layer(sample('idle', 0.5))], [3, 0, 0])),
@@ -98,7 +98,7 @@ describe('atomic per-frame camera application and inbox delivery', () => {
     const otherScope = modelFrameScope(fileScene([actor.declaration, declaration('b', 'otter')]), new Map());
     const unshown = validateModelFrame({...frame(0.9, entity('a', [], [99, 0, 0]), entity('b', [], [1, 0, 0])),
       camera: {position: [9, 9, 9], target: [0, 0, 0], fieldOfView: 65}}, otherScope, coordinates);
-    refused(() => applyModelFrame([actor], unshown, applyCamera, FRAME_SLOTS), MODEL_ACTOR_REFUSAL.scope);
+    refused(() => applyValidated([actor], unshown, applyCamera), MODEL_ACTOR_REFUSAL.scope);
     assert.deepEqual(applied(), {pos: [3, 0, 0], cam: [1, 2, 9], fov: 50});
     // Invalid camera refuses before actor changes.
     refused(() => run({
@@ -136,7 +136,7 @@ describe('atomic per-frame camera application and inbox delivery', () => {
     const delivered: unknown[] = [];
     inbox.attach(value => {
       delivered.push(value);
-      applyModelFrame([actor], value, applyCamera, FRAME_SLOTS);
+      applyValidated([actor], value, applyCamera);
     });
     let entityReads = 0, cameraReads = 0;
     const rawEntities = [entity('a', [], [2, 0, 0])];
@@ -156,7 +156,7 @@ describe('atomic per-frame camera application and inbox delivery', () => {
     assert.equal(inbox.receive({...frame(2, entity('a', [], [5, 0, 0])),
       camera: {position: pendingPos, target: [0, 0, 0]}}), 'pending');
     pendingPos[0] = 99;
-    assert.equal(inbox.attach(value => applyModelFrame([actor], value, applyCamera, FRAME_SLOTS)), 'ready');
+    assert.equal(inbox.attach(value => applyValidated([actor], value, applyCamera)), 'ready');
     assert.deepEqual([camera.position.toArray(), camera.fov], [[4, 2, 7], MODEL_STAGE.fieldOfView]);
     // Validator refuses an undeclared actor directly against the inbox's applied scope.
     assert.equal(inbox.receive(frame(3, entity('b', [], [1, 0, 0], 'actor-mesh'))), 'error');
@@ -179,7 +179,7 @@ describe('atomic per-frame camera application and inbox delivery', () => {
       const requests = createModelDescriptionRequests(() => undefined, () => undefined, () => undefined,
         applied => inbox.describe(applied, []));
       requests.hold(shownA);
-      inbox.attach(value => applyModelFrame(liveActors, value, applyCamera, FRAME_SLOTS));
+      inbox.attach(value => applyValidated(liveActors, value, applyCamera));
       requests.declare({snapshot: () => ({actorsPending: true}),
         setDescription: () => new Promise<void>(resolve => {resolveLoad = resolve;})}, nextB);
       assert.equal(inbox.receive(frame(1, entity('b', [], [2, 0, 0]))), 'error');

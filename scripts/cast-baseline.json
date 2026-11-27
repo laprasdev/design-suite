@@ -98,7 +98,7 @@
     "tests/preview3dStageDescriptions.test.ts": {"casts":6,"nonNullAssertions":0},
     "tests/preview3dStageParts.test.ts": {"casts":1,"nonNullAssertions":0},
     "tests/preview3dSurfaces.test.ts": {"casts":6,"nonNullAssertions":0},
-    "tests/preview3dTextures.test.ts": {"casts":8,"nonNullAssertions":9},
+    "tests/preview3dTextures.test.ts": {"casts":4,"nonNullAssertions":9},
     "tests/progressWeights.test.ts": {"casts":0,"nonNullAssertions":2},
     "tests/renderedHooks.ts": {"casts":2,"nonNullAssertions":0},
     "tests/segmentedLocked.test.ts": {"casts":1,"nonNullAssertions":0},

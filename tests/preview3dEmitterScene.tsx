@@ -5,11 +5,13 @@ import {createModelFrameInbox, MODEL_STAGE_CLOCK, MODEL_STAGE_FRAMING, modelStag
 import {MODEL_EMITTER_CHANGE} from '../src/react/preview3d/emitterFrameModel.ts';
 import {createModelStage} from '../src/react/preview3d/stage.ts';
 import {THEME, declaration, describing, standingAt} from './preview3dActorFixture.ts';
-import {EMITTER_HOST_ID, EMITTER_SCENE_PROFILES, EMITTER_SCENE_ROUTED, EMITTER_SCENE_RUN,
+import {EMITTER_HOST_ID, EMITTER_SCENE_LIGHTING, EMITTER_SCENE_PROFILES, EMITTER_SCENE_ROUTED, EMITTER_SCENE_RUN,
   type EmitterDraws, type EmitterSceneDriver} from './preview3dEmitterSceneCases.ts';
+import {emitterChange} from './preview3dEmitterCases.ts';
 import {makePanelGlbBytes, PANEL_GLB} from './preview3dPanelGlb.ts';
 import {FRAME_PIXEL, readFramePixels} from './framePixels.ts';
 import {renderScene} from './renderScene.tsx';
+import {seededRandom} from '../src/seededRandom.ts';
 
 const nextFrame = () => new Promise<number>(resolve => requestAnimationFrame(resolve));
 // A pixel counts as changed when a channel moves more than this, past dithering.
@@ -66,7 +68,7 @@ async function bootEmitterScene(): Promise<EmitterSceneDriver> {
     placement: standingAt([0, 0, 0])}), emitters: EMITTER_SCENE_PROFILES};
   const description = modelStageDescription(describing({actors: {focus: PANEL_GLB.id, actors: [actor]},
     framing: {kind: MODEL_STAGE_FRAMING.pose, position: [0, 1.2, 4], target: [0, 1, 0], fieldOfView: 45},
-    orbit: false}));
+    orbit: false, lighting: EMITTER_SCENE_LIGHTING}));
   const inbox = createModelFrameInbox();
   inbox.describe(description, []);
   const controller = await new Promise<ModelStageController>((ready, reject) => createModelStage(host, description,
@@ -94,7 +96,7 @@ async function bootEmitterScene(): Promise<EmitterSceneDriver> {
   // state that declares them does.
   const {dark, sparse, wide} = EMITTER_SCENE_ROUTED, everyRouted = {...dark, ...sparse, ...wide};
   const changes = (change: string, routed: object) => Object.keys(EMITTER_SCENE_PROFILES)
-    .map(profile => ({profile, change, ...routed}));
+    .map(profile => ({...emitterChange(change, profile), ...routed}));
   const turns = [changes(MODEL_EMITTER_CHANGE.started, everyRouted), changes(MODEL_EMITTER_CHANGE.stopped, {})];
   const still: readonly unknown[] = [];
   const tickEntity = {entityId: PANEL_GLB.id, modelId: PANEL_GLB.id, pose: {position, rotationQuaternion: [0, 0, 0, 1],
@@ -111,13 +113,14 @@ async function bootEmitterScene(): Promise<EmitterSceneDriver> {
       }
     },
     async run(routed) {
-      const {step, frames, travel} = EMITTER_SCENE_RUN;
+      const {step, frames, travel, seed} = EMITTER_SCENE_RUN;
+      Math.random = seededRandom(seed);
       // The panel where the run ends, before any particle: what the emitters change is the only difference.
       position[0] = travel;
       const before = await drawn(0, []);
       position[0] = 0;
       let after = await drawn(step, Object.keys(EMITTER_SCENE_PROFILES).map(profile =>
-        ({profile, change: MODEL_EMITTER_CHANGE.started, ...routed})));
+        ({...emitterChange(MODEL_EMITTER_CHANGE.started, profile), ...routed})));
       for (let frame = 2; frame <= frames; frame++) {
         position[0] = travel * frame / frames;
         after = await drawn(frame * step, []);

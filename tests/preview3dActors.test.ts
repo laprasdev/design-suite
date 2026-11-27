@@ -30,7 +30,7 @@ describe('declared actors under one frame', () => {
   it('keeps an actor at its declared placement until a record names it, then draws the record', () => {
     const {a, b} = pair();
     assert.deepEqual(b.actor.snapshot(), {id: 'b', modelId: 'otter', driver: MODEL_STAGE_DRIVER.host,
-      animation: MODEL_REST_POSE, samples: [],
+      animation: MODEL_REST_POSE, samples: [], skipped: [],
       pose: {position: [5, 0, 0], rotationQuaternion: [0, 0, 0, 1], scale: [1, 1, 1]}});
     applyFrame([a.actor, b.actor], frame(0, entity('a')));
     assert.equal(b.actor.snapshot().driver, MODEL_STAGE_DRIVER.host);

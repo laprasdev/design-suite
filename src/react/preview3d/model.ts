@@ -6,6 +6,8 @@ import type {ModelStageDescription} from './descriptionModel.ts';
 import type {ModelRotation, ModelVector} from './placementModel.ts';
 import {MODEL_STAGE_DISPLAY, type ModelStageDisplay} from './displayModel.ts';
 import {MODEL_STAGE_FIELD_OF_VIEW, MODEL_STAGE_NEAR_PLANE} from './presentation.ts';
+// The Emitter frame record's fields, which ISM's synth-web checks against the engine's `EmitterChange`.
+export {MODEL_EMITTER_CHANGE_FIELDS} from './emitterFrameModel.ts';
 export {MODEL_RUNTIME_MATERIAL, modelRuntimeMaterialProfile} from './runtimeMaterialModel.ts';
 export type {ModelRuntimeMaterialProfile, ModelMaterialOutput, ModelRendererBinding} from './runtimeMaterialModel.ts';
 export {MODEL_ENVIRONMENT_GRID, MODEL_ENVIRONMENT_REFUSAL, modelEnvironment} from './environmentModel.ts';
@@ -92,6 +94,7 @@ export const MODEL_PREVIEW_TEXT = Object.freeze({
   loading: 'Loading model…', retry: 'Retry',
   unavailable: 'No model is available.', orbit: 'Drag to orbit. Scroll or pinch to zoom.',
   runtimeWaiting: 'Waiting for a runtime pose…', refused: 'Not applied', stopped: 'Preview stopped',
+  skipped: 'Effects skipped', effects: (count: number) => `${count} ${count === 1 ? 'effect' : 'effects'}`,
   runtimeReady: (name: string) => `${name} runtime pose ready`,
   ready: (name: string) => `${name} ready`, canvas: (name: string) => `${name} animation viewer`,
 });

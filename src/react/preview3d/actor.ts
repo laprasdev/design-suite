@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import type {BatchedRenderer} from 'three.quarks';
 import type {ModelStageDisplay, ModelStagePolicy, ModelStageTheme} from './model.ts';
 import {MODEL_STAGE_DISPLAY} from './displayModel.ts';
 import {MODEL_STAGE_ORIGIN, MODEL_STAGE_SIZE, type ModelStageOrigin, type ModelStageSize} from './sizeModel.ts';
@@ -17,10 +18,9 @@ import {MODEL_STAGE_UNCHANGED, type ModelStageCommit} from './commit.ts';
 import {ModelStageRefusal} from './refusal.ts';
 import {extendModelMaterials} from './shading.ts';
 import {createModelEmitters} from './emitters.ts';
-import {modelEmitterProfiles} from './emitterProfileModel.ts';
+import {modelEmitterDrawing} from './emitterRecordModel.ts';
 import {MODEL_NO_EMITTER_CHANGES} from './emitterFrameModel.ts';
 import {MODEL_NO_EMITTERS} from './emitterModel.ts';
-import type {ModelStageProgramValues} from './sharedValues.ts';
 
 // What every actor shares from its stage: the policy, the theme, the scene it joins, the lighting of its aids and the
 // changes its file's materials take.
@@ -35,8 +35,8 @@ export interface ModelActorContext {
   readonly surfaceModes: Pick<ModelSurfaceModes, 'inspecting'>;
   /** The stage's kind materials, its kinds and its compile, which the actor's surfaces draw with. */
   readonly surfaces: ModelActorSurfacesContext;
-  /** The stage's shared numbers, which its emitters age on. */
-  readonly shared: ModelStageProgramValues;
+  /** The stage's batched particle renderer, which steps and draws its emitters. */
+  readonly particles: BatchedRenderer;
 }
 /** How an actor's model sits in its placement: the stage's size rule and origin. */
 export interface ModelActorSizing {readonly size: ModelStageSize; readonly origin: ModelStageOrigin}
@@ -67,9 +67,8 @@ export function createModelActor(drawn: ModelDrawn, declaration: ModelStageActor
     acquired.push(context.lighting.attach([rig.root, ...points.map(({marker}) => marker)]));
     const playback = createModelPlayback(drawn.scene, drawn.clips, context.policy.clock, id);
     acquired.push(() => playback.dispose());
-    const profiles = modelEmitterProfiles(modelActorDrawsFile(declaration) ? declaration.emitters : MODEL_NO_EMITTERS,
-      `Actor ${id}.emitters`);
-    const emitters = createModelEmitters(id, profiles, placement, context);
+    const drawing = modelEmitterDrawing(modelActorDrawsFile(declaration) ? declaration.emitters : MODEL_NO_EMITTERS);
+    const emitters = createModelEmitters(id, drawing, placement, context);
     acquired.push(() => emitters.dispose());
     let current = declaration, driver: ModelStageDriver = MODEL_STAGE_DRIVER.host;
     // Built at its file's own size and origin; the description's size and origin apply with its other stage-wide parts.
@@ -102,7 +101,7 @@ export function createModelActor(drawn: ModelDrawn, declaration: ModelStageActor
     // A frame's prepared parts, written by each prepare into what the one commit made here reads, so a frame tick
     // makes no step of its own. Every prepare writes all four before its commit runs.
     const framed = {hidden: (): ReadonlySet<THREE.Object3D> => engineHidden, layers: MODEL_STAGE_UNCHANGED,
-      pose: declaration.placement, emitters: emitters.prepare(MODEL_NO_EMITTER_CHANGES, 0)};
+      pose: declaration.placement, emitters: emitters.prepare(MODEL_NO_EMITTER_CHANGES)};
     const commitFrame: ModelStageCommit = () => {
       engineHidden = framed.hidden();
       framed.layers();
@@ -128,7 +127,7 @@ export function createModelActor(drawn: ModelDrawn, declaration: ModelStageActor
       /** What the actor draws in its display: the model, its rig, or both. */
       bounds: () => rig.display === MODEL_STAGE_DISPLAY.model ? modelObjectBounds(placement) : rig.bounds(),
       // Everything that can refuse runs here; the returned commit only applies.
-      prepare(entity: ModelPreviewEntity, time: number): ModelStageCommit {
+      prepare(entity: ModelPreviewEntity): ModelStageCommit {
         if (context.surfaceModes.inspecting) throw new ModelStageRefusal(MODEL_ACTOR_TEXT.unlit);
         // The engine's values and visibility reach the renderers through the runtime profile when the asset states
         // one (the description refuses one beside a set; the route leaves in step 5e), else through the surfaces.
@@ -136,13 +135,13 @@ export function createModelActor(drawn: ModelDrawn, declaration: ModelStageActor
           surfaces.prepareValues(entity.materials);
         framed.layers = playback.prepareLayers(entity.animationLayers);
         framed.pose = entity.pose;
-        framed.emitters = emitters.prepare(entity.emitters, time);
+        framed.emitters = emitters.prepare(entity.emitters);
         return commitFrame;
       },
       snapshot(): ModelStageActorSnapshot {
         const {animation, samples} = playback.review();
         const modelId = modelActorDrawsFile(declaration) ? declaration.asset.id : null;
-        return Object.freeze({id, modelId, driver, animation, samples,
+        return Object.freeze({id, modelId, driver, animation, samples, skipped: drawing.skipped,
           pose: Object.freeze({position: placement.position.toArray(),
             rotationQuaternion: placement.quaternion.toArray(), scale: placement.scale.toArray()})});
       },

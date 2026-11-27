@@ -175,7 +175,7 @@ describe('in-memory image surface textures', () => {
       actorSurfaces.prepare({surfaces: {from: 'set', set: 'kit'}, sets: descA.surfaceSets})();
       const firstMat = file.body.material;
       assert.notEqual(firstMat, originalBody);
-      let firstTexDisposed = 0, homeSource: THREE.Source | undefined;
+      let firstTexDisposed = 0, homeSource: THREE.Source<unknown> | undefined;
       if (firstMat instanceof THREE.ShaderMaterial) {
         const tex: unknown = firstMat.uniforms.surfaceTextureMainTex?.value;
         if (tex instanceof THREE.Texture) {
