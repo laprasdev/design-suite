@@ -1,4 +1,6 @@
-import {MODEL_SURFACE_LIGHT, type ModelSurfaceAttribute, type ModelSurfaceKind} from './surfaceKindModel.ts';
+import {MODEL_SURFACE_LIGHT, MODEL_SURFACE_SCENE_READ, type ModelSurfaceAttribute, type ModelSurfaceKind,
+  type ModelSurfaceSceneRead} from './surfaceKindModel.ts';
+import {MODEL_SCENE_DEPTH_READ} from './sceneDepth.ts';
 import {MODEL_SURFACE_GLSL} from './surfaceGlsl.ts';
 import {modelShaderChunk} from './shading.ts';
 
@@ -16,7 +18,8 @@ import {modelShaderChunk} from './shading.ts';
 //   batch's transform, after its morphs, skinning and the kind's own displacement; and `kindWorldPosition`, the same
 //   point in world space, the stage's space (metres, Y up), through the object's world transform: three's own world
 //   position, so the same placed geometry reads the same point whatever transform places it. Fragment stage only.
-// A file's own attribute is read in both stages as `surfaceAttribute` and its name.
+// A file's own attribute is read in both stages as `surfaceAttribute` and its name. What a kind reads of the frame
+// (its `sceneReads`) is declared in the fragment stage alone: 'depth', the opaque scene's (sceneDepth.ts).
 const {normal, view, object, world, objectToWorld, attribute: fileVarying} = MODEL_SURFACE_GLSL;
 const GLSL_TYPE = Object.freeze({1: 'float', 2: 'vec2', 3: 'vec3', 4: 'vec4'});
 /** The GLSL of what a kind reads, by stage. */
@@ -89,6 +92,8 @@ const OWN: Readonly<Record<string, (light: ModelSurfaceKind['light']) => readonl
     projected: [`${object} = transformed;`,
       modelSurfaceObjectToWorld(`${world} = ( ${objectToWorld} * vec4( transformed, 1.0 ) ).xyz;`)]}],
 });
+const SCENE: Readonly<Record<ModelSurfaceSceneRead, Read>> = Object.freeze({
+  [MODEL_SURFACE_SCENE_READ.depth]: {fragmentDeclarations: [MODEL_SCENE_DEPTH_READ]}});
 /** Three's own attributes a kind may read, by name. */
 export const MODEL_SURFACE_OWN_ATTRIBUTES: readonly string[] = Object.freeze(Object.keys(OWN));
 
@@ -103,7 +108,8 @@ const LISTS = Object.freeze(['varyings', 'vertexDeclarations', 'begun', 'project
 /** What the kind's declared attributes add to its program; each attribute was checked to be one the stage hands. */
 export function modelSurfaceReads(kind: ModelSurfaceKind): ModelSurfaceReads {
   const reads = kind.attributes.flatMap((attribute: ModelSurfaceAttribute) =>
-    typeof attribute === 'string' ? OWN[attribute](kind.light) : [fileAttribute(attribute)]);
+    typeof attribute === 'string' ? OWN[attribute](kind.light) : [fileAttribute(attribute)])
+    .concat(kind.sceneReads.map(read => SCENE[read]));
   return Object.freeze({defines: Object.assign({}, ...reads.map(read => read.defines ?? {})),
     vertexColors: reads.some(read => read.vertexColors === true),
     ...Object.fromEntries(LISTS.map(list => [list, reads.flatMap(read => read[list] ?? [])]))} as ModelSurfaceReads);

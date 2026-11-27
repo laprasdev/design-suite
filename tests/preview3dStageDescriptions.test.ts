@@ -12,7 +12,7 @@ import {ModelStageRefusal} from '../src/react/preview3d/refusal.ts';
 import {MODEL_STAGE_THEME_LIGHTING} from '../src/react/preview3d/lightingModel.ts';
 import {createModelSceneGravity} from '../src/react/preview3d/sceneGravity.ts';
 import {THEME, declaration, describing, makeActor, stageLook, standingAt} from './preview3dActorFixture.ts';
-import {kindFile, MASK, PULSE, PULSE_PROGRAM, record, RENDERERS} from './preview3dKindFixture.ts';
+import {frameReaders, kindFile, MASK, PULSE, PULSE_PROGRAM, record, RENDERERS} from './preview3dKindFixture.ts';
 import {TERRAIN_GRID, TERRAIN_ID, terrainActor} from './preview3dTerrainFixture.ts';
 import {MODEL_TERRAIN_SPLIT, modelTerrainChunks, modelStageTerrain} from '../src/react/preview3d/terrainModel.ts';
 
@@ -28,7 +28,7 @@ function stageWith(lightingLoad: () => readonly Promise<void>[] = () => [], refu
     policy: modelStagePolicy({reviewKey: 'review', clock: 'local', floor: false, grid: false, kinds: [PULSE as never]}),
     theme: THEME,
     stage: {scene, fog: createModelFog(scene), shared: createModelStageSharedValues(), particles: new BatchedRenderer(),
-      gravity: createModelSceneGravity(),
+      gravity: createModelSceneGravity(), sceneReaders: frameReaders(),
       compile: () => undefined,
       lighting: {load: lightingLoad, attach: () => () => undefined, prepare: value => {
         if (refused(value.time)) throw new ModelStageRefusal(`Time ${value.time}: refused`);

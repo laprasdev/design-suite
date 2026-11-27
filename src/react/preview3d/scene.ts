@@ -8,7 +8,7 @@ import {createModelLighting} from './lighting.ts';
 import {modelStageBuiltInTimes} from './builtInTimes.ts';
 import {createModelFog} from './fog.ts';
 import {createModelParticleRenderer} from './particleRenderer.ts';
-import {createModelDraw, type ModelDrawModes} from './draw.ts';
+import {createModelDraw, type ModelDrawContext} from './draw.ts';
 import {loadModelGlowPasses} from './glow.ts';
 import {createModelStageSharedValues} from './sharedValues.ts';
 import {createModelSceneGravity} from './sceneGravity.ts';
@@ -46,11 +46,11 @@ function drawnOrReleased<T>(renderer: THREE.WebGLRenderer, create: () => T): T {
     throw error;
   }
 }
-/** The stage's three.js side: its renderer and canvas, scene, camera and controls, lighting, fog and draw. `modes` is
- * what the Surface mode in force asks of the frame, which the draw reads each frame (draw.ts); `onError` hears a
- * failure outside any call, a resize the frame's budget refuses. */
+/** The stage's three.js side: its renderer and canvas, scene, camera and controls, lighting, fog and draw, sized to its
+ * host at creation and at each `resize`. `modes` is what the Surface mode in force asks of the frame, which the draw
+ * reads each frame (draw.ts). */
 export function createModelScene(host: HTMLElement, theme: ModelStageTheme, policy: ModelStagePolicy,
-  modes: ModelDrawModes, onError: (error: unknown) => void) {
+  modes: ModelDrawContext['modes']) {
   // The theme is read before anything is built, so a theme the stage refuses leaves no canvas or context behind.
   const builtIn = modelStageBuiltInTimes(theme.colors);
   const renderer = new THREE.WebGLRenderer({antialias: true, preserveDrawingBuffer: true});
@@ -59,8 +59,9 @@ export function createModelScene(host: HTMLElement, theme: ModelStageTheme, poli
   const scene = new THREE.Scene();
   // The far plane is the look's, set as the lighting applies its first time.
   const camera = new THREE.PerspectiveCamera(settings.fieldOfView, 1, settings.nearPlane);
+  const shared = createModelStageSharedValues();
   const frame = drawnOrReleased(renderer, () => createModelDraw(renderer, scene, camera,
-    {loadPasses: loadModelGlowPasses, modes}));
+    {loadPasses: loadModelGlowPasses, modes, shared}));
   host.append(renderer.domElement);
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.minDistance = settings.cameraMinimum;
@@ -68,7 +69,6 @@ export function createModelScene(host: HTMLElement, theme: ModelStageTheme, poli
   controls.maxPolarAngle = Math.PI / 2;
   const framing = createModelFraming(camera, controls);
   const fog = createModelFog(scene);
-  const shared = createModelStageSharedValues();
   const lighting = createModelLighting(builtIn, {fog, framing, output: frame, shared});
   const aids = createModelStageAids(theme, policy, lighting);
   markModelStageAids(aids);
@@ -87,23 +87,17 @@ export function createModelScene(host: HTMLElement, theme: ModelStageTheme, poli
     camera.updateProjectionMatrix();
     framing.requestFit();
   };
-  // A size the frame's budget refuses after creation reaches `onError`, as a frame that throws does; at creation the
-  // refusal goes on, with what was built released.
-  const observer = new ResizeObserver(() => {
-    try {resize();} catch (error) {onError(error);}
-  });
   const dispose = () => {
-    observer.disconnect();
     controls.dispose();
     disposeModelObject(scene);
     frame.dispose();
     renderer.dispose();
     renderer.domElement.remove();
   };
-  observer.observe(host);
+  // A size the frame's budget refuses at creation goes on, with what was built released.
   try {resize();} catch (error) {dispose(); throw error;}
   return {
-    renderer, scene, camera, controls, lighting, fog, shared, particles, gravity,
+    renderer, scene, camera, controls, lighting, fog, shared, particles, gravity, sceneReaders: frame.sceneReaders,
     // The framing the stage drives; the far plane is the look's, set through the lighting alone.
     requestFit: framing.requestFit, poseCoordinates: framing.poseCoordinates, frame: framing.frame, fit: framing.fit,
     cameraSnapshot: framing.cameraSnapshot,
@@ -112,6 +106,9 @@ export function createModelScene(host: HTMLElement, theme: ModelStageTheme, poli
     /** The frame's one draw, straight or through the look's glow; and the triangles its scene pass drew. */
     draw: frame.draw,
     triangles: () => frame.triangles,
+    /** Sizes the canvas, the frame and the camera to the host as it is now; a size past the frame's budget is refused
+     * by name, and the canvas keeps the size it had. */
+    resize,
     dispose,
   };
 }

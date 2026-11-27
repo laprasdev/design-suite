@@ -22,8 +22,9 @@ const square = new THREE.Mesh(new THREE.PlaneGeometry(2, 2));
 scene.add(square);
 const program = new TextEncoder().encode(FLAT_NORMAL_PROGRAM).buffer;
 const read = async () => program;
-const {shared, changes} = kindStage(scene);
-const materials = createModelSurfaceMaterials({kinds: modelSurfaceKinds([FLAT_NORMAL_KIND]), shared, changes, read,
+const {shared, sceneReaders, changes} = kindStage(scene);
+const materials = createModelSurfaceMaterials({kinds: modelSurfaceKinds([FLAT_NORMAL_KIND]), shared, sceneReaders,
+  changes, read,
   textures: createModelTextures(read, decodeModelImage)});
 const records = new Map(Object.values(NORMAL_DECODE).map(decode => [decode,
   modelSurfaceRecord(flatNormalRecord(decode), `decode ${decode}`)]));
@@ -34,5 +35,5 @@ window.drawFlatNormal = async decode => {
   const record = records.get(decode);
   if (!record) throw new Error(`No record decodes ${decode}.`);
   square.material = materials.material(record).material;
-  return view.readFrame(scene, camera);
+  return view.readFrame(() => view.renderer.render(scene, camera));
 };

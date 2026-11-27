@@ -26,8 +26,9 @@ export const MODEL_STAGE_TEXT = Object.freeze({
 
 // The stage holds what one description declares and draws one engine frame over it. Creation applies the first
 // description through the same function every later one uses. A failure nothing could refuse ahead (a frame that
-// throws, a resize the frame's budget refuses, or the first description failing) reaches `onError`; the stage then
-// draws nothing more.
+// throws, a resize the frame's budget refuses, or the first description failing) takes the loop's one failure route
+// (frameLoop.ts): the loop stops and the host's size is no longer followed, so the stage draws and resizes nothing
+// more, and `onError` hears it once.
 export function createModelStage(
   host: HTMLElement, description: ModelStageDescription, theme: ModelStageTheme,
   onReady: (controller: ModelStageController) => void, onError: (error: Error) => void,
@@ -38,8 +39,12 @@ export function createModelStage(
   for (const kind of policy.kinds.values()) modelSurfaceDrawable(kind);
   const modes = createModelSurfaceModes();
   let disposed = false;
-  const fail = (error: unknown) => {if (!disposed) onError(asError(error));};
-  const stage = createModelScene(host, theme, policy, modes, fail);
+  const stage = createModelScene(host, theme, policy, modes);
+  // The host's size, followed until the stage fails or is disposed. Its callback runs only once it observes, below,
+  // after the loop it fails through is made.
+  const observer = new ResizeObserver(() => {
+    try {stage.resize();} catch (error) {loop.fail(error);}
+  });
   const descriptions = createModelStageDescriptions({policy, theme, stage, modes, load: loadModelStageAsset,
     read: readModelFile, decode: decodeModelImage});
   const {actors} = descriptions;
@@ -131,11 +136,15 @@ export function createModelStage(
     if (stage.controls.enabled) stage.controls.update();
     stage.draw();
   };
-  const loop = createModelFrameLoop(animate, fail, MODEL_PAGE_FRAMES);
+  const loop = createModelFrameLoop(animate, error => {
+    observer.disconnect();
+    if (!disposed) onError(asError(error));
+  }, MODEL_PAGE_FRAMES);
   const dispose = () => {
     if (disposed) return;
     disposed = true;
     loop.stop();
+    observer.disconnect();
     descriptions.dispose();
     stage.dispose();
     if (Reflect.get(host, options.reviewKey) === api) {
@@ -149,7 +158,8 @@ export function createModelStage(
     if (disposed) return;
     Object.defineProperty(host, options.reviewKey, {value: api, configurable: true});
     onReady(api);
-  }, fail);
+  }, loop.fail);
+  observer.observe(host);
   loop.start();
   return dispose;
 }

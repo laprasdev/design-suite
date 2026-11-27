@@ -81,14 +81,8 @@ const COVERAGE_FUNCTION = `float ${coverageOf}( float alpha, float threshold ) {
   return threshold <= 0.0 ? 1.0 : sharpened;
 }`;
 const glslFloat = (value: number) => Number.isInteger(value) ? value.toFixed(1) : String(value);
-function sharpening({coverage}: ModelSurfaceKind) {
-  if (typeof coverage === 'string' || !('cutout' in coverage)) return {declarations: [], after: []};
-  const {cutout} = coverage;
-  const threshold = typeof cutout === 'number' ? glslFloat(cutout) : `${MODEL_SURFACE_GLSL.accessor}${cutout}()`;
-  if ('blend' in coverage) return {declarations: [], after: [`if ( diffuseColor.a < ${threshold} ) discard;`]};
-  return {declarations: [COVERAGE_FUNCTION],
-    after: [`diffuseColor.a = ${coverageOf}( diffuseColor.a, ${threshold} );`]};
-}
+const threshold = (cutout: string | number) => typeof cutout === 'number' ? glslFloat(cutout) :
+  `${MODEL_SURFACE_GLSL.accessor}${cutout}()`;
 const SIDES = Object.freeze({[MODEL_SURFACE_SIDE.front]: THREE.FrontSide, [MODEL_SURFACE_SIDE.back]: THREE.BackSide,
   [MODEL_SURFACE_SIDE.double]: THREE.DoubleSide});
 // Coverage as three's render state: a cut-out writes its alpha as coverage across the samples; a blended surface is
@@ -98,12 +92,19 @@ const COVERAGE = Object.freeze({[MODEL_SURFACE_COVERAGE.opaque]: {alphaToCoverag
   depthWrite: true}, [MODEL_SURFACE_COVERAGE.cutout]: {alphaToCoverage: true, transparent: false, depthWrite: true}});
 const BLENDS = Object.freeze({[MODEL_SURFACE_BLEND.alpha]: THREE.SrcAlphaFactor,
   [MODEL_SURFACE_BLEND.premultiply]: THREE.OneFactor});
-function renderState(coverage: ModelSurfaceCoverage) {
-  if (typeof coverage === 'string') return COVERAGE[coverage];
-  if (!('blend' in coverage)) return COVERAGE[MODEL_SURFACE_COVERAGE.cutout];
-  return {alphaToCoverage: false, transparent: true, depthWrite: false, blending: THREE.CustomBlending,
+/** A kind's coverage, read once: what it adds to the kind's program (its declarations, and what follows the surface)
+ * and the render state three draws it with. */
+function coverageDrawing(coverage: ModelSurfaceCoverage) {
+  if (typeof coverage === 'string') return {declarations: [], after: [], state: COVERAGE[coverage]};
+  if (!('blend' in coverage)) {
+    return {declarations: [COVERAGE_FUNCTION], state: COVERAGE[MODEL_SURFACE_COVERAGE.cutout],
+      after: [`diffuseColor.a = ${coverageOf}( diffuseColor.a, ${threshold(coverage.cutout)} );`]};
+  }
+  const state = {alphaToCoverage: false, transparent: true, depthWrite: false, blending: THREE.CustomBlending,
     blendSrc: BLENDS[coverage.blend], blendDst: THREE.OneMinusSrcAlphaFactor, blendSrcAlpha: THREE.OneFactor,
     blendDstAlpha: THREE.OneMinusSrcAlphaFactor};
+  if (!('cutout' in coverage)) return {declarations: [], after: [], state};
+  return {declarations: [], after: [`if ( diffuseColor.a < ${threshold(coverage.cutout)} ) discard;`], state};
 }
 export const MODEL_SURFACE_PROGRAM_TEXT = Object.freeze({
   attribute: (kind: string, name: string) => `Surface kind ${kind}: attribute ${name} is not one the web stage hands ` +
@@ -130,12 +131,12 @@ export function createModelSurfaceProgram(kind: ModelSurfaceKind, program: strin
     modelShaderUniforms(Object.fromEntries(textures.map(({name}) => [`${MODEL_SURFACE_GLSL.texture}${name}`,
       'sampler2D']))), ...reads.varyings, ...slots.map(modelSurfaceAccessor)].join('\n');
   const replace = modelShaderReplace(`surface kind ${kind.id}`);
-  const sharpen = sharpening(kind), terms = writesTerms(program) ? base.terms : NO_TERMS;
+  const covered = coverageDrawing(kind.coverage), terms = writesTerms(program) ? base.terms : NO_TERMS;
   const fragmentShader = base.surface(replace(base.shader.fragmentShader, CHUNK.declarations,
-    [modelShaderChunk(CHUNK.declarations), both, ...reads.fragmentDeclarations, ...sharpen.declarations,
+    [modelShaderChunk(CHUNK.declarations), both, ...reads.fragmentDeclarations, ...covered.declarations,
       terms.declarations, program].join('\n')), replace,
   {before: [...reads.beforeSurface, terms.before].join('\n'),
-    after: [terms.after, ...reads.afterSurface, ...sharpen.after].join('\n'), lit: terms.lit});
+    after: [terms.after, ...reads.afterSurface, ...covered.after].join('\n'), lit: terms.lit});
   // The vertex stage is three's own unless the kind reads what three's vertex stage does not hand on (declared, and
   // written after the vertex begins or is projected) or moves vertices (its program declared there too, and its
   // displacement applied before the projection).
@@ -155,7 +156,7 @@ export function createModelSurfaceProgram(kind: ModelSurfaceKind, program: strin
   return {slots, textures, fragmentShader, vertexShader, make(uniforms: Record<string, THREE.IUniform>) {
     return new THREE.ShaderMaterial({vertexShader, fragmentShader, uniforms,
       defines: {...base.defines, ...reads.defines}, lights: base.lights, vertexColors: reads.vertexColors,
-      fog: kind.fog, side: SIDES[kind.side], ...renderState(kind.coverage)});
+      fog: kind.fog, side: SIDES[kind.side], ...covered.state});
   }, baseUniforms: () => THREE.UniformsUtils.clone(base.shader.uniforms)};
 }
 export type ModelSurfaceProgram = ReturnType<typeof createModelSurfaceProgram>;

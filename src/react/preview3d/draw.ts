@@ -4,7 +4,10 @@ import type {ModelStageCommit} from './commit.ts';
 import {ModelStageRefusal} from './refusal.ts';
 import {MODEL_STAGE_LAYERS} from './layers.ts';
 import {createModelGlow, type ModelGlow, type ModelGlowPasses} from './glow.ts';
-import {checkModelLinearFrameBudget, createModelLinearFrame} from './linearFrame.ts';
+import {createModelLinearFrame} from './linearFrame.ts';
+import type {ModelSurfaceModes} from './materials.ts';
+import {createModelSceneDepthPass} from './sceneDepth.ts';
+import type {ModelStageSharedValues} from './sharedValues.ts';
 
 const CURVES: Readonly<Record<ModelStageCurve, THREE.ToneMapping>> = Object.freeze({
   [MODEL_STAGE_CURVE.acesFilmic]: THREE.ACESFilmicToneMapping,
@@ -23,35 +26,31 @@ interface Compiled {
     readonly programLog: string; readonly vertexShader: {readonly log: string};
     readonly fragmentShader: {readonly log: string}}};
 }
-/** What the Surface mode in force asks of the frame (materials.ts). */
-export interface ModelDrawModes {
-  /** A mode other than Lit shows a term of each surface, as stated: the frame is drawn without the look's glow. */
-  readonly inspecting: boolean;
-  /** The mode shows its term through the look's tone curve: every mode but Color, which shows the base colour. */
-  readonly curved: boolean;
-}
 /** What the frame's draw is given beside three's renderer, scene and camera. */
 export interface ModelDrawContext {
   /** Fetches the glow's pass (`loadModelGlowPasses`); asked once, again only after a fetch that failed. */
   readonly loadPasses: () => Promise<ModelGlowPasses>;
-  readonly modes: ModelDrawModes;
+  /** What the Surface mode in force asks of the frame: no glow while it inspects, no curve unless it is curved. */
+  readonly modes: Pick<ModelSurfaceModes, 'inspecting' | 'curved'>;
+  /** The stage's shared values: the scene depth's uniforms, which the depth pass writes. */
+  readonly shared: Pick<ModelStageSharedValues, 'sceneDepth'>;
 }
 
 /**
- * The frame's one draw. The scene's look is drawn once, in linear light, into a multisampled half-float target,
- * resolved once, so every blended surface mixes with what is behind it in linear light, as URP's does. With glow (and
- * no Surface mode inspecting) three's bloom pass reads it and composites its bloom into its own target. One output pass
- * writes the canvas, with the bloom added where it is drawn, through the look's tone curve (unless the mode shows its
- * term untoned) and the display encoding, and the target's depth; the stage's aids are drawn last, untoned, behind the
- * scene where it is in front of them. Nothing draws into the target after its one resolve (so the headset browser,
- * which discards a multisampled target's colour after a resolve, draws it whole). No material changes program between
- * frames.
+ * The frame's one draw. The scene's look and the stage's aids are drawn in one pass, in linear light, into a
+ * multisampled half-float target, resolved once, so every blended surface mixes with what is behind it, aids included,
+ * in linear light, as URP's does. With glow (and no Surface mode inspecting) three's bloom pass reads it and composites
+ * its bloom into its own target. One output pass writes the canvas, with the bloom added where it is drawn, through the
+ * look's tone curve (unless the mode shows its term untoned) and the display encoding. Nothing draws into the target
+ * after its one resolve (so the headset browser, which discards a multisampled target's colour after a resolve, draws
+ * it whole). No material changes program between frames.
  */
-export function createModelDraw(renderer: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.Camera,
-  context: ModelDrawContext) {
+export function createModelDraw(renderer: THREE.WebGLRenderer, scene: THREE.Scene,
+  camera: THREE.PerspectiveCamera | THREE.OrthographicCamera, context: ModelDrawContext) {
   if (!HALF_FLOAT.some(name => renderer.extensions.has(name))) throw new ModelStageRefusal(MODEL_DRAW_TEXT.halfFloat);
   const size = new THREE.Vector2();
   const frame = createModelLinearFrame(renderer.getDrawingBufferSize(size));
+  const drawDepth = createModelSceneDepthPass(renderer, scene, camera, context.shared.sceneDepth);
   let passes: ModelGlowPasses | undefined, loading: Promise<void> | undefined;
   let glow: ModelGlow | undefined, curve = THREE.NoToneMapping as THREE.ToneMapping;
   let triangles = 0;
@@ -59,25 +58,14 @@ export function createModelDraw(renderer: THREE.WebGLRenderer, scene: THREE.Scen
     glow?.dispose();
     glow = undefined;
   };
-  const pass = (mask: number, into: THREE.WebGLRenderTarget | null) => {
-    camera.layers.mask = mask;
-    renderer.setRenderTarget(into);
-    renderer.render(scene, camera);
-    triangles += renderer.info.render.triangles;
-  };
-  // three applies no curve inside a target: the output pass is drawn under the look's curve (or none, as the mode
-  // asks), and the aids after it uncurved.
-  const output = (bloom: ModelGlow | undefined) => {
-    bloom?.bloom(renderer, frame.target);
-    frame.bloom(bloom ? bloom.texture : null);
+  // three applies no curve inside a target: the output pass is drawn under the look's curve, or none, as the mode asks.
+  const output = (drawn: ModelGlow | undefined) => {
+    drawn?.render(renderer, frame.target);
+    frame.setGlow(drawn ? drawn.texture : null);
     renderer.setRenderTarget(null);
     renderer.toneMapping = context.modes.curved ? curve : THREE.NoToneMapping;
     frame.output(renderer);
     renderer.toneMapping = THREE.NoToneMapping;
-  };
-  const bloom = (value: ModelStageGlow, loaded: ModelGlowPasses) => {
-    glow ??= createModelGlow(loaded, renderer.getDrawingBufferSize(size));
-    glow.set(value);
   };
   // The curve and exposure the output pass draws under. Under no curve three reads no exposure (its tonemapping chunk
   // is compiled only under a curve).
@@ -86,6 +74,8 @@ export function createModelDraw(renderer: THREE.WebGLRenderer, scene: THREE.Scen
     if (toneCurve !== null) renderer.toneMappingExposure = toneCurve.exposure;
   };
   return {
+    /** What the kind materials that read the frame hold (linearFrame.ts). */
+    sceneReaders: frame.sceneReaders,
     /** What drawing this glow needs loaded first: the glow's passes, fetched once, when a look first brings glow;
      * `where` names the glow in a refusal. */
     load(value: ModelStageGlow | null, where: string): readonly Promise<void>[] {
@@ -103,17 +93,20 @@ export function createModelDraw(renderer: THREE.WebGLRenderer, scene: THREE.Scen
       if (value === null) return () => {apply(look); release();};
       const loaded = passes;
       if (!loaded) throw new Error(MODEL_DRAW_TEXT.unloaded);
-      return () => {apply(look); bloom(value, loaded);};
+      return () => {
+        apply(look);
+        glow ??= createModelGlow(loaded, renderer.getDrawingBufferSize(size));
+        glow.set(value);
+      };
     },
-    /** The canvas is to be this many CSS pixels: refused whole, before the canvas changes, when its drawing buffer
-     * (three's: the size times the pixel ratio, rounded down) would pass the frame's budget; otherwise the canvas, the
-     * frame's target and the glow's passes follow it. */
+    /** The canvas is to be this many CSS pixels. Its drawing buffer is three's: the size times the pixel ratio,
+     * rounded down (WebGLRenderer.js 632). The frame takes it first, so a size past its budget is refused before the
+     * canvas changes; then the canvas and the glow's passes follow it. */
     resize(width: number, height: number) {
       const ratio = renderer.getPixelRatio();
-      checkModelLinearFrameBudget(Math.floor(width * ratio), Math.floor(height * ratio));
-      renderer.setSize(width, height, false);
-      renderer.getDrawingBufferSize(size);
+      size.set(Math.floor(width * ratio), Math.floor(height * ratio));
       frame.resize(size.x, size.y);
+      renderer.setSize(width, height, false);
       glow?.resize(size.x, size.y);
     },
     /**
@@ -145,15 +138,15 @@ export function createModelDraw(renderer: THREE.WebGLRenderer, scene: THREE.Scen
       if (failure !== undefined) throw new Error(failure);
     },
     draw() {
-      triangles = 0;
-      pass(MODEL_STAGE_LAYERS.scene, frame.target);
+      camera.layers.mask = MODEL_STAGE_LAYERS.both;
+      if (frame.depth) drawDepth(frame.depth);
+      renderer.setRenderTarget(frame.target);
+      renderer.render(scene, camera);
+      triangles = renderer.info.render.triangles;
       output(context.modes.inspecting ? undefined : glow);
-      const clears = renderer.autoClear;
-      renderer.autoClear = false;
-      pass(MODEL_STAGE_LAYERS.aids, null);
-      renderer.autoClear = clears;
     },
-    /** The triangles the last frame drew of the scene and the aids; the output pass and the glow's are not counted. */
+    /** The triangles the last frame's one pass drew of the scene and the aids; the output pass and the glow's are not
+     * counted. */
     get triangles() {return triangles;},
     dispose() {
       release();

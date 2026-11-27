@@ -44,7 +44,7 @@ async function bootFrameCameraScene(programSha256: string): Promise<void> {
     id: PAINTED_KIND_ID,
     parameters: {MainTex: {type: 'texture', space: 'srgb'}},
     inert: {},
-    attributes: ['uv'],
+    sceneReads: [], attributes: ['uv'],
     light: 'standard',
     coverage: 'opaque',
     side: 'double',

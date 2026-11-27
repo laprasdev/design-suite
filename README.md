@@ -387,6 +387,7 @@ export const TOON_SURFACE: ModelSurfaceKind = {
   },
   inert: {_Rim: 0},                   // a declared float drawn only at this value; another is refused by name
   attributes: ['uv', 'normal'],       // three's 'uv', 'color', 'normal', 'position'; a file's own is {name, size}
+  sceneReads: [],                     // or ['depth']: the opaque scene's depth behind the kind
   light: 'unlit',                     // 'standard' (three's lit model) or 'unlit' (the kind lights itself)
   coverage: 'opaque',                 // 'cutout', {cutout: '_Cutoff' or 0.5}, {blend: 'alpha'}, both together
   side: 'double', fog: true,
@@ -496,6 +497,13 @@ vec3 kindDisplacement( vec3 world ) { ... }
   change. Also `kindWorldPosition`, the same point in world space (metres, Y up) through the node's, instance's and
   batch's transforms: three's own world position, the same for the same placed geometry whatever transform places it.
   A source shader that samples in world space (triplanar from its world position) reads this.
+- With `sceneReads: ['depth']` (fragment stage only): `kindSceneDepth()`, the eye depth in metres of the opaque scene
+  at the fragment, as URP's camera depth texture gives a Scene Depth node in Eye mode, and `kindFragmentDepth()`, the
+  fragment's own eye depth (a perspective camera's Screen Position w). While a material of such a kind is built, the
+  frame holds a single-sampled depth target, as URP's camera depth texture is, and first draws its scene layer once
+  more into it, colour masked: opaque and cut-out surfaces land in it, blended ones (which write no depth), the backdrop
+  and the stage's aids never. The target costs 5 bytes more per drawing-buffer pixel, held against the frame's budget
+  from the first such material's build to the last one's release; a build the budget cannot hold is refused by name.
 - The look's light, for any kind: `stageKeyDirection` (unit, toward the key, world space), `stageKeyColor` (linear
   colour times strength), `stageAmbientSky` and `stageAmbientGround` (linear colours times strength; the sky is +Y) and
   `stageShadow` (the time's shadow colour, linear). These are the values three hands its own lit programs. Three's
@@ -506,10 +514,12 @@ vec3 kindDisplacement( vec3 world ) { ... }
 
 Names a kind must not declare: anything starting `surfaceParameter`, `surfaceValues`, `surfaceTexture`,
 `surfaceAttribute`, `surfaceTiling`, `surfaceSample` or `stageNumbers`; `stageDecorativeSeconds`, `stageNight`,
-`stageShadow`, `stageKeyDirection`, `stageKeyColor`, `stageAmbientSky`, `stageAmbientGround`; `kindSurface` and
+`stageShadow`, `stageKeyDirection`, `stageKeyColor`, `stageAmbientSky`, `stageAmbientGround`, `stageSceneDepth`,
+`stageSceneDepthView`; `kindSurface` and
 `kindDisplacement` beyond its one definition of each; `kindEmissive`, `kindWorld`, `kindObjectToWorld`, `kindNormal`,
 `kindViewDirection`, `kindObjectPosition`, `kindWorldPosition`, `kindViewNormal`, `kindNormalFromTangentSpace`,
-`kindOcclusion`, `kindRoughness`, `kindMetalness`, `kindCoverage`, `KIND_VERTEX_STAGE`; a file attribute's own name;
+`kindOcclusion`, `kindRoughness`, `kindMetalness`, `kindCoverage`, `kindSceneDepth`, `kindFragmentDepth`,
+`kindEyeDepth`, `KIND_VERTEX_STAGE`; a file attribute's own name;
 and three's names.
 
 The stage does not yet state an engine-to-stage space convention: `kindWorldPosition` is the stage's world space, a
@@ -519,7 +529,8 @@ source engine's world space only through the converter's axis change.
 
 | Where | Refused |
 |---|---|
-| Declaration | A missing or stray field; an unknown option; a parameter name that is not a GLSL name; an `inert` entry, `reach` or threshold that names no declared float; a threshold outside [0, 1]; an include listed twice; a bad hash. |
+| Declaration | A missing or stray field; an unknown option or scene read, or one listed twice; a parameter name that is not a GLSL name; an `inert` entry, `reach` or threshold that names no declared float; a threshold outside [0, 1]; an include listed twice; a bad hash. |
+| Preparing a description | A record of a kind that reads the scene's depth, when the frame's budget cannot hold its depth target at the drawing buffer's size. |
 | Stage creation | A three attribute other than `'uv'`, `'color'`, `'normal'` and `'position'` (a file's own states `{name, size}`). |
 | Record, before anything loads | An unknown kind; a parameter missing or stray; a value of the wrong type or size; a non-HDR colour outside [0, 1]; an inert value not met; a reach below 0; a texture format the stage does not decode or a non-static image source. |
 | Actor | A set the description lacks; a surface set together with `asset.runtimeMaterials`. |
