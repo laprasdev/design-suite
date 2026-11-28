@@ -105,10 +105,13 @@ describe('an engine frame\'s emitters', () => {
       'Frame entity a emitters[0].profile must be a non-empty string.');
     refused(() => applyFrame([actor], frame(0, changing(emitterChange(MODEL_EMITTER_CHANGE.burst)))),
       MODEL_EMITTER_REFUSAL.burst('a', EMITTER_ID));
-    for (const field of ['burst', 'origin', 'position']) {
+    for (const field of ['origin', 'position']) {
       refused(() => applyFrame([actor], frame(0, changing({...emitterChange(MODEL_EMITTER_CHANGE.started),
         [field]: 1}))), MODEL_EMITTER_REFUSAL.stubbed('a', field));
     }
+    // A burst is a value of `change`, never a field the engine's `EmitterChange` names.
+    refused(() => applyFrame([actor], frame(0, changing({...emitterChange(MODEL_EMITTER_CHANGE.started),
+      [MODEL_EMITTER_CHANGE.burst]: 1}))), /^Frame entity a emitters\[0\] does not state burst;/);
     refused(() => applyFrame([actor], frame(0, changing(...starting(EMITTER_ID), {profile: EMITTER_ID}))),
       /^Frame entity a emitters\[1\] omits change; it states profile, change\.$/);
     refused(() => applyFrame([actor], frame(0, changing({...emitterChange(MODEL_EMITTER_CHANGE.started), at: 1}))),
