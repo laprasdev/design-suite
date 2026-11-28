@@ -4,24 +4,29 @@ import {modelFileDrawn} from '../src/react/preview3d/drawn.ts';
 import {MODEL_NO_EMITTERS} from '../src/react/preview3d/emitterModel.ts';
 import * as THREE from 'three';
 import {createModelFog} from '../src/react/preview3d/fog.ts';
+import {createModelParticleRenderer} from '../src/react/preview3d/particleRenderer.ts';
 import {createModelSurfaceModes, modelStageChanges} from '../src/react/preview3d/materials.ts';
 import type {GLTF} from 'three/addons/loaders/GLTFLoader.js';
 import {createModelActor, type ModelActor, type ModelActorContext} from '../src/react/preview3d/actor.ts';
 import {applyModelFrame, createModelFrameSlots} from '../src/react/preview3d/actorFrame.ts';
+import {createModelGroundPressers} from '../src/react/preview3d/groundPressers.ts';
 import {createModelFraming} from '../src/react/preview3d/camera.ts';
 import type {ModelLookLayers} from '../src/react/preview3d/lighting.ts';
 import {CAMERA_COORDS} from '../src/react/preview3d/presentation.ts';
-import {modelFrameScope, validateModelFrame} from '../src/react/preview3d/frameModel.ts';
+import {modelFrameScope, validateModelFrame, type ModelValidatedFrame} from '../src/react/preview3d/frameModel.ts';
 import {createModelSurfaceMaterials} from '../src/react/preview3d/surfaceMaterials.ts';
 import {createModelStageSharedValues} from '../src/react/preview3d/sharedValues.ts';
+import {frameReaders} from './preview3dKindFixture.ts';
 import {MODEL_ACTOR_ANIMATION, MODEL_ANIMATION_LAYER, MODEL_STAGE, MODEL_STAGE_CURVE, MODEL_STAGE_DISPLAY,
   MODEL_STAGE_FRAMING, MODEL_STAGE_ORIGIN, MODEL_STAGE_SIZE, MODEL_STAGE_SURFACE_MODE, MODEL_STAGE_THEME_LIGHTING,
   ModelStageRefusal, modelStagePolicy, type ModelFileActor, type ModelStageActor, type ModelStageClock,
   type ModelStageLook, type ModelStageTheme}
   from '../src/react/preview3d/model.ts';
 
+/** The ground pressers each frame applied (`applyModelFrame`) writes. */
+export const FRAME_PRESSERS = createModelGroundPressers();
 /** What the fixture's emitters would run, zeroed by each frame applied (`applyModelFrame`). */
-export const FRAME_SLOTS = createModelFrameSlots();
+export const FRAME_SLOTS = createModelFrameSlots(FRAME_PRESSERS);
 export const BONE = 'tip';
 export const BIND: readonly [number, number, number] = [2, 3, 4];
 export const clipValue = (index: number, time: number) => (index + 1) * 10 + time;
@@ -55,14 +60,15 @@ export const THEME: ModelStageTheme = Object.freeze({colors: Object.freeze({stag
 
 export function actorContext(clock: ModelStageClock = 'external') {
   const scene = new THREE.Scene(), modes = createModelSurfaceModes(), shared = createModelStageSharedValues();
+  const fog = createModelFog(scene);
   const context: ModelActorContext = {
     policy: modelStagePolicy({reviewKey: 'review', clock, floor: false, grid: false, kinds: []}), scene,
-    theme: THEME, shared,
+    theme: THEME, particles: createModelParticleRenderer(fog.change),
     lighting: {attach: () => () => undefined},
-    changes: modelStageChanges(createModelFog(scene).change, modes), surfaceModes: modes,
+    changes: modelStageChanges(fog.change, modes), surfaceModes: modes,
     surfaces: {materials: createModelSurfaceMaterials({kinds: new Map(), read: () => Promise.reject(new Error('none')),
       textures: {acquire: () => new THREE.Texture(), release: () => undefined},
-      shared, changes: () => []}), kinds: new Map(), compile: () => undefined},
+      shared, sceneReaders: frameReaders(), changes: () => []}), kinds: new Map(), compile: () => undefined},
   };
   return {context, scene};
 }
@@ -133,6 +139,10 @@ export const describing = (changes: Record<string, unknown> = {}) => ({
 // Actors drawn with their files' own materials, as a frame is checked against them: no renderer takes a value.
 export const fileScene = (actors: readonly ModelStageActor[]) =>
   ({actors: {focus: actors[0].id, actors}, surfaceSets: {}});
+/** A validated frame applied as the stage applies it, into the fixture's slots. */
+export const applyValidated = (actors: readonly ModelActor[], value: ModelValidatedFrame,
+  applyCamera: (coordinates: Float64Array) => void) =>
+  applyModelFrame(actors, value, applyCamera, FRAME_SLOTS);
 /** A frame applied as the stage applies it, to actors drawn with their files' own materials. */
 export const applyFrame = (actors: readonly ModelActor[], value: unknown,
   applyCamera: (coordinates: Float64Array) => void = () => {throw new Error('Unexpected frame camera.');}) => {
@@ -140,7 +150,7 @@ export const applyFrame = (actors: readonly ModelActor[], value: unknown,
     value, modelFrameScope(fileScene(actors.map(actor => actor.declaration)), new Map()),
     new Float64Array(CAMERA_COORDS.length),
   );
-  return applyModelFrame(actors, checked, applyCamera, FRAME_SLOTS);
+  return applyValidated(actors, checked, applyCamera);
 };
 /** A staged load that waits on nothing. */
 export const NO_LOAD = Object.freeze({pending: [], release: () => undefined});

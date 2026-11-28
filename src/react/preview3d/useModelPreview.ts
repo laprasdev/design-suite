@@ -4,10 +4,12 @@ import type {ModelStageController, ModelStageHold, ModelStageOptions, ModelStage
 import {REDUCED_MOTION_QUERY} from '../motion.ts';
 import type {ModelPreviewFrame} from './frameModel.ts';
 import type {ModelStageDescription} from './descriptionModel.ts';
+import type {ModelEmitterSkip} from './emitterModel.ts';
 import {createModelFrameInbox, type ModelFrameStatus} from './frameInbox.ts';
 import {createModelDescriptionRequests, createModelPreviewChoices, modelPreviewDescription, modelPreviewFailure,
-  modelPreviewNotice, modelPreviewPick, modelPreviewReady, modelPreviewSelection, modelPreviewTimes,
-  modelPreviewToggle, type ModelPreviewSelection} from './previewDescription.ts';
+  modelPreviewPick, modelPreviewReady, modelPreviewSelection, modelPreviewTimes, modelPreviewToggle,
+  type ModelPreviewSelection} from './previewDescription.ts';
+import {modelPreviewNotice} from './previewNotice.ts';
 import {MODEL_STAGE_FAILURE, modelStageFailure, type ModelStageFailure} from './refusal.ts';
 
 /** What the view fixes when it creates its stage: the clock follows whether an engine frame is given. */
@@ -75,7 +77,14 @@ export function useModelPreview(host: ModelStageDescription, theme: ModelStageTh
     inbox.describe(value, current.kinds);
     if (current.frame !== undefined) pose(inbox.receive(current.frame));
   };
-  const [requests] = useState(() => createModelDescriptionRequests(setLoading, value => read(value), settled, reframe));
+  // Each applied description: frames check against it, and the effects the stage skips of it are read from the stage.
+  const [skipped, setSkipped] = useState<readonly ModelEmitterSkip[]>([]);
+  const applied = (value: ModelStageDescription) => {
+    reframe(value);
+    const api = controller.current;
+    if (api) setSkipped(api.snapshot().actors.flatMap(actor => actor.skipped));
+  };
+  const [requests] = useState(() => createModelDescriptionRequests(setLoading, value => read(value), settled, applied));
   // The controls show and act on what the stage shows: while a refusal stands, the description it holds.
   const selection = requests.shown(declared, failure?.kind === MODEL_STAGE_FAILURE.refused);
   const selected = useRef(selection);
@@ -155,7 +164,8 @@ export function useModelPreview(host: ModelStageDescription, theme: ModelStageTh
   const shown = modelPreviewFailure(failure, frameFailure);
   return {
     host: hostRef, loaded: ready, ready: modelPreviewReady(ready, external, poseStatus, loading),
-    error: shown?.kind === MODEL_STAGE_FAILURE.unusable, failure: shown, notice: modelPreviewNotice(shown, retry),
+    error: shown?.kind === MODEL_STAGE_FAILURE.unusable, failure: shown,
+    notice: modelPreviewNotice(shown, skipped, retry),
     selection, hold, boneCount, external, poseStatus, surfaceModesAvailable, emissiveCount, choose,
     times: modelPreviewTimes(host.lighting, requests.held),
     pick: (name: string) => choose({animation: modelPreviewPick(selected.current.animation, name)}),

@@ -1,6 +1,9 @@
-import {MODEL_SURFACE_LIGHT, type ModelSurfaceAttribute, type ModelSurfaceKind} from './surfaceKindModel.ts';
+import {MODEL_SURFACE_LIGHT, MODEL_SURFACE_SCENE_READ, type ModelSurfaceAttribute, type ModelSurfaceKind,
+  type ModelSurfaceSceneRead} from './surfaceKindModel.ts';
+import {MODEL_GROUND_PRESSER_READ} from './groundPressers.ts';
+import {MODEL_SCENE_DEPTH_READ} from './sceneDepth.ts';
 import {MODEL_SURFACE_GLSL} from './surfaceGlsl.ts';
-import {modelShaderChunk} from './shading.ts';
+import {modelShaderChunk, type ModelShaderReplace} from './shading.ts';
 
 // What a kind reads beyond its parameters, by the vertex attributes it declares, as the GLSL each needs in the program
 // of three's that the kind's light builds on. Nothing a kind does not declare is added, so a kind that declares none
@@ -16,13 +19,17 @@ import {modelShaderChunk} from './shading.ts';
 //   batch's transform, after its morphs, skinning and the kind's own displacement; and `kindWorldPosition`, the same
 //   point in world space, the stage's space (metres, Y up), through the object's world transform: three's own world
 //   position, so the same placed geometry reads the same point whatever transform places it. Fragment stage only.
-// A file's own attribute is read in both stages as `surfaceAttribute` and its name.
+// A file's own attribute is read in both stages as `surfaceAttribute` and its name. What a kind reads of the frame
+// (its `sceneReads`): 'depth', the opaque scene's, in the fragment stage alone (sceneDepth.ts); 'pressers', what
+// presses the ground, in both stages (groundPressers.ts).
 const {normal, view, object, world, objectToWorld, attribute: fileVarying} = MODEL_SURFACE_GLSL;
 const GLSL_TYPE = Object.freeze({1: 'float', 2: 'vec2', 3: 'vec3', 4: 'vec4'});
 /** The GLSL of what a kind reads, by stage. */
 export interface ModelSurfaceReads {
   readonly defines: Readonly<Record<string, string>>;
   readonly vertexColors: boolean;
+  /** Whether the vertex stage reads the object's world transform. */
+  readonly objectToWorld: boolean;
   /** Varyings, each declared once in each stage. */
   readonly varyings: readonly string[];
   /** What only the vertex stage declares, then what it writes after three's <begin_vertex> and <project_vertex>. */
@@ -34,18 +41,25 @@ export interface ModelSurfaceReads {
   readonly beforeSurface: readonly string[];
   readonly afterSurface: readonly string[];
 }
-/** Vertex-stage statements in a block that holds the object's world transform: its model, instance and batch matrices,
- * multiplied as three's own world position multiplies them, after its batching and before its projection. */
-export const modelSurfaceObjectToWorld = (statements: string) => `{
-  mat4 ${objectToWorld} = modelMatrix;
+// The object's world transform, `kindObjectToWorld`: its model, instance and batch matrices, multiplied as three's own
+// world position multiplies them, after its batching and before its projection.
+const OBJECT_TO_WORLD = Object.freeze({declarations: 'common', begin: 'begin_vertex',
+  declaration: `mat4 ${objectToWorld};`, set: `${objectToWorld} = modelMatrix;
   #ifdef USE_INSTANCING
     ${objectToWorld} = ${objectToWorld} * instanceMatrix;
   #endif
   #ifdef USE_BATCHING
     ${objectToWorld} = ${objectToWorld} * batchingMatrix;
-  #endif
-  ${statements}
-}`;
+  #endif`});
+/** A vertex stage that holds the object's world transform, `kindObjectToWorld`, as above: declared once, after three's
+ * <common>, and set once as the vertex begins, so every read of it in the stage (a kind's displacement and world
+ * position, the fog's height) reads that one value. A stage that holds it already is returned as it is. */
+export function modelSurfaceObjectToWorld(vertexShader: string, replace: ModelShaderReplace): string {
+  if (vertexShader.includes(OBJECT_TO_WORLD.declaration)) return vertexShader;
+  const {declarations, begin, declaration, set} = OBJECT_TO_WORLD;
+  return replace(replace(vertexShader, declarations, `${modelShaderChunk(declarations)}\n${declaration}`), begin,
+    `${modelShaderChunk(begin)}\n${set}`);
+}
 type Read = Partial<Omit<ModelSurfaceReads, 'defines'>> & {readonly defines?: Readonly<Record<string, string>>};
 // Three's basic program draws no normal: an unlit kind that reads one is given three's own normal chunks, computed as
 // its standard program computes them, where the basic program has not (it does so only with an environment map or
@@ -87,8 +101,12 @@ const OWN: Readonly<Record<string, (light: ModelSurfaceKind['light']) => readonl
   normal: light => light === MODEL_SURFACE_LIGHT.unlit ? [UNLIT_NORMAL, FACING] : [FACING, LIT_NORMAL],
   position: () => [{varyings: [`varying vec3 ${object};`, `varying vec3 ${world};`],
     projected: [`${object} = transformed;`,
-      modelSurfaceObjectToWorld(`${world} = ( ${objectToWorld} * vec4( transformed, 1.0 ) ).xyz;`)]}],
+      `${world} = ( ${objectToWorld} * vec4( transformed, 1.0 ) ).xyz;`], objectToWorld: true}],
 });
+const SCENE: Readonly<Record<ModelSurfaceSceneRead, Read>> = Object.freeze({
+  [MODEL_SURFACE_SCENE_READ.depth]: {fragmentDeclarations: [MODEL_SCENE_DEPTH_READ]},
+  [MODEL_SURFACE_SCENE_READ.pressers]: {vertexDeclarations: [MODEL_GROUND_PRESSER_READ],
+    fragmentDeclarations: [MODEL_GROUND_PRESSER_READ]}});
 /** Three's own attributes a kind may read, by name. */
 export const MODEL_SURFACE_OWN_ATTRIBUTES: readonly string[] = Object.freeze(Object.keys(OWN));
 
@@ -103,8 +121,10 @@ const LISTS = Object.freeze(['varyings', 'vertexDeclarations', 'begun', 'project
 /** What the kind's declared attributes add to its program; each attribute was checked to be one the stage hands. */
 export function modelSurfaceReads(kind: ModelSurfaceKind): ModelSurfaceReads {
   const reads = kind.attributes.flatMap((attribute: ModelSurfaceAttribute) =>
-    typeof attribute === 'string' ? OWN[attribute](kind.light) : [fileAttribute(attribute)]);
+    typeof attribute === 'string' ? OWN[attribute](kind.light) : [fileAttribute(attribute)])
+    .concat(kind.sceneReads.map(read => SCENE[read]));
   return Object.freeze({defines: Object.assign({}, ...reads.map(read => read.defines ?? {})),
     vertexColors: reads.some(read => read.vertexColors === true),
+    objectToWorld: reads.some(read => read.objectToWorld === true),
     ...Object.fromEntries(LISTS.map(list => [list, reads.flatMap(read => read[list] ?? [])]))} as ModelSurfaceReads);
 }

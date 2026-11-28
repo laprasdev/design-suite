@@ -12,6 +12,9 @@ export const MODEL_SURFACE_PARAMETER = Object.freeze(
 export const MODEL_COLOR_SPACE = Object.freeze({srgb: 'srgb', linear: 'linear'} as const);
 export const MODEL_SURFACE_LIGHT = Object.freeze({standard: 'standard', unlit: 'unlit'} as const);
 export const MODEL_SURFACE_SIDE = Object.freeze({front: 'front', back: 'back', double: 'double'} as const);
+/** What a kind may read of the frame it is drawn into: `depth`, the opaque scene's depth behind it (sceneDepth.ts). */
+export const MODEL_SURFACE_SCENE_READ = Object.freeze({depth: 'depth', pressers: 'pressers'} as const);
+export type ModelSurfaceSceneRead = typeof MODEL_SURFACE_SCENE_READ[keyof typeof MODEL_SURFACE_SCENE_READ];
 export const MODEL_VECTOR_SIZE = Object.freeze({two: 2, three: 3, four: 4} as const);
 /** How many numbers a vertex attribute of the file's own holds per vertex. */
 export const MODEL_ATTRIBUTE_SIZE = Object.freeze({one: 1, two: 2, three: 3, four: 4} as const);
@@ -41,6 +44,8 @@ export interface ModelSurfaceKind {
   readonly inert: Readonly<Record<string, number>>;
   /** The vertex attributes the kind reads, as three names a glTF's: three's own by name, the file's own with a size. */
   readonly attributes: readonly ModelSurfaceAttribute[];
+  /** What the kind reads of the frame beyond its own surface, each once: [] for nothing. */
+  readonly sceneReads: readonly ModelSurfaceSceneRead[];
   readonly light: typeof MODEL_SURFACE_LIGHT[keyof typeof MODEL_SURFACE_LIGHT];
   /** Opaque or cut out, or a record: a threshold, a blend, or both (surfaceCoverageModel.ts). */
   readonly coverage: ModelSurfaceCoverage;
@@ -54,8 +59,9 @@ export interface ModelSurfaceKind {
    * declaration: left out, it includes none, [] here). */
   readonly webProgram: ModelSurfaceProgramFile & {readonly includes: readonly ModelSurfaceProgramFile[]};
 }
-export const MODEL_SURFACE_KIND_FIELDS = Object.freeze({kind: ['id', 'parameters', 'inert', 'attributes', 'light',
-  'coverage', 'side', 'fog', 'displacement', 'webProgram'], webProgram: ['path', 'sha256'], include: ['path', 'sha256'],
+export const MODEL_SURFACE_KIND_FIELDS = Object.freeze({kind: ['id', 'parameters', 'inert', 'attributes',
+  'sceneReads', 'light', 'coverage', 'side', 'fog', 'displacement', 'webProgram'], webProgram: ['path', 'sha256'],
+include: ['path', 'sha256'],
 displacement: ['reach'],
 attribute: ['name', 'size'],
 parameter: Object.freeze({
@@ -117,6 +123,17 @@ function attributes(value: unknown, where: string): readonly ModelSurfaceAttribu
   }));
 }
 
+function sceneReads(value: unknown, where: string): readonly ModelSurfaceSceneRead[] {
+  if (!Array.isArray(value)) throw new ModelStageRefusal(refusal.list(where));
+  const listed = new Set<ModelSurfaceSceneRead>();
+  return Object.freeze(Array.from(value, (entry: unknown, index) => {
+    const read = modelOption(entry, MODEL_SURFACE_SCENE_READ, `${where}[${index}]`);
+    if (listed.has(read)) throw new ModelStageRefusal(refusal.twice(where, read));
+    listed.add(read);
+    return read;
+  }));
+}
+
 const programFile = (record: Record<string, unknown>, where: string): ModelSurfaceProgramFile => Object.freeze({
   path: modelName(record.path, `${where}.path`), sha256: modelDigest(record.sha256, `${where}.sha256`)});
 const NO_INCLUDES: readonly ModelSurfaceProgramFile[] = Object.freeze([]);
@@ -156,6 +173,7 @@ export function modelSurfaceKind(value: unknown, where: string): ModelSurfaceKin
   const program = modelRecordStating(kind.webProgram, {stated: fields.webProgram, whenStated: ['includes']},
     `${where}.webProgram`);
   return Object.freeze({id, parameters, inert, attributes: attributes(kind.attributes, `${where}.attributes`),
+    sceneReads: sceneReads(kind.sceneReads, `${where}.sceneReads`),
     light: modelOption(kind.light, MODEL_SURFACE_LIGHT, `${where}.light`),
     coverage: modelSurfaceCoverage(kind.coverage, `${where}.coverage`, float),
     side: modelOption(kind.side, MODEL_SURFACE_SIDE, `${where}.side`), fog: modelFlag(kind.fog, `${where}.fog`),

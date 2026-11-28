@@ -15,12 +15,12 @@ import {createModelSurfaceModes} from '../src/react/preview3d/materials.ts';
 import {createModelStageSharedValues} from '../src/react/preview3d/sharedValues.ts';
 import {createModelStageParts} from '../src/react/preview3d/stageParts.ts';
 import {declaration, describing, refused} from './preview3dActorFixture.ts';
-import {kindFile, RENDERERS} from './preview3dKindFixture.ts';
+import {frameReaders, kindFile, RENDERERS} from './preview3dKindFixture.ts';
 
 const ASSET_ID = 'actor-mesh', ASSET_PATH = '/models/actor-mesh.glb', PROGRAM_HASH = 'd'.repeat(64);
 const IMAGE_KIND = {id: 'test-image', parameters: {MainTex: {type: 'texture', space: 'srgb'}}, inert: {},
-  attributes: ['uv'], light: 'standard', coverage: 'opaque', side: 'front', fog: true, displacement: null,
-  webProgram: {path: '/image.glsl', sha256: PROGRAM_HASH}};
+  sceneReads: [], attributes: ['uv'], light: 'standard', coverage: 'opaque', side: 'front', fog: true,
+  displacement: null, webProgram: {path: '/image.glsl', sha256: PROGRAM_HASH}};
 const GLSL = 'void kindSurface( inout vec4 diffuse, inout vec3 emissive ) { ' +
   'diffuse = surfaceParameterMainTex( vUv ); }';
 const EXCLUDED_STREAM_SOURCES = Object.freeze(['VideoFrame', 'HTMLVideoElement'] as const);
@@ -162,7 +162,7 @@ describe('in-memory image surface textures', () => {
       const textures = createModelTextures(async () => new ArrayBuffer(0),
         async () => ({image: home, close: () => undefined}));
       const materials = createModelSurfaceMaterials({kinds, read: async () => new TextEncoder().encode(GLSL).buffer,
-        textures, shared: createModelStageSharedValues(), changes: () => []});
+        textures, shared: createModelStageSharedValues(), sceneReaders: frameReaders(), changes: () => []});
       const recordA = descA.surfaceSets.kit[RENDERERS.body];
       if (!('values' in recordA)) throw new Error('Expected surface record.');
       await Promise.all(materials.load([recordA]).pending);
@@ -175,7 +175,7 @@ describe('in-memory image surface textures', () => {
       actorSurfaces.prepare({surfaces: {from: 'set', set: 'kit'}, sets: descA.surfaceSets})();
       const firstMat = file.body.material;
       assert.notEqual(firstMat, originalBody);
-      let firstTexDisposed = 0, homeSource: THREE.Source | undefined;
+      let firstTexDisposed = 0, homeSource: THREE.Source<unknown> | undefined;
       if (firstMat instanceof THREE.ShaderMaterial) {
         const tex: unknown = firstMat.uniforms.surfaceTextureMainTex?.value;
         if (tex instanceof THREE.Texture) {

@@ -1,8 +1,6 @@
 import assert from 'node:assert/strict';
-import {createHash} from 'node:crypto';
 import {describe, it} from 'node:test';
 import * as THREE from 'three';
-import {MODEL_FILE_TEXT, readModelFile} from '../src/react/preview3d/files.ts';
 import {createModelTextures, MODEL_TEXTURE_TEXT} from '../src/react/preview3d/textures.ts';
 import {ModelStageRefusal} from '../src/react/preview3d/refusal.ts';
 import {MODEL_FILE_CACHE_TEXT} from '../src/react/preview3d/fileCache.ts';
@@ -14,11 +12,18 @@ import {createModelSurfaceModes} from '../src/react/preview3d/materials.ts';
 import {createModelFog} from '../src/react/preview3d/fog.ts';
 import {modelStageDescription} from '../src/react/preview3d/descriptionModel.ts';
 import {NO_FILES, NO_LOAD, declaration, describing} from './preview3dActorFixture.ts';
+import {sha256} from './sha256.ts';
 
-const digest = (text: string) => createHash('sha256').update(text).digest('hex');
-const file = (name: string) => ({path: `/${name}.png`, sha256: digest(name)});
+const file = (name: string) => ({path: `/${name}.png`, sha256: sha256(name)});
 const sampled = (name: string, wrap: readonly ['repeat' | 'clamp', 'repeat' | 'clamp'] = ['repeat', 'repeat']) =>
   ({...file(name), wrap, scale: [1, 1] as const, offset: [0, 0] as const});
+// A constant texture's pixels, which it must hold, and its width.
+function pixels(texture: THREE.Texture) {
+  assert.ok(texture instanceof THREE.DataTexture);
+  const {data, width} = texture.image;
+  assert.ok(data, 'a constant texture holds its pixels');
+  return {data: [...data], width};
+}
 // A reader that answers every file at once from its name, counting reads; a decoder that tags what it decoded and
 // counts the images it is asked to close.
 function registry() {
@@ -35,26 +40,11 @@ function registry() {
 const settled = (load: {readonly pending: readonly Promise<void>[]}) => Promise.all(load.pending);
 
 // A kind with one texture, for the staged load.
-const MASK_KIND = {id: 'test-mask', parameters: {_Mask: {type: 'texture', space: 'linear'}}, inert: {}, attributes: [],
-  light: 'standard', coverage: 'opaque', side: 'front', fog: true, displacement: null,
+const MASK_KIND = {id: 'test-mask', parameters: {_Mask: {type: 'texture', space: 'linear'}}, inert: {},
+  sceneReads: [], attributes: [], light: 'standard', coverage: 'opaque', side: 'front', fog: true, displacement: null,
   webProgram: {path: '/mask.glsl', sha256: 'c'.repeat(64)}};
 
 describe('the stage\'s textures', () => {
-  it('reads a file the description names only when its bytes have the stated SHA-256', async () => {
-    const real = globalThis.fetch;
-    globalThis.fetch = (async () => new Response('texels')) as typeof fetch;
-    try {
-      const signal = new AbortController().signal;
-      assert.equal(new TextDecoder().decode(await readModelFile('/a.png', digest('texels'), signal)), 'texels');
-      await assert.rejects(readModelFile('/a.png', digest('other'), signal),
-        new RegExp(MODEL_FILE_TEXT.digest('/a.png', digest('other'), digest('texels'))));
-      globalThis.fetch = (async () => new Response('', {status: 404})) as typeof fetch;
-      await assert.rejects(readModelFile('/a.png', digest('texels'), signal), /\/a.png could not be read \(HTTP 404\)/);
-    } finally {
-      globalThis.fetch = real;
-    }
-  });
-
   it('reads and decodes each file once, and shares one texture per file and sampling, counted', async () => {
     const {textures, reads} = registry();
     const load = textures.load([file('mask'), file('mask'), file('ramp')]);
@@ -79,13 +69,11 @@ describe('the stage\'s textures', () => {
     assert.deepEqual([stated.wrapS, stated.wrapT, stated.repeat.toArray(), stated.offset.toArray()],
       [THREE.MirroredRepeatWrapping, THREE.RepeatWrapping, [2, 3], [0.25, 0.5]]);
     // An empty slot's constant: one texel, in its own space whatever its parameter's, one texture for either.
-    const black = textures.acquire({constant: 'black'}, 'srgb') as THREE.DataTexture;
-    assert.deepEqual([[...black.image.data as Uint8Array], black.image.width, black.colorSpace],
-      [[0, 0, 0, 255], 1, THREE.SRGBColorSpace]);
+    const black = textures.acquire({constant: 'black'}, 'srgb');
+    assert.deepEqual([pixels(black), black.colorSpace], [{data: [0, 0, 0, 255], width: 1}, THREE.SRGBColorSpace]);
     assert.equal(textures.acquire({constant: 'black'}, 'linear'), black);
     const flatNormal = textures.acquire({constant: 'flatNormal'}, 'srgb');
-    assert.ok(flatNormal instanceof THREE.DataTexture);
-    assert.deepEqual([[...flatNormal.image.data], flatNormal.colorSpace],
+    assert.deepEqual([pixels(flatNormal).data, flatNormal.colorSpace],
       [[128, 128, 255, 255], THREE.NoColorSpace], 'a flat normal is linear data on an sRGB slot too');
     let disposed = 0;
     first.addEventListener('dispose', () => disposed++);
@@ -96,9 +84,7 @@ describe('the stage\'s textures', () => {
     // Released once more than acquired, or a texture from elsewhere: a defect of the caller, said by name.
     assert.throws(() => textures.release(first), new RegExp(MODEL_TEXTURE_TEXT.unheld('/mask.png')));
     assert.throws(() => textures.release(new THREE.Texture()), /was released, but the registry does not hold it/);
-    const white = textures.acquire({constant: 'white'}, 'srgb');
-    assert.ok(white instanceof THREE.DataTexture);
-    assert.deepEqual([...white.image.data], [255, 255, 255, 255]);
+    assert.deepEqual(pixels(textures.acquire({constant: 'white'}, 'srgb')).data, [255, 255, 255, 255]);
   });
 
   it('keeps the files the description in force names or a texture uses, and frees and closes the others', async () => {

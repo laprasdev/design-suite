@@ -1,3 +1,5 @@
+import {seededRandom} from '../../seededRandom.ts';
+
 interface Constellation {name: string; stars: Record<string, [number, number]>; lines: string[][];}
 // The header sky's stars: well-known constellations as stick figures, and a scatter of faint dots. Positions are
 // J2000 right ascension in hours and declination in degrees, near enough for a sky a few dozen pixels tall.
@@ -80,16 +82,7 @@ export const CONSTELLATIONS: readonly Constellation[] = Object.freeze<Constellat
 // The faint dots: the same scatter over the whole sphere every time, so they turn with the sky rather than jumping.
 const DOT_COUNT = 160;
 const DOT_SEED = 0x5eed;
-function seeded(seed: number) {
-  let a = seed;
-  return () => {
-    a = (a + 0x6d2b79f5) | 0;
-    let t = Math.imul(a ^ (a >>> 15), 1 | a);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-const random = seeded(DOT_SEED);
+const random = seededRandom(DOT_SEED);
 export const DOTS = Object.freeze(Array.from({ length: DOT_COUNT }, () => (
   { ra: random() * 24, dec: Math.asin(2 * random() - 1) * 180 / Math.PI, glow: random() }
 )));

@@ -24,7 +24,6 @@ export const PageShellDimensions = {
   tileGutter: 3,
   moduleWidth: 320,
   moduleHeight: 194,
-  envelopeMinWidth: 453,
   envelopeMinHeight: 255,
   previewMinWidth: 280,
   previewMinHeight: 157,

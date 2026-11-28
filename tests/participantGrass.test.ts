@@ -1,9 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {PARTICIPANT_GRASS,growParticipantGrass} from '../src/react/participantGrass.ts';
-
-// A repeatable stand-in for Math.random, so a failing field can be reproduced.
-const seeded=(seed:number)=>()=>{seed=(seed*16807)%2147483647;return seed/2147483647;};
+import {seededRandom as seeded} from '../src/seededRandom.ts';
 
 test('grass reaches the full width at its planted spacing',()=>{
  const blades=growParticipantGrass([],640,seeded(1));

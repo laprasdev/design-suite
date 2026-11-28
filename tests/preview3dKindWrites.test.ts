@@ -8,7 +8,7 @@ import {MODEL_SURFACE_COVERAGE_REFUSAL} from '../src/react/preview3d/surfaceCove
 import {createModelSurfaceMaterials} from '../src/react/preview3d/surfaceMaterials.ts';
 import {createModelStageSharedValues} from '../src/react/preview3d/sharedValues.ts';
 import {refused} from './preview3dActorFixture.ts';
-import {PULSE, PULSE_PROGRAM, record} from './preview3dKindFixture.ts';
+import {frameReaders, PULSE, PULSE_PROGRAM, record} from './preview3dKindFixture.ts';
 
 // What a kind may write and use beyond its colour (step E2): its normal from a normal map, its light response, a
 // cut-out threshold the stage sharpens once, shared GLSL its repository owns, a texture's tiling.
@@ -106,7 +106,7 @@ describe('what a kind may write beyond its colour', () => {
       '/more.glsl': 'float sharedTwo() { return sharedOne() * 2.0; }'};
     const reads: string[] = [];
     const materials = createModelSurfaceMaterials({kinds: modelSurfaceKinds([including]),
-      shared: createModelStageSharedValues(), changes: () => [], read: async path => {
+      shared: createModelStageSharedValues(), sceneReaders: frameReaders(), changes: () => [], read: async path => {
         reads.push(path);
         return new TextEncoder().encode(texts[path]).buffer;
       }, textures: {acquire: () => new THREE.Texture(), release: () => undefined}});

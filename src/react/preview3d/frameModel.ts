@@ -5,6 +5,7 @@ import {CAMERA_COORDS, freezeModelPreviewCamera, MODEL_PREVIEW_CAMERA_FIELDS, MO
   modelPreviewCameraWhere, modelPreviewEntity, readModelPreviewCamera,
   type ModelPreviewCamera, type ModelPreviewEntity} from './presentation.ts';
 import {isFiniteNumber, isNonEmptyString as named, isRecord as object} from '../../valueChecks.ts';
+import {checkModelGroundPresserBudget} from './groundPressers.ts';
 import {modelRecordStating, modelStates} from './recordModel.ts';
 import {ModelStageRefusal} from './refusal.ts';
 import type {ModelSurfaceSet} from './surfaceModel.ts';
@@ -83,6 +84,7 @@ export function validateModelFrame(value: unknown, scope: ModelFrameScope,
     seen.add(id);
     return modelPreviewEntity(entity, actor.asset.id, scope.takes.get(id));
   });
+  checkModelGroundPresserBudget(entities);
   const hasCamera = readModelFrameCamera(value, cameraInto);
   const checked: ModelValidatedFrame = {
     [VALIDATED_FRAME]: true,
@@ -101,10 +103,7 @@ export function validateModelFrame(value: unknown, scope: ModelFrameScope,
  * checked whole: an entity by `modelPreviewEntity`, its pose and camera by the record owner.
  */
 export function modelPreviewFrame(value: unknown, scope: ModelFrameScope): ModelPreviewFrame {
-  const checked = validateModelFrame(value, scope, frameCameraScratch);
-  if (checked.cameraCoordinates === null) {
-    return Object.freeze({simulationTimeSeconds: checked.simulationTimeSeconds, entities: checked.entities});
-  }
-  const camera = freezeModelPreviewCamera(checked.cameraCoordinates);
-  return Object.freeze({simulationTimeSeconds: checked.simulationTimeSeconds, entities: checked.entities, camera});
+  const {simulationTimeSeconds, entities, cameraCoordinates} = validateModelFrame(value, scope, frameCameraScratch);
+  return Object.freeze({simulationTimeSeconds, entities,
+    ...cameraCoordinates === null ? {} : {camera: freezeModelPreviewCamera(cameraCoordinates)}});
 }

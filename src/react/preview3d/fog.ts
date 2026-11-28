@@ -15,8 +15,9 @@ import {modelSurfaceObjectToWorld} from './surfaceReads.ts';
 // The fog is mixed in linear light, into the frame's linear target (draw.ts): before the look's tone curve and the
 // display encoding, which the frame's output pass applies to the fogged colour as to any other, once. Both colours
 // are held linear, decoded from the look's sRGB once when the look is written; three's own fog (one colour, mixed
-// after the encoding) is taken out. Every line the change adds sits inside USE_FOG, so with no fog in the look a
-// program compiles to three's own.
+// after the encoding) is taken out. Every line the change adds sits inside USE_FOG but the object's world transform it
+// reads (surfaceReads.ts), which is declared and set once for the stage's every reader, so with no fog in the look a
+// program draws as three's own.
 const CHUNK = Object.freeze({parsVertex: 'fog_pars_vertex', vertex: 'fog_vertex', parsFragment: 'fog_pars_fragment',
   fragment: 'fog_fragment', toneMapping: 'tonemapping_fragment'});
 export const MODEL_FOG_CHANGE = 'model-stage-fog';
@@ -30,7 +31,7 @@ const NO_LAYER = Object.freeze({base: 0, top: 1, strength: 0});
 const {objectToWorld} = MODEL_SURFACE_GLSL;
 const VERTEX = `
 #ifdef USE_FOG
-  ${modelSurfaceObjectToWorld(`${HEIGHT_VARYING} = ( ${objectToWorld} * vec4( transformed, 1.0 ) ).y;`)}
+  ${HEIGHT_VARYING} = ( ${objectToWorld} * vec4( transformed, 1.0 ) ).y;
 #endif`;
 const FRAGMENT = `
 #ifdef USE_FOG
@@ -59,8 +60,9 @@ export function createModelFog(scene: THREE.Scene) {
   const declared = modelShaderUniforms({[UNIFORM.near]: 'vec3', [UNIFORM.far]: 'vec3', [UNIFORM.height]: 'vec3'});
   const change: ModelShaderChange = {key: MODEL_FOG_CHANGE, apply: (shader, replace) => {
     Object.assign(shader.uniforms, uniforms);
-    shader.vertexShader = replace(replace(shader.vertexShader, CHUNK.parsVertex,
-      modelShaderChunk(CHUNK.parsVertex) + inFog(varying)), CHUNK.vertex, modelShaderChunk(CHUNK.vertex) + VERTEX);
+    shader.vertexShader = modelSurfaceObjectToWorld(replace(replace(shader.vertexShader, CHUNK.parsVertex,
+      modelShaderChunk(CHUNK.parsVertex) + inFog(varying)), CHUNK.vertex, modelShaderChunk(CHUNK.vertex) + VERTEX),
+      replace);
     const declaring = replace(shader.fragmentShader, CHUNK.parsFragment,
       modelShaderChunk(CHUNK.parsFragment) + inFog(`${declared}\n${varying}`));
     shader.fragmentShader = replace(replace(declaring, CHUNK.fragment, ''), CHUNK.toneMapping,

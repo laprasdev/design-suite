@@ -49,16 +49,33 @@ export function sumNamedSubtreeBytes(node: unknown, target: string, parentName: 
   return within(node, false);
 }
 
-/** How a scene runs its ticks with or without the path measured, and what each sampled run with it must hold. */
+/** Functions on the measured path whose sampled bytes, with all they call, under `parent`, are another owner's: a
+ * dependency's own allocation, held to that owner's ceiling apart from the path's owner. */
+export interface AllocationDelegate {
+  readonly owner: string;
+  readonly parent: string;
+  readonly functions: readonly string[];
+}
+/** How a scene runs its ticks with or without the path measured, what each sampled run with it must hold, and the
+ * owners its delegated functions' bytes are charged to (none when the path owns every byte). */
 export interface AllocationProfileRun {
   readonly run: (withPath: boolean, count: number) => Promise<void>;
   readonly inspect: (head: unknown) => void;
+  readonly delegates: readonly AllocationDelegate[];
 }
 const mean = (values: readonly number[]) => Math.round(values.reduce((sum, value) => sum + value, 0) / values.length);
 
+const ceilingOf = (owner: string) => {
+  const ceiling = ALLOCATION_BASELINE.read(join(SUITE_ROOT, ALLOCATION_BASELINE.file)).files[owner];
+  assert.ok(ceiling !== undefined, `${ALLOCATION_BASELINE.file} must record a ceiling for ${owner}`);
+  return ceiling.extraBytesPerTick;
+};
+const delegatedBytes = (head: unknown, {parent, functions}: AllocationDelegate) =>
+  functions.reduce((sum, name) => sum + sumNamedSubtreeBytes(head, name, parent), 0);
+
 /**
- * Warms the path, measures `owner`'s extra bytes a tick, writes the report to `captures`, and refuses a measure above
- * the owner's ceiling.
+ * Warms the path, measures `owner`'s extra bytes a tick (less what its delegates' functions allocate, each measured
+ * and held as its own owner's), writes the report to `captures`, and refuses any measure above its owner's ceiling.
  */
 export async function checkAllocationCeiling(page: Page, owner: string, captures: string, path: AllocationProfileRun) {
   for (let pass = 0; pass < warmPasses; pass++) {
@@ -78,21 +95,28 @@ export async function checkAllocationCeiling(page: Page, owner: string, captures
   await sampleRun(false);
   await sampleRun(true);
   const withoutRuns: number[] = [], withRuns: number[] = [];
+  const delegatedRuns = path.delegates.map((): number[] => []);
   for (let pair = 0; pair < pairs; pair++) {
     withoutRuns.push((await sampleRun(false)).bytesPerTick);
     const withSample = await sampleRun(true);
     withRuns.push(withSample.bytesPerTick);
+    path.delegates.forEach((delegate, index) =>
+      delegatedRuns[index].push(Math.round(delegatedBytes(withSample.head, delegate) / ticks)));
     path.inspect(withSample.head);
   }
-  const extraBytesPerTick = mean(withRuns) - mean(withoutRuns);
-  const ceiling = ALLOCATION_BASELINE.read(join(SUITE_ROOT, ALLOCATION_BASELINE.file)).files[owner];
-  assert.ok(ceiling !== undefined, `${ALLOCATION_BASELINE.file} must record a ceiling for ${owner}`);
+  const delegates = path.delegates.map(({owner: delegateOwner, functions}, index) => ({owner: delegateOwner,
+    functions, bytesPerTick: delegatedRuns[index], extraBytesPerTick: mean(delegatedRuns[index]),
+    ceilingExtraBytesPerTick: ceilingOf(delegateOwner)}));
+  const delegated = delegates.reduce((sum, {extraBytesPerTick}) => sum + extraBytesPerTick, 0);
+  const extraBytesPerTick = mean(withRuns) - mean(withoutRuns) - delegated;
   const report = {owner, ticksPerRun: ticks, pairs, samplingIntervalBytes, includeObjectsCollectedByMinorGC: true,
     includeObjectsCollectedByMajorGC: true, withoutBytesPerTick: withoutRuns, withBytesPerTick: withRuns,
     withoutMeanBytesPerTick: mean(withoutRuns), withMeanBytesPerTick: mean(withRuns), extraBytesPerTick,
-    ceilingExtraBytesPerTick: ceiling.extraBytesPerTick};
+    ceilingExtraBytesPerTick: ceilingOf(owner), delegates};
   writeFileSync(join(captures, 'allocation-profile.json'), `${JSON.stringify(report, null, 2)}\n`);
-  assert.ok(extraBytesPerTick <= ceiling.extraBytesPerTick,
-    `${owner} allocated ${extraBytesPerTick} B/tick above ceiling ${ceiling.extraBytesPerTick}`);
+  for (const measured of [report, ...delegates]) {
+    assert.ok(measured.extraBytesPerTick <= measured.ceilingExtraBytesPerTick, `${measured.owner} allocated ` +
+      `${measured.extraBytesPerTick} B/tick above ceiling ${measured.ceilingExtraBytesPerTick}`);
+  }
   return report;
 }

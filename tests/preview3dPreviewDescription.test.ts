@@ -7,8 +7,9 @@ import {MODEL_PREVIEW_TEXT, MODEL_REST_POSE, MODEL_STAGE_SIZE, MODEL_STAGE_THEME
   from '../src/react/preview3d/model.ts';
 import {createModelDescriptionRequests, createModelPreviewChoices, modelPreviewChoices, modelPreviewDescription,
   modelPreviewFailure, modelPreviewSelectionOf,
-  modelPreviewClip, modelPreviewNotice, modelPreviewPick, modelPreviewReady, modelPreviewToggle}
+  modelPreviewClip, modelPreviewPick, modelPreviewReady, modelPreviewToggle}
   from '../src/react/preview3d/previewDescription.ts';
+import {modelPreviewNotice} from '../src/react/preview3d/previewNotice.ts';
 import {NoticeTone} from '../src/react/actionBarElements.ts';
 import {declaration, describing, held, playing, REST, stageLook, standingAt} from './preview3dActorFixture.ts';
 
@@ -183,10 +184,10 @@ describe('the view\'s description', () => {
 
   it('shows a failure as the suite notice: what failed, its own message, and Retry for a stopped stage', () => {
     const retry = () => undefined;
-    assert.equal(modelPreviewNotice(null, retry), null);
-    assert.deepEqual(modelPreviewNotice({kind: MODEL_STAGE_FAILURE.refused, message: 'Actor a: clip swim'}, retry),
+    assert.equal(modelPreviewNotice(null, [], retry), null);
+    assert.deepEqual(modelPreviewNotice({kind: MODEL_STAGE_FAILURE.refused, message: 'Actor a: clip swim'}, [], retry),
       {message: MODEL_PREVIEW_TEXT.refused, tone: NoticeTone.ERROR, detail: 'Actor a: clip swim'});
-    assert.deepEqual(modelPreviewNotice({kind: MODEL_STAGE_FAILURE.unusable, message: 'Missing bone'}, retry),
+    assert.deepEqual(modelPreviewNotice({kind: MODEL_STAGE_FAILURE.unusable, message: 'Missing bone'}, [], retry),
       {message: MODEL_PREVIEW_TEXT.stopped, tone: NoticeTone.ERROR, detail: 'Missing bone',
         action: {label: MODEL_PREVIEW_TEXT.retry, onClick: retry}});
   });

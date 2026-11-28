@@ -1,17 +1,17 @@
 import assert from 'node:assert/strict';
-import {createHash} from 'node:crypto';
 import {after, before, describe, it} from 'node:test';
 import {loadModelStageAsset} from '../src/react/preview3d/asset.ts';
 import {MODEL_FILE_TEXT} from '../src/react/preview3d/files.ts';
 import {modelStageActorSet} from '../src/react/preview3d/actorModel.ts';
 import {modelAssetDigest} from '../src/react/preview3d/actorAssetModel.ts';
+import {sha256} from './sha256.ts';
 import {declaration} from './preview3dActorFixture.ts';
 
 // A model file as the page's server would answer it: a whole glTF (one node), served from memory. Every read goes
 // through the page's fetch, which the test holds, so the reads the stage makes are counted.
 const FILE = new TextEncoder().encode(JSON.stringify({asset: {version: '2.0'}, scenes: [{nodes: [0]}], scene: 0,
   nodes: [{name: 'blue'}]}));
-const DIGEST = createHash('sha256').update(FILE).digest('hex');
+const DIGEST = sha256(FILE);
 const reads: string[] = [];
 const page = globalThis as unknown as {fetch: typeof fetch; document?: {baseURI: string}};
 const held = {fetch: page.fetch, document: page.document};

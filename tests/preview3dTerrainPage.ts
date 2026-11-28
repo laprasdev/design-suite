@@ -1,11 +1,11 @@
 // Opens the terrain's stage scene in Chromium with its files routed and the stage booted, for the capture test and the
 // cost measurement alike.
-import {createHash} from 'node:crypto';
+import {sha256} from './sha256.ts';
 import {openScene, type SceneGl} from './browserScene.ts';
 import {GROUND_PROGRAM, TERRAIN_HOST_ID, TERRAIN_ROUTES, TERRAIN_SCENE_ENTRY, type TerrainViewport}
   from './preview3dTerrainCases.ts';
 
-const programSha256 = createHash('sha256').update(GROUND_PROGRAM).digest('hex');
+const programSha256 = sha256(GROUND_PROGRAM);
 
 /** The scene at a view, drawn with a GL, its stage booted with its floor aid on or off. */
 export async function openTerrainScene(viewport: TerrainViewport, gl: SceneGl, floor: boolean) {

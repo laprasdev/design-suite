@@ -16,7 +16,8 @@ const SQUARE = Object.freeze({from: 1, to: 3});
 export const WORLD_PROGRAM = `void kindSurface( inout vec4 diffuse, inout vec3 emissive ) {
   diffuse.rgb = ${MODEL_SURFACE_GLSL.world} / ${WORLD_VIEW.extent.toFixed(1)};
 }`;
-export const WORLD_KIND = Object.freeze({id: 'test-world', parameters: {}, inert: {}, attributes: ['position'],
+export const WORLD_KIND = Object.freeze({id: 'test-world', parameters: {}, inert: {},
+  sceneReads: [], attributes: ['position'],
   light: 'unlit', coverage: 'opaque', side: 'double', fog: false, displacement: null,
   webProgram: {path: '/world.glsl', sha256: 'c'.repeat(64)}});
 

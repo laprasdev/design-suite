@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import {describe, it} from 'node:test';
 import * as THREE from 'three';
+import {BatchedRenderer} from 'three.quarks';
 import {createModelStageDescriptions} from '../src/react/preview3d/stageDescriptions.ts';
 import {createModelSurfaceModes} from '../src/react/preview3d/materials.ts';
 import {createModelFog} from '../src/react/preview3d/fog.ts';
@@ -10,7 +11,7 @@ import {modelDrawnMeshCount} from '../src/react/preview3d/asset.ts';
 import {ModelStageRefusal} from '../src/react/preview3d/refusal.ts';
 import {MODEL_STAGE_THEME_LIGHTING} from '../src/react/preview3d/lightingModel.ts';
 import {THEME, declaration, describing, makeActor, stageLook, standingAt} from './preview3dActorFixture.ts';
-import {kindFile, MASK, PULSE, PULSE_PROGRAM, record, RENDERERS} from './preview3dKindFixture.ts';
+import {frameReaders, kindFile, MASK, PULSE, PULSE_PROGRAM, record, RENDERERS} from './preview3dKindFixture.ts';
 import {TERRAIN_GRID, TERRAIN_ID, terrainActor} from './preview3dTerrainFixture.ts';
 import {MODEL_TERRAIN_SPLIT, modelTerrainChunks, modelStageTerrain} from '../src/react/preview3d/terrainModel.ts';
 
@@ -25,7 +26,9 @@ function stageWith(lightingLoad: () => readonly Promise<void>[] = () => [], refu
   const descriptions = createModelStageDescriptions({
     policy: modelStagePolicy({reviewKey: 'review', clock: 'local', floor: false, grid: false, kinds: [PULSE as never]}),
     theme: THEME,
-    stage: {scene, fog: createModelFog(scene), shared: createModelStageSharedValues(), compile: () => undefined,
+    stage: {scene, fog: createModelFog(scene), shared: createModelStageSharedValues(), particles: new BatchedRenderer(),
+      sceneReaders: frameReaders(),
+      compile: () => undefined,
       lighting: {load: lightingLoad, attach: () => () => undefined, prepare: value => {
         if (refused(value.time)) throw new ModelStageRefusal(`Time ${value.time}: refused`);
         return () => undefined;

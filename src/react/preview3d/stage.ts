@@ -75,7 +75,7 @@ export function createModelStage(
   };
   const external = policy.clock === MODEL_STAGE_CLOCK.external;
   // What applying a frame writes into, made once here.
-  const frameSlots = createModelFrameSlots();
+  const frameSlots = createModelFrameSlots(stage.shared.pressers);
   const api: ModelStageController = {
     setDescription,
     setFrame(value) {
@@ -128,8 +128,8 @@ export function createModelStage(
       actor.playback.update(times[STAGE_TIME.presentation] - previous);
       actor.placement.updateMatrixWorld(true);
       actor.rig.update();
-      actor.emitters.follow();
     }
+    stage.particles.update(times[STAGE_TIME.presentation] - previous);
     // Before the first description is shown there is nothing to frame; a held pose frames no actor.
     if (descriptions.framed.length) stage.fit(measure);
     if (stage.controls.enabled) stage.controls.update();

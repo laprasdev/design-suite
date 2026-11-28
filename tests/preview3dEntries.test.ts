@@ -58,7 +58,9 @@ describe('optional 3D package boundary', () => {
 
   it('declares a distinct optional Three peer and compiles a focused stage with external Three imports', async () => {
     const manifest = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
-    assert.equal(manifest.peerDependencies.three, '0.180.0');
+    // One three: the peer the suite declares is the one it develops, types and three.quarks against.
+    assert.equal(manifest.peerDependencies.three, manifest.devDependencies.three);
+    assert.equal(manifest.dependencies['@types/three'], manifest.devDependencies.three);
     assert.equal(manifest.peerDependenciesMeta.three.optional, true);
     assert.equal(manifest.exports['./preview3d/model'].source, './src/react/preview3d/model.ts');
     const output = await bundleEntry(manifest.exports['./preview3d'].source);

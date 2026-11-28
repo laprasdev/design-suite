@@ -6,6 +6,7 @@ import {modelFlag, modelNumbers, modelRecord} from './recordModel.ts';
 // coordinate adapter. Every other preview file reaches these through here, so none of them imports another for them.
 export type ModelVector = readonly [number, number, number];
 export type ModelRotation = readonly [number, number, number, number];
+export const MODEL_VECTOR_AXES = 3;
 export const MODEL_PREVIEW_QUATERNION_TOLERANCE = 1e-4;
 // A pose is whole: every component is stated, so no component is ever taken from an earlier pose or an identity.
 export const MODEL_POSE_COMPONENTS = Object.freeze(['position', 'rotationQuaternion', 'scale'] as const);
@@ -24,7 +25,7 @@ export interface ModelPoseBinding {
 }
 const MODEL_POSE_BINDING_OWNER = 'The pose to bind';
 export function modelPresentationVector(value: unknown, name: string): ModelVector {
-  const copy = modelNumbers(value, 3, name);
+  const copy = modelNumbers(value, MODEL_VECTOR_AXES, name);
   return Object.freeze([copy[0], copy[1], copy[2]]);
 }
 /** A unit quaternion; `where` names it in a refusal. */

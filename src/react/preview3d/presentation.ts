@@ -9,6 +9,7 @@ import {modelSurfaceOutputs, type ModelSurfaceTakes} from './surfaceOutputModel.
 import {modelAnimationLayers} from './animationLayerModel.ts';
 import type {ModelAnimationLayer} from './animationLayerModel.ts';
 import {MODEL_NO_EMITTER_CHANGES, modelEmitterChanges, type ModelEmitterChange} from './emitterFrameModel.ts';
+import {modelGroundPresser, type ModelGroundPresser} from './groundPressers.ts';
 
 export const MODEL_STAGE_FIELD_OF_VIEW = 38;
 /** How near the camera the stage draws, the plane every look's far plane lies beyond. */
@@ -30,6 +31,8 @@ export interface ModelPreviewEntity {
   readonly materials: readonly ModelMaterialOutput[];
   /** The emitter changes of this tick, in order; the engine states `emitters` only on a tick with one. */
   readonly emitters: readonly ModelEmitterChange[];
+  /** What it presses the ground with at its pose position; null for an entity that states no `presser`. */
+  readonly presser: ModelGroundPresser | null;
 }
 
 // Validate every channel before any pose is applied; refusals name the entity. Accepted values never retain
@@ -53,7 +56,10 @@ export function modelPreviewEntity(value: unknown, modelId: string,
       modelSurfaceOutputs(value.materials, materials, `Entity ${value.entityId}`) :
       modelMaterialOutputs(value.materials, materials),
     emitters: modelStates(value, 'emitters') ?
-      modelEmitterChanges(value.emitters, value.entityId) : MODEL_NO_EMITTER_CHANGES});
+      modelEmitterChanges(value.emitters, value.entityId) : MODEL_NO_EMITTER_CHANGES,
+    // An accepted entity states its absent presser as null, and a frame of accepted entities must read again.
+    presser: modelStates(value, 'presser') && value.presser !== null ?
+      modelGroundPresser(value.presser, `Entity ${value.entityId} presser`) : null});
 }
 
 /** A camera pose: eye position, look-at target, and optional vertical field of view in degrees within (0, 180). */

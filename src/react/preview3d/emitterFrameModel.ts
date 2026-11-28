@@ -3,6 +3,7 @@ import {modelIsOption, modelName, modelOption, modelRecordStating, modelStates, 
   type ModelStatingFields} from './recordModel.ts';
 import {ModelStageRefusal} from './refusal.ts';
 import {MODEL_EMITTER_REFUSAL as refusal} from './emitterModel.ts';
+import {MODEL_VECTOR_AXES, type ModelVector} from './placementModel.ts';
 
 // What an engine frame says of an entity's emitters. Whether its actor declares each profile is checked as the frame
 // applies (emitters.ts `addLoad`), before anything changes, where the actor is.
@@ -11,48 +12,61 @@ export const MODEL_EMITTER_CHANGE = Object.freeze({started: 'started', stopped: 
 const DRAWN_CHANGE = Object.freeze({started: MODEL_EMITTER_CHANGE.started, stopped: MODEL_EMITTER_CHANGE.stopped});
 /** Linear red, green and blue, each multiplying the profile's start colour; alpha is not routed. */
 export type ModelEmitterTint = readonly [number, number, number];
+const TINT_CHANNELS: ModelEmitterTint['length'] = 3;
 /**
  * What an engine frame says of one profile: it starts (again, from nothing, as Unity's provider clears before each
  * play) or stops emitting (its particles live out their lifetimes). A start carries the routed values its state
- * declares, each only when declared: `rate` (particles a second) and `radius` (metres) replace the profile's own, and
- * `tint` multiplies its start colour. One a start leaves out means the profile's own value: this is where that rule is
- * stated, and emitters.ts `start` applies it.
+ * declares (`ModelEmitterRouted`), and the gravity its particles fall by, which no state routes: the engine works it
+ * out (the profile's `gravityModifier` times the machine's scene gravity, as Unity's ParticleSystem does) and the
+ * stage draws it as stated, metres a second squared in world space. The engine states it on every start of a profile
+ * whose modifier is one Constant on the 3D source, which is every profile the stage draws; a skipped profile's start
+ * may leave it out, and a drawn one's start that leaves it out is refused (emitters.ts `prepare`). This is where those
+ * rules are stated, and emitterSystems.ts `start` applies them.
  */
 export type ModelEmitterChange = ({readonly profile: string; readonly change: typeof DRAWN_CHANGE.started} &
-  ModelEmitterRouted) | {readonly profile: string; readonly change: typeof DRAWN_CHANGE.stopped};
-/** A start's routed values, each stated only when its state declares it. */
+  ModelEmitterRouted & {readonly gravity?: ModelVector}) |
+  {readonly profile: string; readonly change: typeof DRAWN_CHANGE.stopped};
+/** A start's routed values, each stated only when its state declares it: `rate` (particles a second) and `radius`
+ * (metres) replace the profile's own, and `tint` multiplies its start colour; one a start leaves out means the
+ * profile's own value. */
 export interface ModelEmitterRouted {
   readonly rate?: number;
   readonly tint?: ModelEmitterTint;
   readonly radius?: number;
 }
 
-function isTint(value: unknown): value is ModelEmitterTint {
-  if (!Array.isArray(value) || value.length !== 3) return false;
+// `length` finite numbers, each at least `least`: a tint's channels or a gravity's axes.
+function isNumbers<T extends readonly number[]>(value: unknown, length: T['length'], least: number): value is T {
+  if (!Array.isArray(value) || value.length !== length) return false;
   for (let index = 0; index < value.length; index++) {
-    if (!isFiniteNumber(value[index]) || value[index] < 0) return false;
+    if (!isFiniteNumber(value[index]) || value[index] < least) return false;
   }
   return true;
 }
-/** The routed values the stage draws, each with its check of a change and what it must be. A rate of 0 emits nothing,
- * which a profile is refused for too. Each check reads its own field by name: a number read by a computed key and
- * passed on is boxed, an allocation on every frame that changes an emitter. */
-export const MODEL_EMITTER_ROUTED = Object.freeze({
+/** The values a start states that the stage draws, routed or worked out by the engine, each with its check of a change
+ * and what it must be. A rate of 0 emits nothing, which a profile is refused for too. Each check reads its own field
+ * by name: a number read by a computed key and passed on is boxed, an allocation on every frame that changes an
+ * emitter. */
+export const MODEL_EMITTER_START = Object.freeze({
   rate: Object.freeze({drawn: ({rate}: Record<string, unknown>) => isFiniteNumber(rate) && rate > 0,
     is: 'a finite number of particles a second above 0'}),
-  tint: Object.freeze({drawn: ({tint}: Record<string, unknown>) => isTint(tint),
+  tint: Object.freeze({drawn: ({tint}: Record<string, unknown>) => isNumbers<ModelEmitterTint>(tint, TINT_CHANNELS, 0),
     is: 'three finite channels, each at least 0'}),
   radius: Object.freeze({drawn: ({radius}: Record<string, unknown>) => isFiniteNumber(radius) && radius >= 0,
     is: 'a finite number of metres of at least 0'}),
+  gravity: Object.freeze({
+    drawn: ({gravity}: Record<string, unknown>) => isNumbers<ModelVector>(gravity, MODEL_VECTOR_AXES, -Infinity),
+    is: 'three finite metres a second squared, in world space'}),
 });
 // Listed once: the check runs on every frame that changes an emitter.
-const ROUTED = Object.freeze(Object.entries(MODEL_EMITTER_ROUTED)
+const START = Object.freeze(Object.entries(MODEL_EMITTER_START)
   .map(([field, rule]) => Object.freeze({field, ...rule})));
-// The record's fields the engine names but does not send yet, each refused by name until the stage draws it.
-const STUBBED = Object.freeze(['burst', 'origin', 'position']);
-// The Emitter frame's whole record.
-const CHANGE_FIELDS: ModelStatingFields = Object.freeze({stated: ['profile', 'change'],
-  whenStated: [...ROUTED.map(({field}) => field), ...STUBBED]});
+// The record's fields the engine names but does not send yet, each refused by name until the stage draws it. A burst
+// is a value of `change`, not a field, and is refused as one (`DRAWN_CHANGE`).
+const STUBBED = Object.freeze(['origin', 'position']);
+/** The Emitter frame's whole record, field by field as the engine's `EmitterChange` names them. */
+export const MODEL_EMITTER_CHANGE_FIELDS: ModelStatingFields = Object.freeze({stated: ['profile', 'change'],
+  whenStated: [...START.map(({field}) => field), ...STUBBED]});
 export const MODEL_NO_EMITTER_CHANGES: readonly ModelEmitterChange[] = Object.freeze([]);
 
 // The first stubbed field a change states, or none: the one walk both the per-tick check and its refusal read.
@@ -62,19 +76,19 @@ function stubbedField(record: Record<string, unknown>) {
   }
   return undefined;
 }
-// The first routed value a change states that the stage does not draw (one not a start carries, or one out of its
+// The first start value a change states that the stage does not draw (one not a start carries, or one out of its
 // range), or none.
-function undrawnRouted(record: Record<string, unknown>) {
-  for (let index = 0; index < ROUTED.length; index++) {
-    const routed = ROUTED[index];
-    if (modelStates(record, routed.field) &&
-      (record.change !== DRAWN_CHANGE.started || !routed.drawn(record))) return routed;
+function undrawnStart(record: Record<string, unknown>) {
+  for (let index = 0; index < START.length; index++) {
+    const value = START[index];
+    if (modelStates(record, value.field) &&
+      (record.change !== DRAWN_CHANGE.started || !value.drawn(record))) return value;
   }
   return undefined;
 }
-const isDrawnChange = (value: unknown): value is ModelEmitterChange => modelStatesExactly(value, CHANGE_FIELDS) &&
-  stubbedField(value) === undefined && isNonEmptyString(value.profile) && modelIsOption(value.change, DRAWN_CHANGE) &&
-  undrawnRouted(value) === undefined;
+const isDrawnChange = (value: unknown): value is ModelEmitterChange =>
+  modelStatesExactly(value, MODEL_EMITTER_CHANGE_FIELDS) && stubbedField(value) === undefined &&
+  isNonEmptyString(value.profile) && modelIsOption(value.change, DRAWN_CHANGE) && undrawnStart(value) === undefined;
 function isDrawnChanges(value: unknown): value is readonly ModelEmitterChange[] {
   if (!Array.isArray(value)) return false;
   for (let index = 0; index < value.length; index++) {
@@ -88,19 +102,19 @@ function refuseEmitterChanges(value: unknown, entity: string): never {
   const where = `Frame entity ${entity} emitters`;
   if (!Array.isArray(value)) throw new ModelStageRefusal(`${where} must be an array.`);
   const index = value.findIndex(item => !isDrawnChange(item));
-  const at = `${where}[${index}]`, record = modelRecordStating(value[index], CHANGE_FIELDS, at);
+  const at = `${where}[${index}]`, record = modelRecordStating(value[index], MODEL_EMITTER_CHANGE_FIELDS, at);
   const stubbed = stubbedField(record);
   if (stubbed !== undefined) throw new ModelStageRefusal(refusal.stubbed(entity, stubbed));
   const profile = modelName(record.profile, `${at}.profile`);
   const change = modelOption(record.change, MODEL_EMITTER_CHANGE, `${at}.change`);
   if (!modelIsOption(change, DRAWN_CHANGE)) throw new ModelStageRefusal(refusal.burst(entity, profile));
-  // What is left of a change the stage does not draw is a routed value.
-  const routed = undrawnRouted(record);
-  if (routed === undefined) throw new Error(`${at} was refused by no rule.`);
+  // What is left of a change the stage does not draw is a start value.
+  const undrawn = undrawnStart(record);
+  if (undrawn === undefined) throw new Error(`${at} was refused by no rule.`);
   if (change !== DRAWN_CHANGE.started) {
-    throw new ModelStageRefusal(refusal.routedOff(entity, profile, routed.field, change));
+    throw new ModelStageRefusal(refusal.startOff(entity, profile, undrawn.field, change));
   }
-  throw new ModelStageRefusal(refusal.routedValue(entity, profile, routed.field, routed.is));
+  throw new ModelStageRefusal(refusal.startValue(entity, profile, undrawn.field, undrawn.is));
 }
 
 /** An entity's emitter changes, in order, each naming a profile: the frame's own records, checked in place, so a
