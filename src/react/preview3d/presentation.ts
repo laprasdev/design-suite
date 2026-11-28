@@ -57,7 +57,8 @@ export function modelPreviewEntity(value: unknown, modelId: string,
       modelMaterialOutputs(value.materials, materials),
     emitters: modelStates(value, 'emitters') ?
       modelEmitterChanges(value.emitters, value.entityId) : MODEL_NO_EMITTER_CHANGES,
-    presser: modelStates(value, 'presser') ?
+    // An accepted entity states its absent presser as null, and a frame of accepted entities must read again.
+    presser: modelStates(value, 'presser') && value.presser !== null ?
       modelGroundPresser(value.presser, `Entity ${value.entityId} presser`) : null});
 }
 

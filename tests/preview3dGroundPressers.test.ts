@@ -14,6 +14,7 @@ import {createModelSurfaceMaterials} from '../src/react/preview3d/surfaceMateria
 import {modelSurfaceRecord} from '../src/react/preview3d/surfaceModel.ts';
 import {createModelLinearFrame} from '../src/react/preview3d/linearFrame.ts';
 import {ModelStageRefusal} from '../src/react/preview3d/refusal.ts';
+import {modelPreviewEntity} from '../src/react/preview3d/model.ts';
 import {kindStage, PULSE, PULSE_PROGRAM, record} from './preview3dKindFixture.ts';
 import {actorContext, applyFrame, entity as frameEntity, frame, FRAME_PRESSERS, makeActor}
   from './preview3dActorFixture.ts';
@@ -95,5 +96,11 @@ describe('the ground pressers a kind reads', () => {
     assert.deepEqual([...FRAME_PRESSERS.uniforms[pressers].value], before);
     assert.equal(FRAME_PRESSERS.uniforms[count].value, 1);
     assert.deepEqual(actors.map(actor => actor.snapshot().pose.position[0]), ids.map((_, index) => index ? 0 : 1));
+  });
+  it('read again, from an accepted entity with or without a presser, to the same entity', () => {
+    for (const raw of [frameEntity('a'), {...frameEntity('b'), presser: {radius: 0.5}}]) {
+      const accepted = modelPreviewEntity(raw, 'otter');
+      assert.deepEqual(modelPreviewEntity(accepted, 'otter'), accepted);
+    }
   });
 });
