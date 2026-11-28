@@ -2,6 +2,8 @@ import React from 'react';
 import { hexToRgba } from '../../../color.ts';
 import { LayoutDimensions } from '../../../layout.ts';
 import { D, DC, O, S, T, STRIP_LABEL, TransitionKeys, Borders } from '../../design/index.ts';
+import { WrappingStripGrid } from './WrappingStripGrid.tsx';
+import type { StripWrap } from './stripColumns.ts';
 
 // =====================================================
 // TAB STRIP — flush edge-to-edge cells with dividers
@@ -37,11 +39,12 @@ function dividerStyle(color?: string, flipped?: boolean, accentH: number = D.acc
  *  edge='top' (default) → top alignment.
  *  edge='bottom' → bottom alignment, accent flipped to top.
  *  edge='inline' → inline alignment.
- *  reachesEdge → it ends at its container's border, whose own inside curve closes it, so it draws no end cap. */
-export function Strip({ edge = 'top', columns, fill, reachesEdge, children, style, accent }: {
-  edge?: StripEdge; columns?: string; fill?: boolean; reachesEdge?: boolean;
-  children: React.ReactNode; style?: React.CSSProperties; accent?: number;
-}) {
+ *  reachesEdge → it ends at its container's border, whose own inside curve closes it, so it draws no end cap.
+ *  wrap → by the room it has, it takes fewer columns in full rows to keep its cells' weighted least (`stripColumns`);
+ *  the wrap form lays its own columns, so it takes no `columns` or `fill`. */
+export function Strip({ edge = 'top', columns, fill, reachesEdge, children, style, accent, wrap }: {
+  edge?: StripEdge; children: React.ReactNode; style?: React.CSSProperties; accent?: number; reachesEdge?: boolean;
+} & ({ columns?: string; fill?: boolean; wrap?: never } | { wrap: StripWrap; columns?: never; fill?: never })) {
   const flipped = edge === 'bottom';
   const arr = React.Children.toArray(children);
   const count = arr.length;
@@ -49,7 +52,7 @@ export function Strip({ edge = 'top', columns, fill, reachesEdge, children, styl
   const h = accent ?? LayoutDimensions.accent.thin;
   const r = LayoutDimensions.radius.cutout;
   const bleedsLeft = true;
-  const bleedsRight = !!(columns || fill || reachesEdge);
+  const bleedsRight = !!(columns || fill || wrap || reachesEdge);
   const capped = arr.map((child, i) => (
     <StripCapContext.Provider key={`cap-${i}`} value={{
       height: h, radius: r,
@@ -61,9 +64,12 @@ export function Strip({ edge = 'top', columns, fill, reachesEdge, children, styl
   ));
   let inner = (
     <StripFlipContext.Provider value={flipped}>
-      <div style={{ display: 'grid', gridTemplateColumns: cols, alignItems: 'stretch', ...(!columns && !fill && { justifyContent: 'start' }), ...style }}>
+      {wrap ? <WrappingStripGrid wrap={wrap} style={{ display: 'grid', alignItems: 'stretch', ...style }}>
         {capped}
-      </div>
+      </WrappingStripGrid> : <div style={{ display: 'grid', gridTemplateColumns: cols, alignItems: 'stretch',
+        ...(!columns && !fill && { justifyContent: 'start' }), ...style }}>
+        {capped}
+      </div>}
     </StripFlipContext.Provider>
   );
   if (accent != null) inner = <StripAccentContext.Provider value={accent}>{inner}</StripAccentContext.Provider>;

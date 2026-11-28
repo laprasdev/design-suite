@@ -1,5 +1,7 @@
-// Pure sizing of `ModuleField` (`LineField` / `StackField`), one-column least room, and `ModuleGroups` strips.
-import { captionWidth, readingWidth, type CaptionWidthTable } from '../../captionWidths.ts';
+// Pure sizing of `ModuleField` (`LineField` / `StackField`), one-column least room, `ModuleGroups` strips and the
+// header that holds them.
+import { captionWidth, readingWidth, textRunWidth, type CaptionWidthTable } from '../../captionWidths.ts';
+import { Typography } from '../../tokens.ts';
 import { ControlKind, type ChoiceFormValue, type ControlKindValue } from '../../fields.ts';
 import { ModuleGridDimensions as G, TEXT_FLOOR } from '../../moduleGridLayout.ts';
 import { CONTROL_KINDS, LINE_TEXT_HEIGHT, controlBoxOf } from './controlBoxes.ts';
@@ -116,4 +118,18 @@ export function moduleGroupsHeight(chips: readonly number[], innerWidth: number)
     else used = used === 0 ? chip : used + G.groupGap + chip;
   }
   return G.groupStripPadding + rows * ONE_LINE_HEIGHT + (rows - 1) * G.groupGap;
+}
+
+// A module's title, and an inline group chip drawn as the shown one: bold as a title, in label type (ModuleGroups).
+const TITLE_RUN = { ...Typography.title, uppercase: true }, SHOWN_CHIP_RUN = {
+  ...Typography.label, fontWeight: Typography.title.fontWeight, uppercase: true,
+};
+
+/** Least width of a module's header holding `title` and inline `ModuleGroups` `chips` whole. The open group's name
+ *  yields first (ModuleHeaderRow), so it needs no room; every chip is measured as the shown one, the widest. */
+export function moduleHeaderLeastWidth(title: string, chips: readonly string[], table: CaptionWidthTable): number {
+  const chipWidths = chips.map(chip => Math.ceil(textRunWidth(chip, SHOWN_CHIP_RUN, table)) + G.groupPaddingInline * 2);
+  const chipsWidth = chipWidths.reduce((sum, width) => sum + width, 0) + G.groupGap * (chips.length - 1);
+  return G.headerInset * 2 + Math.ceil(textRunWidth(title, TITLE_RUN, table)) + G.headerTitleGap + G.headerGap
+    + chipsWidth;
 }

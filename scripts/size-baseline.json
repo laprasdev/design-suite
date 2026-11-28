@@ -30,7 +30,7 @@
     "src/synth/components/synth/PhaseGlyph.tsx": {"lines":54,"longLines":4},
     "src/synth/components/synth/RangeSlider.tsx": {"lines":140,"longLines":17},
     "src/synth/components/synth/Slider.tsx": {"lines":133,"longLines":5},
-    "src/synth/components/synth/TabStrip.tsx": {"lines":193,"longLines":4},
+    "src/synth/components/synth/TabStrip.tsx": {"lines":193,"longLines":3},
     "src/synth/components/synth/TooltipContext.tsx": {"lines":151,"longLines":2},
     "src/synth/components/synth/base/KnobInnerCircle.tsx": {"lines":83,"longLines":2},
     "src/synth/components/synth/base/useControlBehavior.ts": {"lines":117,"longLines":2},
