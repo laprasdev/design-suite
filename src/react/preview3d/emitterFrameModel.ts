@@ -61,8 +61,9 @@ export const MODEL_EMITTER_START = Object.freeze({
 // Listed once: the check runs on every frame that changes an emitter.
 const START = Object.freeze(Object.entries(MODEL_EMITTER_START)
   .map(([field, rule]) => Object.freeze({field, ...rule})));
-// The record's fields the engine names but does not send yet, each refused by name until the stage draws it.
-const STUBBED = Object.freeze(['burst', 'origin', 'position']);
+// The record's fields the engine names but does not send yet, each refused by name until the stage draws it. A burst
+// is a value of `change`, not a field, and is refused as one (`DRAWN_CHANGE`).
+const STUBBED = Object.freeze(['origin', 'position']);
 /** The Emitter frame's whole record, field by field as the engine's `EmitterChange` names them. */
 export const MODEL_EMITTER_CHANGE_FIELDS: ModelStatingFields = Object.freeze({stated: ['profile', 'change'],
   whenStated: [...START.map(({field}) => field), ...STUBBED]});
