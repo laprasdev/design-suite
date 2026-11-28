@@ -4,6 +4,16 @@ import {ModelStageRefusal} from './refusal.ts';
 import {MODEL_STAGE} from './model.ts';
 import {MODEL_SURFACE_SCENE_READ, type ModelSurfaceSceneRead} from './surfaceKindModel.ts';
 
+/** The scene reads the frame draws a target of its own for while a material holds them; every other
+ * read is a uniform the stage writes. */
+export const MODEL_SURFACE_FRAMED_READ = Object.freeze({depth: MODEL_SURFACE_SCENE_READ.depth} as const);
+export type ModelSurfaceFramedRead = typeof MODEL_SURFACE_FRAMED_READ[keyof typeof MODEL_SURFACE_FRAMED_READ];
+const FRAMED_READS: readonly ModelSurfaceSceneRead[] = Object.freeze(Object.values(MODEL_SURFACE_FRAMED_READ));
+const framedRead = (read: ModelSurfaceSceneRead): read is ModelSurfaceFramedRead => FRAMED_READS.includes(read);
+/** The reads of `reads` the frame draws a target for, in their order. */
+export const modelSurfaceFramedReads = (reads: readonly ModelSurfaceSceneRead[]): readonly ModelSurfaceFramedRead[] =>
+  reads.filter(framedRead);
+
 // The frame in linear light: the scene's multisampled half-float target, which every surface is drawn and blended into
 // as a URP camera's colour target is (blending in linear light, before any curve), and the one output pass that writes
 // it to the canvas. How a frame draws with them is draw.ts's.
@@ -52,8 +62,8 @@ const depthTarget = (width: number, height: number) => new THREE.WebGLRenderTarg
  * until it is freed (surfaceMaterials.ts), and the frame holds what a read needs while one holds it. */
 export interface ModelSceneReaders {
   /** Refused by name, holding nothing, when the frame's budget cannot hold what the read needs at its size. */
-  hold(read: ModelSurfaceSceneRead): void;
-  release(read: ModelSurfaceSceneRead): void;
+  hold(read: ModelSurfaceFramedRead): void;
+  release(read: ModelSurfaceFramedRead): void;
 }
 
 /** The frame's target and output pass at a drawing-buffer size, and the scene depth's target while a reader holds it
@@ -63,7 +73,7 @@ export function createModelLinearFrame(size: THREE.Vector2) {
   checkBudget(size.x, size.y, MODEL_LINEAR_FRAME_PIXEL_BYTES.frame);
   const target = new THREE.WebGLRenderTarget(size.x, size.y, {type: THREE.HalfFloatType, samples: SAMPLES});
   let depth: THREE.WebGLRenderTarget | null = null;
-  const readers: Record<ModelSurfaceSceneRead, number> = {[MODEL_SURFACE_SCENE_READ.depth]: 0};
+  const readers: Record<ModelSurfaceFramedRead, number> = {[MODEL_SURFACE_FRAMED_READ.depth]: 0};
   const perPixel = () => MODEL_LINEAR_FRAME_PIXEL_BYTES[depth ? 'withSceneDepth' : 'frame'];
   const glow: THREE.IUniform<THREE.Texture | null> = {value: null};
   const material = new THREE.ShaderMaterial({...OUTPUT,

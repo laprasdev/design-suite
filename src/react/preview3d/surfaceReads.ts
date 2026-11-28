@@ -1,5 +1,6 @@
 import {MODEL_SURFACE_LIGHT, MODEL_SURFACE_SCENE_READ, type ModelSurfaceAttribute, type ModelSurfaceKind,
   type ModelSurfaceSceneRead} from './surfaceKindModel.ts';
+import {MODEL_GROUND_PRESSER_READ} from './groundPressers.ts';
 import {MODEL_SCENE_DEPTH_READ} from './sceneDepth.ts';
 import {MODEL_SURFACE_GLSL} from './surfaceGlsl.ts';
 import {modelShaderChunk, type ModelShaderReplace} from './shading.ts';
@@ -19,7 +20,8 @@ import {modelShaderChunk, type ModelShaderReplace} from './shading.ts';
 //   point in world space, the stage's space (metres, Y up), through the object's world transform: three's own world
 //   position, so the same placed geometry reads the same point whatever transform places it. Fragment stage only.
 // A file's own attribute is read in both stages as `surfaceAttribute` and its name. What a kind reads of the frame
-// (its `sceneReads`) is declared in the fragment stage alone: 'depth', the opaque scene's (sceneDepth.ts).
+// (its `sceneReads`): 'depth', the opaque scene's, in the fragment stage alone (sceneDepth.ts); 'pressers', what
+// presses the ground, in both stages (groundPressers.ts).
 const {normal, view, object, world, objectToWorld, attribute: fileVarying} = MODEL_SURFACE_GLSL;
 const GLSL_TYPE = Object.freeze({1: 'float', 2: 'vec2', 3: 'vec3', 4: 'vec4'});
 /** The GLSL of what a kind reads, by stage. */
@@ -102,7 +104,9 @@ const OWN: Readonly<Record<string, (light: ModelSurfaceKind['light']) => readonl
       `${world} = ( ${objectToWorld} * vec4( transformed, 1.0 ) ).xyz;`], objectToWorld: true}],
 });
 const SCENE: Readonly<Record<ModelSurfaceSceneRead, Read>> = Object.freeze({
-  [MODEL_SURFACE_SCENE_READ.depth]: {fragmentDeclarations: [MODEL_SCENE_DEPTH_READ]}});
+  [MODEL_SURFACE_SCENE_READ.depth]: {fragmentDeclarations: [MODEL_SCENE_DEPTH_READ]},
+  [MODEL_SURFACE_SCENE_READ.pressers]: {vertexDeclarations: [MODEL_GROUND_PRESSER_READ],
+    fragmentDeclarations: [MODEL_GROUND_PRESSER_READ]}});
 /** Three's own attributes a kind may read, by name. */
 export const MODEL_SURFACE_OWN_ATTRIBUTES: readonly string[] = Object.freeze(Object.keys(OWN));
 

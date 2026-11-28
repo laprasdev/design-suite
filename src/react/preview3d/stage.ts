@@ -75,7 +75,7 @@ export function createModelStage(
   };
   const external = policy.clock === MODEL_STAGE_CLOCK.external;
   // What applying a frame writes into, made once here.
-  const frameSlots = createModelFrameSlots();
+  const frameSlots = createModelFrameSlots(stage.shared.pressers);
   const api: ModelStageController = {
     setDescription,
     setFrame(value) {

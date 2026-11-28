@@ -9,6 +9,7 @@ import {createModelSurfaceModes, modelStageChanges} from '../src/react/preview3d
 import type {GLTF} from 'three/addons/loaders/GLTFLoader.js';
 import {createModelActor, type ModelActor, type ModelActorContext} from '../src/react/preview3d/actor.ts';
 import {applyModelFrame, createModelFrameSlots} from '../src/react/preview3d/actorFrame.ts';
+import {createModelGroundPressers} from '../src/react/preview3d/groundPressers.ts';
 import {createModelFraming} from '../src/react/preview3d/camera.ts';
 import type {ModelLookLayers} from '../src/react/preview3d/lighting.ts';
 import {CAMERA_COORDS} from '../src/react/preview3d/presentation.ts';
@@ -22,8 +23,10 @@ import {MODEL_ACTOR_ANIMATION, MODEL_ANIMATION_LAYER, MODEL_STAGE, MODEL_STAGE_C
   type ModelStageLook, type ModelStageTheme}
   from '../src/react/preview3d/model.ts';
 
+/** The ground pressers each frame applied (`applyModelFrame`) writes. */
+export const FRAME_PRESSERS = createModelGroundPressers();
 /** What the fixture's emitters would run, zeroed by each frame applied (`applyModelFrame`). */
-export const FRAME_SLOTS = createModelFrameSlots();
+export const FRAME_SLOTS = createModelFrameSlots(FRAME_PRESSERS);
 export const BONE = 'tip';
 export const BIND: readonly [number, number, number] = [2, 3, 4];
 export const clipValue = (index: number, time: number) => (index + 1) * 10 + time;

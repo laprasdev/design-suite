@@ -13,7 +13,7 @@ export const MODEL_COLOR_SPACE = Object.freeze({srgb: 'srgb', linear: 'linear'} 
 export const MODEL_SURFACE_LIGHT = Object.freeze({standard: 'standard', unlit: 'unlit'} as const);
 export const MODEL_SURFACE_SIDE = Object.freeze({front: 'front', back: 'back', double: 'double'} as const);
 /** What a kind may read of the frame it is drawn into: `depth`, the opaque scene's depth behind it (sceneDepth.ts). */
-export const MODEL_SURFACE_SCENE_READ = Object.freeze({depth: 'depth'} as const);
+export const MODEL_SURFACE_SCENE_READ = Object.freeze({depth: 'depth', pressers: 'pressers'} as const);
 export type ModelSurfaceSceneRead = typeof MODEL_SURFACE_SCENE_READ[keyof typeof MODEL_SURFACE_SCENE_READ];
 export const MODEL_VECTOR_SIZE = Object.freeze({two: 2, three: 3, four: 4} as const);
 /** How many numbers a vertex attribute of the file's own holds per vertex. */
