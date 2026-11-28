@@ -301,7 +301,10 @@ exactly its fields: one it omits or one it does not have is refused by its path 
   `aids` `{floor, share}`, `fog` (`{near, far, height}` or `null`), `toneCurve` (`{curve, exposure}` with `curve`
   `'aces-filmic'` and `exposure` greater than 0, 1 drawing the light as lit, or `null`), `glow`
   (`{threshold, strength, radius}` with `radius` from 0 to 1, or `null`) and `farPlane` (how far the camera draws,
-  greater than `MODEL_STAGE.nearPlane`; a fit framed further off reaches further); colours are sRGB triples in
+  greater than `MODEL_STAGE.nearPlane`; a fit framed further off reaches further) and `lights`, its point lights
+  (`{color, strength, range, position}`: strength in candela, range in metres past which it lights nothing, position
+  in stage space; `[]` for none, at most `MODEL_STAGE_LIGHT_BUDGET.pointLights`, refused by name past it); colours
+  are sRGB triples in
   [0, 1]. Everything the look colours, the backdrop included, is scaled by the curve's exposure, then passes through
   its curve. Under glow the scene is drawn once in
   linear light, the bloom (blurred by tapered Gaussians, so a bright emitter's halo is round) added, then the curve
@@ -518,7 +521,9 @@ vec3 kindDisplacement( vec3 world ) { ... }
   colour times strength), `stageAmbientSky` and `stageAmbientGround` (linear colours times strength; the sky is +Y) and
   `stageShadow` (the time's shadow colour, linear). These are the values three hands its own lit programs. Three's
   diffuse divides by pi (`RECIPROCAL_PI`, as `BRDF_Lambert`); a ramp meant to match a lit kind does the same. The
-  stage has exactly two lights, the key `directionalLights[0]` and the ambient `hemisphereLights[0]`.
+  stage has the key `directionalLights[0]` and the ambient `hemisphereLights[0]`, and then the look's point lights,
+  which three hands a lit program as `pointLights[0]` to `pointLights[NUM_POINT_LIGHTS - 1]`; no shared value carries
+  them to an unlit kind.
 - `stageDecorativeSeconds`, decorative time on either clock, never for gameplay (what the game decides arrives as an
   engine value), and `stageNight`, 0 by day and 1 by night.
 

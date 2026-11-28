@@ -124,7 +124,7 @@ export const ACES_CURVE = Object.freeze({curve: MODEL_STAGE_CURVE.acesFilmic, ex
 export const stageLook = (changes: Partial<ModelStageLook> = {}): ModelStageLook => ({
   backdrop: [0, 0, 0], key: {color: [1, 1, 1], strength: 1, direction: [0, 1, 0]},
   ambient: {sky: [1, 1, 1], ground: [0, 0, 0], strength: 1}, shadow: [0, 0, 0], night: 0,
-  aids: {floor: [0, 0, 0], share: 1}, fog: null, toneCurve: null, glow: null, farPlane: 100,
+  aids: {floor: [0, 0, 0], share: 1}, fog: null, toneCurve: null, glow: null, farPlane: 100, lights: [],
   ...changes});
 // The layers a look is applied to, each taking it and doing nothing; a test overrides the layers it reads.
 export const lookLayers = (changes: Partial<ModelLookLayers> = {}): ModelLookLayers => ({

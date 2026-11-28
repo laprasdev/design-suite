@@ -6,10 +6,10 @@ import {MODEL_STAGE_BUILT_IN_TIMES, type ModelStageBuiltInTime, type ModelStageT
 import {modelToneCurveSource} from './toneCurve.ts';
 
 // The stage as it has always drawn: one key light from this direction and one hemisphere ambient, at these strengths,
-// under the one curve at exposure 1, to one far plane. Dark is a night stage of its own: a deep colour behind, a floor
-// that still reads under less light, both lights cooled and held to one share of Light's strength, and the unlit aids
-// held to another, so a model's emission carries the picture. Exposure is untouched, or the glow would dim with the
-// lights.
+// under the one curve at exposure 1, to one far plane, with no point light. Dark is a night stage of its own: a deep
+// colour behind, a floor that still reads under less light, both lights cooled and held to one share of Light's
+// strength, and the unlit aids held to another, so a model's emission carries the picture. Exposure is untouched, or
+// the glow would dim with the lights.
 const STAGE = Object.freeze({
   light: Object.freeze({key: 3, ambient: 2, direction: Object.freeze([3, 5, 4]) as ModelVector}),
   curve: Object.freeze({curve: MODEL_STAGE_CURVE.acesFilmic, exposure: 1}), farPlane: 100,
@@ -35,11 +35,11 @@ export function modelStageBuiltInTimes(colors: ModelStageThemeColors): readonly 
     light: {backdrop: behind('light', stage), key: {color: text, strength: STAGE.light.key,
       direction: STAGE.light.direction}, ambient: {sky: text, ground: surface, strength: STAGE.light.ambient},
     shadow: surface, night: 0, aids: {floor: surface, share: 1}, fog: null, toneCurve: STAGE.curve, glow: null,
-    farPlane: STAGE.farPlane},
+    farPlane: STAGE.farPlane, lights: []},
     dark: {backdrop: behind('dark', deep), ambient: {sky: light, ground: deep,
       strength: STAGE.light.ambient * DARK.lightShare}, key: {color: light, strength: STAGE.light.key * DARK.lightShare,
       direction: STAGE.light.direction}, shadow: deep, night: 1, aids: {floor, share: DARK.aidShare}, fog: null,
-    toneCurve: STAGE.curve, glow: null, farPlane: STAGE.farPlane},
+    toneCurve: STAGE.curve, glow: null, farPlane: STAGE.farPlane, lights: []},
   };
   return Object.freeze(MODEL_STAGE_BUILT_IN_TIMES.map(({id, label}) =>
     Object.freeze({id, label, look: modelStageLook(looks[id], `Time ${id}: look`)})));

@@ -9,7 +9,7 @@ import {MODEL_STAGE_THEME_LIGHTING, MODEL_STAGE_TIME, modelStageLighting, modelS
   type ModelStageTime} from '../src/react/preview3d/lightingModel.ts';
 import {modelStageBuiltInTimes} from '../src/react/preview3d/builtInTimes.ts';
 import type {ModelStageTheme} from '../src/react/preview3d/model.ts';
-import type {ModelStageOutput} from '../src/react/preview3d/lookModel.ts';
+import {MODEL_STAGE_LIGHT_BUDGET, type ModelStageOutput} from '../src/react/preview3d/lookModel.ts';
 import {ACES_CURVE, lookLayers, stageLook} from './preview3dActorFixture.ts';
 import {shownBytes} from './preview3dToneCurveOracle.ts';
 
@@ -105,8 +105,10 @@ describe('stage lighting', () => {
 
   it('lights a kind with one ambient and one key, as three hands them on: hemisphereLights[0], directionalLights[0]',
     () => {
-      // A kind's program reads these two by index (kind-contract.md): the stage adds no other light anywhere.
-      assert.deepEqual(fixture().lighting.lights.map(light => light.type), ['HemisphereLight', 'DirectionalLight']);
+      // A kind's program reads these two by index (kind-contract.md); every other light is one of the look's point
+      // lights, the budget's worth made once (preview3dPointLights.test.ts).
+      assert.deepEqual(fixture().lighting.lights.map(light => light.type), ['HemisphereLight', 'DirectionalLight',
+        ...Array.from({length: MODEL_STAGE_LIGHT_BUDGET.pointLights}, () => 'PointLight')]);
     });
 
   it('shares with an unlit kind the look\'s key and ambient, in world space, as three hands its lit programs them',

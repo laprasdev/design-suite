@@ -27,7 +27,20 @@ export interface ModelStageLook {
   readonly glow: ModelStageGlow | null;
   /** How far from the camera the stage draws, beyond its near plane; a fit framed further off reaches further. */
   readonly farPlane: number;
+  /** The time's point lights, none to the stage's budget of them, drawn as Unity's URP draws one (lighting.ts). */
+  readonly lights: readonly ModelStagePointLight[];
 }
+/** A point light: its colour; its strength in candela; the range, in metres, past which it lights nothing; and where
+ * it stands, in stage space. */
+export interface ModelStagePointLight {
+  readonly color: ModelColor;
+  readonly strength: number;
+  readonly range: number;
+  readonly position: ModelVector;
+}
+/** How many point lights one look may state. Every lit program shades each one on every pixel it draws, so the stage
+ * holds them to a count (perf-budgets) and refuses a look past it by name; it never drops one. */
+export const MODEL_STAGE_LIGHT_BUDGET = Object.freeze({pointLights: 8});
 /** What the canvas's output takes from a look: its tone curve and its glow (draw.ts). */
 export type ModelStageOutput = Pick<ModelStageLook, 'toneCurve' | 'glow'>;
 /** The curves the stage can draw: the one it has always used. */
@@ -51,7 +64,8 @@ export interface ModelStageFog {
   readonly height: {readonly base: number; readonly top: number; readonly strength: number} | null;
 }
 export const MODEL_STAGE_LOOK_FIELDS = Object.freeze({
-  look: ['backdrop', 'key', 'ambient', 'shadow', 'night', 'aids', 'fog', 'toneCurve', 'glow', 'farPlane'],
+  look: ['backdrop', 'key', 'ambient', 'shadow', 'night', 'aids', 'fog', 'toneCurve', 'glow', 'farPlane', 'lights'],
+  light: ['color', 'strength', 'range', 'position'],
   key: ['color', 'strength', 'direction'], ambient: ['sky', 'ground', 'strength'], aids: ['floor', 'share'],
   fog: ['near', 'far', 'height'], reach: ['distance', 'color'], height: ['base', 'top', 'strength'],
   glow: ['threshold', 'strength', 'radius'], toneCurve: ['curve', 'exposure'],
@@ -67,8 +81,12 @@ export const MODEL_STAGE_ABOVE = Object.freeze({
   base: (value: number) => above(value, 'its base'),
   nearDistance: (value: number) => above(value, 'its near distance'),
 });
+const LIGHT_BUDGET = MODEL_STAGE_LIGHT_BUDGET.pointLights;
 export const MODEL_STAGE_LOOK_REFUSAL = Object.freeze({
   beyond: (where: string, bound: string) => `${where} must be a finite number greater than ${bound}.`,
+  lights: (where: string) => `${where} states its point lights as an array.`,
+  overBudget: (where: string, count: number) =>
+    `${where} states ${count} point lights, ${count - LIGHT_BUDGET} over the stage's budget of ${LIGHT_BUDGET}.`,
 });
 const fields = MODEL_STAGE_LOOK_FIELDS, bounds = MODEL_STAGE_ABOVE, UNBOUNDED = Number.POSITIVE_INFINITY;
 /** The widest spread the bloom mixes to (UnrealBloomPass's radius), the end of the range it is meaningful on. */
@@ -125,6 +143,21 @@ function toneCurve(value: unknown, where: string): ModelStageToneCurve | null {
     exposure: beyond(record.exposure, `${where}.exposure`, bounds.nothing())});
 }
 
+// Lights are an array, none an empty one; past the budget the look is refused whole, before any light is read.
+function lights(value: unknown, where: string): readonly ModelStagePointLight[] {
+  if (!Array.isArray(value)) throw new ModelStageRefusal(MODEL_STAGE_LOOK_REFUSAL.lights(where));
+  if (value.length > LIGHT_BUDGET) {
+    throw new ModelStageRefusal(MODEL_STAGE_LOOK_REFUSAL.overBudget(where, value.length));
+  }
+  return Object.freeze(Array.from(value, (entry: unknown, index) => {
+    const at = `${where}[${index}]`, light = modelRecord(entry, fields.light, at);
+    return Object.freeze({color: modelColor(light.color, `${at}.color`),
+      strength: modelNumber(light.strength, `${at}.strength`, 0, UNBOUNDED),
+      range: beyond(light.range, `${at}.range`, bounds.nothing()),
+      position: modelPresentationVector(light.position, `${at}.position`)});
+  }));
+}
+
 /** One look, checked whole; `where` names it in every refusal, as `Time dusk: look`. */
 export function modelStageLook(value: unknown, where: string): ModelStageLook {
   const look = modelRecord(value, fields.look, where);
@@ -147,5 +180,6 @@ export function modelStageLook(value: unknown, where: string): ModelStageLook {
     toneCurve: toneCurve(look.toneCurve, `${where}.toneCurve`),
     glow: glow(look.glow, `${where}.glow`),
     farPlane: beyond(look.farPlane, `${where}.farPlane`, bounds.nearPlane()),
+    lights: lights(look.lights, `${where}.lights`),
   });
 }

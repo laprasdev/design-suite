@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import {writeModelColor} from './color.ts';
-import type {ModelStageLook} from './lookModel.ts';
+import {MODEL_STAGE_LIGHT_BUDGET, type ModelStageLook, type ModelStagePointLight} from './lookModel.ts';
 import type {ModelFog} from './fog.ts';
 import type {ModelDraw} from './draw.ts';
 import type {ModelFraming} from './camera.ts';
@@ -29,6 +29,31 @@ function stageAids(objects: readonly THREE.Object3D[]) {
   };
 }
 
+// Three's inverse-square falloff, windowed to nothing at the range: the attenuation URP gives a point light
+// (Lighting.hlsl DistanceAttenuation, smoothFactor = saturate(1 - (d^2 / range^2)^2)^2), as three r182 shades it.
+const POINT_DECAY = 2;
+
+// The look's point lights, written into the budget's lights made once. A light the look does not state is hidden, so
+// lit programs shade only the lights stated (their count is in the program key, WebGLPrograms.js numPointLights).
+function stagePointLights() {
+  const lights = Array.from({length: MODEL_STAGE_LIGHT_BUDGET.pointLights}, () => {
+    const light = new THREE.PointLight();
+    light.decay = POINT_DECAY;
+    light.visible = false;
+    return light;
+  });
+  const write = (light: THREE.PointLight, stated: ModelStagePointLight | undefined) => {
+    light.visible = stated !== undefined;
+    if (stated === undefined) return;
+    writeModelColor(light.color, stated.color);
+    light.intensity = stated.strength;
+    light.distance = stated.range;
+    light.position.fromArray(stated.position);
+  };
+  return {lights, set: (stated: readonly ModelStagePointLight[]) =>
+    lights.forEach((light, index) => write(light, stated[index]))};
+}
+
 /** The parts of a look the scene owns: its fog, the draw that applies its tone curve and exposure and adds its glow,
  * the camera's framing that draws to its far plane, and the values the stage shares with every kind's program (its
  * night and shadow colour). */
@@ -38,17 +63,19 @@ export interface ModelLookLayers {
   readonly output: Pick<ModelDraw, 'load' | 'prepare'>;
   readonly shared: Pick<ModelStageSharedValues, 'setLook'>;
 }
-// The stage's backdrop, floor, two lights, unlit aids, fog, far plane, tone curve, exposure and glow, as the look of
-// one time at a time. A look is written into the same objects every time: a changed colour, strength, distance or
-// exposure allocates nothing and compiles nothing. What does compile, once each, read from three r182's program key
-// (WebGLPrograms.js 420, 463): fog arriving or leaving recompiles every program that takes it; a tone curve arriving,
-// leaving or changing recompiles every program the canvas pass draws; and glow arriving compiles, on its first frame, a
+// The stage's backdrop, floor, two lights and point lights, unlit aids, fog, far plane, tone curve, exposure and glow,
+// as the look of one time at a time. A look is written into the same objects every time: a changed colour, strength,
+// distance, position or exposure allocates nothing and compiles nothing. What does compile, once each, read from three
+// r182's program key (WebGLPrograms.js 420, 463): fog arriving or leaving recompiles every program that takes it; a
+// change in how many point lights are stated recompiles every lit program; a tone curve arriving, leaving or changing
+// recompiles every program the canvas pass draws; and glow arriving compiles, on its first frame, a
 // second variant of every program the scene draws, for the linear, curve-less target its source is drawn into
 // (WebGLPrograms.js 166-172, 202). Those variants stay in each material's programs after glow leaves, so a later return
 // compiles nothing.
 export function createModelLighting(builtIn: readonly ModelStageTime[], layers: ModelLookLayers) {
   const ambient = new THREE.HemisphereLight();
   const key = new THREE.DirectionalLight();
+  const points = stagePointLights();
   const backdrop = createModelBackdrop();
   const aids = new Set<(share: number) => void>();
   const floors = new Set<THREE.MeshStandardMaterial>();
@@ -71,6 +98,7 @@ export function createModelLighting(builtIn: readonly ModelStageTime[], layers: 
     writeModelColor(key.color, look.key.color);
     key.intensity = look.key.strength;
     key.position.fromArray(look.key.direction);
+    points.set(look.lights);
     for (const floor of floors) writeModelColor(floor.color, look.aids.floor);
     for (const hold of aids) hold(look.aids.share);
     layers.fog.set(look.fog);
@@ -81,7 +109,7 @@ export function createModelLighting(builtIn: readonly ModelStageTime[], layers: 
   let current = resolve(MODEL_STAGE_THEME_LIGHTING);
   prepare(current)();
   return {
-    lights: [ambient, key] as const,
+    lights: [ambient, key, ...points.lights] as const,
     /** The backdrop the look colours, drawn first in the scene (backdrop.ts). */
     backdrop: backdrop.mesh,
     /** The id of the time in force. */
