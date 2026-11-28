@@ -14,7 +14,8 @@ export const MODEL_SURFACE_GLSL = Object.freeze({accessor: 'surfaceParameter', v
   tiling: 'surfaceTiling', sample: 'surfaceSample', viewNormal: 'kindViewNormal',
   fromMap: 'kindNormalFromTangentSpace', occlusion: 'kindOcclusion', roughness: 'kindRoughness',
   metalness: 'kindMetalness', coverage: 'kindCoverage', sceneDepth: 'kindSceneDepth',
-  fragmentDepth: 'kindFragmentDepth', eyeDepth: 'kindEyeDepth'});
+  fragmentDepth: 'kindFragmentDepth', eyeDepth: 'kindEyeDepth', presserCount: 'kindPresserCount',
+  presser: 'kindPresser'});
 
 /** Where each parameter sits in a kind's values: one vec4 apiece, in the declaration's order. */
 export interface ModelSurfaceSlot {

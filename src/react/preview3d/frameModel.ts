@@ -5,6 +5,7 @@ import {CAMERA_COORDS, freezeModelPreviewCamera, MODEL_PREVIEW_CAMERA_FIELDS, MO
   modelPreviewCameraWhere, modelPreviewEntity, readModelPreviewCamera,
   type ModelPreviewCamera, type ModelPreviewEntity} from './presentation.ts';
 import {isFiniteNumber, isNonEmptyString as named, isRecord as object} from '../../valueChecks.ts';
+import {checkModelGroundPresserBudget} from './groundPressers.ts';
 import {modelRecordStating, modelStates} from './recordModel.ts';
 import {ModelStageRefusal} from './refusal.ts';
 import type {ModelSurfaceSet} from './surfaceModel.ts';
@@ -83,6 +84,7 @@ export function validateModelFrame(value: unknown, scope: ModelFrameScope,
     seen.add(id);
     return modelPreviewEntity(entity, actor.asset.id, scope.takes.get(id));
   });
+  checkModelGroundPresserBudget(entities);
   const hasCamera = readModelFrameCamera(value, cameraInto);
   const checked: ModelValidatedFrame = {
     [VALIDATED_FRAME]: true,

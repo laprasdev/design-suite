@@ -387,7 +387,7 @@ export const TOON_SURFACE: ModelSurfaceKind = {
   },
   inert: {_Rim: 0},                   // a declared float drawn only at this value; another is refused by name
   attributes: ['uv', 'normal'],       // three's 'uv', 'color', 'normal', 'position'; a file's own is {name, size}
-  sceneReads: [],                     // or ['depth']: the opaque scene's depth behind the kind
+  sceneReads: [],                     // or ['depth'], ['pressers']: the opaque scene's depth; what presses the ground
   light: 'unlit',                     // 'standard' (three's lit model) or 'unlit' (the kind lights itself)
   coverage: 'opaque',                 // 'cutout', {cutout: '_Cutoff' or 0.5}, {blend: 'alpha'}, both together
   side: 'double', fog: true,
@@ -508,6 +508,12 @@ vec3 kindDisplacement( vec3 world ) { ... }
   more into it, colour masked: opaque and cut-out surfaces land in it, blended ones (which write no depth), the backdrop
   and the stage's aids never. The target costs 5 bytes more per drawing-buffer pixel, held against the frame's budget
   from the first such material's build to the last one's release; a build the budget cannot hold is refused by name.
+- With `sceneReads: ['pressers']` (both stages): `int kindPresserCount()`, how many ground pressers the applied engine
+  frame states, and `vec4 kindPresser( int index )` below that count: a presser's world position (metres, Y up) in
+  xyz and its radius in metres in w. A frame entity states one as `presser: {radius}`, pressing at its pose position;
+  the engine decides what presses and how far, the stage only carries them, in the frame's entity order, and refuses a
+  frame that states more than `MODEL_GROUND_PRESSER_BUDGET` carries, by name, before any of it applies. No frame
+  target is drawn for it; with no frame applied the count is 0.
 - The look's light, for any kind: `stageKeyDirection` (unit, toward the key, world space), `stageKeyColor` (linear
   colour times strength), `stageAmbientSky` and `stageAmbientGround` (linear colours times strength; the sky is +Y) and
   `stageShadow` (the time's shadow colour, linear). These are the values three hands its own lit programs. Three's
@@ -519,8 +525,8 @@ vec3 kindDisplacement( vec3 world ) { ... }
 Names a kind must not declare: anything starting `surfaceParameter`, `surfaceValues`, `surfaceTexture`,
 `surfaceAttribute`, `surfaceTiling`, `surfaceSample` or `stageNumbers`; `stageDecorativeSeconds`, `stageNight`,
 `stageShadow`, `stageKeyDirection`, `stageKeyColor`, `stageAmbientSky`, `stageAmbientGround`, `stageSceneDepth`,
-`stageSceneDepthView`; `kindSurface` and
-`kindDisplacement` beyond its one definition of each; `kindEmissive`, `kindWorld`, `kindObjectToWorld`, `kindNormal`,
+`stageSceneDepthView`, `stageGroundPressers`, `stageGroundPresserCount`, `kindPresserCount`, `kindPresser`;
+`kindSurface` and `kindDisplacement` beyond its one definition of each; `kindEmissive`, `kindWorld`, `kindObjectToWorld`, `kindNormal`,
 `kindViewDirection`, `kindObjectPosition`, `kindWorldPosition`, `kindViewNormal`, `kindNormalFromTangentSpace`,
 `kindOcclusion`, `kindRoughness`, `kindMetalness`, `kindCoverage`, `kindSceneDepth`, `kindFragmentDepth`,
 `kindEyeDepth`, `KIND_VERTEX_STAGE`; a file attribute's own name;
